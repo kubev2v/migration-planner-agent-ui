@@ -13,4 +13,11 @@ export { VirtualMachinesView } from "./VirtualMachinesView";
 export { VMDetailsPage } from "./VMDetailsPage";
 export { VMMigrationStatus } from "./VMMigrationStatus";
 export { VMTable } from "./VMTable";
+export type { VMFilters } from "./vmFilters";
+export {
+  filtersToSearchParams,
+  hasActiveFilters,
+  searchParamsToFilters,
+} from "./vmFilters";
+export { createVMFilterURL } from "./vmNavigation";
 export { WarningsTable } from "./WarningsTable";

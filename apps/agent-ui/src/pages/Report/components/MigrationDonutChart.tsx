@@ -41,6 +41,7 @@ interface MigrationDonutChartProps {
     percent: number;
     total: number;
   }) => string;
+  onItemClick?: (item: OSData) => void;
 }
 
 const legendColors = ["#0066cc", "#5e40be", "#b6a6e9", "#b98412"];
@@ -64,6 +65,7 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   donutThickness = 45,
   padAngle = 1,
   tooltipLabelFormatter,
+  onItemClick,
 }) => {
   const dynamicLegend = useMemo(() => {
     return data.reduce(
@@ -121,6 +123,47 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
     return chartData.reduce((sum, item) => sum + (Number(item.y) || 0), 0);
   }, [chartData]);
 
+  const handleClick = useCallback(
+    // biome-ignore lint/suspicious/noExplicitAny: Victory chart types are not well-typed
+    (event: any) => {
+      if (!onItemClick || !event || !event.datum) return;
+
+      // Find the original data item
+      const clickedItem = data.find(
+        (item) =>
+          item.name === event.datum.x ||
+          item.legendCategory === event.datum.legendCategory,
+      );
+
+      if (clickedItem) {
+        onItemClick(clickedItem);
+      }
+    },
+    [onItemClick, data],
+  );
+
+  const chartEvents = useMemo(() => {
+    if (!onItemClick) return undefined;
+
+    return [
+      {
+        target: "data" as const,
+        eventHandlers: {
+          onClick: () => [
+            {
+              target: "data" as const,
+              // biome-ignore lint/suspicious/noExplicitAny: Victory chart types are not well-typed
+              mutation: (props: any) => {
+                handleClick(props);
+                return null;
+              },
+            },
+          ],
+        },
+      },
+    ];
+  }, [onItemClick, handleClick]);
+
   if (!data || data.length === 0) {
     return (
       <div style={{ padding: "20px", textAlign: "center" }}>
@@ -135,11 +178,13 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        cursor: onItemClick ? "pointer" : "default",
       }}
     >
       <ChartDonut
         ariaDesc="Migration data donut chart"
         data={chartData}
+        events={chartEvents}
         labels={({
           datum,
         }: {
@@ -209,20 +254,77 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
           width: "100%",
           display: "flex",
           justifyContent: "center",
+          alignItems: "flex-start",
           marginLeft: marginLeft,
           overflowX: "hidden",
           overflowY: "hidden",
+          minHeight: "40px",
         }}
       >
-        <ChartLegend
-          data={legendData}
-          orientation="horizontal"
-          width={legendWidth ?? 800}
-          itemsPerRow={itemsPerRow}
-          style={{
-            labels: { fontSize: labelFontSize },
-          }}
-        />
+        {onItemClick ? (
+          // Custom clickable legend
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px 16px",
+              justifyContent: "center",
+              alignItems: "center",
+              maxWidth: legendWidth ?? 800,
+              padding: "8px 0",
+            }}
+          >
+            {data.map((item) => (
+              <button
+                key={item.legendCategory}
+                type="button"
+                onClick={() => onItemClick(item)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                  fontSize: `${labelFontSize}px`,
+                  border: "none",
+                  background: "none",
+                  padding: "2px 4px",
+                  margin: 0,
+                  transition: "opacity 0.2s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "0.7";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              >
+                <svg width="10" height="10" aria-hidden="true">
+                  <title>Legend color indicator</title>
+                  <rect
+                    width="10"
+                    height="10"
+                    fill={getColor(item.legendCategory)}
+                  />
+                </svg>
+                <span>
+                  {item.name} ({item.countDisplay ?? item.count})
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          // Standard non-clickable legend
+          <ChartLegend
+            data={legendData}
+            orientation="horizontal"
+            width={legendWidth ?? 800}
+            itemsPerRow={itemsPerRow}
+            style={{
+              labels: { fontSize: labelFontSize },
+            }}
+          />
+        )}
       </div>
     </div>
   );

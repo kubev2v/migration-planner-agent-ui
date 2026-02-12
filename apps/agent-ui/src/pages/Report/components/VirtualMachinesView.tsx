@@ -3,15 +3,18 @@ import type React from "react";
 import { useState } from "react";
 import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
+import type { VMFilters } from "./vmFilters";
 
 interface VirtualMachinesViewProps {
   vms: VM[];
   loading?: boolean;
+  initialFilters?: VMFilters;
 }
 
 export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   vms,
   loading = false,
+  initialFilters,
 }) => {
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
 
@@ -27,7 +30,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     return <VMDetailsPage vmId={selectedVMId} onBack={handleBack} />;
   }
 
-  return <VMTable vms={vms} loading={loading} onVMClick={handleVMClick} />;
+  return (
+    <VMTable
+      vms={vms}
+      loading={loading}
+      onVMClick={handleVMClick}
+      initialFilters={initialFilters}
+    />
+  );
 };
 
 VirtualMachinesView.displayName = "VirtualMachinesView";

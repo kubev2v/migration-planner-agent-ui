@@ -16,7 +16,8 @@ import {
   TabTitleText,
 } from "@patternfly/react-core";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
 import {
   DataSharingAlert,
@@ -25,22 +26,61 @@ import {
 import { Symbols } from "../../main/Symbols";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { Dashboard, VirtualMachinesView } from "./components/index";
+import {
+  hasActiveFilters,
+  searchParamsToFilters,
+} from "./components/vmFilters";
 import { Header } from "./Header";
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [vmsList, setVmsList] = useState<VM[]>([]);
   const [vmsLoading, setVmsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string | number>(0);
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isShareLoading, setIsShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+
+  // Parse filters from URL (recalculates when URL changes)
+  const initialVMFilters = useMemo(
+    () => searchParamsToFilters(searchParams),
+    [searchParams],
+  );
+
+  // Determine initial tab based on URL params (only on mount)
+  const [activeTab, setActiveTab] = useState<string | number>(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "vms") return 1;
+    // If there are VM filters in URL, open Virtual Machines tab
+    if (hasActiveFilters(initialVMFilters)) return 1;
+    return 0;
+  });
+
+  // Sync active tab with URL changes
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "vms" && activeTab !== 1) {
+      setActiveTab(1);
+    } else if ((tabParam === "overview" || !tabParam) && activeTab !== 0) {
+      // Switch to overview if tab is explicitly "overview" or no tab param
+      // Only check for VM filters if no tab param is set (legacy behavior)
+      if (tabParam === "overview") {
+        setActiveTab(0);
+      } else if (!tabParam) {
+        const currentFilters = searchParamsToFilters(searchParams);
+        if (!hasActiveFilters(currentFilters)) {
+          setActiveTab(0);
+        }
+      }
+    }
+  }, [searchParams, activeTab]);
+
   // Fetch inventory only (agent status comes from context)
   useEffect(() => {
     const fetchData = async () => {
@@ -195,8 +235,35 @@ export const ReportContainer: React.FC = () => {
       setSelectedClusterId(value);
       // Reset to Overview tab when changing cluster
       setActiveTab(0);
+      // Update URL to reflect tab change
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("tab");
+      setSearchParams(newParams, { replace: true });
     }
     setIsClusterSelectOpen(false);
+  };
+
+  const handleTabSelect = (
+    _event: React.MouseEvent<HTMLElement, MouseEvent>,
+    tabIndex: string | number,
+  ) => {
+    setActiveTab(tabIndex);
+    // Update URL with tab parameter
+    const newParams = new URLSearchParams(searchParams);
+    if (tabIndex === 1) {
+      newParams.set("tab", "vms");
+    } else {
+      newParams.set("tab", "overview");
+      // Clear all VM filters when switching away from VMs tab
+      newParams.delete("statuses");
+      newParams.delete("hasIssues");
+      newParams.delete("search");
+      newParams.delete("diskRangeMin");
+      newParams.delete("diskRangeMax");
+      newParams.delete("memoryRangeMin");
+      newParams.delete("memoryRangeMax");
+    }
+    setSearchParams(newParams, { replace: true });
   };
 
   return (
@@ -256,10 +323,7 @@ export const ReportContainer: React.FC = () => {
 
         {/* Tabs */}
         <StackItem>
-          <Tabs
-            activeKey={activeTab}
-            onSelect={(_event, tabIndex) => setActiveTab(tabIndex)}
-          >
+          <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
             <Tab eventKey={0} title={<TabTitleText>Overview</TabTitleText>}>
               <div style={{ marginTop: "24px" }}>
                 {clusterView.viewInfra && clusterView.viewVms ? (
@@ -286,7 +350,11 @@ export const ReportContainer: React.FC = () => {
               title={<TabTitleText>Virtual Machines</TabTitleText>}
             >
               <div style={{ marginTop: "24px" }}>
-                <VirtualMachinesView vms={vmsList} loading={vmsLoading} />
+                <VirtualMachinesView
+                  vms={vmsList}
+                  loading={vmsLoading}
+                  initialFilters={initialVMFilters}
+                />
               </div>
             </Tab>
           </Tabs>

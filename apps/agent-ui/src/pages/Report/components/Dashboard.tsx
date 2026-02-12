@@ -145,9 +145,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <Gallery hasGutter minWidths={{ default: "300px", md: "45%" }}>
               <GalleryItem>
                 <ClustersOverview
-                  vmsPerCluster={Object.values(clusters || {}).map(
-                    (c) => c.vms?.total ?? 0,
-                  )}
                   clustersPerDatacenter={infra.clustersPerDatacenter ?? []}
                   isExportMode={isExportMode}
                   clusters={clusters}

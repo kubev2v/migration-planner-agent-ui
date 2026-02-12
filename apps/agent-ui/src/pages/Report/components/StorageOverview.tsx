@@ -8,8 +8,10 @@ import {
 import { DatabaseIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
+import { createVMFilterURL } from "./vmNavigation";
 
 interface DiskTierData {
   vmCount?: number;
@@ -33,6 +35,8 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
   diskSizeTier = {},
   isExportMode = false,
 }) => {
+  const navigate = useNavigate();
+
   const { chartData, totalSize, totalVMs } = useMemo(() => {
     const getTierPrefix = (key: string): string | null => {
       for (const prefix of Object.keys(TIER_CONFIG)) {
@@ -78,6 +82,39 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
     return legendMap;
   }, [chartData]);
 
+  // Parse disk tier string to client-side filter format
+  const parseDiskTierToFilter = (
+    tier: string,
+  ): { min: number; max?: number } | null => {
+    const MB_IN_TB = 1024 * 1024;
+    const normalized = tier.trim();
+
+    // Disk range mappings matching VMTable
+    const diskRangeMappings: Record<
+      string,
+      { min: number; max: number | undefined }
+    > = {
+      "0-10 TB": { min: 0, max: 10 * MB_IN_TB },
+      "11-20 TB": { min: 10 * MB_IN_TB + 1, max: 20 * MB_IN_TB },
+      "21-50 TB": { min: 20 * MB_IN_TB + 1, max: 50 * MB_IN_TB },
+      "50+ TB": { min: 50 * MB_IN_TB + 1, max: undefined },
+      "> 50 TB": { min: 50 * MB_IN_TB + 1, max: undefined },
+    };
+
+    if (normalized in diskRangeMappings) {
+      return diskRangeMappings[normalized];
+    }
+
+    return null;
+  };
+
+  const handleDiskTierClick = (item: { name: string }) => {
+    const diskRange = parseDiskTierToFilter(item.name);
+    if (diskRange) {
+      navigate(createVMFilterURL({ diskRange }));
+    }
+  };
+
   return (
     <Card
       className={
@@ -108,10 +145,10 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
           subTitleColor="#9a9da0"
           itemsPerRow={Math.ceil(chartData.length / 2)}
           labelFontSize={18}
-          marginLeft="52%"
           tooltipLabelFormatter={({ datum, percent }) =>
             `${datum.countDisplay}\n${percent.toFixed(1)}%`
           }
+          onItemClick={!isExportMode ? handleDiskTierClick : undefined}
         />
       </CardBody>
     </Card>
