@@ -20,7 +20,6 @@ import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
 
 interface ClustersOverviewProps {
-  vmsPerCluster: number[];
   clustersPerDatacenter: number[];
   isExportMode?: boolean;
   clusters?: { [key: string]: InventoryData };
@@ -146,7 +145,6 @@ const colorPalette = [
 ];
 
 export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
-  vmsPerCluster,
   clustersPerDatacenter,
   isExportMode = false,
   clusters,
@@ -211,25 +209,36 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
     }
 
     if (viewMode === "vmByCluster") {
-      const counts = Array.isArray(vmsPerCluster) ? [...vmsPerCluster] : [];
-      const totalVMs = counts.reduce((acc, n) => acc + n, 0);
+      // Sort clusters by VM count and get real cluster names
+      const clusterEntries = clusters
+        ? Object.entries(clusters).map(([name, data]) => ({
+            name,
+            count: data.vms?.total ?? 0,
+          }))
+        : [];
+
+      const totalVMs = clusterEntries.reduce((acc, c) => acc + c.count, 0);
       const TOP_N = 4;
-      const ranked = counts
-        .map((count, index) => ({ count, index }))
-        .sort((a, b) => b.count - a.count);
+
+      const ranked = clusterEntries.sort((a, b) => b.count - a.count);
       const top = ranked.slice(0, TOP_N);
       const rest = ranked.slice(TOP_N);
       const restSum = rest.reduce((acc, r) => acc + r.count, 0);
 
+      // Map display names to actual cluster names
+      const indexToName = new Map<string, string>();
+
       const slices = top.map((item, i) => {
-        const name = `Cluster ${i + 1}`;
+        const displayName = `Cluster ${i + 1}`;
+        indexToName.set(displayName, item.name);
         return {
-          name,
+          name: displayName,
           count: item.count,
           countDisplay: `${item.count} VMs`,
-          legendCategory: name,
+          legendCategory: displayName,
         };
       });
+
       if (restSum > 0) {
         slices.push({
           name: "Rest of clusters",
@@ -286,7 +295,7 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
       title: `${totalClusters}`,
       subTitle: "Clusters",
     };
-  }, [viewMode, vmsPerCluster, clustersPerDatacenter, clusters]);
+  }, [viewMode, clustersPerDatacenter, clusters]);
 
   const onDropdownToggle = (): void => {
     setIsDropdownOpen(!isDropdownOpen);
