@@ -567,7 +567,7 @@ __metadata:
     "@patternfly/react-icons": "npm:^6.4.0"
     "@patternfly/react-table": "npm:^6.4.0"
     react: "npm:^18.3.1"
-    react-content-loader: "npm:^6.2.0"
+    react-content-loader: "npm:^7.0.0"
     react-dom: "npm:^18.3.1"
     react-router-dom: "npm:^6.26.0"
     react-use: "npm:^17.5.1"
@@ -2491,12 +2491,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-content-loader@npm:^6.2.0":
-  version: 6.2.1
-  resolution: "react-content-loader@npm:6.2.1"
+"react-content-loader@npm:^7.0.0":
+  version: 7.1.2
+  resolution: "react-content-loader@npm:7.1.2"
   peerDependencies:
-    react: ">=16.0.0"
-  checksum: 10c0/65968a9ec46cffdc7017c0aa68f6b4f5770c1c6e1677d0eb70f7c553a6a3b9385e8bcae570152e6a006812c81a575dce401c07192b3ac49c64654c4b0cce0d80
+    react: ">=18.0.0"
+  checksum: 10c0/11bdc384ea94731a9066e0598dcd62e9eaee69528c1db0dd581652b47c329f0cb92de55ea0dc37ec2ef0791de5e1c4738032a8f61b839d8f03df1f13fb03b144
   languageName: node
   linkType: hard
 
