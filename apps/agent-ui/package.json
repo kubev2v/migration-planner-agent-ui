@@ -16,7 +16,6 @@
   "dependencies": {
     "@emotion/css": "^11.13.0",
     "@migration-planner-ui/agent-client": "workspace:*",
-    "@migration-planner-ui/api-client": "workspace:*",
     "@migration-planner-ui/ioc": "workspace:*",
     "@patternfly/react-charts": "^8.0.0",
     "@patternfly/react-core": "^6.4.0",
