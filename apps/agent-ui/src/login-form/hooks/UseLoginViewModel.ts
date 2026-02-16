@@ -39,6 +39,29 @@ export const useLoginViewModel = (): LoginViewModelInterface => {
   // Track consecutive polling failures to surface persistent errors
   const pollFailuresRef = useRef<number>(0);
 
+  // Check collector status on mount to redirect if already collected
+  useEffect(() => {
+    const checkInitialStatus = async () => {
+      try {
+        const signal = newAbortSignal(
+          REQUEST_TIMEOUT_MS,
+          "Initial collector status request timed out.",
+        );
+        const collectorStatus = await agentApi.getCollectorStatus({ signal });
+
+        // If already collected, redirect to report page
+        if (collectorStatus.status === "collected") {
+          navigate("/report");
+        }
+      } catch (err) {
+        // Silently fail - user can still use login form
+        console.warn("Failed to check initial collector status:", err);
+      }
+    };
+
+    checkInitialStatus();
+  }, [agentApi, navigate]);
+
   // Poll collector status periodically when collecting
   useEffect(() => {
     if (!isCollecting) {
