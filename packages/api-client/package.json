@@ -12,19 +12,22 @@
   "type": "module",
   "exports": {
     "./apis": {
+      "development": "./src/apis/index.ts",
       "import": "./dist/apis/index.js",
       "types": "./dist/apis/index.d.ts",
-      "default": "./src/apis/index.ts"
+      "default": "./dist/apis/index.js"
     },
     "./models": {
+      "development": "./src/models/index.ts",
       "import": "./dist/models/index.js",
       "types": "./dist/models/index.d.ts",
-      "default": "./src/models/index.ts"
+      "default": "./dist/models/index.js"
     },
     "./runtime": {
+      "development": "./src/runtime.ts",
       "import": "./dist/runtime.js",
       "types": "./dist/runtime.d.ts",
-      "default": "./src/runtime.ts"
+      "default": "./dist/runtime.js"
     }
   },
   "typesVersions": {
