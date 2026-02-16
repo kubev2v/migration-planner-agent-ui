@@ -12,9 +12,10 @@
   "type": "module",
   "exports": {
     ".": {
+      "development": "./src/index.ts",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
+      "default": "./dist/index.js"
     }
   },
   "typesVersions": {
@@ -36,11 +37,6 @@
     "check:fix": "yarn run -T biome check --write .",
     "test": "echo 'No tests configured for this package'",
     "typecheck": "yarn run -T tsc -b --noEmit"
-  },
-  "devDependencies": {
-    "react": "*",
-    "react-dom": "*",
-    "react-router-dom": "*"
   },
   "peerDependencies": {
     "react": "^18.3.1",

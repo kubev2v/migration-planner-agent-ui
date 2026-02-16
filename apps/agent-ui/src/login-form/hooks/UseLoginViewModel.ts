@@ -30,7 +30,7 @@ export const useLoginViewModel = (): LoginViewModelInterface => {
   useTitle("Login - Migration Discovery VM");
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const navigate = useNavigate();
-  const [version] = useState<string | undefined>("v1.0.0");
+  const [version] = useState<string | undefined>("v0.0.0");
   const [isDataShared] = useState<boolean>(false);
   const [isCollecting, setIsCollecting] = useState<boolean>(false);
   const [status, setStatus] = useState<CollectorStatus["status"] | null>(null);
