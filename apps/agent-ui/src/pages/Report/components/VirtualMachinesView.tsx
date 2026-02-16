@@ -30,7 +30,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     return <VMDetailsPage vmId={selectedVMId} onBack={handleBack} />;
   }
 
-  return <VMTable vms={vms} loading={loading} onVMClick={handleVMClick} initialFilters={initialFilters}/>;
+  return (
+    <VMTable
+      vms={vms}
+      loading={loading}
+      onVMClick={handleVMClick}
+      initialFilters={initialFilters}
+    />
+  );
 };
 
 VirtualMachinesView.displayName = "VirtualMachinesView";
