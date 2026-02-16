@@ -61,9 +61,9 @@ const statusLabels: Record<string, string> = {
 // Disk size ranges in MB (displayed as TB)
 const diskSizeRanges = [
   { label: "0-10 TB", min: 0, max: 10 * 1024 * 1024 },
-  { label: "11-20 TB", min: 11 * 1024 * 1024, max: 20 * 1024 * 1024 },
-  { label: "21-50 TB", min: 21 * 1024 * 1024, max: 50 * 1024 * 1024 },
-  { label: "50+ TB", min: 51 * 1024 * 1024, max: undefined },
+  { label: "11-20 TB", min: 10 * 1024 * 1024 + 1, max: 20 * 1024 * 1024 },
+  { label: "21-50 TB", min: 20 * 1024 * 1024 + 1, max: 50 * 1024 * 1024 },
+  { label: "50+ TB", min: 50 * 1024 * 1024 + 1, max: undefined },
 ];
 
 // Memory size ranges in MB (displayed as GB)
@@ -136,7 +136,10 @@ export const VMTable: React.FC<VMTableProps> = ({
 
   // Sync local state with initialFilters when they change (e.g., from chart navigation)
   useEffect(() => {
-    // Only sync if we're on the VMs tab and not during user interaction
+    // Skip if changes come from user interaction
+    if (isUserInteraction.current) return;
+
+    // Only sync if we're on the VMs tab
     const currentTab = searchParams.get("tab");
     if (currentTab !== "vms") return;
 
@@ -146,7 +149,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     setHasIssuesFilter(initialFilters?.hasIssues || false);
     setSearchValue(initialFilters?.search || "");
   }, [initialFilters, searchParams]);
-
   // Selection state
   // const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
 
@@ -470,6 +472,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     } else {
       setDiskRangeFilter({ min: range.min, max: range.max });
     }
+    setPage(1);
   };
 
   const onMemorySizeSelect = (index: number) => {
@@ -481,6 +484,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     } else {
       setMemoryRangeFilter({ min: range.min, max: range.max });
     }
+    setPage(1);
   };
 
   const onStatusSelect = (status: string) => {

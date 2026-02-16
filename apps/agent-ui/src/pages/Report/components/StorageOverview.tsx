@@ -95,10 +95,10 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
       { min: number; max: number | undefined }
     > = {
       "0-10 TB": { min: 0, max: 10 * MB_IN_TB },
-      "11-20 TB": { min: 11 * MB_IN_TB, max: 20 * MB_IN_TB },
-      "21-50 TB": { min: 21 * MB_IN_TB, max: 50 * MB_IN_TB },
-      "50+ TB": { min: 51 * MB_IN_TB, max: undefined },
-      "> 50 TB": { min: 51 * MB_IN_TB, max: undefined },
+      "11-20 TB": { min: 10 * MB_IN_TB + 1, max: 20 * MB_IN_TB },
+      "21-50 TB": { min: 20 * MB_IN_TB + 1, max: 50 * MB_IN_TB },
+      "50+ TB": { min: 50 * MB_IN_TB + 1, max: undefined },
+      "> 50 TB": { min: 50 * MB_IN_TB + 1, max: undefined },
     };
 
     if (normalized in diskRangeMappings) {
