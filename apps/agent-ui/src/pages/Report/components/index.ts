@@ -10,6 +10,7 @@ export { OSDistribution } from "./OSDistribution";
 export { ReportTable } from "./ReportTable";
 export { StorageOverview } from "./StorageOverview";
 export { VirtualMachinesView } from "./VirtualMachinesView";
+export { VMDetailsPage } from "./VMDetailsPage";
 export { VMMigrationStatus } from "./VMMigrationStatus";
 export { VMTable } from "./VMTable";
 export type { VMFilters } from "./vmFilters";

@@ -19,7 +19,7 @@ import {
 } from "@patternfly/react-core";
 import {
   CheckCircleIcon,
-  // EllipsisVIcon,
+  EllipsisVIcon,
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
   FilterIcon,
@@ -42,7 +42,7 @@ interface VMTableProps {
   vms: VM[];
   loading: boolean;
   initialFilters?: VMFilters;
-  // onVMClick?: (vm: VM) => void;
+  onVMClick?: (vmId: string) => void;
 }
 
 type SortableColumn =
@@ -104,7 +104,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   vms,
   loading,
   initialFilters,
-  // onVMClick,
+  onVMClick,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -151,7 +151,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   // const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
 
   // Row actions dropdown state
-  // const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
 
   // Sort state
   const [activeSortIndex, setActiveSortIndex] = useState<number | null>(null);
@@ -577,16 +577,24 @@ export const VMTable: React.FC<VMTableProps> = ({
     return (
       <span>
         {state === "poweredOff" && (
-          <ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />
+          <>
+            <ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />{" "}
+          </>
         )}
         {state === "suspended" && (
-          <ExclamationTriangleIcon color="var(--pf-t--global--icon--color--status--warning--default)" />
+          <>
+            <ExclamationTriangleIcon color="var(--pf-t--global--icon--color--status--warning--default)" />{" "}
+          </>
         )}
         {state === "poweredOn" && hasIssues && (
-          <ExclamationTriangleIcon color="var(--pf-t--global--icon--color--status--warning--default)" />
+          <>
+            <ExclamationTriangleIcon color="var(--pf-t--global--icon--color--status--warning--default)" />{" "}
+          </>
         )}
         {state === "poweredOn" && !hasIssues && (
-          <CheckCircleIcon color="var(--pf-t--global--icon--color--status--success--default)" />
+          <>
+            <CheckCircleIcon color="var(--pf-t--global--icon--color--status--success--default)" />{" "}
+          </>
         )}
         {statusLabels[state] || state}
       </span>
@@ -683,13 +691,13 @@ export const VMTable: React.FC<VMTableProps> = ({
             </ToolbarItem>
           </ToolbarGroup>
 
-          {/* <ToolbarGroup>
+          <ToolbarGroup>
             <ToolbarItem>
-              <Button variant="secondary" isDisabled={selectedVMs.size === 0}>
+              <Button variant="secondary" isDisabled>
                 Send to deep inspection
               </Button>
             </ToolbarItem>
-          </ToolbarGroup> */}
+          </ToolbarGroup>
 
           <ToolbarItem variant="pagination" align={{ default: "alignEnd" }}>
             <Pagination
@@ -750,21 +758,23 @@ export const VMTable: React.FC<VMTableProps> = ({
               <Th
                 key={column.key}
                 sort={column.sortable ? getSortParams(index) : undefined}
+                width={column.key === "issues" ? 10 : undefined}
+                modifier={column.key === "issues" ? "fitContent" : undefined}
               >
                 {column.label}
               </Th>
             ))}
-            {/* <Th screenReaderText="Actions" /> */}
+            <Th width={10} modifier="fitContent" />
           </Tr>
         </Thead>
         <Tbody>
           {loading ? (
             <Tr>
-              <Td colSpan={columns.length}>Loading...</Td>
+              <Td colSpan={columns.length + 1}>Loading...</Td>
             </Tr>
           ) : paginatedVMs.length === 0 ? (
             <Tr>
-              <Td colSpan={columns.length}>No virtual machines found</Td>
+              <Td colSpan={columns.length + 1}>No virtual machines found</Td>
             </Tr>
           ) : (
             paginatedVMs.map((vm) => (
@@ -777,10 +787,17 @@ export const VMTable: React.FC<VMTableProps> = ({
                   }}
                 /> */}
                 <Td dataLabel="Name">
-                  {vm.name}
-                  {/* <Button variant="link" isInline onClick={() => onVMClick?.(vm)}>
-                    {vm.name}
-                  </Button> */}
+                  {onVMClick ? (
+                    <Button
+                      variant="link"
+                      isInline
+                      onClick={() => onVMClick(vm.id)}
+                    >
+                      {vm.name}
+                    </Button>
+                  ) : (
+                    vm.name
+                  )}
                 </Td>
                 <Td dataLabel="Status">{renderStatus(vm)}</Td>
                 <Td dataLabel="Disk size">
@@ -789,18 +806,24 @@ export const VMTable: React.FC<VMTableProps> = ({
                 <Td dataLabel="Memory size">
                   {formatMemorySize(vm.memory || 0)}
                 </Td>
-                <Td dataLabel="Issues">{vm.issueCount || 0}</Td>
-                {/* <Td isActionCell>
+                <Td dataLabel="Issues" modifier="fitContent">
+                  {vm.issueCount || 0}
+                </Td>
+                <Td isActionCell modifier="fitContent">
                   <Dropdown
                     isOpen={openActionMenuId === vm.id}
                     onSelect={() => setOpenActionMenuId(null)}
-                    onOpenChange={(isOpen) => setOpenActionMenuId(isOpen ? vm.id : null)}
+                    onOpenChange={(isOpen) =>
+                      setOpenActionMenuId(isOpen ? vm.id : null)
+                    }
                     toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
                       <MenuToggle
                         ref={toggleRef}
                         variant="plain"
                         onClick={() =>
-                          setOpenActionMenuId(openActionMenuId === vm.id ? null : vm.id)
+                          setOpenActionMenuId(
+                            openActionMenuId === vm.id ? null : vm.id,
+                          )
                         }
                         isExpanded={openActionMenuId === vm.id}
                       >
@@ -810,13 +833,18 @@ export const VMTable: React.FC<VMTableProps> = ({
                     popperProps={{ position: "right" }}
                   >
                     <DropdownList>
-                      <DropdownItem key="inspect">Send to deep inspection</DropdownItem>
-                      <DropdownItem key="details" onClick={() => onVMClick?.(vm)}>
+                      <DropdownItem key="inspect" isDisabled>
+                        Send to deep inspection
+                      </DropdownItem>
+                      <DropdownItem
+                        key="details"
+                        onClick={() => onVMClick?.(vm.id)}
+                      >
                         View details
                       </DropdownItem>
                     </DropdownList>
                   </Dropdown>
-                </Td> */}
+                </Td>
               </Tr>
             ))
           )}
