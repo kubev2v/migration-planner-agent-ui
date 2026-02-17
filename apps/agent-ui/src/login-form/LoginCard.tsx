@@ -93,9 +93,15 @@ export const LoginCard: React.FC<LoginCardProps> = ({
   };
 
   return (
-    <Backdrop>
-      <Bullseye>
-        <Card>
+    <Backdrop style={{ overflow: "auto" }}>
+      <Bullseye style={{ height: "100vh", padding: "1rem" }}>
+        <Card
+          style={{
+            maxHeight: "calc(100vh - 2rem)",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <CardHeader>
             <Flex direction={{ default: "column" }} gap={{ default: "gapMd" }}>
               <FlexItem>
@@ -175,7 +181,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({
 
           <Divider />
 
-          <CardBody>
+          <CardBody style={{ overflow: "auto" }}>
             <LoginFormComponent
               collect={handleCollect}
               cancelCollection={onCancel}
