@@ -39,19 +39,10 @@ import { Symbols } from "../../../main/Symbols";
 import { dashboardStyles } from "./dashboardStyles";
 
 const MB_IN_GB = 1024;
-const BYTES_IN_GB = 1024 * 1024 * 1024;
 
 const formatMemorySize = (sizeInMB: number): string => {
   const sizeInGB = sizeInMB / MB_IN_GB;
   return `${sizeInGB.toFixed(sizeInGB % 1 === 0 ? 0 : 2)} GB`;
-};
-
-const formatCapacity = (bytes: number): string => {
-  const gb = bytes / BYTES_IN_GB;
-  if (gb >= 1024) {
-    return `${(gb / 1024).toFixed(2)} TB`;
-  }
-  return `${gb.toFixed(2)} GB`;
 };
 
 interface VMDetailsPageProps {
@@ -433,9 +424,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                   {(vm.disks ?? []).map((disk) => (
                     <Tr key={disk.key || disk.file || `disk-${disk.bus}`}>
                       <Td>{disk.file || "—"}</Td>
-                      <Td>
-                        {disk.capacity ? formatCapacity(disk.capacity) : "—"}
-                      </Td>
+                      <Td>{disk.capacity ? `${disk.capacity} MB` : "—"}</Td>
                       <Td>{disk.bus || "—"}</Td>
                       <Td>{disk.mode || "—"}</Td>
                       <Td>{disk.shared ? "Yes" : "No"}</Td>
