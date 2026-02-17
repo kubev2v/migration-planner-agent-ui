@@ -465,7 +465,9 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
               </Stack>
             ) : (
               <span
-                style={{ color: "var(--pf-t--global--text--color--subtle)" }}
+                style={{
+                  color: "var(--pf-t--global--text--color--subtle)",
+                }}
               >
                 No issues found
               </span>

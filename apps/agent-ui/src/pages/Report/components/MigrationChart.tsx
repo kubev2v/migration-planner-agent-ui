@@ -187,7 +187,7 @@ const MigrationChart: React.FC<MigrationChartProps> = ({
                         component="p"
                         style={{ fontSize: "clamp(0.4rem, 0.7vw, 1.1rem)" }}
                       >
-                        {item.count}
+                        {item.count} VM{item.count !== 1 ? "s" : ""}
                       </Content>
                     </Td>
                   </Tr>
