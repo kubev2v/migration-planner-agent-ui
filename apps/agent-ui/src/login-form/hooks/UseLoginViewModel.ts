@@ -18,7 +18,6 @@ const MAX_POLL_FAILURES = 5;
 
 export interface LoginViewModelInterface {
   version: string | undefined;
-  isDataShared: boolean;
   isCollecting: boolean;
   status: CollectorStatus["status"] | null;
   error: ApiError | null;
@@ -26,12 +25,18 @@ export interface LoginViewModelInterface {
   onCancel: () => Promise<void>;
 }
 
-export const useLoginViewModel = (): LoginViewModelInterface => {
+interface UseLoginViewModelProps {
+  refetchAgentStatus?: () => Promise<void>;
+}
+
+export const useLoginViewModel = (
+  props?: UseLoginViewModelProps,
+): LoginViewModelInterface => {
   useTitle("Login - Migration Discovery VM");
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const navigate = useNavigate();
+  const refetchAgentStatus = props?.refetchAgentStatus;
   const [version] = useState<string | undefined>("v0.0.0");
-  const [isDataShared] = useState<boolean>(false);
   const [isCollecting, setIsCollecting] = useState<boolean>(false);
   const [status, setStatus] = useState<CollectorStatus["status"] | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -136,14 +141,41 @@ export const useLoginViewModel = (): LoginViewModelInterface => {
   }, [isCollecting, agentApi, navigate]);
 
   const onCollect = useCallback(
-    async (credentials: Credentials, _isDataShared: boolean) => {
+    async (credentials: Credentials, isDataShared: boolean) => {
       setError(null);
       setIsCollecting(true);
       setStatus("connecting");
       // Reset failure counter when starting new collection
       pollFailuresRef.current = 0;
 
+      let modeChangeSucceeded = false;
+
       try {
+        // Step 1: If data sharing is enabled, change agent mode to "connected"
+        if (isDataShared) {
+          const signal = newAbortSignal(
+            REQUEST_TIMEOUT_MS,
+            "The server didn't respond in a timely fashion.",
+          );
+
+          await agentApi.setAgentMode(
+            { agentModeRequest: { mode: "connected" } },
+            { signal },
+          );
+          modeChangeSucceeded = true;
+
+          // Refetch agent status to update the UI (isolated error handling)
+          if (refetchAgentStatus) {
+            try {
+              await refetchAgentStatus();
+            } catch (refetchErr) {
+              // Log but don't fail the collection process
+              console.error("Failed to refetch agent status:", refetchErr);
+            }
+          }
+        }
+
+        // Step 2: Start the collection process
         const collectorRequest: CollectorStartRequest = {
           url: credentials.url,
           username: credentials.username,
@@ -160,17 +192,35 @@ export const useLoginViewModel = (): LoginViewModelInterface => {
           { signal },
         );
         // Status will be updated by the polling effect
-        // Note: _isDataShared is accepted for interface compatibility but not currently used in the API
       } catch (err) {
         setIsCollecting(false);
         setStatus(null);
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to start collection";
+
+        // Provide context-aware error messages
+        let errorMessage: string;
+        if (modeChangeSucceeded) {
+          // Mode change succeeded but collection failed
+          errorMessage =
+            err instanceof Error
+              ? `Data sharing was enabled, but collection failed: ${err.message}`
+              : "Data sharing was enabled, but failed to start collection";
+        } else if (isDataShared && !modeChangeSucceeded) {
+          // Mode change failed
+          errorMessage =
+            err instanceof Error
+              ? `Failed to enable data sharing: ${err.message}`
+              : "Failed to enable data sharing";
+        } else {
+          // Collection failed without mode change
+          errorMessage =
+            err instanceof Error ? err.message : "Failed to start collection";
+        }
+
         setError({ message: errorMessage });
-        console.error("Error starting collection:", err);
+        console.error("Error during collection start:", err);
       }
     },
-    [agentApi],
+    [agentApi, refetchAgentStatus],
   );
 
   const onCancel = useCallback(async () => {
@@ -191,7 +241,6 @@ export const useLoginViewModel = (): LoginViewModelInterface => {
 
   return {
     version,
-    isDataShared,
     isCollecting,
     status,
     error,
