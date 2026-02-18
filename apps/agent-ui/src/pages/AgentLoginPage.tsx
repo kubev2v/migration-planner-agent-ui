@@ -5,8 +5,8 @@ import { useLoginViewModel } from "../login-form/hooks/UseLoginViewModel";
 import { LoginCard } from "../login-form/LoginCard";
 
 const AgentLoginPage: React.FC = () => {
-  const vm = useLoginViewModel();
-  const { agentStatus } = useAgentStatus();
+  const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
+  const vm = useLoginViewModel({ refetchAgentStatus });
   return (
     <LoginCard
       version={vm.version}

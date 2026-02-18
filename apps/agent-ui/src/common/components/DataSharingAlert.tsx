@@ -24,11 +24,12 @@ export const DataSharingAlert: React.FC<DataSharingAlertProps> = ({
           <Button variant="link" isInline onClick={() => onShare()}>
             Share with Red Hat
           </Button>
-        )}{" "}
+        )}
         <a
           href="https://www.redhat.com/en/about/privacy-policy"
           target="_blank"
           rel="noopener noreferrer"
+          style={onShare ? { marginLeft: "1.5rem" } : undefined}
         >
           Learn more <ExternalLinkAltIcon />
         </a>
