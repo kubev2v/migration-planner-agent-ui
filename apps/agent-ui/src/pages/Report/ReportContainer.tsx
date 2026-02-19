@@ -1,5 +1,8 @@
 import type { DefaultApiInterface } from "@migration-planner-ui/agent-client/apis";
-import type { Inventory, VM } from "@migration-planner-ui/agent-client/models";
+import type {
+  Inventory,
+  VirtualMachine,
+} from "@migration-planner-ui/agent-client/models";
 import { useInjection } from "@migration-planner-ui/ioc";
 import {
   Content,
@@ -37,7 +40,7 @@ export const ReportContainer: React.FC = () => {
   const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inventory, setInventory] = useState<Inventory | null>(null);
-  const [vmsList, setVmsList] = useState<VM[]>([]);
+  const [vmsList, setVmsList] = useState<VirtualMachine[]>([]);
   const [vmsLoading, setVmsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +112,7 @@ export const ReportContainer: React.FC = () => {
       try {
         setVmsLoading(true);
         const pageSize = 100;
-        let allVMs: VM[] = [];
+        let allVMs: VirtualMachine[] = [];
         let currentPage = 1;
         let totalVMs = 0;
 

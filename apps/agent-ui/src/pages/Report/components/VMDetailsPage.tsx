@@ -1,5 +1,5 @@
 import type { DefaultApiInterface } from "@migration-planner-ui/agent-client/apis";
-import type { VMDetails } from "@migration-planner-ui/agent-client/models";
+import type { VirtualMachineDetail } from "@migration-planner-ui/agent-client/models";
 import { useInjection } from "@migration-planner-ui/ioc";
 import {
   Alert,
@@ -55,7 +55,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   onBack,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const [vm, setVm] = useState<VMDetails | null>(null);
+  const [vm, setVm] = useState<VirtualMachineDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -319,7 +319,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                   <DescriptionListGroup>
                     <DescriptionListTerm>Template</DescriptionListTerm>
                     <DescriptionListDescription>
-                      {vm.isTemplate ? "Yes" : "No"}
+                      {vm.template ? "Yes" : "No"}
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                   <DescriptionListGroup>

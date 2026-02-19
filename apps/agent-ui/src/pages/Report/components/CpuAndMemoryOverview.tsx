@@ -211,6 +211,7 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
           donutThickness={9}
           titleFontSize={34}
           legend={legend}
+          legendWidth={680}
           title={`${totalVMs} VMs`}
           subTitle={
             viewMode === "memoryTiers"
@@ -223,7 +224,7 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
           }
           subTitleColor="#9a9da0"
           itemsPerRow={Math.ceil(activeSlices.length / 2)}
-          labelFontSize={18}
+          labelFontSize={16}
           tooltipLabelFormatter={({ datum, percent }) =>
             `${datum.countDisplay}\n${percent.toFixed(1)}%`
           }

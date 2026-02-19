@@ -32,7 +32,7 @@ export interface VMNIC {
      */
     network?: string;
     /**
-     * Index of the NIC within the VM
+     * Index of the NIC within the VirtualMachine
      * @type {number}
      * @memberof VMNIC
      */

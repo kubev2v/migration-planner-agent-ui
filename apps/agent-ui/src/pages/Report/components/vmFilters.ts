@@ -5,6 +5,7 @@ export interface VMFilters {
   search?: string;
   diskRange?: { min: number; max?: number };
   memoryRange?: { min: number; max?: number };
+  migrationReadiness?: string[];
 }
 
 /**
@@ -37,6 +38,10 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
     if (filters.memoryRange.max !== undefined) {
       params.set("memoryRangeMax", filters.memoryRange.max.toString());
     }
+  }
+
+  if (filters.migrationReadiness && filters.migrationReadiness.length > 0) {
+    params.set("migrationReadiness", filters.migrationReadiness.join(","));
   }
 
   return params;
@@ -95,6 +100,11 @@ export function searchParamsToFilters(
     }
   }
 
+  const migrationReadiness = searchParams.get("migrationReadiness");
+  if (migrationReadiness) {
+    filters.migrationReadiness = migrationReadiness.split(",").filter(Boolean);
+  }
+
   return filters;
 }
 
@@ -107,6 +117,7 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.diskRange !== undefined && filters.diskRange !== null) ||
     (filters.memoryRange !== undefined && filters.memoryRange !== null) ||
     (filters.statuses && filters.statuses.length > 0) ||
+    (filters.migrationReadiness && filters.migrationReadiness.length > 0) ||
     filters.search
   );
 }
