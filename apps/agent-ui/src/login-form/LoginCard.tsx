@@ -2,6 +2,7 @@ import type { CollectorStatus } from "@migration-planner-ui/agent-client/models"
 import {
   Backdrop,
   Bullseye,
+  Button,
   Card,
   CardBody,
   CardHeader,
@@ -10,6 +11,10 @@ import {
   Flex,
   FlexItem,
   Icon,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   Popover,
   Title,
 } from "@patternfly/react-core";
@@ -82,6 +87,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({
   onCancel,
 }) => {
   const [isDataShared, setIsDataShared] = useState(initialIsDataShared);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const progressInfo = useMemo(
     () => getProgressInfo(status, error),
@@ -90,6 +96,25 @@ export const LoginCard: React.FC<LoginCardProps> = ({
 
   const handleCollect = (credentials: Credentials) => {
     onCollect(credentials, isDataShared);
+  };
+
+  const handleDataSharingChange = (checked: boolean) => {
+    if (checked && !isDataShared) {
+      // Show confirmation dialog when trying to enable data sharing
+      setShowConfirmDialog(true);
+    } else {
+      // Allow unchecking without confirmation (though it will be disabled once checked)
+      setIsDataShared(checked);
+    }
+  };
+
+  const handleConfirmDataSharing = () => {
+    setIsDataShared(true);
+    setShowConfirmDialog(false);
+  };
+
+  const handleCancelDataSharing = () => {
+    setShowConfirmDialog(false);
   };
 
   return (
@@ -189,7 +214,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({
               dataSharingComponent={
                 <DataSharingCheckbox
                   isChecked={isDataShared}
-                  onChange={setIsDataShared}
+                  onChange={handleDataSharingChange}
                   isDisabled={isCollecting || isDataShared}
                 />
               }
@@ -208,6 +233,32 @@ export const LoginCard: React.FC<LoginCardProps> = ({
           </CardBody>
         </Card>
       </Bullseye>
+
+      <Modal
+        isOpen={showConfirmDialog}
+        onClose={handleCancelDataSharing}
+        aria-labelledby="data-sharing-confirm-title"
+        aria-describedby="data-sharing-confirm-body"
+        variant="small"
+      >
+        <ModalHeader
+          title="Confirm data sharing"
+          labelId="data-sharing-confirm-title"
+        />
+        <ModalBody id="data-sharing-confirm-body">
+          <Content component="p">
+            This action cannot be undone. Are you sure you want to proceed?
+          </Content>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="primary" onClick={handleConfirmDataSharing}>
+            Confirm
+          </Button>
+          <Button variant="link" onClick={handleCancelDataSharing}>
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
     </Backdrop>
   );
 };
