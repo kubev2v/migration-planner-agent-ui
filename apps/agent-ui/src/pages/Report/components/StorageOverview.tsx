@@ -144,7 +144,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
           subTitle={`${totalSize.toFixed(2)} TB`}
           subTitleColor="#9a9da0"
           itemsPerRow={Math.ceil(chartData.length / 2)}
-          labelFontSize={18}
+          labelFontSize={16}
           tooltipLabelFormatter={({ datum, percent }) =>
             `${datum.countDisplay}\n${percent.toFixed(1)}%`
           }

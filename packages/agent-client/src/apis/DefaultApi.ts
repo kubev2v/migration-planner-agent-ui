@@ -22,9 +22,11 @@ import type {
   InspectorStartRequest,
   InspectorStatus,
   Inventory,
-  VMDetails,
-  VMListResponse,
   VddkPost200Response,
+  VddkPostRequest,
+  VersionInfo,
+  VirtualMachineDetail,
+  VirtualMachineListResponse,
   VmInspectionStatus,
 } from '../models/index.js';
 import {
@@ -42,12 +44,16 @@ import {
     InspectorStatusToJSON,
     InventoryFromJSON,
     InventoryToJSON,
-    VMDetailsFromJSON,
-    VMDetailsToJSON,
-    VMListResponseFromJSON,
-    VMListResponseToJSON,
     VddkPost200ResponseFromJSON,
     VddkPost200ResponseToJSON,
+    VddkPostRequestFromJSON,
+    VddkPostRequestToJSON,
+    VersionInfoFromJSON,
+    VersionInfoToJSON,
+    VirtualMachineDetailFromJSON,
+    VirtualMachineDetailToJSON,
+    VirtualMachineListResponseFromJSON,
+    VirtualMachineListResponseToJSON,
     VmInspectionStatusFromJSON,
     VmInspectionStatusToJSON,
 } from '../models/index.js';
@@ -93,8 +99,8 @@ export interface StartInspectionRequest {
     inspectorStartRequest: InspectorStartRequest;
 }
 
-export interface VddkPostRequest {
-    file: Blob;
+export interface VddkPostOperationRequest {
+    vddkPostRequest: VddkPostRequest;
 }
 
 /**
@@ -178,22 +184,22 @@ export interface DefaultApiInterface {
     /**
      * 
      * @summary Get details about a vm
-     * @param {string} id VM id
+     * @param {string} id VirtualMachine id
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof DefaultApiInterface
      */
-    getVMRaw(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VMDetails>>;
+    getVMRaw(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VirtualMachineDetail>>;
 
     /**
      * Get details about a vm
      */
-    getVM(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VMDetails>;
+    getVM(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VirtualMachineDetail>;
 
     /**
      * 
-     * @summary Get inspection status for a specific VM
-     * @param {string} id VM ID
+     * @summary Get inspection status for a specific VirtualMachine
+     * @param {string} id VirtualMachine ID
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof DefaultApiInterface
@@ -201,7 +207,7 @@ export interface DefaultApiInterface {
     getVMInspectionStatusRaw(requestParameters: GetVMInspectionStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VmInspectionStatus>>;
 
     /**
-     * Get inspection status for a specific VM
+     * Get inspection status for a specific VirtualMachine
      */
     getVMInspectionStatus(requestParameters: GetVMInspectionStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VmInspectionStatus>;
 
@@ -222,16 +228,30 @@ export interface DefaultApiInterface {
      * @throws {RequiredError}
      * @memberof DefaultApiInterface
      */
-    getVMsRaw(requestParameters: GetVMsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VMListResponse>>;
+    getVMsRaw(requestParameters: GetVMsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VirtualMachineListResponse>>;
 
     /**
      * Get list of VMs with filtering and pagination
      */
-    getVMs(requestParameters: GetVMsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VMListResponse>;
+    getVMs(requestParameters: GetVMsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VirtualMachineListResponse>;
 
     /**
      * 
-     * @summary Remove VM from inspection queue
+     * @summary Get agent version information
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof DefaultApiInterface
+     */
+    getVersionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VersionInfo>>;
+
+    /**
+     * Get agent version information
+     */
+    getVersion(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VersionInfo>;
+
+    /**
+     * 
+     * @summary Remove VirtualMachine from inspection queue
      * @param {string} id 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -240,7 +260,7 @@ export interface DefaultApiInterface {
     removeVMFromInspectionRaw(requestParameters: RemoveVMFromInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VmInspectionStatus>>;
 
     /**
-     * Remove VM from inspection queue
+     * Remove VirtualMachine from inspection queue
      */
     removeVMFromInspection(requestParameters: RemoveVMFromInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VmInspectionStatus>;
 
@@ -320,17 +340,17 @@ export interface DefaultApiInterface {
     /**
      * 
      * @summary Upload VDDK tarball
-     * @param {Blob} file VDDK tarball
+     * @param {VddkPostRequest} vddkPostRequest 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof DefaultApiInterface
      */
-    vddkPostRaw(requestParameters: VddkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VddkPost200Response>>;
+    vddkPostRaw(requestParameters: VddkPostOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VddkPost200Response>>;
 
     /**
      * Upload VDDK tarball
      */
-    vddkPost(requestParameters: VddkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VddkPost200Response>;
+    vddkPost(requestParameters: VddkPostOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VddkPost200Response>;
 
 }
 
@@ -497,7 +517,7 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
     /**
      * Get details about a vm
      */
-    async getVMRaw(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VMDetails>> {
+    async getVMRaw(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VirtualMachineDetail>> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -520,19 +540,19 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VMDetailsFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VirtualMachineDetailFromJSON(jsonValue));
     }
 
     /**
      * Get details about a vm
      */
-    async getVM(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VMDetails> {
+    async getVM(requestParameters: GetVMRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VirtualMachineDetail> {
         const response = await this.getVMRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get inspection status for a specific VM
+     * Get inspection status for a specific VirtualMachine
      */
     async getVMInspectionStatusRaw(requestParameters: GetVMInspectionStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VmInspectionStatus>> {
         if (requestParameters['id'] == null) {
@@ -561,7 +581,7 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
     }
 
     /**
-     * Get inspection status for a specific VM
+     * Get inspection status for a specific VirtualMachine
      */
     async getVMInspectionStatus(requestParameters: GetVMInspectionStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VmInspectionStatus> {
         const response = await this.getVMInspectionStatusRaw(requestParameters, initOverrides);
@@ -571,7 +591,7 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
     /**
      * Get list of VMs with filtering and pagination
      */
-    async getVMsRaw(requestParameters: GetVMsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VMListResponse>> {
+    async getVMsRaw(requestParameters: GetVMsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VirtualMachineListResponse>> {
         const queryParameters: any = {};
 
         if (requestParameters['minIssues'] != null) {
@@ -626,19 +646,48 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VMListResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VirtualMachineListResponseFromJSON(jsonValue));
     }
 
     /**
      * Get list of VMs with filtering and pagination
      */
-    async getVMs(requestParameters: GetVMsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VMListResponse> {
+    async getVMs(requestParameters: GetVMsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VirtualMachineListResponse> {
         const response = await this.getVMsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Remove VM from inspection queue
+     * Get agent version information
+     */
+    async getVersionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VersionInfo>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/version`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VersionInfoFromJSON(jsonValue));
+    }
+
+    /**
+     * Get agent version information
+     */
+    async getVersion(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VersionInfo> {
+        const response = await this.getVersionRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Remove VirtualMachine from inspection queue
      */
     async removeVMFromInspectionRaw(requestParameters: RemoveVMFromInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VmInspectionStatus>> {
         if (requestParameters['id'] == null) {
@@ -667,7 +716,7 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
     }
 
     /**
-     * Remove VM from inspection queue
+     * Remove VirtualMachine from inspection queue
      */
     async removeVMFromInspection(requestParameters: RemoveVMFromInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VmInspectionStatus> {
         const response = await this.removeVMFromInspectionRaw(requestParameters, initOverrides);
@@ -851,11 +900,11 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
     /**
      * Upload VDDK tarball
      */
-    async vddkPostRaw(requestParameters: VddkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VddkPost200Response>> {
-        if (requestParameters['file'] == null) {
+    async vddkPostRaw(requestParameters: VddkPostOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VddkPost200Response>> {
+        if (requestParameters['vddkPostRequest'] == null) {
             throw new runtime.RequiredError(
-                'file',
-                'Required parameter "file" was null or undefined when calling vddkPost().'
+                'vddkPostRequest',
+                'Required parameter "vddkPostRequest" was null or undefined when calling vddkPost().'
             );
         }
 
@@ -863,25 +912,7 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const consumes: runtime.Consume[] = [
-            { contentType: 'multipart/form-data' },
-        ];
-        // @ts-ignore: canConsumeForm may be unused
-        const canConsumeForm = runtime.canConsumeForm(consumes);
-
-        let formParams: { append(param: string, value: any): any };
-        let useForm = false;
-        // use FormData to transmit files using content-type "multipart/form-data"
-        useForm = canConsumeForm;
-        if (useForm) {
-            formParams = new FormData();
-        } else {
-            formParams = new URLSearchParams();
-        }
-
-        if (requestParameters['file'] != null) {
-            formParams.append('file', requestParameters['file'] as any);
-        }
+        headerParameters['Content-Type'] = 'multiple/form-data';
 
 
         let urlPath = `/vddk`;
@@ -891,7 +922,7 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: formParams,
+            body: VddkPostRequestToJSON(requestParameters['vddkPostRequest']),
         }, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => VddkPost200ResponseFromJSON(jsonValue));
@@ -900,7 +931,7 @@ export class DefaultApi extends runtime.BaseAPI implements DefaultApiInterface {
     /**
      * Upload VDDK tarball
      */
-    async vddkPost(requestParameters: VddkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VddkPost200Response> {
+    async vddkPost(requestParameters: VddkPostOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VddkPost200Response> {
         const response = await this.vddkPostRaw(requestParameters, initOverrides);
         return await response.value();
     }

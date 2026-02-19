@@ -34,7 +34,7 @@ export interface InspectorStartRequest {
      */
     vcenterCredentials: VcenterCredentials;
     /**
-     * Array of VM id
+     * Array of VirtualMachine id
      * @type {Array<string>}
      * @memberof InspectorStartRequest
      */

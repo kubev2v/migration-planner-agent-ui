@@ -1,3 +1,4 @@
+import { css } from "@emotion/css";
 import {
   ChartDonut,
   ChartLabel,
@@ -46,6 +47,12 @@ interface MigrationDonutChartProps {
 }
 
 const legendColors = ["#0066cc", "#5e40be", "#b6a6e9", "#b98412"];
+
+const legendStyles = {
+  icon: css`
+    margin-right: 8px;
+  `,
+};
 
 const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   data,
@@ -265,7 +272,7 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
           <Flex
             style={{
               maxWidth: legendWidth ?? 800,
-              padding: "var(--pf-t--global--spacer--sm) 0",
+              padding: "var(--pf-t--global--spacer--ml)",
             }}
             spaceItems={{ default: "spaceItemsSm" }}
             justifyContent={{ default: "justifyContentCenter" }}
@@ -279,13 +286,13 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
                   onClick={() => onItemClick(item)}
                   className="pf-v6-u-display-inline-flex pf-v6-u-align-items-center"
                   style={{
-                    gap: "var(--pf-t--global--spacer--xs)",
+                    gap: "var(--pf-t--global--spacer--ml)",
                     cursor: "pointer",
                     fontSize: `${labelFontSize}px`,
                     border: "none",
                     background: "none",
                     padding:
-                      "var(--pf-t--global--spacer--xs) var(--pf-t--global--spacer--sm)",
+                      "var(--pf-t--global--spacer--xs) var(--pf-t--global--spacer--ml)",
                     margin: 0,
                     transition:
                       "opacity var(--pf-t--global--motion--duration--short)",
@@ -298,7 +305,12 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
                     e.currentTarget.style.opacity = "1";
                   }}
                 >
-                  <svg width="10" height="10" aria-hidden="true">
+                  <svg
+                    width="10"
+                    height="10"
+                    aria-hidden="true"
+                    className={legendStyles.icon}
+                  >
                     <title>Legend color indicator</title>
                     <rect
                       width="10"

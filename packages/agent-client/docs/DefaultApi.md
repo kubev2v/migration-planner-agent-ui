@@ -10,15 +10,16 @@ All URIs are relative to */api/v1*
 | [**getInspectorStatus**](DefaultApi.md#getinspectorstatus) | **GET** /vms/inspector | Get inspector status |
 | [**getInventory**](DefaultApi.md#getinventory) | **GET** /inventory | Get collected inventory |
 | [**getVM**](DefaultApi.md#getvm) | **GET** /vms/{id} | Get details about a vm |
-| [**getVMInspectionStatus**](DefaultApi.md#getvminspectionstatus) | **GET** /vms/{id}/inspector | Get inspection status for a specific VM |
+| [**getVMInspectionStatus**](DefaultApi.md#getvminspectionstatus) | **GET** /vms/{id}/inspector | Get inspection status for a specific VirtualMachine |
 | [**getVMs**](DefaultApi.md#getvms) | **GET** /vms | Get list of VMs with filtering and pagination |
-| [**removeVMFromInspection**](DefaultApi.md#removevmfrominspection) | **DELETE** /vms/{id}/inspector | Remove VM from inspection queue |
+| [**getVersion**](DefaultApi.md#getversion) | **GET** /version | Get agent version information |
+| [**removeVMFromInspection**](DefaultApi.md#removevmfrominspection) | **DELETE** /vms/{id}/inspector | Remove VirtualMachine from inspection queue |
 | [**setAgentMode**](DefaultApi.md#setagentmode) | **POST** /agent | Change agent mode |
 | [**startCollector**](DefaultApi.md#startcollector) | **POST** /collector | Start inventory collection |
 | [**startInspection**](DefaultApi.md#startinspection) | **POST** /vms/inspector | Start inspection for VMs |
 | [**stopCollector**](DefaultApi.md#stopcollector) | **DELETE** /collector | Stop collection |
 | [**stopInspection**](DefaultApi.md#stopinspection) | **DELETE** /vms/inspector | Stop inspector entirely |
-| [**vddkPost**](DefaultApi.md#vddkpost) | **POST** /vddk | Upload VDDK tarball |
+| [**vddkPost**](DefaultApi.md#vddkpostoperation) | **POST** /vddk | Upload VDDK tarball |
 
 
 
@@ -325,7 +326,7 @@ No authorization required
 
 ## getVM
 
-> VMDetails getVM(id)
+> VirtualMachineDetail getVM(id)
 
 Get details about a vm
 
@@ -343,7 +344,7 @@ async function example() {
   const api = new DefaultApi();
 
   const body = {
-    // string | VM id
+    // string | VirtualMachine id
     id: id_example,
   } satisfies GetVMRequest;
 
@@ -364,11 +365,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **id** | `string` | VM id | [Defaults to `undefined`] |
+| **id** | `string` | VirtualMachine id | [Defaults to `undefined`] |
 
 ### Return type
 
-[**VMDetails**](VMDetails.md)
+[**VirtualMachineDetail**](VirtualMachineDetail.md)
 
 ### Authorization
 
@@ -383,8 +384,8 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | VM details |  -  |
-| **404** | VM not found |  -  |
+| **200** | VirtualMachine details |  -  |
+| **404** | VirtualMachine not found |  -  |
 | **500** | Internal server error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
@@ -394,7 +395,7 @@ No authorization required
 
 > VmInspectionStatus getVMInspectionStatus(id)
 
-Get inspection status for a specific VM
+Get inspection status for a specific VirtualMachine
 
 ### Example
 
@@ -410,7 +411,7 @@ async function example() {
   const api = new DefaultApi();
 
   const body = {
-    // string | VM ID
+    // string | VirtualMachine ID
     id: id_example,
   } satisfies GetVMInspectionStatusRequest;
 
@@ -431,7 +432,7 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **id** | `string` | VM ID | [Defaults to `undefined`] |
+| **id** | `string` | VirtualMachine ID | [Defaults to `undefined`] |
 
 ### Return type
 
@@ -450,8 +451,8 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | VM inspection status |  -  |
-| **404** | VM not found |  -  |
+| **200** | VirtualMachine inspection status |  -  |
+| **404** | VirtualMachine not found |  -  |
 | **500** | Internal server error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
@@ -459,7 +460,7 @@ No authorization required
 
 ## getVMs
 
-> VMListResponse getVMs(minIssues, clusters, diskSizeMin, diskSizeMax, memorySizeMin, memorySizeMax, status, sort, page, pageSize)
+> VirtualMachineListResponse getVMs(minIssues, clusters, diskSizeMin, diskSizeMax, memorySizeMin, memorySizeMax, status, sort, page, pageSize)
 
 Get list of VMs with filtering and pagination
 
@@ -529,7 +530,7 @@ example().catch(console.error);
 
 ### Return type
 
-[**VMListResponse**](VMListResponse.md)
+[**VirtualMachineListResponse**](VirtualMachineListResponse.md)
 
 ### Authorization
 
@@ -551,11 +552,68 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## getVersion
+
+> VersionInfo getVersion()
+
+Get agent version information
+
+### Example
+
+```ts
+import {
+  Configuration,
+  DefaultApi,
+} from '@migration-planner-ui/agent-client';
+import type { GetVersionRequest } from '@migration-planner-ui/agent-client';
+
+async function example() {
+  console.log("🚀 Testing @migration-planner-ui/agent-client SDK...");
+  const api = new DefaultApi();
+
+  try {
+    const data = await api.getVersion();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**VersionInfo**](VersionInfo.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Version information |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## removeVMFromInspection
 
 > VmInspectionStatus removeVMFromInspection(id)
 
-Remove VM from inspection queue
+Remove VirtualMachine from inspection queue
 
 ### Example
 
@@ -943,7 +1001,7 @@ No authorization required
 
 ## vddkPost
 
-> VddkPost200Response vddkPost(file)
+> VddkPost200Response vddkPost(vddkPostRequest)
 
 Upload VDDK tarball
 
@@ -954,16 +1012,16 @@ import {
   Configuration,
   DefaultApi,
 } from '@migration-planner-ui/agent-client';
-import type { VddkPostRequest } from '@migration-planner-ui/agent-client';
+import type { VddkPostOperationRequest } from '@migration-planner-ui/agent-client';
 
 async function example() {
   console.log("🚀 Testing @migration-planner-ui/agent-client SDK...");
   const api = new DefaultApi();
 
   const body = {
-    // Blob | VDDK tarball
-    file: BINARY_DATA_HERE,
-  } satisfies VddkPostRequest;
+    // VddkPostRequest
+    vddkPostRequest: ...,
+  } satisfies VddkPostOperationRequest;
 
   try {
     const data = await api.vddkPost(body);
@@ -982,7 +1040,7 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **file** | `Blob` | VDDK tarball | [Defaults to `undefined`] |
+| **vddkPostRequest** | [VddkPostRequest](VddkPostRequest.md) |  | |
 
 ### Return type
 
@@ -994,14 +1052,14 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: `multipart/form-data`
+- **Content-Type**: `multiple/form-data`
 - **Accept**: `application/json`
 
 
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Upload successful |  -  |
+| **200** | Upload successfull |  -  |
 | **413** | File exceeds 64MB limit |  -  |
 | **400** | Bad request |  -  |
 | **500** | Internal server error |  -  |

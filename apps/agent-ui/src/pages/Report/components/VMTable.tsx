@@ -1,9 +1,9 @@
-import type { VM } from "@migration-planner-ui/agent-client/models";
+import { css } from "@emotion/css";
+import type { VirtualMachine } from "@migration-planner-ui/agent-client/models";
 import {
   Button,
-  // Checkbox,
+  Checkbox,
   Dropdown,
-  DropdownGroup,
   DropdownItem,
   DropdownList,
   Label,
@@ -38,8 +38,44 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
 
+const filterStyles = {
+  dropdownContent: css`
+    padding: 24px;
+    width: 1400px;
+    max-width: 95vw;
+    overflow: visible;
+  `,
+
+  filterGrid: css`
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 24px;
+  `,
+
+  columnTitle: css`
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #151515;
+  `,
+
+  checkboxList: css`
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  `,
+
+  footer: css`
+    display: flex;
+    justify-content: flex-start;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 20px;
+  `,
+};
+
 interface VMTableProps {
-  vms: VM[];
+  vms: VirtualMachine[];
   loading: boolean;
   initialFilters?: VMFilters;
   onVMClick?: (vmId: string) => void;
@@ -48,9 +84,13 @@ interface VMTableProps {
 type SortableColumn =
   | "name"
   | "vCenterState"
+  | "id"
+  | "datacenter"
+  | "cluster"
   | "diskSize"
   | "memory"
-  | "issues";
+  | "issues"
+  | "migratable";
 
 const statusLabels: Record<string, string> = {
   poweredOn: "Powered on",
@@ -115,13 +155,18 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Search state
   const [searchValue, setSearchValue] = useState(initialFilters?.search || "");
 
-  // Filter dropdown state
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  // Filter modal state
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Client-side filter state
+  // Client-side filter state (applied filters)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
     initialFilters?.statuses || [],
   );
+  const [selectedClusters, setSelectedClusters] = useState<string[]>([]);
+  const [selectedDatacenters, setSelectedDatacenters] = useState<string[]>([]);
+  const [selectedMigrationReadiness, setSelectedMigrationReadiness] = useState<
+    string[]
+  >(initialFilters?.migrationReadiness || []);
   const [hasIssuesFilter, setHasIssuesFilter] = useState(
     initialFilters?.hasIssues || false,
   );
@@ -133,6 +178,29 @@ export const VMTable: React.FC<VMTableProps> = ({
     min: number;
     max?: number;
   } | null>(initialFilters?.memoryRange || null);
+
+  // Temporary filter state (for modal, not yet applied)
+  const [tempSelectedStatuses, setTempSelectedStatuses] = useState<string[]>(
+    [],
+  );
+  const [tempSelectedClusters, setTempSelectedClusters] = useState<string[]>(
+    [],
+  );
+  const [tempSelectedDatacenters, setTempSelectedDatacenters] = useState<
+    string[]
+  >([]);
+  const [tempSelectedMigrationReadiness, setTempSelectedMigrationReadiness] =
+    useState<string[]>([]);
+  const [tempHasIssuesFilter, setTempHasIssuesFilter] = useState(false);
+  const [tempNoIssuesFilter, setTempNoIssuesFilter] = useState(false);
+  const [tempDiskRangeFilter, setTempDiskRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(null);
+  const [tempMemoryRangeFilter, setTempMemoryRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(null);
 
   // Sync local state with initialFilters when they change (e.g., from chart navigation)
   useEffect(() => {
@@ -146,6 +214,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     setDiskRangeFilter(initialFilters?.diskRange || null);
     setMemoryRangeFilter(initialFilters?.memoryRange || null);
     setSelectedStatuses(initialFilters?.statuses || []);
+    setSelectedMigrationReadiness(initialFilters?.migrationReadiness || []);
     setHasIssuesFilter(initialFilters?.hasIssues || false);
     setSearchValue(initialFilters?.search || "");
   }, [initialFilters, searchParams]);
@@ -165,10 +234,36 @@ export const VMTable: React.FC<VMTableProps> = ({
   const columns: { key: SortableColumn; label: string; sortable: boolean }[] = [
     { key: "name", label: "Name", sortable: true },
     { key: "vCenterState", label: "Status", sortable: true },
+    { key: "migratable", label: "Migration Readiness", sortable: true },
+    { key: "id", label: "ID", sortable: true },
+    { key: "datacenter", label: "Data center", sortable: true },
+    { key: "cluster", label: "Cluster", sortable: true },
     { key: "diskSize", label: "Disk size", sortable: true },
     { key: "memory", label: "Memory size", sortable: true },
     { key: "issues", label: "Issues", sortable: true },
   ];
+
+  // Get unique clusters from VMs for filter options
+  const availableClusters = useMemo(() => {
+    const clusters = new Set<string>();
+    vms.forEach((vm) => {
+      if (vm.cluster) {
+        clusters.add(vm.cluster);
+      }
+    });
+    return Array.from(clusters).sort();
+  }, [vms]);
+
+  // Get unique datacenters from VMs for filter options
+  const availableDatacenters = useMemo(() => {
+    const datacenters = new Set<string>();
+    vms.forEach((vm) => {
+      if (vm.datacenter) {
+        datacenters.add(vm.datacenter);
+      }
+    });
+    return Array.from(datacenters).sort();
+  }, [vms]);
 
   // Track if filter changes come from user interaction (not from URL sync)
   const isUserInteraction = useRef(false);
@@ -191,6 +286,9 @@ export const VMTable: React.FC<VMTableProps> = ({
     if (!currentTab) {
       const hasAnyFilter = !!(
         selectedStatuses.length > 0 ||
+        selectedClusters.length > 0 ||
+        selectedDatacenters.length > 0 ||
+        selectedMigrationReadiness.length > 0 ||
         hasIssuesFilter ||
         searchValue ||
         diskRangeFilter ||
@@ -207,6 +305,10 @@ export const VMTable: React.FC<VMTableProps> = ({
       search: searchValue || undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
+      migrationReadiness:
+        selectedMigrationReadiness.length > 0
+          ? selectedMigrationReadiness
+          : undefined,
     };
 
     const newParams = filtersToSearchParams(currentFilters);
@@ -216,6 +318,9 @@ export const VMTable: React.FC<VMTableProps> = ({
     isUserInteraction.current = false; // Reset flag after updating URL
   }, [
     selectedStatuses,
+    selectedClusters,
+    selectedDatacenters,
+    selectedMigrationReadiness,
     hasIssuesFilter,
     searchValue,
     diskRangeFilter,
@@ -307,6 +412,33 @@ export const VMTable: React.FC<VMTableProps> = ({
       });
     });
 
+    // Cluster filters
+    selectedClusters.forEach((cluster) => {
+      filters.push({
+        category: "Cluster",
+        label: cluster,
+        key: `cluster-${cluster}`,
+      });
+    });
+
+    // Datacenter filters
+    selectedDatacenters.forEach((datacenter) => {
+      filters.push({
+        category: "Data center",
+        label: datacenter,
+        key: `datacenter-${datacenter}`,
+      });
+    });
+
+    // Migration Readiness filters
+    selectedMigrationReadiness.forEach((status) => {
+      filters.push({
+        category: "Migration Readiness",
+        label: status === "ready" ? "Ready" : "Not ready",
+        key: `migration-readiness-${status}`,
+      });
+    });
+
     // Issues filter
     if (hasIssuesFilter) {
       filters.push({
@@ -317,7 +449,15 @@ export const VMTable: React.FC<VMTableProps> = ({
     }
 
     return filters;
-  }, [selectedStatuses, hasIssuesFilter, diskRangeFilter, memoryRangeFilter]);
+  }, [
+    selectedStatuses,
+    selectedClusters,
+    selectedDatacenters,
+    selectedMigrationReadiness,
+    hasIssuesFilter,
+    diskRangeFilter,
+    memoryRangeFilter,
+  ]);
 
   // Client-side filtering
   const filteredVMs = useMemo(() => {
@@ -336,6 +476,31 @@ export const VMTable: React.FC<VMTableProps> = ({
         !selectedStatuses.includes(vm.vCenterState || "")
       ) {
         return false;
+      }
+
+      // Cluster filter
+      if (
+        selectedClusters.length > 0 &&
+        !selectedClusters.includes(vm.cluster || "")
+      ) {
+        return false;
+      }
+
+      // Datacenter filter
+      if (
+        selectedDatacenters.length > 0 &&
+        !selectedDatacenters.includes(vm.datacenter || "")
+      ) {
+        return false;
+      }
+
+      // Migration Readiness filter
+      if (selectedMigrationReadiness.length > 0) {
+        const isReady = vm.migratable === true;
+        const readyStatus = isReady ? "ready" : "not-ready";
+        if (!selectedMigrationReadiness.includes(readyStatus)) {
+          return false;
+        }
       }
 
       // Issues filter
@@ -377,6 +542,9 @@ export const VMTable: React.FC<VMTableProps> = ({
     vms,
     searchValue,
     selectedStatuses,
+    selectedClusters,
+    selectedDatacenters,
+    selectedMigrationReadiness,
     hasIssuesFilter,
     diskRangeFilter,
     memoryRangeFilter,
@@ -400,6 +568,18 @@ export const VMTable: React.FC<VMTableProps> = ({
           aValue = a.vCenterState || "";
           bValue = b.vCenterState || "";
           break;
+        case "id":
+          aValue = a.id || "";
+          bValue = b.id || "";
+          break;
+        case "datacenter":
+          aValue = a.datacenter || "";
+          bValue = b.datacenter || "";
+          break;
+        case "cluster":
+          aValue = a.cluster || "";
+          bValue = b.cluster || "";
+          break;
         case "diskSize":
           aValue = a.diskSize || 0;
           bValue = b.diskSize || 0;
@@ -411,6 +591,11 @@ export const VMTable: React.FC<VMTableProps> = ({
         case "issues":
           aValue = a.issueCount || 0;
           bValue = b.issueCount || 0;
+          break;
+        case "migratable":
+          // Sort by migratable status: true (1) comes before false (0)
+          aValue = a.migratable ? 1 : 0;
+          bValue = b.migratable ? 1 : 0;
           break;
         default:
           return 0;
@@ -444,62 +629,116 @@ export const VMTable: React.FC<VMTableProps> = ({
     columnIndex,
   });
 
-  // Helper to check if a disk range is selected
-  const isDiskRangeSelected = (index: number): boolean => {
-    if (!diskRangeFilter) return false;
-    const range = diskSizeRanges[index];
-    return (
-      diskRangeFilter.min === range.min && diskRangeFilter.max === range.max
+  // Apply filters from modal
+  const applyFilters = () => {
+    isUserInteraction.current = true;
+    setSelectedStatuses(tempSelectedStatuses);
+    setSelectedClusters(tempSelectedClusters);
+    setSelectedDatacenters(tempSelectedDatacenters);
+    setSelectedMigrationReadiness(tempSelectedMigrationReadiness);
+    setHasIssuesFilter(tempHasIssuesFilter);
+    setDiskRangeFilter(tempDiskRangeFilter);
+    setMemoryRangeFilter(tempMemoryRangeFilter);
+    setPage(1);
+    setIsFilterModalOpen(false);
+    // Reset temporary filters after applying
+    resetTempFilters();
+  };
+
+  // Cancel filter modal
+  const cancelFilterModal = () => {
+    setIsFilterModalOpen(false);
+    // Reset temporary filters when canceling
+    resetTempFilters();
+  };
+
+  // Reset temporary filters to empty state
+  const resetTempFilters = () => {
+    setTempSelectedStatuses([]);
+    setTempSelectedClusters([]);
+    setTempSelectedDatacenters([]);
+    setTempSelectedMigrationReadiness([]);
+    setTempHasIssuesFilter(false);
+    setTempNoIssuesFilter(false);
+    setTempDiskRangeFilter(null);
+    setTempMemoryRangeFilter(null);
+  };
+
+  // Initialize temporary filters when opening modal
+  // Always sync temp filters with current applied filters when modal opens
+  useEffect(() => {
+    if (isFilterModalOpen) {
+      // Sync temp filters with currently applied filters
+      setTempSelectedStatuses(selectedStatuses);
+      setTempSelectedClusters(selectedClusters);
+      setTempSelectedDatacenters(selectedDatacenters);
+      setTempSelectedMigrationReadiness(selectedMigrationReadiness);
+      setTempHasIssuesFilter(hasIssuesFilter);
+      setTempDiskRangeFilter(diskRangeFilter);
+      setTempMemoryRangeFilter(memoryRangeFilter);
+    }
+  }, [
+    isFilterModalOpen,
+    selectedStatuses,
+    selectedClusters,
+    selectedDatacenters,
+    selectedMigrationReadiness,
+    hasIssuesFilter,
+    diskRangeFilter,
+    memoryRangeFilter,
+  ]);
+
+  // Toggle temporary filter selections in modal
+  const toggleTempStatus = (status: string) => {
+    setTempSelectedStatuses(
+      tempSelectedStatuses.includes(status)
+        ? tempSelectedStatuses.filter((s) => s !== status)
+        : [...tempSelectedStatuses, status],
     );
   };
 
-  // Helper to check if a memory range is selected
-  const isMemoryRangeSelected = (index: number): boolean => {
-    if (!memoryRangeFilter) return false;
-    const range = memorySizeRanges[index];
-    return (
-      memoryRangeFilter.min === range.min && memoryRangeFilter.max === range.max
+  const toggleTempCluster = (cluster: string) => {
+    setTempSelectedClusters(
+      tempSelectedClusters.includes(cluster)
+        ? tempSelectedClusters.filter((c) => c !== cluster)
+        : [...tempSelectedClusters, cluster],
     );
   };
 
-  // Filter handlers
-  const onDiskSizeSelect = (index: number) => {
-    isUserInteraction.current = true;
+  const toggleTempDatacenter = (datacenter: string) => {
+    setTempSelectedDatacenters(
+      tempSelectedDatacenters.includes(datacenter)
+        ? tempSelectedDatacenters.filter((d) => d !== datacenter)
+        : [...tempSelectedDatacenters, datacenter],
+    );
+  };
+
+  const toggleTempMigrationReadiness = (status: string) => {
+    setTempSelectedMigrationReadiness(
+      tempSelectedMigrationReadiness.includes(status)
+        ? tempSelectedMigrationReadiness.filter((s) => s !== status)
+        : [...tempSelectedMigrationReadiness, status],
+    );
+  };
+
+  const toggleTempDiskRange = (index: number) => {
     const range = diskSizeRanges[index];
-    // Toggle selection
-    if (isDiskRangeSelected(index)) {
-      setDiskRangeFilter(null);
-    } else {
-      setDiskRangeFilter({ min: range.min, max: range.max });
-    }
-    setPage(1);
+    const isSameRange =
+      tempDiskRangeFilter?.min === range.min &&
+      tempDiskRangeFilter?.max === range.max;
+    setTempDiskRangeFilter(
+      isSameRange ? null : { min: range.min, max: range.max },
+    );
   };
 
-  const onMemorySizeSelect = (index: number) => {
-    isUserInteraction.current = true;
+  const toggleTempMemoryRange = (index: number) => {
     const range = memorySizeRanges[index];
-    // Toggle selection
-    if (isMemoryRangeSelected(index)) {
-      setMemoryRangeFilter(null);
-    } else {
-      setMemoryRangeFilter({ min: range.min, max: range.max });
-    }
-    setPage(1);
-  };
-
-  const onStatusSelect = (status: string) => {
-    isUserInteraction.current = true;
-    const newStatuses = selectedStatuses.includes(status)
-      ? selectedStatuses.filter((s) => s !== status)
-      : [...selectedStatuses, status];
-    setSelectedStatuses(newStatuses);
-    setPage(1);
-  };
-
-  const onIssuesFilterToggle = () => {
-    isUserInteraction.current = true;
-    setHasIssuesFilter(!hasIssuesFilter);
-    setPage(1);
+    const isSameRange =
+      tempMemoryRangeFilter?.min === range.min &&
+      tempMemoryRangeFilter?.max === range.max;
+    setTempMemoryRangeFilter(
+      isSameRange ? null : { min: range.min, max: range.max },
+    );
   };
 
   // Remove individual filter
@@ -512,6 +751,19 @@ export const VMTable: React.FC<VMTableProps> = ({
     } else if (filterKey.startsWith("status-")) {
       const status = filterKey.replace("status-", "");
       setSelectedStatuses(selectedStatuses.filter((s) => s !== status));
+    } else if (filterKey.startsWith("cluster-")) {
+      const cluster = filterKey.replace("cluster-", "");
+      setSelectedClusters(selectedClusters.filter((c) => c !== cluster));
+    } else if (filterKey.startsWith("datacenter-")) {
+      const datacenter = filterKey.replace("datacenter-", "");
+      setSelectedDatacenters(
+        selectedDatacenters.filter((d) => d !== datacenter),
+      );
+    } else if (filterKey.startsWith("migration-readiness-")) {
+      const status = filterKey.replace("migration-readiness-", "");
+      setSelectedMigrationReadiness(
+        selectedMigrationReadiness.filter((s) => s !== status),
+      );
     } else if (filterKey === "hasIssues") {
       setHasIssuesFilter(false);
     }
@@ -522,6 +774,9 @@ export const VMTable: React.FC<VMTableProps> = ({
   const clearAllFilters = () => {
     isUserInteraction.current = true;
     setSelectedStatuses([]);
+    setSelectedClusters([]);
+    setSelectedDatacenters([]);
+    setSelectedMigrationReadiness([]);
     setHasIssuesFilter(false);
     setSearchValue("");
     setDiskRangeFilter(null);
@@ -541,7 +796,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   };
 
   // Selection handlers (commented out - not needed when checkboxes are hidden)
-  // const onSelectVM = (vm: VM, isSelected: boolean) => {
+  // const onSelectVM = (vm: VirtualMachine, isSelected: boolean) => {
   //   const newSelected = new Set(selectedVMs);
   //   if (isSelected) {
   //     newSelected.add(vm.id);
@@ -574,7 +829,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   // }, [sortedVMs, selectedVMs, areAllSelected]);
 
   // Render status cell with icon
-  const renderStatus = (vm: VM) => {
+  const renderStatus = (vm: VirtualMachine) => {
     const state = vm.vCenterState || "poweredOff";
     const hasIssues = (vm.issueCount || 0) > 0;
 
@@ -626,71 +881,184 @@ export const VMTable: React.FC<VMTableProps> = ({
               />
             </ToolbarItem>
 
-            {/* Consolidated Filters Dropdown */}
+            {/* Filters Dropdown */}
             <ToolbarItem>
               <Dropdown
-                isOpen={isFilterOpen}
-                onSelect={() => {}}
-                onOpenChange={setIsFilterOpen}
+                isOpen={isFilterModalOpen}
+                onOpenChange={setIsFilterModalOpen}
                 toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
                   <MenuToggle
                     ref={toggleRef}
-                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    isExpanded={isFilterOpen}
+                    onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+                    isExpanded={isFilterModalOpen}
+                    variant="default"
                   >
                     <FilterIcon /> Filters
                   </MenuToggle>
                 )}
+                popperProps={{
+                  maxWidth: "95vw",
+                }}
               >
-                <DropdownGroup label="Disk size">
-                  <DropdownList>
-                    {diskSizeRanges.map((range, index) => (
-                      <DropdownItem
-                        key={range.label}
-                        onClick={() => onDiskSizeSelect(index)}
-                        isSelected={isDiskRangeSelected(index)}
-                      >
-                        {range.label}
-                      </DropdownItem>
-                    ))}
-                  </DropdownList>
-                </DropdownGroup>
-                <DropdownGroup label="Memory size">
-                  <DropdownList>
-                    {memorySizeRanges.map((range, index) => (
-                      <DropdownItem
-                        key={range.label}
-                        onClick={() => onMemorySizeSelect(index)}
-                        isSelected={isMemoryRangeSelected(index)}
-                      >
-                        {range.label}
-                      </DropdownItem>
-                    ))}
-                  </DropdownList>
-                </DropdownGroup>
-                <DropdownGroup label="Status">
-                  <DropdownList>
-                    {Object.entries(statusLabels).map(([status, label]) => (
-                      <DropdownItem
-                        key={status}
-                        onClick={() => onStatusSelect(status)}
-                        isSelected={selectedStatuses.includes(status)}
-                      >
-                        {label}
-                      </DropdownItem>
-                    ))}
-                  </DropdownList>
-                </DropdownGroup>
-                <DropdownGroup label="Issues">
-                  <DropdownList>
-                    <DropdownItem
-                      onClick={onIssuesFilterToggle}
-                      isSelected={hasIssuesFilter}
-                    >
-                      Has issues
-                    </DropdownItem>
-                  </DropdownList>
-                </DropdownGroup>
+                <div className={filterStyles.dropdownContent}>
+                  <div className={filterStyles.filterGrid}>
+                    {/* Issue type column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>Issue type</h3>
+                      <div className={filterStyles.checkboxList}>
+                        <Checkbox
+                          id="no-issues"
+                          label="No issues"
+                          isChecked={tempNoIssuesFilter}
+                          onChange={() => {
+                            setTempNoIssuesFilter(!tempNoIssuesFilter);
+                            // Make mutually exclusive with "Has issues"
+                            if (!tempNoIssuesFilter) {
+                              setTempHasIssuesFilter(false);
+                            }
+                          }}
+                        />
+                        <Checkbox
+                          id="has-issues"
+                          label="Has issues"
+                          isChecked={tempHasIssuesFilter}
+                          onChange={() => {
+                            setTempHasIssuesFilter(!tempHasIssuesFilter);
+                            // Make mutually exclusive with "No issues"
+                            if (!tempHasIssuesFilter) {
+                              setTempNoIssuesFilter(false);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Data center column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>Data center</h3>
+                      <div className={filterStyles.checkboxList}>
+                        {availableDatacenters.map((datacenter) => (
+                          <Checkbox
+                            key={datacenter}
+                            id={`datacenter-${datacenter}`}
+                            label={datacenter}
+                            isChecked={tempSelectedDatacenters.includes(
+                              datacenter,
+                            )}
+                            onChange={() => toggleTempDatacenter(datacenter)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cluster column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>Cluster</h3>
+                      <div className={filterStyles.checkboxList}>
+                        {availableClusters.map((cluster) => (
+                          <Checkbox
+                            key={cluster}
+                            id={`cluster-${cluster}`}
+                            label={cluster}
+                            isChecked={tempSelectedClusters.includes(cluster)}
+                            onChange={() => toggleTempCluster(cluster)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Disk size column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>Disk size</h3>
+                      <div className={filterStyles.checkboxList}>
+                        {diskSizeRanges.map((range, index) => (
+                          <Checkbox
+                            key={range.label}
+                            id={`disk-${index}`}
+                            label={range.label}
+                            isChecked={
+                              tempDiskRangeFilter?.min === range.min &&
+                              tempDiskRangeFilter?.max === range.max
+                            }
+                            onChange={() => toggleTempDiskRange(index)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Memory size column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>Memory size</h3>
+                      <div className={filterStyles.checkboxList}>
+                        {memorySizeRanges.map((range, index) => (
+                          <Checkbox
+                            key={range.label}
+                            id={`memory-${index}`}
+                            label={range.label}
+                            isChecked={
+                              tempMemoryRangeFilter?.min === range.min &&
+                              tempMemoryRangeFilter?.max === range.max
+                            }
+                            onChange={() => toggleTempMemoryRange(index)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Status column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>Status</h3>
+                      <div className={filterStyles.checkboxList}>
+                        {Object.entries(statusLabels).map(([status, label]) => (
+                          <Checkbox
+                            key={status}
+                            id={`status-${status}`}
+                            label={label}
+                            isChecked={tempSelectedStatuses.includes(status)}
+                            onChange={() => toggleTempStatus(status)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Migration Readiness column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>
+                        Migration Readiness
+                      </h3>
+                      <div className={filterStyles.checkboxList}>
+                        <Checkbox
+                          id="migration-ready"
+                          label="Ready"
+                          isChecked={tempSelectedMigrationReadiness.includes(
+                            "ready",
+                          )}
+                          onChange={() => toggleTempMigrationReadiness("ready")}
+                        />
+                        <Checkbox
+                          id="migration-not-ready"
+                          label="Not ready"
+                          isChecked={tempSelectedMigrationReadiness.includes(
+                            "not-ready",
+                          )}
+                          onChange={() =>
+                            toggleTempMigrationReadiness("not-ready")
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer with buttons */}
+                  <div className={filterStyles.footer}>
+                    <Button variant="primary" onClick={applyFilters}>
+                      Apply filters
+                    </Button>
+                    <Button variant="link" onClick={cancelFilterModal}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               </Dropdown>
             </ToolbarItem>
           </ToolbarGroup>
@@ -754,20 +1122,43 @@ export const VMTable: React.FC<VMTableProps> = ({
         aria-label="Virtual machines table"
         variant="compact"
         borders={false}
+        isStickyHeader
       >
         <Thead>
           <Tr>
             {/* <Th screenReaderText="Select" /> */}
-            {columns.map((column, index) => (
-              <Th
-                key={column.key}
-                sort={column.sortable ? getSortParams(index) : undefined}
-                width={column.key === "issues" ? 10 : undefined}
-                modifier={column.key === "issues" ? "fitContent" : undefined}
-              >
-                {column.label}
-              </Th>
-            ))}
+            {columns.map((column, index) => {
+              const getWidth = (key: SortableColumn) => {
+                switch (key) {
+                  case "migratable":
+                    return 15;
+                  case "issues":
+                    return 10;
+                  case "id":
+                    return 15;
+                  default:
+                    return undefined;
+                }
+              };
+
+              const getModifier = (key: SortableColumn) => {
+                if (key === "issues" || key === "migratable") {
+                  return "fitContent";
+                }
+                return "nowrap";
+              };
+
+              return (
+                <Th
+                  key={column.key}
+                  sort={column.sortable ? getSortParams(index) : undefined}
+                  width={getWidth(column.key)}
+                  modifier={getModifier(column.key)}
+                >
+                  {column.label}
+                </Th>
+              );
+            })}
             <Th width={10} modifier="fitContent" />
           </Tr>
         </Thead>
@@ -804,6 +1195,12 @@ export const VMTable: React.FC<VMTableProps> = ({
                   )}
                 </Td>
                 <Td dataLabel="Status">{renderStatus(vm)}</Td>
+                <Td dataLabel="Migration Readiness" modifier="fitContent">
+                  {vm.migratable === true ? "Ready" : "Not ready"}
+                </Td>
+                <Td dataLabel="ID">{vm.id}</Td>
+                <Td dataLabel="Data center">{vm.datacenter || "—"}</Td>
+                <Td dataLabel="Cluster">{vm.cluster || "—"}</Td>
                 <Td dataLabel="Disk size">
                   {formatDiskSize(vm.diskSize || 0)}
                 </Td>

@@ -20,7 +20,7 @@ import { mapValues } from '../runtime.js';
  */
 export interface VMDisk {
     /**
-     * Unique key identifying this disk within the VM
+     * Unique key identifying this disk within the VirtualMachine
      * @type {number}
      * @memberof VMDisk
      */

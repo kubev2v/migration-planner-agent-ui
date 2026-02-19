@@ -1,8 +1,10 @@
 import { Card, CardBody, CardTitle } from "@patternfly/react-core";
 import { VirtualMachineIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useNavigate } from "react-router-dom";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
+import { createVMFilterURL } from "./vmNavigation";
 
 interface VmMigrationStatusProps {
   data: {
@@ -16,6 +18,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   data,
   isExportMode = false,
 }) => {
+  const navigate = useNavigate();
   const donutData = [
     {
       name: "Migratable",
@@ -34,6 +37,15 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   const legend = {
     Migratable: "#28a745",
     "Non-Migratable": "#dc3545",
+  };
+
+  const handleItemClick = (item: { name: string }) => {
+    if (isExportMode) return;
+
+    const migrationReadiness =
+      item.name === "Migratable" ? ["ready"] : ["not-ready"];
+    const url = createVMFilterURL({ migrationReadiness });
+    navigate(url);
   };
 
   return (
@@ -58,9 +70,9 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
           subTitle="VMs"
           subTitleColor="#9a9da0"
           titleFontSize={34}
-          labelFontSize={18}
+          labelFontSize={16}
           itemsPerRow={2}
-          marginLeft="40%"
+          onItemClick={handleItemClick}
         />
       </CardBody>
     </Card>

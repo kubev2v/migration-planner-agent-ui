@@ -1,4 +1,4 @@
-import type { VM } from "@migration-planner-ui/agent-client/models";
+import type { VirtualMachine } from "@migration-planner-ui/agent-client/models";
 import type React from "react";
 import { useState } from "react";
 import { VMDetailsPage } from "./VMDetailsPage";
@@ -6,7 +6,7 @@ import { VMTable } from "./VMTable";
 import type { VMFilters } from "./vmFilters";
 
 interface VirtualMachinesViewProps {
-  vms: VM[];
+  vms: VirtualMachine[];
   loading?: boolean;
   initialFilters?: VMFilters;
 }
