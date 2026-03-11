@@ -439,12 +439,12 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
             title={title}
             subTitle={subTitle}
             subTitleColor="#9a9da0"
-            itemsPerRow={Math.ceil(chartData.length / 2)}
-            labelFontSize={viewMode === "vmByCluster" ? 18 : 17}
-            marginLeft={viewMode === "vmByCluster" ? "12%" : "0%"}
+            itemsPerRow={chartData.length}
+            legendLabelFormatter={({ x }) => x}
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%`
             }
+            onItemClick={() => {}}
             onTitleClick={
               !isExportMode && viewMode === "vmByCluster"
                 ? handleTitleClick

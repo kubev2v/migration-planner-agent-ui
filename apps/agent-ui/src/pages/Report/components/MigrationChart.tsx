@@ -106,7 +106,10 @@ const MigrationChart: React.FC<MigrationChartProps> = ({
               <Tbody>
                 {data.map((item) => (
                   <Tr key={`${item.name}-${item.legendCategory}`}>
-                    <Td width={40} style={{ paddingLeft: "0px" }}>
+                    <Td
+                      width={40}
+                      style={{ paddingLeft: "0px", paddingTop: "0px" }}
+                    >
                       <Flex
                         alignItems={{ default: "alignItemsCenter" }}
                         spaceItems={{ default: "spaceItemsSm" }}
@@ -115,7 +118,8 @@ const MigrationChart: React.FC<MigrationChartProps> = ({
                           <Content
                             component="p"
                             style={{
-                              fontSize: "clamp(0.4rem, 0.7vw, 1.1rem)",
+                              fontSize: "clamp(0.4rem, 0.7vw, 0.95rem)",
+                              lineHeight: 1.2,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               wordBreak: "break-word",
@@ -123,6 +127,7 @@ const MigrationChart: React.FC<MigrationChartProps> = ({
                               WebkitLineClamp: 1,
                               textTransform: "capitalize",
                               WebkitBoxOrient: "vertical",
+                              margin: 0,
                             }}
                           >
                             {item.name}
@@ -139,6 +144,7 @@ const MigrationChart: React.FC<MigrationChartProps> = ({
                                 type="button"
                                 aria-label="Open operating system upgrade information"
                                 variant="plain"
+                                style={{ padding: 5 }}
                               >
                                 <InfoCircleIcon color="#6a6ec8" />
                               </Button>

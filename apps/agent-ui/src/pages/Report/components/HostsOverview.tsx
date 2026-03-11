@@ -1,3 +1,4 @@
+import { css } from "@emotion/css";
 import type { Host } from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
@@ -11,6 +12,13 @@ import type React from "react";
 import { useMemo } from "react";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
+
+const styles = {
+  cardSubtitle: css`
+    color: #6a6e73;
+    font-size: 0.85rem;
+  `,
+};
 
 interface HostsOverviewProps {
   hosts?: Host[];
@@ -93,7 +101,9 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
               <div>
                 <ServerIcon /> Host distribution by model
               </div>
-              {!isExportMode && <div>Top 5 models</div>}
+              {!isExportMode && (
+                <div className={styles.cardSubtitle}>Top 5 models</div>
+              )}
             </div>
           </FlexItem>
         </Flex>
@@ -106,16 +116,20 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
           donutThickness={9}
           titleFontSize={34}
           legend={legend}
-          legendWidth={680}
           title={`${totalHosts}`}
           subTitle="Hosts"
           subTitleColor="#9a9da0"
           itemsPerRow={2}
-          labelFontSize={16}
           marginLeft="0%"
-          tooltipLabelFormatter={({ datum, percent }) =>
-            `${datum.countDisplay}\n${percent.toFixed(1)}%`
-          }
+          legendLabelFormatter={({ x }: { x: string }) => x}
+          tooltipLabelFormatter={({
+            datum,
+            percent,
+          }: {
+            datum: { countDisplay?: string | number };
+            percent: number;
+          }) => `${datum.countDisplay}\n${percent.toFixed(1)}%`}
+          onItemClick={() => {}}
         />
       </CardBody>
     </Card>
