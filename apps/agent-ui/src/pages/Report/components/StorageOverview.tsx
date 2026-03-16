@@ -277,7 +277,11 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
   }, [diskTypes]);
 
   const sharedDisksChartData = useMemo(() => {
-    if (totalWithSharedDisks === undefined || totalVMs === undefined)
+    if (
+      totalWithSharedDisks === undefined ||
+      totalVMs === undefined ||
+      totalWithSharedDisks === 0
+    )
       return null;
     const withSharedDisks = Math.min(totalWithSharedDisks, totalVMs);
     const withoutSharedDisks = Math.max(0, totalVMs - withSharedDisks);
@@ -435,11 +439,16 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   <DropdownItem key="totalSize" value="totalSize">
                     Total disk size by tier
                   </DropdownItem>
-                  {totalWithSharedDisks !== undefined && (
-                    <DropdownItem key="sharedDisks" value="sharedDisks">
-                      Shared disks VS. No shared disks
-                    </DropdownItem>
-                  )}
+                  <DropdownItem
+                    key="sharedDisks"
+                    value="sharedDisks"
+                    isDisabled={
+                      totalWithSharedDisks !== undefined &&
+                      totalWithSharedDisks === 0
+                    }
+                  >
+                    Shared disks VS. No shared disks
+                  </DropdownItem>
                 </DropdownList>
               </Dropdown>
             </FlexItem>
