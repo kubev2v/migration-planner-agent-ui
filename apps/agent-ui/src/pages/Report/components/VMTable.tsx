@@ -12,9 +12,6 @@ import {
   type MenuToggleElement,
   Pagination,
   SearchInput,
-  Select,
-  SelectList,
-  SelectOption,
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
@@ -55,16 +52,6 @@ const filterStyles = {
     gap: 24px;
   `,
 
-  concernsColumn: css`
-    max-height: 400px;
-    overflow-y: auto;
-  `,
-
-  concernSelect: css`
-    width: 100%;
-    margin-top: 8px;
-  `,
-
   columnTitle: css`
     font-size: 13px;
     font-weight: 700;
@@ -92,18 +79,6 @@ interface VMTableProps {
   loading: boolean;
   initialFilters?: VMFilters;
   onVMClick?: (vmId: string) => void;
-  totalVMs?: number;
-  currentPage?: number;
-  pageSize?: number;
-  onFiltersChange?: (filters: VMFilters) => void;
-  onPageChange?: (page: number, pageSize: number) => void;
-  onSortChange?: (sortFields: string[]) => void;
-  availableFilterOptions?: {
-    clusters: string[];
-    datacenters: string[];
-    concernLabels: string[];
-    concernCategories: string[];
-  };
 }
 
 type SortableColumn =
@@ -165,21 +140,53 @@ interface AppliedFilter {
   key: string;
 }
 
-// Emotion styles to fix sortable column header layout shifts
+// Emotion styles: sortable header layout + responsive font-size and column widths
 const styles = {
   vmTable: css`
     table {
-      table-layout: fixed;
+      table-layout: auto;
       width: 100%;
+      min-width: 0;
+    }
+
+    th,
+    td {
+      min-width: 0;
+      font-size: clamp(0.75rem, 1.2vw + 0.65rem, 0.875rem);
+    }
+
+    .pf-v6-c-table__td {
+      padding-left: 0px;
+    }
+
+    thead th {
+      font-size: clamp(0.7rem, 1vw + 0.6rem, 0.75rem);
+      padding-block: 0.5rem;
+      padding-inline: 0.5rem;
     }
 
     th button {
       display: flex;
       align-items: center;
       width: 100%;
+      min-width: 100%;
+      box-sizing: border-box;
       text-align: left;
       justify-content: space-between;
-      gap: 0.5rem;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    /* Allow first column to grow, last (actions) to stay narrow */
+    tbody td:first-of-type {
+      min-width: 8ch;
+      max-width: min(35%, 40ch);
+      padding-left: 15px;
+    }
+
+    tbody td:last-of-type {
+      width: 1%;
+      white-space: nowrap;
     }
   `,
 };
@@ -189,31 +196,18 @@ export const VMTable: React.FC<VMTableProps> = ({
   loading,
   initialFilters,
   onVMClick,
-  totalVMs,
-  currentPage = 1,
-  pageSize: propPageSize = 20,
-  onFiltersChange,
-  onPageChange,
-  onSortChange,
-  availableFilterOptions = {
-    clusters: [],
-    datacenters: [],
-    concernLabels: [],
-    concernCategories: [],
-  },
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Use props for pagination state (controlled by parent)
-  const page = currentPage;
-  const pageSize = propPageSize;
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Search state
   const [searchValue, setSearchValue] = useState(initialFilters?.search || "");
 
   // Filter modal state
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [isConcernSelectOpen, setIsConcernSelectOpen] = useState(false);
 
   // Client-side filter state (applied filters)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
@@ -228,12 +222,6 @@ export const VMTable: React.FC<VMTableProps> = ({
   const [selectedMigrationReadiness, setSelectedMigrationReadiness] = useState<
     string[]
   >(initialFilters?.migrationReadiness || []);
-  const [selectedConcernLabels, setSelectedConcernLabels] = useState<string[]>(
-    initialFilters?.concernLabels || [],
-  );
-  const [selectedConcernCategories, setSelectedConcernCategories] = useState<
-    string[]
-  >(initialFilters?.concernCategories || []);
   const [hasIssuesFilter, setHasIssuesFilter] = useState(
     initialFilters?.hasIssues || false,
   );
@@ -261,11 +249,6 @@ export const VMTable: React.FC<VMTableProps> = ({
   >([]);
   const [tempSelectedMigrationReadiness, setTempSelectedMigrationReadiness] =
     useState<string[]>([]);
-  const [tempSelectedConcernLabels, setTempSelectedConcernLabels] = useState<
-    string[]
-  >([]);
-  const [tempSelectedConcernCategories, setTempSelectedConcernCategories] =
-    useState<string[]>([]);
   const [tempHasIssuesFilter, setTempHasIssuesFilter] = useState(false);
   const [tempNoIssuesFilter, setTempNoIssuesFilter] = useState(false);
   const [tempDiskRangeFilter, setTempDiskRangeFilter] = useState<{
@@ -292,8 +275,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     setSelectedClusters(initialFilters?.clusters || []);
     setSelectedDatacenters(initialFilters?.datacenters || []);
     setSelectedMigrationReadiness(initialFilters?.migrationReadiness || []);
-    setSelectedConcernLabels(initialFilters?.concernLabels || []);
-    setSelectedConcernCategories(initialFilters?.concernCategories || []);
     setHasIssuesFilter(initialFilters?.hasIssues || false);
     setNoIssuesFilter(initialFilters?.noIssues || false);
     setSearchValue(initialFilters?.search || "");
@@ -323,16 +304,32 @@ export const VMTable: React.FC<VMTableProps> = ({
     { key: "issues", label: "Issues", sortable: true },
   ];
 
-  // Use filter options from props (pre-fetched from parent)
-  const availableClusters = availableFilterOptions.clusters;
-  const availableDatacenters = availableFilterOptions.datacenters;
-  const availableConcernLabels = availableFilterOptions.concernLabels;
-  const availableConcernCategories = availableFilterOptions.concernCategories;
+  // Get unique clusters from VMs for filter options
+  const availableClusters = useMemo(() => {
+    const clusters = new Set<string>();
+    vms.forEach((vm) => {
+      if (vm.cluster) {
+        clusters.add(vm.cluster);
+      }
+    });
+    return Array.from(clusters).sort();
+  }, [vms]);
+
+  // Get unique datacenters from VMs for filter options
+  const availableDatacenters = useMemo(() => {
+    const datacenters = new Set<string>();
+    vms.forEach((vm) => {
+      if (vm.datacenter) {
+        datacenters.add(vm.datacenter);
+      }
+    });
+    return Array.from(datacenters).sort();
+  }, [vms]);
 
   // Track if filter changes come from user interaction (not from URL sync)
   const isUserInteraction = useRef(false);
 
-  // Update URL and trigger backend refetch when filters change due to user interaction
+  // Update URL when filters change due to user interaction
   useEffect(() => {
     // Skip if changes come from URL sync (initialFilters change)
     if (!isUserInteraction.current) {
@@ -353,8 +350,6 @@ export const VMTable: React.FC<VMTableProps> = ({
         selectedClusters.length > 0 ||
         selectedDatacenters.length > 0 ||
         selectedMigrationReadiness.length > 0 ||
-        selectedConcernLabels.length > 0 ||
-        selectedConcernCategories.length > 0 ||
         hasIssuesFilter ||
         noIssuesFilter ||
         searchValue ||
@@ -380,30 +375,18 @@ export const VMTable: React.FC<VMTableProps> = ({
         selectedMigrationReadiness.length > 0
           ? selectedMigrationReadiness
           : undefined,
-      concernLabels:
-        selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
-      concernCategories:
-        selectedConcernCategories.length > 0
-          ? selectedConcernCategories
-          : undefined,
     };
 
     const newParams = filtersToSearchParams(currentFilters);
     newParams.set("tab", "vms");
 
     setSearchParams(newParams, { replace: true });
-
-    // Trigger backend filter update
-    onFiltersChange?.(currentFilters);
-
     isUserInteraction.current = false; // Reset flag after updating URL
   }, [
     selectedStatuses,
     selectedClusters,
     selectedDatacenters,
     selectedMigrationReadiness,
-    selectedConcernLabels,
-    selectedConcernCategories,
     hasIssuesFilter,
     noIssuesFilter,
     searchValue,
@@ -411,7 +394,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     memoryRangeFilter,
     searchParams,
     setSearchParams,
-    onFiltersChange,
   ]);
 
   // Build list of applied filters for chip display
@@ -524,30 +506,8 @@ export const VMTable: React.FC<VMTableProps> = ({
       });
     });
 
-    // Concern categories filters
-    selectedConcernCategories.forEach((category) => {
-      filters.push({
-        category: "Issue category",
-        label: category,
-        key: `concern-category-${category}`,
-      });
-    });
-
-    // Concern labels filters (specific issues)
-    selectedConcernLabels.forEach((concernLabel) => {
-      filters.push({
-        category: "Specific issue",
-        label: concernLabel,
-        key: `concern-${concernLabel}`,
-      });
-    });
-
-    // Issues filter (only show if no specific concerns/categories selected)
-    if (
-      hasIssuesFilter &&
-      selectedConcernLabels.length === 0 &&
-      selectedConcernCategories.length === 0
-    ) {
+    // Issues filter
+    if (hasIssuesFilter) {
       filters.push({
         category: "Issues",
         label: "Has issues",
@@ -555,12 +515,8 @@ export const VMTable: React.FC<VMTableProps> = ({
       });
     }
 
-    // No issues filter (only show if no specific concerns/categories selected)
-    if (
-      noIssuesFilter &&
-      selectedConcernLabels.length === 0 &&
-      selectedConcernCategories.length === 0
-    ) {
+    // No issues filter
+    if (noIssuesFilter) {
       filters.push({
         category: "Issues",
         label: "No issues",
@@ -574,18 +530,180 @@ export const VMTable: React.FC<VMTableProps> = ({
     selectedClusters,
     selectedDatacenters,
     selectedMigrationReadiness,
-    selectedConcernLabels,
-    selectedConcernCategories,
     hasIssuesFilter,
     noIssuesFilter,
     diskRangeFilter,
     memoryRangeFilter,
   ]);
 
-  // No client-side filtering - handled by backend
-  // VMs are already filtered, sorted, and paginated by the backend
+  // Client-side filtering
+  const filteredVMs = useMemo(() => {
+    return vms.filter((vm) => {
+      // Search filter
+      if (
+        searchValue &&
+        !vm.name?.toLowerCase().includes(searchValue.toLowerCase())
+      ) {
+        return false;
+      }
 
-  // Sort handler - triggers backend sort
+      // Status filter
+      if (
+        selectedStatuses.length > 0 &&
+        !selectedStatuses.includes(vm.vCenterState || "")
+      ) {
+        return false;
+      }
+
+      // Cluster filter
+      if (
+        selectedClusters.length > 0 &&
+        !selectedClusters.includes(vm.cluster || "")
+      ) {
+        return false;
+      }
+
+      // Datacenter filter
+      if (
+        selectedDatacenters.length > 0 &&
+        !selectedDatacenters.includes(vm.datacenter || "")
+      ) {
+        return false;
+      }
+
+      // Migration Readiness filter
+      if (selectedMigrationReadiness.length > 0) {
+        // Exclude VMs with undefined migratable status from both filters
+        if (vm.migratable === undefined) {
+          return false;
+        }
+        const isReady = vm.migratable === true;
+        const readyStatus = isReady ? "ready" : "not-ready";
+        if (!selectedMigrationReadiness.includes(readyStatus)) {
+          return false;
+        }
+      }
+
+      // Issues filter
+      if (hasIssuesFilter && (vm.issueCount || 0) === 0) {
+        return false;
+      }
+
+      // No issues filter
+      if (noIssuesFilter && (vm.issueCount || 0) > 0) {
+        return false;
+      }
+
+      // Disk size filter
+      if (diskRangeFilter) {
+        const diskSize = vm.diskSize || 0;
+        if (diskSize < diskRangeFilter.min) {
+          return false;
+        }
+        if (
+          diskRangeFilter.max !== undefined &&
+          diskSize > diskRangeFilter.max
+        ) {
+          return false;
+        }
+      }
+
+      // Memory size filter
+      if (memoryRangeFilter) {
+        const memorySize = vm.memory || 0;
+        if (memorySize < memoryRangeFilter.min) {
+          return false;
+        }
+        if (
+          memoryRangeFilter.max !== undefined &&
+          memorySize > memoryRangeFilter.max
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [
+    vms,
+    searchValue,
+    selectedStatuses,
+    selectedClusters,
+    selectedDatacenters,
+    selectedMigrationReadiness,
+    hasIssuesFilter,
+    noIssuesFilter,
+    diskRangeFilter,
+    memoryRangeFilter,
+  ]);
+
+  // Client-side sorting
+  const sortedVMs = useMemo(() => {
+    if (activeSortIndex === null) return filteredVMs;
+
+    const columnKey = columns[activeSortIndex].key;
+    const sorted = [...filteredVMs].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (columnKey) {
+        case "name":
+          aValue = a.name || "";
+          bValue = b.name || "";
+          break;
+        case "vCenterState":
+          aValue = a.vCenterState || "";
+          bValue = b.vCenterState || "";
+          break;
+        case "id":
+          aValue = a.id || "";
+          bValue = b.id || "";
+          break;
+        case "datacenter":
+          aValue = a.datacenter || "";
+          bValue = b.datacenter || "";
+          break;
+        case "cluster":
+          aValue = a.cluster || "";
+          bValue = b.cluster || "";
+          break;
+        case "diskSize":
+          aValue = a.diskSize || 0;
+          bValue = b.diskSize || 0;
+          break;
+        case "memory":
+          aValue = a.memory || 0;
+          bValue = b.memory || 0;
+          break;
+        case "issues":
+          aValue = a.issueCount || 0;
+          bValue = b.issueCount || 0;
+          break;
+        case "migratable":
+          // Sort by migratable status: true (1) comes before false (0)
+          aValue = a.migratable ? 1 : 0;
+          bValue = b.migratable ? 1 : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return activeSortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return activeSortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [filteredVMs, activeSortIndex, activeSortDirection]);
+
+  // Client-side pagination
+  const paginatedVMs = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return sortedVMs.slice(startIndex, endIndex);
+  }, [sortedVMs, page, pageSize]);
+
+  // Sort handler
   const getSortParams = (columnIndex: number): ThProps["sort"] => ({
     sortBy: {
       index: activeSortIndex ?? undefined,
@@ -594,23 +712,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     onSort: (_event, index, direction) => {
       setActiveSortIndex(index);
       setActiveSortDirection(direction);
-
-      // Map frontend column to backend sort field
-      // Only include API-supported fields: name, vCenterState, cluster, diskSize, memory, issues
-      const columnKey = columns[index].key;
-      const backendFieldMap: Partial<Record<SortableColumn, string>> = {
-        name: "name",
-        vCenterState: "vCenterState",
-        cluster: "cluster",
-        diskSize: "diskSize",
-        memory: "memory",
-        issues: "issues",
-      };
-
-      const sortField = backendFieldMap[columnKey];
-      if (sortField) {
-        onSortChange?.([`${sortField}:${direction}`]);
-      }
     },
     columnIndex,
   });
@@ -622,15 +723,12 @@ export const VMTable: React.FC<VMTableProps> = ({
     setSelectedClusters(tempSelectedClusters);
     setSelectedDatacenters(tempSelectedDatacenters);
     setSelectedMigrationReadiness(tempSelectedMigrationReadiness);
-    setSelectedConcernLabels(tempSelectedConcernLabels);
-    setSelectedConcernCategories(tempSelectedConcernCategories);
     setHasIssuesFilter(tempHasIssuesFilter);
     setNoIssuesFilter(tempNoIssuesFilter);
     setDiskRangeFilter(tempDiskRangeFilter);
     setMemoryRangeFilter(tempMemoryRangeFilter);
-    onPageChange?.(1, pageSize); // Reset to page 1
+    setPage(1);
     setIsFilterModalOpen(false);
-    setIsConcernSelectOpen(false);
     // Reset temporary filters after applying
     resetTempFilters();
   };
@@ -638,7 +736,6 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Cancel filter modal
   const cancelFilterModal = () => {
     setIsFilterModalOpen(false);
-    setIsConcernSelectOpen(false);
     // Reset temporary filters when canceling
     resetTempFilters();
   };
@@ -649,8 +746,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     setTempSelectedClusters([]);
     setTempSelectedDatacenters([]);
     setTempSelectedMigrationReadiness([]);
-    setTempSelectedConcernLabels([]);
-    setTempSelectedConcernCategories([]);
     setTempHasIssuesFilter(false);
     setTempNoIssuesFilter(false);
     setTempDiskRangeFilter(null);
@@ -666,8 +761,6 @@ export const VMTable: React.FC<VMTableProps> = ({
       setTempSelectedClusters(selectedClusters);
       setTempSelectedDatacenters(selectedDatacenters);
       setTempSelectedMigrationReadiness(selectedMigrationReadiness);
-      setTempSelectedConcernLabels(selectedConcernLabels);
-      setTempSelectedConcernCategories(selectedConcernCategories);
       setTempHasIssuesFilter(hasIssuesFilter);
       setTempNoIssuesFilter(noIssuesFilter);
       setTempDiskRangeFilter(diskRangeFilter);
@@ -679,8 +772,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     selectedClusters,
     selectedDatacenters,
     selectedMigrationReadiness,
-    selectedConcernLabels,
-    selectedConcernCategories,
     hasIssuesFilter,
     noIssuesFilter,
     diskRangeFilter,
@@ -717,22 +808,6 @@ export const VMTable: React.FC<VMTableProps> = ({
       tempSelectedMigrationReadiness.includes(status)
         ? tempSelectedMigrationReadiness.filter((s) => s !== status)
         : [...tempSelectedMigrationReadiness, status],
-    );
-  };
-
-  const toggleTempConcernLabel = (concernLabel: string) => {
-    setTempSelectedConcernLabels((prev) =>
-      prev.includes(concernLabel)
-        ? prev.filter((c) => c !== concernLabel)
-        : [...prev, concernLabel],
-    );
-  };
-
-  const toggleTempConcernCategory = (category: string) => {
-    setTempSelectedConcernCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category],
     );
   };
 
@@ -779,22 +854,12 @@ export const VMTable: React.FC<VMTableProps> = ({
       setSelectedMigrationReadiness(
         selectedMigrationReadiness.filter((s) => s !== status),
       );
-    } else if (filterKey.startsWith("concern-category-")) {
-      const category = filterKey.replace("concern-category-", "");
-      setSelectedConcernCategories(
-        selectedConcernCategories.filter((c) => c !== category),
-      );
-    } else if (filterKey.startsWith("concern-")) {
-      const concernLabel = filterKey.replace("concern-", "");
-      setSelectedConcernLabels(
-        selectedConcernLabels.filter((c) => c !== concernLabel),
-      );
     } else if (filterKey === "hasIssues") {
       setHasIssuesFilter(false);
     } else if (filterKey === "noIssues") {
       setNoIssuesFilter(false);
     }
-    onPageChange?.(1, pageSize); // Reset to page 1
+    setPage(1);
   };
 
   // Clear all filters
@@ -804,14 +869,12 @@ export const VMTable: React.FC<VMTableProps> = ({
     setSelectedClusters([]);
     setSelectedDatacenters([]);
     setSelectedMigrationReadiness([]);
-    setSelectedConcernLabels([]);
-    setSelectedConcernCategories([]);
     setHasIssuesFilter(false);
     setNoIssuesFilter(false);
     setSearchValue("");
     setDiskRangeFilter(null);
     setMemoryRangeFilter(null);
-    onPageChange?.(1, pageSize); // Reset to page 1
+    setPage(1);
   };
 
   // Search handlers
@@ -904,7 +967,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                 onChange={(_event, isSelected) => onSelectAll(isSelected)}
               /> */}
               <SearchInput
-                placeholder="Find by VM name"
+                placeholder="Find by name"
                 value={searchValue}
                 onChange={handleSearchChange}
                 onClear={handleSearchClear}
@@ -932,89 +995,34 @@ export const VMTable: React.FC<VMTableProps> = ({
               >
                 <div className={filterStyles.dropdownContent}>
                   <div className={filterStyles.filterGrid}>
-                    {/* Issue categories column */}
+                    {/* Issue type column */}
                     <div>
-                      <h3 className={filterStyles.columnTitle}>
-                        Issue categories:
-                      </h3>
+                      <h3 className={filterStyles.columnTitle}>Issue type</h3>
                       <div className={filterStyles.checkboxList}>
-                        {availableConcernCategories.length > 0 &&
-                          availableConcernCategories.map((category) => (
-                            <Checkbox
-                              key={category}
-                              id={`concern-category-${category}`}
-                              label={category}
-                              isChecked={tempSelectedConcernCategories.includes(
-                                category,
-                              )}
-                              onChange={() => {
-                                toggleTempConcernCategory(category);
-                                // Clear has/no issues filters when selecting specific categories
-                                setTempHasIssuesFilter(false);
-                                setTempNoIssuesFilter(false);
-                              }}
-                            />
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Specific issues column */}
-                    <div>
-                      <h3 className={filterStyles.columnTitle}>
-                        Specific issues
-                      </h3>
-                      <div className={filterStyles.checkboxList}>
-                        {availableConcernLabels.length > 0 && (
-                          <Select
-                            isOpen={isConcernSelectOpen}
-                            selected={tempSelectedConcernLabels}
-                            onSelect={(_event, selection) => {
-                              const concernLabel = selection as string;
-                              toggleTempConcernLabel(concernLabel);
-                              // Clear has/no issues filters when selecting specific concerns
+                        <Checkbox
+                          id="no-issues"
+                          label="No issues"
+                          isChecked={tempNoIssuesFilter}
+                          onChange={() => {
+                            setTempNoIssuesFilter(!tempNoIssuesFilter);
+                            // Make mutually exclusive with "Has issues"
+                            if (!tempNoIssuesFilter) {
                               setTempHasIssuesFilter(false);
+                            }
+                          }}
+                        />
+                        <Checkbox
+                          id="has-issues"
+                          label="Has issues"
+                          isChecked={tempHasIssuesFilter}
+                          onChange={() => {
+                            setTempHasIssuesFilter(!tempHasIssuesFilter);
+                            // Make mutually exclusive with "No issues"
+                            if (!tempHasIssuesFilter) {
                               setTempNoIssuesFilter(false);
-                            }}
-                            onOpenChange={(isOpen) => {
-                              setIsConcernSelectOpen(isOpen);
-                            }}
-                            toggle={(
-                              toggleRef: React.Ref<MenuToggleElement>,
-                            ) => (
-                              <MenuToggle
-                                ref={toggleRef}
-                                onClick={() =>
-                                  setIsConcernSelectOpen(!isConcernSelectOpen)
-                                }
-                                isExpanded={isConcernSelectOpen}
-                                className={filterStyles.concernSelect}
-                              >
-                                {tempSelectedConcernLabels.length === 0
-                                  ? "Select specific issues..."
-                                  : `${tempSelectedConcernLabels.length} selected`}
-                              </MenuToggle>
-                            )}
-                            isScrollable
-                          >
-                            <SelectList>
-                              {availableConcernLabels.map((concernLabel) => (
-                                <SelectOption
-                                  key={concernLabel}
-                                  value={concernLabel}
-                                  hasCheckbox
-                                  isSelected={tempSelectedConcernLabels.includes(
-                                    concernLabel,
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                >
-                                  {concernLabel}
-                                </SelectOption>
-                              ))}
-                            </SelectList>
-                          </Select>
-                        )}
+                            }
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -1158,12 +1166,13 @@ export const VMTable: React.FC<VMTableProps> = ({
 
           <ToolbarItem variant="pagination" align={{ default: "alignEnd" }}>
             <Pagination
-              itemCount={totalVMs ?? vms.length}
+              itemCount={sortedVMs.length}
               perPage={pageSize}
               page={page}
-              onSetPage={(_event, newPage) => onPageChange?.(newPage, pageSize)}
+              onSetPage={(_event, newPage) => setPage(newPage)}
               onPerPageSelect={(_event, newPerPage) => {
-                onPageChange?.(1, newPerPage);
+                setPageSize(newPerPage);
+                setPage(1);
               }}
               variant="top"
               isCompact
@@ -1203,59 +1212,23 @@ export const VMTable: React.FC<VMTableProps> = ({
 
       {/* Table */}
       <Table
-        aria-label="Virtual machines table"
-        variant="compact"
-        borders={false}
-        isStickyHeader
+      // aria-label="Virtual machines table"
+      // variant="compact"
+      // borders={false}
+      // isStickyHeader
       >
         <Thead>
           <Tr>
             {/* <Th screenReaderText="Select" /> */}
-            {columns.map((column, index) => {
-              const getWidth = (key: SortableColumn) => {
-                switch (key) {
-                  case "name":
-                    return 20;
-                  case "vCenterState":
-                    return 15;
-                  case "migratable":
-                    return 15;
-                  case "id":
-                    return 15;
-                  case "datacenter":
-                    return 10;
-                  case "cluster":
-                    return 10;
-                  case "diskSize":
-                    return 10;
-                  case "memory":
-                    return 10;
-                  case "issues":
-                    return 10;
-                  default:
-                    return undefined;
-                }
-              };
-
-              const getModifier = (key: SortableColumn) => {
-                if (key === "issues" || key === "migratable") {
-                  return "fitContent";
-                }
-                return "nowrap";
-              };
-
-              return (
-                <Th
-                  key={column.key}
-                  sort={column.sortable ? getSortParams(index) : undefined}
-                  width={getWidth(column.key)}
-                  modifier={getModifier(column.key)}
-                >
-                  {column.label}
-                </Th>
-              );
-            })}
-            <Th width={10} modifier="fitContent" />
+            {columns.map((column, index) => (
+              <Th
+                key={column.key}
+                sort={column.sortable ? getSortParams(index) : undefined}
+              >
+                {column.label}
+              </Th>
+            ))}
+            <Th />
           </Tr>
         </Thead>
         <Tbody>
@@ -1263,12 +1236,12 @@ export const VMTable: React.FC<VMTableProps> = ({
             <Tr>
               <Td colSpan={columns.length + 1}>Loading...</Td>
             </Tr>
-          ) : vms.length === 0 ? (
+          ) : paginatedVMs.length === 0 ? (
             <Tr>
               <Td colSpan={columns.length + 1}>No virtual machines found</Td>
             </Tr>
           ) : (
-            vms.map((vm) => (
+            paginatedVMs.map((vm) => (
               <Tr key={vm.id}>
                 {/* <Td
                   select={{
@@ -1291,7 +1264,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                   )}
                 </Td>
                 <Td dataLabel="Status">{renderStatus(vm)}</Td>
-                <Td dataLabel="Migration Readiness" modifier="fitContent">
+                <Td dataLabel="Migration Readiness">
                   {vm.migratable === true
                     ? "Ready"
                     : vm.migratable === false
@@ -1307,10 +1280,8 @@ export const VMTable: React.FC<VMTableProps> = ({
                 <Td dataLabel="Memory size">
                   {formatMemorySize(vm.memory || 0)}
                 </Td>
-                <Td dataLabel="Issues" modifier="fitContent">
-                  {vm.issueCount || 0}
-                </Td>
-                <Td isActionCell modifier="fitContent">
+                <Td dataLabel="Issues">{vm.issueCount || 0}</Td>
+                <Td isActionCell width={10}>
                   <Dropdown
                     isOpen={openActionMenuId === vm.id}
                     onSelect={() => setOpenActionMenuId(null)}
