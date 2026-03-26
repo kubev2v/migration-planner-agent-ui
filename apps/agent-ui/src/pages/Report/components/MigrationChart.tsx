@@ -106,7 +106,7 @@ const MigrationChart: React.FC<MigrationChartProps> = ({
               <Tbody>
                 {data.map((item) => (
                   <Tr key={`${item.name}-${item.legendCategory}`}>
-                    <Td width={40} style={{ paddingLeft: "0px", paddingTop: "0px" }}>
+                    <Td width={40} style={{ paddingLeft: "0px", paddingTop: "7px" }}>
                       <Flex
                         alignItems={{ default: "alignItemsCenter" }}
                         spaceItems={{ default: "spaceItemsSm" }}
