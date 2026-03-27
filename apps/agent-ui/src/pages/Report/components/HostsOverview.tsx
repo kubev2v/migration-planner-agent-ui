@@ -1,4 +1,4 @@
-import type { Host } from "@migration-planner-ui/agent-client/models";
+import type { Host } from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
   CardBody,

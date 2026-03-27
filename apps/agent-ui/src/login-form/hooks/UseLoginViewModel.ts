@@ -1,9 +1,9 @@
-import type { DefaultApiInterface } from "@migration-planner-ui/agent-client/apis";
+import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   CollectorStartRequest,
   CollectorStatus,
-} from "@migration-planner-ui/agent-client/models";
-import { useInjection } from "@migration-planner-ui/ioc";
+  DefaultApiInterface,
+} from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTitle } from "react-use";

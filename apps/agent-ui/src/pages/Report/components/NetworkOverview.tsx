@@ -1,7 +1,7 @@
 import type {
   Infra,
   VMResourceBreakdown,
-} from "@migration-planner-ui/agent-client/models";
+} from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
   CardBody,

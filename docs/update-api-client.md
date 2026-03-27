@@ -214,13 +214,12 @@ Once your API changes are ready and merged into the main branch:
 
 ### Step 2: Update migration-planner-ui-app Project
 
-Update the api-client, agent-client and ioc projects inside migration-planner-ui-app project:
+Update the api-client and ioc projects inside migration-planner-ui-app project:
 
 1. **Update the dependency version** in the consuming project's `package.json`:
    ```json
    {
      "dependencies": {
-       "@migration-planner-ui/agent-client": "^1.2.3",
        "@migration-planner-ui/api-client": "^1.2.3",
        "@migration-planner-ui/ioc": "^1.2.3"      
      }
@@ -233,3 +232,5 @@ Update the api-client, agent-client and ioc projects inside migration-planner-ui
    ```
 
 3. **Test the application** with the new API client version
+
+**Note:** The Agent API client (`@openshift-migration-advisor/agent-sdk`) is now consumed as a published npm package and is updated independently by changing its version in `package.json`.

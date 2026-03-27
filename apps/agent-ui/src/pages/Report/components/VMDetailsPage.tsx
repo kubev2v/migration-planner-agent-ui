@@ -1,9 +1,9 @@
-import type { DefaultApiInterface } from "@migration-planner-ui/agent-client/apis";
+import { useInjection } from "@migration-planner-ui/ioc";
 import type {
+  DefaultApiInterface,
   VirtualMachineDetail,
   VMIssue,
-} from "@migration-planner-ui/agent-client/models";
-import { useInjection } from "@migration-planner-ui/ioc";
+} from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   Breadcrumb,

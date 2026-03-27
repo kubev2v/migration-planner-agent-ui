@@ -15,18 +15,6 @@
           "withInterfaces": true,
           "importFileExtension": ".js"
         }
-      },
-      "agent-client": {
-        "inputSpec": "packages/agent-client/api/openapi.yaml",
-        "output": "packages/agent-client",
-        "generatorName": "typescript-fetch",
-        "additionalProperties": {
-          "npmName": "@migration-planner-ui/agent-client",
-          "ensureUniqueParams": true,
-          "supportsES6": true,
-          "withInterfaces": true,
-          "importFileExtension": ".js"
-        }
       }
     }
   }

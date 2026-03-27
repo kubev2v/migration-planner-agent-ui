@@ -1,6 +1,8 @@
-import type { DefaultApiInterface } from "@migration-planner-ui/agent-client/apis";
-import type { AgentStatus } from "@migration-planner-ui/agent-client/models";
 import { useInjection } from "@migration-planner-ui/ioc";
+import type {
+  AgentStatus,
+  DefaultApiInterface,
+} from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import {
   createContext,

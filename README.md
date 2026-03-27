@@ -28,8 +28,7 @@ The root `package.json` provides workspace-wide scripts and dev dependencies tha
 - `yarn check:all` - Run linting checks across all workspaces
 - `yarn check:fix:all` - Auto-fix linting issues
 - `yarn format:all` - Format code across all workspaces
-- `yarn api-client:update` - Regenerate the API client from OpenAPI spec
-- `yarn agent-client:update` - Regenerate the Agent client from OpenAPI spec
+- `yarn update:api-client` - Regenerate the API client from OpenAPI spec
 
 **Shared Dev Dependencies:**
 - `@biomejs/biome` - Linting and formatting (configured in `biome.json`)
@@ -68,10 +67,6 @@ Apps may include additional scripts like `start` and `preview` for development w
 ### `@migration-planner-ui/api-client`
 
 TypeScript client for the Migration Planner API, auto-generated from the OpenAPI specification. Provides type-safe API methods and models for interacting with the main Migration Planner backend.
-
-### `@migration-planner-ui/agent-client`
-
-TypeScript client for the Migration Planner Agent API. Similar to `api-client`, but specifically for agent-related operations. Auto-generated from the Agent API OpenAPI specification.
 
 ### `@migration-planner-ui/ioc`
 
@@ -147,27 +142,26 @@ This project uses the [OpenAPI Generator CLI](https://openapi-generator.tech/) t
 
 ### How We Use It
 
-The OpenAPI Generator CLI is configured via `openapitools.json` at the root of the project. Each client package has its own generator configuration:
+The OpenAPI Generator CLI is configured via `openapitools.json` at the root of the project.
 
-- **`api-client`**: Generates from the main Migration Planner API spec
-- **`agent-client`**: Generates from the Agent API spec
+- **`api-client`**: Generates the TypeScript client from the main Migration Planner API spec
+
+**Note:** The Agent API client is now consumed as a published npm package (`@openshift-migration-advisor/agent-sdk`) rather than being generated locally.
 
 ### Usage
 
 **Via Yarn Scripts (Recommended):**
 ```bash
-# Update a specific client
+# Update the API client
 yarn update:api-client
-yarn update:agent-client
 ```
 
 **Via Makefile (isolated container execution, no extra dependencies needed):**
 The Makefile provides a way to run the OpenAPI Generator CLI in isolation using Docker/Podman, ensuring consistent execution across different environments:
 
 ```bash
-# Update a specific client
+# Update the API client
 make api-client
-make agent-client
 
 # Or use the generic generate target
 make generate ARGS="--generator-key api-client"
@@ -230,7 +224,7 @@ To locally reproduce the publishing of a minimal OCI image (only `dist/`) to Qua
 
 ## Testing Package Changes Locally
 
-When making changes to the generated client packages (`api-client` or `agent-client`), you may want to test them locally in a consuming application before publishing. The following procedure uses the `api-client` package for demonstration, but the same steps apply to `agent-client`.
+When making changes to the generated client packages (e.g., `api-client`), you may want to test them locally in a consuming application before publishing.
 
 **Steps:**
 

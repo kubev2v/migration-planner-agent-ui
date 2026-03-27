@@ -1,15 +1,14 @@
-import type { DefaultApiInterface } from "@migration-planner-ui/agent-client/apis";
-import type {
-  Inventory,
-  UpdateInventory,
-  VirtualMachine,
-} from "@migration-planner-ui/agent-client/models";
-import {
-  GetInventory200ResponseToJSON,
-  instanceOfInventory,
-} from "@migration-planner-ui/agent-client/models";
-import { ResponseError } from "@migration-planner-ui/agent-client/runtime";
 import { useInjection } from "@migration-planner-ui/ioc";
+import type {
+  DefaultApiInterface,
+  Inventory,
+  VirtualMachine,
+} from "@openshift-migration-advisor/agent-sdk";
+import {
+  InventoryFromJSON,
+  ResponseError,
+  UpdateInventoryFromJSON,
+} from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   Content,
@@ -42,6 +41,11 @@ import {
   searchParamsToFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
+
+// Helper type to access SDK configuration (workaround for SDK bug)
+type ApiWithConfig = DefaultApiInterface & {
+  configuration?: { basePath?: string };
+};
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
@@ -120,30 +124,48 @@ export const ReportContainer: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const inventoryData = await agentApi.getInventory({});
 
-        // Handle the union type: GetInventory200Response can be Inventory | UpdateInventory
-        let actualInventory: Inventory | null = null;
+        // Workaround: Fetch directly with native fetch API to bypass SDK bug
+        // The published SDK has a bug where GetInventory200ResponseFromJSONTyped returns {}
+        // when it receives snake_case JSON from the API
+        const basePath =
+          (agentApi as ApiWithConfig).configuration?.basePath ||
+          `${window.location.origin}/agent/api/v1`;
 
-        if (!inventoryData) {
+        const httpResponse = await fetch(`${basePath}/inventory`);
+
+        if (!httpResponse.ok) {
+          throw new Error(
+            `HTTP ${httpResponse.status}: ${httpResponse.statusText}`,
+          );
+        }
+
+        const jsonData = await httpResponse.json();
+
+        if (!jsonData) {
           setInventory(null);
           return;
         }
 
         // Check if response is an empty object - means inventory not collected yet
         if (
-          typeof inventoryData === "object" &&
-          Object.keys(inventoryData).length === 0
+          typeof jsonData === "object" &&
+          Object.keys(jsonData).length === 0
         ) {
           setInventory(null);
           return;
         }
 
-        if (instanceOfInventory(inventoryData)) {
-          actualInventory = inventoryData;
-        } else {
-          // It's UpdateInventory, extract the inventory field
-          const updateInventory = inventoryData as UpdateInventory;
+        // Manually parse the JSON using the SDK converters
+        let actualInventory: Inventory | null = null;
+
+        // Check raw JSON structure (before SDK conversion)
+        if ("vcenter_id" in jsonData && "clusters" in jsonData) {
+          // It's an Inventory - parse it manually
+          actualInventory = InventoryFromJSON(jsonData);
+        } else if ("inventory" in jsonData) {
+          // It's UpdateInventory - parse and extract
+          const updateInventory = UpdateInventoryFromJSON(jsonData);
           if (updateInventory.inventory) {
             actualInventory = updateInventory.inventory;
           }
@@ -412,11 +434,25 @@ export const ReportContainer: React.FC = () => {
 
   const handleDownloadInventory = async () => {
     try {
-      const inventoryData = await agentApi.getInventory({ withAgentId: true });
+      // Workaround: Fetch directly to bypass SDK bug (same as in the main fetch)
+      const basePath =
+        (agentApi as ApiWithConfig).configuration?.basePath ||
+        `${window.location.origin}/agent/api/v1`;
 
-      // Convert inventory data to proper JSON format (with snake_case field names)
-      const jsonObject = GetInventory200ResponseToJSON(inventoryData);
-      const jsonString = JSON.stringify(jsonObject, null, 2);
+      const httpResponse = await fetch(
+        `${basePath}/inventory?with_agent_id=true`,
+      );
+
+      if (!httpResponse.ok) {
+        throw new Error(
+          `HTTP ${httpResponse.status}: ${httpResponse.statusText}`,
+        );
+      }
+
+      const jsonData = await httpResponse.json();
+
+      // The JSON is already in the correct format from the API
+      const jsonString = JSON.stringify(jsonData, null, 2);
 
       // Create a Blob from the JSON string
       const blob = new Blob([jsonString], { type: "application/json" });
