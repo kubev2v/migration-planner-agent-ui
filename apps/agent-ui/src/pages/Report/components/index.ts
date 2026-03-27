@@ -1,6 +1,7 @@
 export { ClustersOverview } from "./ClustersOverview";
 export { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
 export { Dashboard } from "./Dashboard";
+export { DeepInspectionModal } from "./DeepInspectionModal";
 export { ErrorTable } from "./ErrorTable";
 export { HostsOverview } from "./HostsOverview";
 export { default as MigrationChart } from "./MigrationChart";

@@ -3,6 +3,7 @@ import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Checkbox,
+  Content,
   Dropdown,
   DropdownItem,
   DropdownList,
@@ -10,15 +11,21 @@ import {
   LabelGroup,
   MenuToggle,
   type MenuToggleElement,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
   Pagination,
   SearchInput,
   Select,
   SelectList,
   SelectOption,
+  Spinner,
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
   ToolbarItem,
+  Tooltip,
 } from "@patternfly/react-core";
 import {
   CheckCircleIcon,
@@ -26,6 +33,7 @@ import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
   FilterIcon,
+  MagicIcon,
 } from "@patternfly/react-icons";
 import {
   Table,
@@ -104,6 +112,13 @@ interface VMTableProps {
     concernLabels: string[];
     concernCategories: string[];
   };
+  selectedVMs?: Set<string>;
+  onSelectionChange?: (selected: Set<string>) => void;
+  onRunDeepInspection?: (includeVmId?: string) => void;
+  hasInspectionResults?: boolean;
+  inspectionActive?: boolean;
+  onCancelInspection?: () => void;
+  onResetInspection?: () => void;
 }
 
 type SortableColumn =
@@ -201,6 +216,13 @@ export const VMTable: React.FC<VMTableProps> = ({
     concernLabels: [],
     concernCategories: [],
   },
+  selectedVMs = new Set<string>(),
+  onSelectionChange,
+  onRunDeepInspection,
+  hasInspectionResults = false,
+  inspectionActive = false,
+  onCancelInspection,
+  onResetInspection,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -214,6 +236,10 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Filter modal state
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isConcernSelectOpen, setIsConcernSelectOpen] = useState(false);
+
+  // Deep inspection kebab & cancel confirmation
+  const [isInspectionKebabOpen, setIsInspectionKebabOpen] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
   // Client-side filter state (applied filters)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
@@ -825,38 +851,32 @@ export const VMTable: React.FC<VMTableProps> = ({
     setSearchValue("");
   };
 
-  // Selection handlers (commented out - not needed when checkboxes are hidden)
-  // const onSelectVM = (vm: VirtualMachine, isSelected: boolean) => {
-  //   const newSelected = new Set(selectedVMs);
-  //   if (isSelected) {
-  //     newSelected.add(vm.id);
-  //   } else {
-  //     newSelected.delete(vm.id);
-  //   }
-  //   setSelectedVMs(newSelected);
-  // };
+  const onSelectVM = (vm: VirtualMachine, isSelected: boolean) => {
+    const newSelected = new Set(selectedVMs);
+    if (isSelected) {
+      newSelected.add(vm.id);
+    } else {
+      newSelected.delete(vm.id);
+    }
+    onSelectionChange?.(newSelected);
+  };
 
-  // Select all handler
-  // const onSelectAll = (isSelected: boolean) => {
-  //   if (isSelected) {
-  //     const allIds = new Set(sortedVMs.map((vm) => vm.id));
-  //     setSelectedVMs(allIds);
-  //   } else {
-  //     setSelectedVMs(new Set());
-  //   }
-  // };
+  const onSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      const newSelected = new Set(selectedVMs);
+      for (const vm of vms) {
+        newSelected.add(vm.id);
+      }
+      onSelectionChange?.(newSelected);
+    } else {
+      onSelectionChange?.(new Set());
+    }
+  };
 
-  // Check if all VMs are selected
-  // const areAllSelected = useMemo(() => {
-  //   if (sortedVMs.length === 0) return false;
-  //   return sortedVMs.every((vm) => selectedVMs.has(vm.id));
-  // }, [sortedVMs, selectedVMs]);
-
-  // Check if some (but not all) VMs are selected
-  // const areSomeSelected = useMemo(() => {
-  //   if (selectedVMs.size === 0) return false;
-  //   return sortedVMs.some((vm) => selectedVMs.has(vm.id)) && !areAllSelected;
-  // }, [sortedVMs, selectedVMs, areAllSelected]);
+  const areAllSelected = useMemo(() => {
+    if (vms.length === 0) return false;
+    return vms.every((vm) => selectedVMs.has(vm.id));
+  }, [vms, selectedVMs]);
 
   // Render status cell with icon
   const renderStatus = (vm: VirtualMachine) => {
@@ -888,6 +908,54 @@ export const VMTable: React.FC<VMTableProps> = ({
         {statusLabels[state] || state}
       </span>
     );
+  };
+
+  const renderInspectionStatus = (vm: VirtualMachine) => {
+    const status = vm.inspectionStatus;
+    if (!status) return "—";
+
+    const state = status.state;
+
+    if (state === "pending") {
+      return (
+        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <Spinner size="sm" /> Pending
+        </span>
+      );
+    }
+
+    if (state === "running") {
+      return (
+        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <Spinner size="sm" /> Running
+        </span>
+      );
+    }
+
+    if (state === "completed") {
+      const concernCount = vm.inspectionConcernCount || 0;
+      return (
+        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <CheckCircleIcon color="var(--pf-t--global--icon--color--status--success--default)" />
+          Completed{concernCount > 0 ? ` (${concernCount} concerns)` : ""}
+        </span>
+      );
+    }
+
+    if (state === "error") {
+      return (
+        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />
+          Error
+        </span>
+      );
+    }
+
+    if (state === "canceled") {
+      return "Canceled";
+    }
+
+    return "—";
   };
 
   return (
@@ -1150,10 +1218,59 @@ export const VMTable: React.FC<VMTableProps> = ({
 
           <ToolbarGroup>
             <ToolbarItem>
-              <Button variant="secondary" isDisabled>
-                Send to deep inspection
-              </Button>
+              <Tooltip content="Select VMs for deep inspection.">
+                <Button
+                  variant="primary"
+                  icon={<MagicIcon />}
+                  isDisabled={selectedVMs.size === 0 || inspectionActive}
+                  onClick={() => onRunDeepInspection?.()}
+                >
+                  Run deep inspection
+                </Button>
+              </Tooltip>
             </ToolbarItem>
+            {inspectionActive && (
+              <ToolbarItem>
+                <Dropdown
+                  isOpen={isInspectionKebabOpen}
+                  onSelect={() => setIsInspectionKebabOpen(false)}
+                  onOpenChange={setIsInspectionKebabOpen}
+                  toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                    <MenuToggle
+                      ref={toggleRef}
+                      variant="plain"
+                      onClick={() =>
+                        setIsInspectionKebabOpen(!isInspectionKebabOpen)
+                      }
+                      isExpanded={isInspectionKebabOpen}
+                    >
+                      <EllipsisVIcon />
+                    </MenuToggle>
+                  )}
+                  popperProps={{ position: "right" }}
+                >
+                  <DropdownList>
+                    <DropdownItem
+                      key="cancel-inspection"
+                      onClick={() => setIsCancelConfirmOpen(true)}
+                    >
+                      Cancel deep inspection
+                    </DropdownItem>
+                    <DropdownItem
+                      key="reset-inspection"
+                      onClick={() => onResetInspection?.()}
+                    >
+                      Reset deep inspection
+                    </DropdownItem>
+                  </DropdownList>
+                </Dropdown>
+              </ToolbarItem>
+            )}
+            {inspectionActive && (
+              <ToolbarItem>
+                <Spinner size="md" />
+              </ToolbarItem>
+            )}
           </ToolbarGroup>
 
           <ToolbarItem variant="pagination" align={{ default: "alignEnd" }}>
@@ -1210,18 +1327,24 @@ export const VMTable: React.FC<VMTableProps> = ({
       >
         <Thead>
           <Tr>
-            {/* <Th screenReaderText="Select" /> */}
+            <Th
+              select={{
+                onSelect: (_event, isSelected) => onSelectAll(isSelected),
+                isSelected: areAllSelected,
+                isHeaderSelectDisabled: vms.length === 0,
+              }}
+            />
             {columns.map((column, index) => {
               const getWidth = (key: SortableColumn) => {
                 switch (key) {
                   case "name":
-                    return 20;
+                    return hasInspectionResults ? 15 : 20;
                   case "vCenterState":
-                    return 15;
+                    return hasInspectionResults ? 10 : 15;
                   case "migratable":
-                    return 15;
+                    return hasInspectionResults ? 10 : 15;
                   case "id":
-                    return 15;
+                    return hasInspectionResults ? 10 : 15;
                   case "datacenter":
                     return 10;
                   case "cluster":
@@ -1255,28 +1378,38 @@ export const VMTable: React.FC<VMTableProps> = ({
                 </Th>
               );
             })}
+            {hasInspectionResults && (
+              <Th width={15} modifier="nowrap">
+                Deep inspection results
+              </Th>
+            )}
             <Th width={10} modifier="fitContent" />
           </Tr>
         </Thead>
         <Tbody>
           {loading ? (
             <Tr>
-              <Td colSpan={columns.length + 1}>Loading...</Td>
+              <Td colSpan={columns.length + 2 + (hasInspectionResults ? 1 : 0)}>
+                Loading...
+              </Td>
             </Tr>
           ) : vms.length === 0 ? (
             <Tr>
-              <Td colSpan={columns.length + 1}>No virtual machines found</Td>
+              <Td colSpan={columns.length + 2 + (hasInspectionResults ? 1 : 0)}>
+                No virtual machines found
+              </Td>
             </Tr>
           ) : (
-            vms.map((vm) => (
+            vms.map((vm, rowIndex) => (
               <Tr key={vm.id}>
-                {/* <Td
+                <Td
                   select={{
-                    rowIndex: 0,
-                    onSelect: (_event, isSelected) => onSelectVM(vm, isSelected),
+                    rowIndex,
+                    onSelect: (_event, isSelected) =>
+                      onSelectVM(vm, isSelected),
                     isSelected: selectedVMs.has(vm.id),
                   }}
-                /> */}
+                />
                 <Td dataLabel="Name">
                   {onVMClick ? (
                     <Button
@@ -1310,6 +1443,11 @@ export const VMTable: React.FC<VMTableProps> = ({
                 <Td dataLabel="Issues" modifier="fitContent">
                   {vm.issueCount || 0}
                 </Td>
+                {hasInspectionResults && (
+                  <Td dataLabel="Deep inspection results">
+                    {renderInspectionStatus(vm)}
+                  </Td>
+                )}
                 <Td isActionCell modifier="fitContent">
                   <Dropdown
                     isOpen={openActionMenuId === vm.id}
@@ -1334,7 +1472,10 @@ export const VMTable: React.FC<VMTableProps> = ({
                     popperProps={{ position: "right" }}
                   >
                     <DropdownList>
-                      <DropdownItem key="inspect" isDisabled>
+                      <DropdownItem
+                        key="inspect"
+                        onClick={() => onRunDeepInspection?.(vm.id)}
+                      >
                         Send to deep inspection
                       </DropdownItem>
                       <DropdownItem
@@ -1351,6 +1492,38 @@ export const VMTable: React.FC<VMTableProps> = ({
           )}
         </Tbody>
       </Table>
+
+      {/* Cancel deep inspection confirmation modal */}
+      <Modal
+        isOpen={isCancelConfirmOpen}
+        onClose={() => setIsCancelConfirmOpen(false)}
+        aria-labelledby="cancel-inspection-title"
+        aria-describedby="cancel-inspection-body"
+        variant="small"
+      >
+        <ModalHeader
+          title="Cancel deep inspection"
+          titleIconVariant="warning"
+          labelId="cancel-inspection-title"
+        />
+        <ModalBody id="cancel-inspection-body">
+          <Content component="p">Are you sure you want to proceed?</Content>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="danger"
+            onClick={() => {
+              onCancelInspection?.();
+              setIsCancelConfirmOpen(false);
+            }}
+          >
+            Confirm
+          </Button>
+          <Button variant="link" onClick={() => setIsCancelConfirmOpen(false)}>
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 };
