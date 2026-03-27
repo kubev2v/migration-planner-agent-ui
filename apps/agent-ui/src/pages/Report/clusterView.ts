@@ -3,7 +3,7 @@ import type {
   InventoryData,
   VMResourceBreakdown,
   VMs,
-} from "@migration-planner-ui/agent-client/models";
+} from "@openshift-migration-advisor/agent-sdk";
 
 export type ClusterSelection = string;
 

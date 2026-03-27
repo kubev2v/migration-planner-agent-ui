@@ -1,5 +1,5 @@
 import { css } from "@emotion/css";
-import type { InventoryData } from "@migration-planner-ui/agent-client/models";
+import type { InventoryData } from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
   CardBody,

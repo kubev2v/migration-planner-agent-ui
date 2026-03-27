@@ -1,11 +1,13 @@
 import "@patternfly/react-core/dist/styles/base.css";
 
-import { DefaultApi } from "@migration-planner-ui/agent-client/apis";
-import { Configuration } from "@migration-planner-ui/agent-client/runtime";
 import {
   Container,
   Provider as DependencyInjectionProvider,
 } from "@migration-planner-ui/ioc";
+import {
+  Configuration,
+  DefaultApi,
+} from "@openshift-migration-advisor/agent-sdk";
 import { Spinner } from "@patternfly/react-core";
 import React from "react";
 import ReactDOM from "react-dom/client";

@@ -26,8 +26,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "references": [
-    { "path": "../../packages/agent-client" },
-    { "path": "../../packages/ioc" }
-  ]
+  "references": [{ "path": "../../packages/ioc" }]
 }

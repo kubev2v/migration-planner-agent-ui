@@ -1,5 +1,5 @@
 import { css } from "@emotion/css";
-import type { VirtualMachine } from "@migration-planner-ui/agent-client/models";
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Checkbox,

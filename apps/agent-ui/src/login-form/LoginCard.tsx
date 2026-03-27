@@ -1,4 +1,4 @@
-import type { CollectorStatus } from "@migration-planner-ui/agent-client/models";
+import type { CollectorStatus } from "@openshift-migration-advisor/agent-sdk";
 import {
   Backdrop,
   Bullseye,
@@ -43,14 +43,9 @@ const getProgressInfo = (
     case "ready":
       return { percentage: 0, statusText: "Ready to start" };
     case "connecting":
-      return { percentage: 25, statusText: "Connecting to vCenter..." };
-    case "connected":
-      return {
-        percentage: 50,
-        statusText: "Connected, starting collection...",
-      };
+      return { percentage: 20, statusText: "Connecting to vCenter..." };
     case "collecting":
-      return { percentage: 75, statusText: "Collecting inventory data..." };
+      return { percentage: 60, statusText: "Collecting inventory data..." };
     case "parsing":
       return { percentage: 90, statusText: "Parsing..." };
     case "collected":

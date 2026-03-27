@@ -1,5 +1,5 @@
-import type { DefaultApiInterface } from "@migration-planner-ui/agent-client/apis";
 import { useInjection } from "@migration-planner-ui/ioc";
+import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";

@@ -1,4 +1,4 @@
-import type { MigrationIssue } from "@migration-planner-ui/agent-client/models";
+import type { MigrationIssue } from "@openshift-migration-advisor/agent-sdk";
 import { Card, CardBody, CardTitle, Icon } from "@patternfly/react-core";
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";

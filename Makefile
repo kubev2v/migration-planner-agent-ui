@@ -32,16 +32,6 @@ _clean-api-client:
 api-client: _clean-api-client
 	$(MAKE) generate ARGS="--generator-key api-client"
 
-# Cleans up the Agent client
-.PHONY: _clean-agent-client
-_clean-agent-client:
-	rm -rf packages/agent-client/src packages/agent-client/docs;
-
-# Updates the Agent client
-.PHONY: agent-client
-agent-client: _clean-agent-client
-	$(MAKE) generate ARGS="--generator-key agent-client"
-
 # Clean up OpenAPI Generator CLI container image
 .PHONY: clean
 clean:
@@ -55,7 +45,6 @@ help:
 	@echo "Available targets:"
 	@echo "  openapi-generator-cli   Executes `openapi-generator-cli` allowing access to all CLI commands"
 	@echo "  api-client              Updates the API client"
-	@echo "  agent-client            Updates the Agent UI client"
 	@echo "  generate                Runs `openapi-generator-cli generate`, optionally pass --generator-key <key> or other arguments"
 	@echo "                          See openapitools.json for keys (e.g., make generate ARGS=\"--generator-key api-client\")"
 	@echo "  clean                   Remove the OpenAPI Generator CLI container image"

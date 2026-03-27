@@ -1,4 +1,4 @@
-import type { VirtualMachine } from "@migration-planner-ui/agent-client/models";
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import { useState } from "react";
 import { VMDetailsPage } from "./VMDetailsPage";
