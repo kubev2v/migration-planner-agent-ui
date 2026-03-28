@@ -16,7 +16,7 @@
   "dependencies": {
     "@emotion/css": "^11.13.0",
     "@migration-planner-ui/ioc": "workspace:*",
-    "@openshift-migration-advisor/agent-sdk": "0.8.0-89b5466bbbac",
+    "@openshift-migration-advisor/agent-sdk": "0.8.0",
     "@patternfly/react-charts": "^8.0.0",
     "@patternfly/react-core": "^6.4.0",
     "@patternfly/react-icons": "^6.4.0",
