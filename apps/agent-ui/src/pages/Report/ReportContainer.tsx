@@ -459,7 +459,7 @@ export const ReportContainer: React.FC = () => {
         `${window.location.origin}/agent/api/v1`;
 
       const httpResponse = await fetch(
-        `${basePath}/inventory?with_agent_id=true`,
+        `${basePath}/inventory?withAgentId=true`,
       );
 
       if (!httpResponse.ok) {
@@ -470,8 +470,17 @@ export const ReportContainer: React.FC = () => {
 
       const jsonData = await httpResponse.json();
 
-      // The JSON is already in the correct format from the API
-      const jsonString = JSON.stringify(jsonData, null, 2);
+      // Ensure the downloaded JSON is in UpdateInventory format
+      // The API may return a plain Inventory (with vcenter_id at top level)
+      // or an UpdateInventory wrapper ({ agent_id: "...", inventory: {...} })
+      let downloadData = jsonData;
+      if (jsonData && !("inventory" in jsonData) && "vcenter_id" in jsonData) {
+        const agentId = jsonData.agent_id || jsonData.agentId || "";
+        delete jsonData.agent_id;
+        downloadData = { agent_id: agentId, inventory: jsonData };
+      }
+
+      const jsonString = JSON.stringify(downloadData, null, 2);
 
       // Create a Blob from the JSON string
       const blob = new Blob([jsonString], { type: "application/json" });
