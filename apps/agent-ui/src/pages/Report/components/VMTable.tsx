@@ -47,6 +47,7 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { TechnologyPreviewBadge } from "./TechnologyPreviewBadge";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
 
 const filterStyles = {
@@ -1197,6 +1198,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                   Run deep inspection
                 </Button>
               </Tooltip>
+              <TechnologyPreviewBadge />
             </ToolbarItem>
             <ToolbarItem>
               <Dropdown
