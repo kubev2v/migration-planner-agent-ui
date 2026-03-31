@@ -48,6 +48,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
   const [inspectionActive, setInspectionActive] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onRefreshVMsRef = useRef(onRefreshVMs);
+
+  useEffect(() => {
+    onRefreshVMsRef.current = onRefreshVMs;
+  }, [onRefreshVMs]);
 
   const hasInspectionResults = vms.some((vm) => vm.inspectionStatus != null);
 
@@ -105,13 +110,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleInspectionStarted = useCallback(() => {
     setInspectionActive(true);
     setSelectedVMs(new Set());
-    onRefreshVMs?.();
+    onRefreshVMsRef.current?.();
 
     stopPolling();
     pollingRef.current = setInterval(() => {
-      onRefreshVMs?.();
+      onRefreshVMsRef.current?.();
     }, 5000);
-  }, [onRefreshVMs, stopPolling]);
+  }, [stopPolling]);
 
   useEffect(() => {
     if (!inspectionActive) return;

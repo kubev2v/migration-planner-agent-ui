@@ -209,12 +209,15 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setVddkFile(file);
     setVddkFileName(file.name);
     setVddkError(null);
+    setVddkStatus("notConfigured");
   };
 
   const handleVddkClear = () => {
     setVddkFile(null);
     setVddkFileName("");
     setVddkError(null);
+    setVddkStatus("notConfigured");
+    setVddkProps(null);
   };
 
   const handleVddkUpload = async () => {
@@ -505,7 +508,11 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
                   <TextInput
                     id="vcenter-url"
                     value={vcenterUrl}
-                    onChange={(_ev, val) => setVcenterUrl(val)}
+                    onChange={(_ev, val) => {
+                      setVcenterUrl(val);
+                      if (credentialsStatus === "configured")
+                        setCredentialsStatus("notConfigured");
+                    }}
                     placeholder="vcenter.example.com"
                     isDisabled={credentialsSaving}
                   />
@@ -514,7 +521,11 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
                   <TextInput
                     id="vcenter-user"
                     value={username}
-                    onChange={(_ev, val) => setUsername(val)}
+                    onChange={(_ev, val) => {
+                      setUsername(val);
+                      if (credentialsStatus === "configured")
+                        setCredentialsStatus("notConfigured");
+                    }}
                     placeholder="administrator@vsphere.local"
                     isDisabled={credentialsSaving}
                   />
@@ -524,7 +535,11 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
                     id="vcenter-pass"
                     type="password"
                     value={password}
-                    onChange={(_ev, val) => setPassword(val)}
+                    onChange={(_ev, val) => {
+                      setPassword(val);
+                      if (credentialsStatus === "configured")
+                        setCredentialsStatus("notConfigured");
+                    }}
                     isDisabled={credentialsSaving}
                   />
                 </FormGroup>
