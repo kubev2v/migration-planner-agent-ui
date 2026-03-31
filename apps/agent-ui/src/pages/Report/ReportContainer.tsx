@@ -25,7 +25,7 @@ import {
   TabTitleText,
 } from "@patternfly/react-core";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
 import {
@@ -330,6 +330,25 @@ export const ReportContainer: React.FC = () => {
     vmsPageSize,
     vmsSortFields,
   ]);
+
+  const refreshVMs = useCallback(async () => {
+    const reqId = ++vmsRequestIdRef.current;
+    try {
+      const byExpression = filtersToByExpression(initialVMFilters);
+      const response = await agentApi.getVMs({
+        byExpression,
+        sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
+        page: vmsPage,
+        pageSize: vmsPageSize,
+      });
+      if (vmsRequestIdRef.current === reqId) {
+        setVmsList(response.vms || []);
+        setVmsTotalCount(response.total || 0);
+      }
+    } catch (err) {
+      console.error("Error refreshing VMs:", err);
+    }
+  }, [agentApi, initialVMFilters, vmsSortFields, vmsPage, vmsPageSize]);
 
   if (loading) {
     return (
@@ -670,6 +689,8 @@ export const ReportContainer: React.FC = () => {
                   onPageChange={handlePageChange}
                   onSortChange={handleSortChange}
                   availableFilterOptions={availableFilterOptions}
+                  agentApi={agentApi}
+                  onRefreshVMs={refreshVMs}
                 />
               </div>
             </Tab>

@@ -3,6 +3,7 @@ import type {
   DefaultApiInterface,
   VirtualMachineDetail,
   VMIssue,
+  VmInspectionStatus,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
@@ -54,11 +55,13 @@ const formatMemorySize = (sizeInMB: number): string => {
 interface VMDetailsPageProps {
   vmId: string;
   onBack: () => void;
+  inspectionStatus?: VmInspectionStatus;
 }
 
 export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   vmId,
   onBack,
+  inspectionStatus,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const [vm, setVm] = useState<VirtualMachineDetail | null>(null);
@@ -185,6 +188,78 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
           </div>
         </div>
       </StackItem>
+
+      {inspectionStatus &&
+        (() => {
+          const concerns = (vm.inspection?.concerns ?? []).filter(
+            (c) =>
+              !c.message?.toLowerCase().includes("no inspection concerns") &&
+              !c.label?.toLowerCase().includes("no inspection concerns"),
+          );
+          const hasError = !!inspectionStatus.error;
+          const hasContent = hasError || concerns.length > 0;
+
+          return (
+            <StackItem>
+              <Card className={dashboardStyles.cardBorder}>
+                <CardTitle>
+                  <ExclamationTriangleIcon /> Deep inspection results
+                </CardTitle>
+                <CardBody>
+                  {hasContent ? (
+                    <Stack hasGutter>
+                      {hasError && (
+                        <StackItem>
+                          <Alert
+                            variant="danger"
+                            isInline
+                            isPlain
+                            title="Inspection error"
+                          >
+                            {inspectionStatus.error}
+                          </Alert>
+                        </StackItem>
+                      )}
+                      {concerns.map((concern, idx) => (
+                        <StackItem key={`concern-${concern.label}-${idx}`}>
+                          <Alert
+                            variant={
+                              concern.category === "Critical" ||
+                              concern.category === "Error"
+                                ? "danger"
+                                : concern.category === "Warning"
+                                  ? "warning"
+                                  : "info"
+                            }
+                            isInline
+                            isPlain
+                            title={concern.label}
+                          >
+                            {concern.message}
+                          </Alert>
+                        </StackItem>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <span
+                      style={{
+                        color: "var(--pf-t--global--text--color--subtle)",
+                      }}
+                    >
+                      {inspectionStatus.state === "pending"
+                        ? "Inspection pending…"
+                        : inspectionStatus.state === "running"
+                          ? "Inspection in progress…"
+                          : inspectionStatus.state === "canceled"
+                            ? "Inspection was canceled"
+                            : "No issues found"}
+                    </span>
+                  )}
+                </CardBody>
+              </Card>
+            </StackItem>
+          );
+        })()}
 
       <StackItem>
         <Flex
