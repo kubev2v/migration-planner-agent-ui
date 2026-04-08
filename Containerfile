@@ -8,7 +8,7 @@ ARG GIT_TAG
 ENV GIT_TAG=${GIT_TAG}
 RUN node .yarn/releases/yarn-4.12.0.cjs install --immutable && node .yarn/releases/yarn-4.12.0.cjs build:all
 
-FROM registry.access.redhat.com/ubi9/nginx-124@sha256:04156cd38c436fb6692930d18af59619b0669b2d80cd3590d0973c0e038c5d6d
+FROM registry.access.redhat.com/ubi9/nginx-124@sha256:5f74c8297926209136221c135b27d756867aa0d478e256a53fd4e0dc0acc148c
 # Required labels for Red Hat / Enterprise Contract
 ARG IMAGE_NAME=migration-planner-agent-ui
 ARG IMAGE_VERSION=0.0.0
