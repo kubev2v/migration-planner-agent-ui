@@ -35,6 +35,7 @@ import {
   FilterIcon,
   MagicIcon,
 } from "@patternfly/react-icons";
+import { ColumnsIcon } from "@patternfly/react-icons/dist/esm/icons/columns-icon";
 import {
   Table,
   Tbody,
@@ -45,8 +46,9 @@ import {
   Tr,
 } from "@patternfly/react-table";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import useLocalStorage from "../../../hooks/useLocalStorage";
 import { TechnologyPreviewBadge } from "./TechnologyPreviewBadge";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
 
@@ -122,7 +124,7 @@ interface VMTableProps {
   onResetInspection?: () => void;
 }
 
-type SortableColumn =
+type ColumnKey =
   | "name"
   | "vCenterState"
   | "id"
@@ -132,6 +134,29 @@ type SortableColumn =
   | "memory"
   | "issues"
   | "migratable";
+
+type SortableColumn = ColumnKey;
+
+const Columns: Record<ColumnKey, string> = {
+  name: "Name",
+  vCenterState: "Status",
+  migratable: "Migration Readiness",
+  id: "ID",
+  datacenter: "Data center",
+  cluster: "Cluster",
+  diskSize: "Disk size",
+  memory: "Memory size",
+  issues: "Issues",
+};
+
+const ALL_COLUMN_KEYS = Object.keys(Columns) as ColumnKey[];
+
+const MANDATORY_COLUMNS: ColumnKey[] = ["name"];
+
+const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [...ALL_COLUMN_KEYS];
+
+const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
+const VISIBLE_COLUMNS_VERSION = 1;
 
 const statusLabels: Record<string, string> = {
   poweredOn: "Powered on",
@@ -230,6 +255,39 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Use props for pagination state (controlled by parent)
   const page = currentPage;
   const pageSize = propPageSize;
+
+  // Column visibility state (persisted in localStorage)
+  const [userSelectedColumns, setUserSelectedColumns] = useLocalStorage<
+    ColumnKey[]
+  >(VISIBLE_COLUMNS_KEY, DEFAULT_VISIBLE_COLUMNS, VISIBLE_COLUMNS_VERSION);
+
+  const [isColumnSelectOpen, setIsColumnSelectOpen] = useState(false);
+
+  const visibleColumns = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
+          ...MANDATORY_COLUMNS,
+        ]),
+      ),
+    [userSelectedColumns],
+  );
+
+  const isColumnVisible = useCallback(
+    (key: ColumnKey): boolean => visibleColumns.includes(key),
+    [visibleColumns],
+  );
+
+  const toggleColumn = useCallback(
+    (key: ColumnKey) => {
+      if (MANDATORY_COLUMNS.includes(key)) return;
+      setUserSelectedColumns((prev) =>
+        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+      );
+    },
+    [setUserSelectedColumns],
+  );
 
   // Search state
   const [searchValue, setSearchValue] = useState(initialFilters?.search || "");
@@ -331,24 +389,32 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Row actions dropdown state
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
 
-  // Sort state
-  const [activeSortIndex, setActiveSortIndex] = useState<number | null>(null);
+  // Sort state - tracked by column key so it survives column visibility changes
+  const [sortByColumnKey, setSortByColumnKey] = useState<ColumnKey | null>(
+    null,
+  );
   const [activeSortDirection, setActiveSortDirection] = useState<
     "asc" | "desc"
   >("asc");
 
-  // Column definitions
-  const columns: { key: SortableColumn; label: string; sortable: boolean }[] = [
-    { key: "name", label: "Name", sortable: true },
-    { key: "vCenterState", label: "Status", sortable: true },
-    { key: "migratable", label: "Migration Readiness", sortable: true },
-    { key: "id", label: "ID", sortable: true },
-    { key: "datacenter", label: "Data center", sortable: true },
-    { key: "cluster", label: "Cluster", sortable: true },
-    { key: "diskSize", label: "Disk size", sortable: true },
-    { key: "memory", label: "Memory size", sortable: true },
-    { key: "issues", label: "Issues", sortable: true },
-  ];
+  // Reset sort when the sorted column is hidden
+  useEffect(() => {
+    if (sortByColumnKey && !isColumnVisible(sortByColumnKey)) {
+      setSortByColumnKey(null);
+      onSortChange?.([]);
+    }
+  }, [sortByColumnKey, isColumnVisible, onSortChange]);
+
+  // Column definitions - filtered by visibility
+  const columns = useMemo(
+    () =>
+      ALL_COLUMN_KEYS.filter((key) => isColumnVisible(key)).map((key) => ({
+        key,
+        label: Columns[key],
+        sortable: true,
+      })),
+    [isColumnVisible],
+  );
 
   // Use filter options from props (pre-fetched from parent)
   const availableClusters = availableFilterOptions.clusters;
@@ -612,27 +678,29 @@ export const VMTable: React.FC<VMTableProps> = ({
   // No client-side filtering - handled by backend
   // VMs are already filtered, sorted, and paginated by the backend
 
-  // Sort handler - triggers backend sort
-  const getSortParams = (columnIndex: number): ThProps["sort"] => ({
+  const backendFieldMap: Partial<Record<SortableColumn, string>> = {
+    name: "name",
+    vCenterState: "vCenterState",
+    cluster: "cluster",
+    diskSize: "diskSize",
+    memory: "memory",
+    issues: "issues",
+  };
+
+  // Sort handler - triggers backend sort, tracks by column key
+  const getSortParams = (
+    columnKey: ColumnKey,
+    columnIndex: number,
+  ): ThProps["sort"] => ({
     sortBy: {
-      index: activeSortIndex ?? undefined,
+      index: sortByColumnKey
+        ? columns.findIndex((c) => c.key === sortByColumnKey)
+        : undefined,
       direction: activeSortDirection,
     },
-    onSort: (_event, index, direction) => {
-      setActiveSortIndex(index);
+    onSort: (_event, _index, direction) => {
+      setSortByColumnKey(columnKey);
       setActiveSortDirection(direction);
-
-      // Map frontend column to backend sort field
-      // Only include API-supported fields: name, vCenterState, cluster, diskSize, memory, issues
-      const columnKey = columns[index].key;
-      const backendFieldMap: Partial<Record<SortableColumn, string>> = {
-        name: "name",
-        vCenterState: "vCenterState",
-        cluster: "cluster",
-        diskSize: "diskSize",
-        memory: "memory",
-        issues: "issues",
-      };
 
       const sortField = backendFieldMap[columnKey];
       if (sortField) {
@@ -1184,6 +1252,41 @@ export const VMTable: React.FC<VMTableProps> = ({
                 </div>
               </Dropdown>
             </ToolbarItem>
+
+            {/* Manage Columns */}
+            <ToolbarItem>
+              <Select
+                role="menu"
+                isOpen={isColumnSelectOpen}
+                onSelect={(_event, selection) => {
+                  toggleColumn(selection as ColumnKey);
+                }}
+                onOpenChange={setIsColumnSelectOpen}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                  <MenuToggle
+                    ref={toggleRef}
+                    onClick={() => setIsColumnSelectOpen((prev) => !prev)}
+                    isExpanded={isColumnSelectOpen}
+                  >
+                    <ColumnsIcon /> Manage columns
+                  </MenuToggle>
+                )}
+              >
+                <SelectList>
+                  {ALL_COLUMN_KEYS.map((key) => (
+                    <SelectOption
+                      key={key}
+                      value={key}
+                      hasCheckbox
+                      isSelected={isColumnVisible(key)}
+                      isDisabled={MANDATORY_COLUMNS.includes(key)}
+                    >
+                      {Columns[key]}
+                    </SelectOption>
+                  ))}
+                </SelectList>
+              </Select>
+            </ToolbarItem>
           </ToolbarGroup>
 
           <ToolbarGroup>
@@ -1298,7 +1401,7 @@ export const VMTable: React.FC<VMTableProps> = ({
       >
         <Thead>
           <Tr>
-            <Th />
+            <Th screenReaderText="Select" />
             {columns.map((column, index) => {
               const getWidth = (key: SortableColumn) => {
                 switch (key) {
@@ -1335,7 +1438,11 @@ export const VMTable: React.FC<VMTableProps> = ({
               return (
                 <Th
                   key={column.key}
-                  sort={column.sortable ? getSortParams(index) : undefined}
+                  sort={
+                    column.sortable
+                      ? getSortParams(column.key, index)
+                      : undefined
+                  }
                   width={getWidth(column.key)}
                   modifier={getModifier(column.key)}
                 >
@@ -1348,7 +1455,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                 Deep inspection
               </Th>
             )}
-            <Th width={10} modifier="fitContent" />
+            <Th width={10} modifier="fitContent" screenReaderText="Actions" />
           </Tr>
         </Thead>
         <Tbody>
@@ -1378,39 +1485,55 @@ export const VMTable: React.FC<VMTableProps> = ({
                       vm.inspectionStatus?.state === "pending",
                   }}
                 />
-                <Td dataLabel="Name">
-                  {onVMClick ? (
-                    <Button
-                      variant="link"
-                      isInline
-                      onClick={() => onVMClick(vm.id)}
-                    >
-                      {vm.name}
-                    </Button>
-                  ) : (
-                    vm.name
-                  )}
-                </Td>
-                <Td dataLabel="Status">{renderStatus(vm)}</Td>
-                <Td dataLabel="Migration Readiness" modifier="fitContent">
-                  {vm.migratable === true
-                    ? "Ready"
-                    : vm.migratable === false
-                      ? "Not ready"
-                      : "Unknown"}
-                </Td>
-                <Td dataLabel="ID">{vm.id}</Td>
-                <Td dataLabel="Data center">{vm.datacenter || "—"}</Td>
-                <Td dataLabel="Cluster">{vm.cluster || "—"}</Td>
-                <Td dataLabel="Disk size">
-                  {formatDiskSize(vm.diskSize || 0)}
-                </Td>
-                <Td dataLabel="Memory size">
-                  {formatMemorySize(vm.memory || 0)}
-                </Td>
-                <Td dataLabel="Issues" modifier="fitContent">
-                  {vm.issueCount || 0}
-                </Td>
+                {isColumnVisible("name") && (
+                  <Td dataLabel="Name">
+                    {onVMClick ? (
+                      <Button
+                        variant="link"
+                        isInline
+                        onClick={() => onVMClick(vm.id)}
+                      >
+                        {vm.name}
+                      </Button>
+                    ) : (
+                      vm.name
+                    )}
+                  </Td>
+                )}
+                {isColumnVisible("vCenterState") && (
+                  <Td dataLabel="Status">{renderStatus(vm)}</Td>
+                )}
+                {isColumnVisible("migratable") && (
+                  <Td dataLabel="Migration Readiness" modifier="fitContent">
+                    {vm.migratable === true
+                      ? "Ready"
+                      : vm.migratable === false
+                        ? "Not ready"
+                        : "Unknown"}
+                  </Td>
+                )}
+                {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
+                {isColumnVisible("datacenter") && (
+                  <Td dataLabel="Data center">{vm.datacenter || "—"}</Td>
+                )}
+                {isColumnVisible("cluster") && (
+                  <Td dataLabel="Cluster">{vm.cluster || "—"}</Td>
+                )}
+                {isColumnVisible("diskSize") && (
+                  <Td dataLabel="Disk size">
+                    {formatDiskSize(vm.diskSize || 0)}
+                  </Td>
+                )}
+                {isColumnVisible("memory") && (
+                  <Td dataLabel="Memory size">
+                    {formatMemorySize(vm.memory || 0)}
+                  </Td>
+                )}
+                {isColumnVisible("issues") && (
+                  <Td dataLabel="Issues" modifier="fitContent">
+                    {vm.issueCount || 0}
+                  </Td>
+                )}
                 {hasInspectionResults && (
                   <Td dataLabel="Deep inspection">
                     {renderInspectionStatus(vm)}
