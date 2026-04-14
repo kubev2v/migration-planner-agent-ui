@@ -28,7 +28,6 @@ interface MigrationDonutChartProps {
   subTitleColor?: string;
   itemsPerRow?: number;
   marginLeft?: string;
-  labelFontSize?: number;
   titleFontSize?: number;
   subTitleFontSize?: number;
   donutThickness?: number;
@@ -45,6 +44,11 @@ interface MigrationDonutChartProps {
   }) => string;
   onItemClick?: (item: OSData) => void;
   onTitleClick?: () => void;
+  /** When set, used for legend label instead of "name (countDisplay)". */
+  legendLabelFormatter?: (item: {
+    x: string;
+    countDisplay?: string | number;
+  }) => string;
 }
 
 const legendColors = ["#0066cc", "#5e40be", "#b6a6e9", "#b98412"];
@@ -52,6 +56,11 @@ const legendColors = ["#0066cc", "#5e40be", "#b6a6e9", "#b98412"];
 const legendStyles = {
   icon: css`
   margin-right: 4px;
+  `,
+  centeredWrapper: css`
+    display: flex;
+    justify-content: center;
+    width: 100%;
   `,
 };
 
@@ -68,7 +77,6 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   subTitleColor = "#000000",
   itemsPerRow = 1,
   marginLeft = "0%",
-  labelFontSize = 25,
   titleFontSize = 28,
   subTitleFontSize = 14,
   donutThickness = 45,
@@ -76,6 +84,7 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   tooltipLabelFormatter,
   onItemClick,
   onTitleClick,
+  legendLabelFormatter,
 }) => {
   const dynamicLegend = useMemo(() => {
     return data.reduce(
@@ -118,10 +127,15 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
 
   const legendData = useMemo(() => {
     return chartData.map((item) => ({
-      name: `${item.x} (${item.countDisplay})`,
+      name: legendLabelFormatter
+        ? legendLabelFormatter({
+            x: item.x,
+            countDisplay: item.countDisplay,
+          })
+        : `${item.x} (${item.countDisplay})`,
       symbol: { fill: getColor(item.legendCategory) },
     }));
-  }, [chartData, getColor]);
+  }, [chartData, getColor, legendLabelFormatter]);
 
   const innerRadius = useMemo(() => {
     const outerApprox = Math.min(width, height) / 2;
@@ -303,7 +317,7 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
               maxWidth: legendWidth ?? 800,
               padding: "var(--pf-t--global--spacer--ml)",
             }}
-            spaceItems={{ default: "spaceItemsSm" }}
+            spaceItems={{ default: "spaceItemsMd" }}
             justifyContent={{ default: "justifyContentCenter" }}
             alignItems={{ default: "alignItemsCenter" }}
             flexWrap={{ default: "wrap" }}
@@ -315,9 +329,8 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
                   onClick={() => onItemClick(item)}
                   className="pf-v6-u-display-inline-flex pf-v6-u-align-items-center"
                   style={{
-                    gap: "var(--pf-t--global--spacer--ml)",
+                    gap: "var(--pf-t--global--spacer--lg)",
                     cursor: "pointer",
-                    fontSize: `${labelFontSize}px`,
                     border: "none",
                     background: "none",
                     padding:
@@ -348,23 +361,27 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
                     />
                   </svg>
                   <span>
-                    {item.name} ({item.countDisplay ?? item.count})
+                    {legendLabelFormatter
+                      ? legendLabelFormatter({
+                          x: item.name,
+                          countDisplay: item.countDisplay,
+                        })
+                      : item.name}
                   </span>
                 </button>
               </FlexItem>
             ))}
           </Flex>
         ) : (
-          // Standard non-clickable legend
-          <ChartLegend
-            data={legendData}
-            orientation="horizontal"
-            width={legendWidth ?? 800}
-            itemsPerRow={itemsPerRow}
-            style={{
-              labels: { fontSize: labelFontSize },
-            }}
-          />
+          // Standard non-clickable legend (centered block)
+          <div className={legendStyles.centeredWrapper}>
+            <ChartLegend
+              data={legendData}
+              orientation="horizontal"
+              width={legendWidth ?? 800}
+              itemsPerRow={itemsPerRow}
+            />
+          </div>
         )}
       </Flex>
     </Flex>

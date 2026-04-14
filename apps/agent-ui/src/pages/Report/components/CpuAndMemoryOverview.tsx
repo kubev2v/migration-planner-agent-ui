@@ -1,3 +1,4 @@
+import { css } from "@emotion/css";
 import {
   Card,
   CardBody,
@@ -27,6 +28,11 @@ interface CpuAndMemoryOverviewProps {
 }
 
 type ViewMode = "memoryTiers" | "vcpuTiers";
+
+const cardSubtitleStyle = css`
+  color: #6a6e73;
+  font-size: 0.85rem;
+`;
 
 const colorPalette = [
   "#0066cc",
@@ -164,7 +170,7 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
                 <DataProcessorIcon /> CPU &amp; memory
               </div>
               {!isExportMode && (
-                <div>
+                <div className={cardSubtitleStyle}>
                   {viewMode === "memoryTiers"
                     ? "Memory size tiers"
                     : "vCPU count tiers"}
@@ -229,7 +235,6 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
           }
           subTitleColor="#9a9da0"
           itemsPerRow={Math.ceil(activeSlices.length / 2)}
-          labelFontSize={16}
           tooltipLabelFormatter={({ datum, percent }) =>
             `${datum.countDisplay}\n${percent.toFixed(1)}%`
           }

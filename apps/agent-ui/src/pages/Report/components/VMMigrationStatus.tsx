@@ -321,7 +321,6 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
             subTitle="VMs"
             subTitleColor="#9a9da0"
             titleFontSize={34}
-            labelFontSize={16}
             itemsPerRow={2}
             onItemClick={handleItemClick}
             onTitleClick={!isExportMode ? handleTitleClick : undefined}
