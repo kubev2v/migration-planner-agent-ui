@@ -444,7 +444,6 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%`
             }
-            onItemClick={() => {}}
             onTitleClick={
               !isExportMode && viewMode === "vmByCluster"
                 ? handleTitleClick

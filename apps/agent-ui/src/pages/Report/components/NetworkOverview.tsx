@@ -333,7 +333,6 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%\nVLAN: ${legendVlanMap[datum.legendCategory] ?? "-"}`
             }
-            onItemClick={() => {}}
             onTitleClick={!isExportMode ? handleTitleClick : undefined}
           />
         )}
@@ -349,7 +348,6 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
             subTitle={nicSubTitle}
             subTitleColor="#9a9da0"
             itemsPerRow={Math.ceil((nicChartData?.length ?? 0) / 2)}
-            onItemClick={() => {}}
             marginLeft="12%"
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%`

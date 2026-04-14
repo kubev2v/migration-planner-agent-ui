@@ -129,7 +129,6 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
             datum: { countDisplay?: string | number };
             percent: number;
           }) => `${datum.countDisplay}\n${percent.toFixed(1)}%`}
-          onItemClick={() => {}}
         />
       </CardBody>
     </Card>

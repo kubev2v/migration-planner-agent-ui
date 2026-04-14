@@ -360,7 +360,14 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
                       fill={getColor(item.legendCategory)}
                     />
                   </svg>
-                  <span>{item.name}</span>
+                  <span>
+                    {legendLabelFormatter
+                      ? legendLabelFormatter({
+                          x: item.name,
+                          countDisplay: item.countDisplay,
+                        })
+                      : item.name}
+                  </span>
                 </button>
               </FlexItem>
             ))}
