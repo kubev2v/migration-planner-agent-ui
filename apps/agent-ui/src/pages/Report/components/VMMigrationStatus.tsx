@@ -205,16 +205,16 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
       legendCategory: "Migratable",
     },
     {
-      name: "Non-Migratable",
+      name: "Unready for migration",
       count: data.nonMigratable,
       countDisplay: `${data.nonMigratable} VMs`,
-      legendCategory: "Non-Migratable",
+      legendCategory: "Unready for migration",
     },
   ];
 
   const legend = {
     Migratable: "#28a745",
-    "Non-Migratable": "#dc3545",
+    "Unready for migration": "#dc3545",
   };
 
   const breakdownData = useMemo(() => {
