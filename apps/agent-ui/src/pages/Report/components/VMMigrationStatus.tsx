@@ -19,6 +19,7 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Symbols } from "../../../main/Symbols";
+import { chartColorFailure, chartColorSuccess } from "./constants";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
 import { createVMFilterURL } from "./vmNavigation";
@@ -213,8 +214,8 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   ];
 
   const legend = {
-    Migratable: "#28a745",
-    "Unready for migration": "#dc3545",
+    Migratable: chartColorSuccess,
+    "Unready for migration": chartColorFailure,
   };
 
   const breakdownData = useMemo(() => {
