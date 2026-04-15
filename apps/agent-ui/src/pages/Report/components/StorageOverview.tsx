@@ -334,7 +334,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
     () => ({
       height: 300,
       width: 420,
-      donutThickness: 9,
+      donutThickness: 18,
       titleFontSize: 34,
       subTitleColor: "#9a9da0",
     }),

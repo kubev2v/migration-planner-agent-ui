@@ -19,6 +19,7 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Symbols } from "../../../main/Symbols";
+import { chartColorFailure, chartColorSuccess } from "./constants";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
 import { createVMFilterURL } from "./vmNavigation";
@@ -205,16 +206,16 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
       legendCategory: "Migratable",
     },
     {
-      name: "Non-Migratable",
+      name: "Unready for migration",
       count: data.nonMigratable,
       countDisplay: `${data.nonMigratable} VMs`,
-      legendCategory: "Non-Migratable",
+      legendCategory: "Unready for migration",
     },
   ];
 
   const legend = {
-    Migratable: "#28a745",
-    "Non-Migratable": "#dc3545",
+    Migratable: chartColorSuccess,
+    "Unready for migration": chartColorFailure,
   };
 
   const breakdownData = useMemo(() => {
@@ -315,7 +316,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
             legend={legend}
             height={300}
             width={420}
-            donutThickness={9}
+            donutThickness={18}
             padAngle={1}
             title={`${totalVMs}`}
             subTitle="VMs"
