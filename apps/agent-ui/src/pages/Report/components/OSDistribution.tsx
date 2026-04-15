@@ -32,7 +32,12 @@ export const OSDistribution: React.FC<OSDistributionProps> = ({
   );
 
   const dataEntries = Object.entries(osData).filter(([os]) => os.trim() !== "");
-  const sorted = dataEntries.sort(([, a], [, b]) => b.count - a.count);
+  const sorted = dataEntries.sort(([, a], [, b]) => {
+    if (a.supported !== b.supported) {
+      return a.supported ? -1 : 1;
+    }
+    return b.count - a.count;
+  });
 
   const chartData = sorted.map(([os, osInfo]) => ({
     name: os,
