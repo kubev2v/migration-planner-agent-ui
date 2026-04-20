@@ -219,7 +219,7 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
           data={activeSlices}
           height={300}
           width={420}
-          donutThickness={9}
+          donutThickness={18}
           titleFontSize={34}
           legend={legend}
           legendWidth={680}
@@ -235,6 +235,9 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
           }
           subTitleColor="#9a9da0"
           itemsPerRow={Math.ceil(activeSlices.length / 2)}
+          legendLabelFormatter={({ x, countDisplay }) =>
+            `${x} (${countDisplay})`
+          }
           tooltipLabelFormatter={({ datum, percent }) =>
             `${datum.countDisplay}\n${percent.toFixed(1)}%`
           }

@@ -334,7 +334,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
     () => ({
       height: 300,
       width: 420,
-      donutThickness: 9,
+      donutThickness: 18,
       titleFontSize: 34,
       subTitleColor: "#9a9da0",
     }),
@@ -506,6 +506,9 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   : `${totals.totalSize.toFixed(2)} TB`
               }
               itemsPerRow={Math.ceil(chartData.length / 2)}
+              legendLabelFormatter={({ x, countDisplay }) =>
+                `${x} (${countDisplay})`
+              }
               tooltipLabelFormatter={({ datum, percent }) =>
                 `${datum.x}: ${datum.countDisplay}\n${percent.toFixed(1)}%`
               }

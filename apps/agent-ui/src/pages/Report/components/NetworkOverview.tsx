@@ -322,14 +322,13 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
             data={chartData}
             height={300}
             width={420}
-            donutThickness={9}
+            donutThickness={18}
             titleFontSize={34}
             legend={legend}
             title={title}
             subTitle={subTitle}
             subTitleColor="#9a9da0"
             itemsPerRow={Math.ceil(chartData.length / 2)}
-            legendLabelFormatter={({ x }) => x}
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%\nVLAN: ${legendVlanMap[datum.legendCategory] ?? "-"}`
             }
@@ -341,7 +340,7 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
             data={nicChartData}
             height={300}
             width={420}
-            donutThickness={9}
+            donutThickness={18}
             titleFontSize={34}
             legend={nicLegend}
             title={nicTitle}
