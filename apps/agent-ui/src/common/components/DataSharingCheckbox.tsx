@@ -63,7 +63,7 @@ export const DataSharingCheckbox: React.FC<DataSharingCheckboxProps> = ({
           Aggregated data does not include names of virtual machines, hosts,
           clusters, data centers, datastores, disks and networks.{" "}
           <a
-            href="https://www.redhat.com/en/about/privacy-policy"
+            href="https://kubev2v.github.io/openshift-migration-advisor-docs/docs/aggregated-data-report/"
             target="_blank"
             rel="noopener noreferrer"
           >

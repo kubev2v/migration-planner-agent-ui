@@ -113,7 +113,7 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
           data={slices}
           height={300}
           width={420}
-          donutThickness={9}
+          donutThickness={18}
           titleFontSize={34}
           legend={legend}
           title={`${totalHosts}`}
@@ -121,7 +121,6 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
           subTitleColor="#9a9da0"
           itemsPerRow={2}
           marginLeft="0%"
-          legendLabelFormatter={({ x }: { x: string }) => x}
           tooltipLabelFormatter={({
             datum,
             percent,

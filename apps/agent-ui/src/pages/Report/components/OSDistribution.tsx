@@ -9,6 +9,7 @@ import {
 } from "@patternfly/react-core";
 import { DesktopIcon, InfoCircleIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { chartColorFailure, chartColorSuccess } from "./constants";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationChart from "./MigrationChart";
 
@@ -32,7 +33,23 @@ export const OSDistribution: React.FC<OSDistributionProps> = ({
   );
 
   const dataEntries = Object.entries(osData).filter(([os]) => os.trim() !== "");
-  const sorted = dataEntries.sort(([, a], [, b]) => b.count - a.count);
+
+  const osSortGroup = (osInfo: {
+    count: number;
+    supported: boolean;
+    upgradeRecommendation: string;
+  }): number => {
+    if (osInfo.supported) return 1;
+    if ((osInfo.upgradeRecommendation?.trim() ?? "") !== "") return 2;
+    return 3;
+  };
+
+  const sorted = [...dataEntries].sort(([, a], [, b]) => {
+    const groupA = osSortGroup(a);
+    const groupB = osSortGroup(b);
+    if (groupA !== groupB) return groupA - groupB;
+    return b.count - a.count;
+  });
 
   const chartData = sorted.map(([os, osInfo]) => ({
     name: os,
@@ -44,8 +61,8 @@ export const OSDistribution: React.FC<OSDistributionProps> = ({
   }));
 
   const customLegend = {
-    "Supported by MTV": "#28a745",
-    "Not supported by MTV": "#f0ad4e",
+    "Supported by MTV": chartColorSuccess,
+    "Not supported by MTV": chartColorFailure,
   };
 
   return (

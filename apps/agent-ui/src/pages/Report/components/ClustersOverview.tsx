@@ -433,14 +433,13 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
             data={chartData}
             height={300}
             width={420}
-            donutThickness={9}
+            donutThickness={18}
             titleFontSize={34}
             legend={legend}
             title={title}
             subTitle={subTitle}
             subTitleColor="#9a9da0"
             itemsPerRow={chartData.length}
-            legendLabelFormatter={({ x }) => x}
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%`
             }
