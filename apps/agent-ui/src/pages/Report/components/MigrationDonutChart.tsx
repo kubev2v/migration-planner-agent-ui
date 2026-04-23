@@ -28,6 +28,7 @@ interface MigrationDonutChartProps {
   subTitleColor?: string;
   itemsPerRow?: number;
   marginLeft?: string;
+  labelFontSize?: number;
   titleFontSize?: number;
   subTitleFontSize?: number;
   donutThickness?: number;
@@ -57,11 +58,6 @@ const legendStyles = {
   icon: css`
   margin-right: 4px;
   `,
-  centeredWrapper: css`
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  `,
 };
 
 const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
@@ -77,6 +73,7 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   subTitleColor = "#000000",
   itemsPerRow = 1,
   marginLeft = "0%",
+  labelFontSize = 14,
   titleFontSize = 28,
   subTitleFontSize = 14,
   donutThickness = 45,
@@ -136,6 +133,27 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
       symbol: { fill: getColor(item.legendCategory) },
     }));
   }, [chartData, getColor, legendLabelFormatter]);
+
+  const legendWidthValue = legendWidth ?? 800;
+
+  const legendX = useMemo(() => {
+    const symbolAndGap = 34;
+    const charWidth = labelFontSize * 0.55;
+    const itemWidths = legendData.map(
+      (d) => symbolAndGap + d.name.length * charWidth,
+    );
+    const numCols = Math.min(legendData.length, itemsPerRow);
+    const gutter = 16;
+    let contentWidth = (numCols - 1) * gutter;
+    for (let c = 0; c < numCols; c++) {
+      let maxW = 0;
+      for (let i = c; i < itemWidths.length; i += itemsPerRow) {
+        maxW = Math.max(maxW, itemWidths[i] ?? 0);
+      }
+      contentWidth += maxW;
+    }
+    return Math.max(0, (legendWidthValue - contentWidth) / 2);
+  }, [legendData, itemsPerRow, legendWidthValue, labelFontSize]);
 
   const innerRadius = useMemo(() => {
     const outerApprox = Math.min(width, height) / 2;
@@ -373,15 +391,14 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
             ))}
           </Flex>
         ) : (
-          // Standard non-clickable legend (centered block)
-          <div className={legendStyles.centeredWrapper}>
-            <ChartLegend
-              data={legendData}
-              orientation="horizontal"
-              width={legendWidth ?? 800}
-              itemsPerRow={itemsPerRow}
-            />
-          </div>
+          // Standard non-clickable legend (centered via x offset)
+          <ChartLegend
+            data={legendData}
+            orientation="horizontal"
+            width={legendWidthValue}
+            itemsPerRow={itemsPerRow}
+            x={legendX}
+          />
         )}
       </Flex>
     </Flex>

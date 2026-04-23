@@ -266,7 +266,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
           justifyContent={{ default: "justifyContentSpaceBetween" }}
         >
           <FlexItem>
-            <VirtualMachineIcon /> VM migration status
+            <VirtualMachineIcon /> VM Migration status
           </FlexItem>
           {!isExportMode && (
             <FlexItem>
@@ -323,6 +323,9 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
             subTitleColor="#9a9da0"
             titleFontSize={34}
             itemsPerRow={2}
+            legendLabelFormatter={({ x, countDisplay }) =>
+              `${x} (${countDisplay})`
+            }
             onItemClick={handleItemClick}
             onTitleClick={!isExportMode ? handleTitleClick : undefined}
           />

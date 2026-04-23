@@ -33,13 +33,23 @@ export const OSDistribution: React.FC<OSDistributionProps> = ({
   );
 
   const dataEntries = Object.entries(osData).filter(([os]) => os.trim() !== "");
-  const sorted = dataEntries.sort(([, a], [, b]) => {
-    if (a.supported !== b.supported) {
-      return a.supported ? -1 : 1;
-    }
+  const osSortGroup = (osInfo: {
+    count: number;
+    supported: boolean;
+    upgradeRecommendation: string;
+  }): number => {
+    if (osInfo.supported) return 1;
+    if ((osInfo.upgradeRecommendation?.trim() ?? "") !== "") return 2;
+    return 3;
+  };
+
+  const sorted = [...dataEntries].sort(([, a], [, b]) => {
+    const groupA = osSortGroup(a);
+    const groupB = osSortGroup(b);
+    if (groupA !== groupB) return groupA - groupB;
     return b.count - a.count;
   });
-
+  
   const chartData = sorted.map(([os, osInfo]) => ({
     name: os,
     count: osInfo.count,

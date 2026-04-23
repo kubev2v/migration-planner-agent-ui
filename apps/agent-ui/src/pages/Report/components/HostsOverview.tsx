@@ -121,7 +121,6 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
           subTitleColor="#9a9da0"
           itemsPerRow={2}
           marginLeft="0%"
-          legendLabelFormatter={({ x }: { x: string }) => x}
           tooltipLabelFormatter={({
             datum,
             percent,

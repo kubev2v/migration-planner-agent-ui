@@ -235,6 +235,9 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
           }
           subTitleColor="#9a9da0"
           itemsPerRow={Math.ceil(activeSlices.length / 2)}
+          legendLabelFormatter={({ x, countDisplay }) =>
+            `${x} (${countDisplay})`
+          }
           tooltipLabelFormatter={({ datum, percent }) =>
             `${datum.countDisplay}\n${percent.toFixed(1)}%`
           }
