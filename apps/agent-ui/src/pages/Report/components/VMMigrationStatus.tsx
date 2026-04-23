@@ -266,7 +266,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
           justifyContent={{ default: "justifyContentSpaceBetween" }}
         >
           <FlexItem>
-            <VirtualMachineIcon /> VM Migration status
+            <VirtualMachineIcon /> VM Migration Status
           </FlexItem>
           {!isExportMode && (
             <FlexItem>
