@@ -20,6 +20,7 @@ export type TechnologyPreviewBadgeProps = {
 export const TechnologyPreviewBadge: React.FC<TechnologyPreviewBadgeProps> = ({
   position = TechnologyPreviewBadgePosition.inline,
   className = "pf-v6-u-ml-md",
+  text = "Technology preview",
 }) => {
   let clsName = className;
   switch (position) {
@@ -54,7 +55,7 @@ export const TechnologyPreviewBadge: React.FC<TechnologyPreviewBadgeProps> = ({
         icon={<InfoCircleIcon />}
         className={clsName}
       >
-        Technology preview
+        {text}
       </Label>
     </Popover>
   );
