@@ -64,7 +64,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     onRefreshVMsRef.current = onRefreshVMs;
   }, [onRefreshVMs]);
 
-  const hasInspectionResults = vms.some((vm) => vm.inspectionStatus != null);
+  // Once any VM has inspection data the column must stay visible, even while
+  // the list is momentarily empty during a sort/filter refetch.
+  const hasInspectionResultsRef = useRef(false);
+  if (vms.some((vm) => vm.inspectionStatus != null)) {
+    hasInspectionResultsRef.current = true;
+  }
+  const hasInspectionResults = hasInspectionResultsRef.current;
 
   const handleVMClick = (vmId: string) => {
     setSelectedVMId(vmId);
