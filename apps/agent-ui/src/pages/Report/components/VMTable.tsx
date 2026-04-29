@@ -133,7 +133,8 @@ type ColumnKey =
   | "diskSize"
   | "memory"
   | "issues"
-  | "migratable";
+  | "migratable"
+  | "deepInspection";
 
 type SortableColumn = ColumnKey;
 
@@ -147,6 +148,7 @@ const Columns: Record<ColumnKey, string> = {
   diskSize: "Disk size",
   memory: "Memory size",
   issues: "Issues",
+  deepInspection: "Deep inspection",
 };
 
 const ALL_COLUMN_KEYS = Object.keys(Columns) as ColumnKey[];
@@ -156,7 +158,7 @@ const MANDATORY_COLUMNS: ColumnKey[] = ["name"];
 const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [...ALL_COLUMN_KEYS];
 
 const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-const VISIBLE_COLUMNS_VERSION = 1;
+const VISIBLE_COLUMNS_VERSION = 2;
 
 const statusLabels: Record<string, string> = {
   poweredOn: "Powered on",
@@ -185,6 +187,20 @@ const memorySizeRanges = [
 
 const MB_IN_GB = 1024;
 const MB_IN_TB = 1024 * 1024;
+
+// Client-side sort order for inspection states (lower index = first in asc order)
+const inspectionStateOrder: Record<string, number> = {
+  running: 0,
+  pending: 1,
+  completed: 2,
+  error: 3,
+  canceled: 4,
+};
+
+const getInspectionSortValue = (vm: VirtualMachine): number => {
+  const state = vm.inspectionStatus?.state;
+  return state !== undefined ? (inspectionStateOrder[state] ?? 99) : 99;
+};
 
 const formatDiskSize = (sizeInMB: number): string => {
   if (sizeInMB >= MB_IN_TB) {
@@ -408,12 +424,17 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Column definitions - filtered by visibility
   const columns = useMemo(
     () =>
-      ALL_COLUMN_KEYS.filter((key) => isColumnVisible(key)).map((key) => ({
+      ALL_COLUMN_KEYS.filter((key) => {
+        if (key === "deepInspection") {
+          return isColumnVisible(key) && hasInspectionResults;
+        }
+        return isColumnVisible(key);
+      }).map((key) => ({
         key,
         label: Columns[key],
         sortable: true,
       })),
-    [isColumnVisible],
+    [isColumnVisible, hasInspectionResults],
   );
 
   // Use filter options from props (pre-fetched from parent)
@@ -678,6 +699,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   // No client-side filtering - handled by backend
   // VMs are already filtered, sorted, and paginated by the backend
 
+  // Backend supports sorting for these columns only
   const backendFieldMap: Partial<Record<SortableColumn, string>> = {
     name: "name",
     vCenterState: "vCenterState",
@@ -687,9 +709,19 @@ export const VMTable: React.FC<VMTableProps> = ({
     issues: "issues",
   };
 
+  // Apply client-side sort for deepInspection; all other columns use backend sort.
+  // Skip reordering while inspection is active so rows don't jump as statuses change.
+  const displayVMs = useMemo(() => {
+    if (sortByColumnKey !== "deepInspection" || inspectionActive) return vms;
+    return [...vms].sort((a, b) => {
+      const diff = getInspectionSortValue(a) - getInspectionSortValue(b);
+      return activeSortDirection === "asc" ? diff : -diff;
+    });
+  }, [vms, sortByColumnKey, activeSortDirection, inspectionActive]);
+
   // Sort handler - triggers backend sort, tracks by column key
   const getSortParams = (
-    columnKey: ColumnKey,
+    columnKey: SortableColumn,
     columnIndex: number,
   ): ThProps["sort"] => ({
     sortBy: {
@@ -702,9 +734,14 @@ export const VMTable: React.FC<VMTableProps> = ({
       setSortByColumnKey(columnKey);
       setActiveSortDirection(direction);
 
-      const sortField = backendFieldMap[columnKey];
-      if (sortField) {
-        onSortChange?.([`${sortField}:${direction}`]);
+      if (columnKey === "deepInspection") {
+        // Client-side only — clear any active backend sort
+        onSortChange?.([]);
+      } else {
+        const sortField = backendFieldMap[columnKey];
+        if (sortField) {
+          onSortChange?.([`${sortField}:${direction}`]);
+        }
       }
     },
     columnIndex,
@@ -1273,7 +1310,9 @@ export const VMTable: React.FC<VMTableProps> = ({
                 )}
               >
                 <SelectList>
-                  {ALL_COLUMN_KEYS.map((key) => (
+                  {ALL_COLUMN_KEYS.filter(
+                    (key) => key !== "deepInspection" || hasInspectionResults,
+                  ).map((key) => (
                     <SelectOption
                       key={key}
                       value={key}
@@ -1403,7 +1442,7 @@ export const VMTable: React.FC<VMTableProps> = ({
           <Tr>
             <Th screenReaderText="Select" />
             {columns.map((column, index) => {
-              const getWidth = (key: SortableColumn) => {
+              const getWidth = (key: ColumnKey) => {
                 switch (key) {
                   case "name":
                     return hasInspectionResults ? 15 : 20;
@@ -1423,12 +1462,14 @@ export const VMTable: React.FC<VMTableProps> = ({
                     return 10;
                   case "issues":
                     return 10;
+                  case "deepInspection":
+                    return 15;
                   default:
                     return undefined;
                 }
               };
 
-              const getModifier = (key: SortableColumn) => {
+              const getModifier = (key: ColumnKey) => {
                 if (key === "issues" || key === "migratable") {
                   return "fitContent";
                 }
@@ -1450,29 +1491,20 @@ export const VMTable: React.FC<VMTableProps> = ({
                 </Th>
               );
             })}
-            {hasInspectionResults && (
-              <Th width={15} modifier="nowrap">
-                Deep inspection
-              </Th>
-            )}
             <Th width={10} modifier="fitContent" screenReaderText="Actions" />
           </Tr>
         </Thead>
         <Tbody>
           {loading ? (
             <Tr>
-              <Td colSpan={columns.length + 2 + (hasInspectionResults ? 1 : 0)}>
-                Loading...
-              </Td>
+              <Td colSpan={columns.length + 2}>Loading...</Td>
             </Tr>
           ) : vms.length === 0 ? (
             <Tr>
-              <Td colSpan={columns.length + 2 + (hasInspectionResults ? 1 : 0)}>
-                No virtual machines found
-              </Td>
+              <Td colSpan={columns.length + 2}>No virtual machines found</Td>
             </Tr>
           ) : (
-            vms.map((vm, rowIndex) => (
+            displayVMs.map((vm, rowIndex) => (
               <Tr key={vm.id}>
                 <Td
                   select={{
@@ -1489,17 +1521,21 @@ export const VMTable: React.FC<VMTableProps> = ({
                   }}
                 />
                 {isColumnVisible("name") && (
-                  <Td dataLabel="Name">
+                  <Td dataLabel="Name" modifier="truncate">
                     {onVMClick ? (
-                      <Button
-                        variant="link"
-                        isInline
-                        onClick={() => onVMClick(vm.id)}
-                      >
-                        {vm.name}
-                      </Button>
+                      <Tooltip content={vm.name}>
+                        <Button
+                          variant="link"
+                          isInline
+                          onClick={() => onVMClick(vm.id)}
+                        >
+                          {vm.name}
+                        </Button>
+                      </Tooltip>
                     ) : (
-                      vm.name
+                      <Tooltip content={vm.name}>
+                        <span>{vm.name}</span>
+                      </Tooltip>
                     )}
                   </Td>
                 )}
@@ -1537,7 +1573,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                     {vm.issueCount || 0}
                   </Td>
                 )}
-                {hasInspectionResults && (
+                {hasInspectionResults && isColumnVisible("deepInspection") && (
                   <Td dataLabel="Deep inspection">
                     {renderInspectionStatus(vm)}
                   </Td>
