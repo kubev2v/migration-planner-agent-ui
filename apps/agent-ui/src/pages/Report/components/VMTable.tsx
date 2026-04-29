@@ -1295,7 +1295,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                 <Button
                   variant="primary"
                   icon={<MagicIcon />}
-                  isDisabled={selectedVMs.size === 0 || inspectionActive}
+                  isDisabled={selectedVMs.size === 0}
                   onClick={() => onRunDeepInspection?.()}
                 >
                   Run deep inspection
@@ -1479,7 +1479,10 @@ export const VMTable: React.FC<VMTableProps> = ({
                     rowIndex,
                     onSelect: (_event, isSelected) =>
                       onSelectVM(vm, isSelected),
-                    isSelected: selectedVMs.has(vm.id),
+                    isSelected:
+                      selectedVMs.has(vm.id) ||
+                      vm.inspectionStatus?.state === "running" ||
+                      vm.inspectionStatus?.state === "pending",
                     isDisabled:
                       vm.inspectionStatus?.state === "running" ||
                       vm.inspectionStatus?.state === "pending",
@@ -1592,7 +1595,6 @@ export const VMTable: React.FC<VMTableProps> = ({
                         return (
                           <DropdownItem
                             key="inspect"
-                            isDisabled={inspectionActive}
                             onClick={() => onRunDeepInspection?.(vm.id)}
                           >
                             Run deep inspection
