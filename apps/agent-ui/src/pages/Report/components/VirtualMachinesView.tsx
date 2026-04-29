@@ -79,6 +79,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     if (includeVmId) {
       merged.add(includeVmId);
     }
+    // startInspection replaces the entire run on the server, so VMs that are
+    // currently running or pending must be included in every new call or the
+    // server will cancel them by omission.
+    for (const vm of vms) {
+      if (
+        vm.inspectionStatus?.state === "running" ||
+        vm.inspectionStatus?.state === "pending"
+      ) {
+        merged.add(vm.id);
+      }
+    }
     if (merged.size > 0) {
       setSelectedVMs(merged);
       setIsInspectionModalOpen(true);
