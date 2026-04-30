@@ -24,7 +24,7 @@ export const DataSharingAlert: React.FC<DataSharingAlertProps> = ({
         Sharing it with Red Hat unlocks exclusive cloud capabilities and
         enhanced insights.
       </Content>
-      <Content component="p">
+      <div>
         {onShare && (
           <Button variant="link" isInline onClick={() => onShare()}>
             Share with Red Hat
@@ -50,7 +50,7 @@ export const DataSharingAlert: React.FC<DataSharingAlertProps> = ({
             </Button>
             <Tooltip
               content={
-                <div>
+                <span>
                   To share your aggregated data manually, you can download here
                   the inventory JSON file and upload it to the environment at{" "}
                   <a
@@ -61,7 +61,7 @@ export const DataSharingAlert: React.FC<DataSharingAlertProps> = ({
                   >
                     https://console.redhat.com/openshift/migration-assessment/environments/
                   </a>
-                </div>
+                </span>
               }
             >
               <Icon status="info" style={{ marginLeft: "0.2rem" }}>
@@ -70,7 +70,7 @@ export const DataSharingAlert: React.FC<DataSharingAlertProps> = ({
             </Tooltip>
           </>
         )}
-      </Content>
+      </div>
     </Alert>
   );
 };

@@ -35,6 +35,7 @@ import {
 import { Symbols } from "../../main/Symbols";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { Dashboard, VirtualMachinesView } from "./components/index";
+import { StorageOffloadTab } from "./components/StorageOffloadEstimatorModal";
 import {
   filtersToByExpression,
   hasActiveFilters,
@@ -61,6 +62,13 @@ export const ReportContainer: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isShareLoading, setIsShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+  // Derive base path for forecaster API (same root as agent API)
+  const forecasterBasePath = useMemo(
+    () =>
+      (agentApi as ApiWithConfig).configuration?.basePath ||
+      `${window.location.origin}/api/v1`,
+    [agentApi],
+  );
 
   // Request ID for race condition prevention in VM fetching
   const vmsRequestIdRef = useRef(0);
@@ -95,6 +103,7 @@ export const ReportContainer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string | number>(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam === "vms") return 1;
+    if (tabParam === "storage-offload") return 2;
     // If there are VM filters in URL, open Virtual Machines tab
     if (hasActiveFilters(initialVMFilters)) return 1;
     return 0;
@@ -105,6 +114,8 @@ export const ReportContainer: React.FC = () => {
     const tabParam = searchParams.get("tab");
     if (tabParam === "vms" && activeTab !== 1) {
       setActiveTab(1);
+    } else if (tabParam === "storage-offload" && activeTab !== 2) {
+      setActiveTab(2);
     } else if ((tabParam === "overview" || !tabParam) && activeTab !== 0) {
       // Switch to overview if tab is explicitly "overview" or no tab param
       // Only check for VM filters if no tab param is set (legacy behavior)
@@ -550,6 +561,22 @@ export const ReportContainer: React.FC = () => {
       newParams.set("tab", "vms");
       // Reset pagination when switching to VMs tab
       setVmsPage(1);
+    } else if (tabIndex === 2) {
+      newParams.set("tab", "storage-offload");
+      // Clear all VM filters when switching to storage offload tab
+      newParams.delete("statuses");
+      newParams.delete("hasIssues");
+      newParams.delete("noIssues");
+      newParams.delete("clusters");
+      newParams.delete("datacenters");
+      newParams.delete("search");
+      newParams.delete("diskRangeMin");
+      newParams.delete("diskRangeMax");
+      newParams.delete("memoryRangeMin");
+      newParams.delete("memoryRangeMax");
+      newParams.delete("migrationReadiness");
+      newParams.delete("concernLabels");
+      newParams.delete("concernCategories");
     } else {
       newParams.set("tab", "overview");
       // Clear all VM filters when switching away from VMs tab
@@ -702,6 +729,12 @@ export const ReportContainer: React.FC = () => {
                   onRefreshVMs={refreshVMs}
                 />
               </div>
+            </Tab>
+            <Tab
+              eventKey={2}
+              title={<TabTitleText>Storage offload estimator</TabTitleText>}
+            >
+              <StorageOffloadTab basePath={forecasterBasePath} />
             </Tab>
           </Tabs>
         </StackItem>
