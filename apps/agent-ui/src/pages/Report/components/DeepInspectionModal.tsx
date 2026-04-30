@@ -271,12 +271,22 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   const MAX_VMS = 10;
   const tooManyVMs = selectedVMIds.length > MAX_VMS;
 
+  const hasVMsSelected = selectedVMIds.length > 0;
+
   const canConfigure =
     vddkStatus === "configured" &&
     credentialsStatus === "configured" &&
-    !tooManyVMs;
+    (!hasVMsSelected || !tooManyVMs);
 
   const handleConfigure = async () => {
+    // When no VMs are selected the user is only updating the configuration
+    // (VDDK / credentials). Both are already persisted by their own actions,
+    // so there is nothing left to do — just close the modal.
+    if (!hasVMsSelected) {
+      handleClose();
+      return;
+    }
+
     setConfiguring(true);
     setGlobalError(null);
 
@@ -321,7 +331,11 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       <ModalHeader
         title="Set up deep inspection"
         labelId="deep-inspection-modal-title"
-        description={`Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}`}
+        description={
+          hasVMsSelected
+            ? `Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}`
+            : "Update the VDDK archive and credentials for deep inspection"
+        }
       />
       <ModalBody id="deep-inspection-modal-body">
         <Content component="p" style={{ marginBottom: "24px" }}>
@@ -566,7 +580,7 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
           isLoading={configuring}
           isDisabled={!canConfigure || configuring}
         >
-          Configure
+          {hasVMsSelected ? "Configure" : "Save configuration"}
         </Button>
         <Button variant="link" onClick={handleClose} isDisabled={configuring}>
           Cancel

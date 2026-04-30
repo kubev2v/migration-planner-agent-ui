@@ -49,12 +49,28 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [inspectionActive, setInspectionActive] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onRefreshVMsRef = useRef(onRefreshVMs);
+  // Tracks whether the current run has been observed in running/pending state
+  // at least once. Guards against stopping the poll too early when VMs still
+  // carry a terminal inspectionStatus from a previous run at the moment the
+  // first refresh returns (before the server updates them to "pending").
+  const seenRunningRef = useRef(false);
+  // Fallback: stop polling after this many attempts even if the server never
+  // transitions any VM to running/pending (e.g. the run completes before the
+  // first refresh or a transient error prevents observation).
+  const MAX_POLL_ATTEMPTS = 60; // 60 × 5 s = 5 min ceiling
+  const pollAttemptsRef = useRef(0);
 
   useEffect(() => {
     onRefreshVMsRef.current = onRefreshVMs;
   }, [onRefreshVMs]);
 
-  const hasInspectionResults = vms.some((vm) => vm.inspectionStatus != null);
+  // Once any VM has inspection data the column must stay visible, even while
+  // the list is momentarily empty during a sort/filter refetch.
+  const hasInspectionResultsRef = useRef(false);
+  if (vms.some((vm) => vm.inspectionStatus != null)) {
+    hasInspectionResultsRef.current = true;
+  }
+  const hasInspectionResults = hasInspectionResultsRef.current;
 
   const handleVMClick = (vmId: string) => {
     setSelectedVMId(vmId);
@@ -68,6 +84,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     const merged = new Set(selectedVMs);
     if (includeVmId) {
       merged.add(includeVmId);
+    }
+    // startInspection replaces the entire run on the server, so VMs that are
+    // currently running or pending must be included in every new call or the
+    // server will cancel them by omission.
+    for (const vm of vms) {
+      if (
+        vm.inspectionStatus?.state === "running" ||
+        vm.inspectionStatus?.state === "pending"
+      ) {
+        merged.add(vm.id);
+      }
     }
     if (merged.size > 0) {
       setSelectedVMs(merged);
@@ -108,6 +135,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [agentApi, onRefreshVMs, stopPolling]);
 
   const handleInspectionStarted = useCallback(() => {
+    seenRunningRef.current = false;
+    pollAttemptsRef.current = 0;
     setInspectionActive(true);
     setSelectedVMs(new Set());
     onRefreshVMsRef.current?.();
@@ -121,13 +150,28 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   useEffect(() => {
     if (!inspectionActive) return;
 
-    const allDone = vms.every((vm) => {
-      if (!vm.inspectionStatus) return true;
-      const s = vm.inspectionStatus.state;
-      return s === "completed" || s === "error" || s === "canceled";
-    });
+    const hasRunningOrPending = vms.some(
+      (vm) =>
+        vm.inspectionStatus?.state === "running" ||
+        vm.inspectionStatus?.state === "pending",
+    );
 
-    if (allDone && vms.some((vm) => vm.inspectionStatus != null)) {
+    if (hasRunningOrPending) {
+      seenRunningRef.current = true;
+    }
+
+    pollAttemptsRef.current += 1;
+
+    // Only stop polling after the current run has been observed in an active
+    // state at least once. Without this guard, stale terminal statuses from a
+    // previous run would satisfy "allDone" on the very first refresh (before
+    // the server transitions the VMs to "pending"), killing the poll early.
+    // Fallback: if the server never transitions any VM to running/pending
+    // within MAX_POLL_ATTEMPTS refreshes, stop polling to avoid an infinite
+    // loop (e.g. run completes before first observation, transient API error).
+    const exhausted = pollAttemptsRef.current >= MAX_POLL_ATTEMPTS;
+    if ((seenRunningRef.current && !hasRunningOrPending) || exhausted) {
+      seenRunningRef.current = true;
       stopPolling();
       setInspectionActive(false);
     }
