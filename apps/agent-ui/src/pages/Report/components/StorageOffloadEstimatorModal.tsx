@@ -26,6 +26,7 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Popover,
   Progress,
   ProgressSize,
   ProgressStep,
@@ -44,6 +45,7 @@ import {
   EllipsisVIcon,
   ExternalLinkAltIcon,
   PlusCircleIcon,
+  QuestionCircleIcon,
   TimesCircleIcon,
   TrashIcon,
 } from "@patternfly/react-icons";
@@ -519,12 +521,6 @@ const SelectPairsStep: React.FC<SelectPairsStepProps> = ({
 
   return (
     <Stack hasGutter>
-      <StackItem>
-        <Content component="h2" style={{ marginBottom: "4px" }}>
-          Set datastore pairs
-        </Content>
-      </StackItem>
-
       {error && (
         <StackItem>
           <Alert variant="danger" title="Error loading datastores" isInline>
@@ -535,13 +531,9 @@ const SelectPairsStep: React.FC<SelectPairsStepProps> = ({
 
       {groups.length > 0 && (
         <StackItem>
-          <Content component="p" style={{ marginBottom: "4px" }}>
+          <Content component="p">
             <strong>{datastores.length}</strong> datastores discovered across{" "}
             <strong>{groups.length}</strong> storage array group(s).
-          </Content>
-          <Content component="p">
-            Select one or more source datastore and target datastore pair to run
-            a storage offload estimate on.
             <a
               href="https://docs.redhat.com/en/documentation/migration_toolkit_for_virtualization/2.10/html-single/planning_your_migration_to_red_hat_openshift_virtualization/index#about-storage-copy-offload_vmware"
               target="_blank"
@@ -558,21 +550,67 @@ const SelectPairsStep: React.FC<SelectPairsStepProps> = ({
         {/* Column headers — shown once above the first pair row */}
         <Grid hasGutter style={{ marginBottom: "4px" }}>
           <GridItem span={5}>
-            <Content
-              component="small"
-              style={{ fontWeight: 600, display: "block" }}
+            <Flex
+              alignItems={{ default: "alignItemsCenter" }}
+              gap={{ default: "gapXs" }}
             >
-              Source datastore
-            </Content>
+              <FlexItem>
+                <Content
+                  component="small"
+                  style={{ fontWeight: 600, display: "block" }}
+                >
+                  Source datastore
+                </Content>
+              </FlexItem>
+              <FlexItem>
+                <Popover
+                  bodyContent="The selected source datastore and target datastore the estimation is based on."
+                  position="top"
+                  withFocusTrap={false}
+                >
+                  <QuestionCircleIcon
+                    style={{
+                      color: "var(--pf-t--global--text--color--200)",
+                      cursor: "pointer",
+                      fontSize: "0.85em",
+                    }}
+                    aria-label="Source datastore info"
+                  />
+                </Popover>
+              </FlexItem>
+            </Flex>
           </GridItem>
           <GridItem span={2} />
           <GridItem span={5}>
-            <Content
-              component="small"
-              style={{ fontWeight: 600, display: "block" }}
+            <Flex
+              alignItems={{ default: "alignItemsCenter" }}
+              gap={{ default: "gapXs" }}
             >
-              Target datastore
-            </Content>
+              <FlexItem>
+                <Content
+                  component="small"
+                  style={{ fontWeight: 600, display: "block" }}
+                >
+                  Target datastore
+                </Content>
+              </FlexItem>
+              <FlexItem>
+                <Popover
+                  bodyContent="The selected source datastore and target datastore the estimation is based on."
+                  position="top"
+                  withFocusTrap={false}
+                >
+                  <QuestionCircleIcon
+                    style={{
+                      color: "var(--pf-t--global--text--color--200)",
+                      cursor: "pointer",
+                      fontSize: "0.85em",
+                    }}
+                    aria-label="Target datastore info"
+                  />
+                </Popover>
+              </FlexItem>
+            </Flex>
           </GridItem>
         </Grid>
         {pairs.map((pair, idx) => (
@@ -1132,8 +1170,65 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
       targetDatastore: fp.targetDatastore ?? "",
     }));
 
+  const copyAllAsText = () => {
+    const sections: string[] = [];
+    for (const p of pairs) {
+      const stats = statsMap[p.name];
+      if (!stats || stats.sampleCount === 0) continue;
+      const pairRuns = runs.filter((r) => r.pairName === p.name);
+      const lines: string[] = [
+        `${p.sourceDatastore} → ${p.targetDatastore}`,
+        "",
+        "Storage-offload estimate (for 1 TB transfer)",
+        `  Expected:   ${stats.estimatePer1TB?.expected ?? "-"}`,
+        `  Best case:  ${stats.estimatePer1TB?.bestCase ?? "-"}`,
+        `  Worst case: ${stats.estimatePer1TB?.worstCase ?? "-"}`,
+        "",
+        "Throughput statistics",
+        `  Samples:  ${stats.sampleCount}`,
+        `  Mean:     ${stats.meanMbps?.toFixed(1) ?? "-"} MB/s`,
+        `  Median:   ${stats.medianMbps?.toFixed(1) ?? "-"} MB/s`,
+        `  Min/Max:  ${stats.minMbps?.toFixed(1) ?? "-"} / ${stats.maxMbps?.toFixed(1) ?? "-"} MB/s`,
+        `  Std Dev:  ${stats.stddevMbps?.toFixed(1) ?? "-"} MB/s`,
+        `  95% CI:   [${stats.ci95LowerMbps?.toFixed(1) ?? "-"}, ${stats.ci95UpperMbps?.toFixed(1) ?? "-"}] MB/s`,
+      ];
+      if (pairRuns.length > 0) {
+        lines.push("", `Individual runs (${pairRuns.length})`);
+        for (const r of pairRuns) {
+          lines.push(
+            `  Run ${r.iteration}: ${r.durationSec.toFixed(1)}s  ${r.throughputMbps.toFixed(1)} MB/s  ${r.method ?? "-"}`,
+          );
+        }
+      }
+      sections.push(lines.join("\n"));
+    }
+    navigator.clipboard
+      .writeText(sections.join("\n\n---\n\n"))
+      .catch(() => undefined);
+  };
+
+  const hasAnyResults = pairs.some(
+    (p) => statsMap[p.name] && statsMap[p.name].sampleCount > 0,
+  );
+
   return (
     <Stack hasGutter>
+      {hasAnyResults && (
+        <StackItem>
+          <Flex justifyContent={{ default: "justifyContentFlexEnd" }}>
+            <FlexItem>
+              <Button
+                variant="link"
+                icon={<CopyIcon />}
+                iconPosition="start"
+                onClick={copyAllAsText}
+              >
+                Copy all as plain text
+              </Button>
+            </FlexItem>
+          </Flex>
+        </StackItem>
+      )}
       <StackItem>
         <div
           style={{
@@ -1550,20 +1645,10 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                                       textTransform: "uppercase",
                                       color:
                                         "var(--pf-t--global--text--color--200)",
-                                    }}
-                                  >
-                                    Storage-offload estimate
-                                  </Content>
-                                  <Content
-                                    component="small"
-                                    style={{
-                                      display: "block",
-                                      color:
-                                        "var(--pf-t--global--text--color--200)",
                                       marginBottom: "16px",
                                     }}
                                   >
-                                    Time estimate for 1 TB transfer
+                                    Storage-offload estimate
                                   </Content>
                                   <Content
                                     component="p"
@@ -1587,7 +1672,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                                       marginBottom: "16px",
                                     }}
                                   >
-                                    Expected time
+                                    Expected time estimate for 1 TB transfer
                                   </Content>
                                 </CardBody>
                               </Card>
@@ -2596,10 +2681,26 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     <Stack hasGutter style={{ maxWidth: "75%", padding: "24px 0" }}>
       {/* Page header */}
       <StackItem>
-        <div style={{ color: "var(--pf-t--global--text--color--200)" }}>
-          Benchmark disk copy throughput between vSphere datastore pairs to
-          estimate migration time.&nbsp;&nbsp;
-          <TechnologyPreviewBadge />
+        <Flex
+          alignItems={{ default: "alignItemsCenter" }}
+          gap={{ default: "gapSm" }}
+        >
+          <FlexItem>
+            <Content component="h2" style={{ margin: 0 }}>
+              Storage offload estimator
+            </Content>
+          </FlexItem>
+          <FlexItem>
+            <TechnologyPreviewBadge />
+          </FlexItem>
+        </Flex>
+        <div
+          style={{
+            color: "var(--pf-t--global--text--color--200)",
+            marginTop: "8px",
+          }}
+        >
+          Estimate migration time between vSphere datastore pairs.
         </div>
       </StackItem>
 
@@ -2708,7 +2809,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         <ModalHeader
           title="Add datastore pairs"
           labelId="add-pairs-modal-title"
-          description="Select one or more additional source/target pairs to benchmark."
         />
         <ModalBody id="add-pairs-modal-body">
           <SelectPairsStep
