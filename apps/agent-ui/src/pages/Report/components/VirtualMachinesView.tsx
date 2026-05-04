@@ -176,10 +176,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     //    inspection completes so fast that we never catch the transient
     //    running/pending state — after a few ticks the server has had enough
     //    time to transition VMs, so terminal states are trustworthy.
+    // The MAX_POLL_TICKS ceiling only applies when no VM is still active —
+    // if VMs are genuinely running we must keep polling regardless of how
+    // long it takes.
     const seenAndDone = seenRunningRef.current && !hasRunningOrPending;
     const waitedAndDone =
       ticks >= MIN_POLL_TICKS_BEFORE_DONE && !hasRunningOrPending;
-    const exhausted = ticks >= MAX_POLL_TICKS;
+    const exhausted = ticks >= MAX_POLL_TICKS && !hasRunningOrPending;
 
     if (seenAndDone || waitedAndDone || exhausted) {
       stopPolling();

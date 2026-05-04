@@ -278,6 +278,27 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     credentialsStatus === "configured" &&
     (!hasVMsSelected || !tooManyVMs);
 
+  const isInspectorRunning = async (): Promise<boolean> => {
+    try {
+      const status = await agentApi.getInspectorStatus({});
+      return status.state === "running" || status.state === "Initiating";
+    } catch {
+      // Can't determine state — assume it may be running so the caller
+      // attempts a stop, which is harmless if it's already stopped.
+      return true;
+    }
+  };
+
+  const waitForInspectorReady = async (): Promise<void> => {
+    const MAX_WAIT_ATTEMPTS = 10;
+    const POLL_INTERVAL_MS = 500;
+    for (let i = 0; i < MAX_WAIT_ATTEMPTS; i++) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      if (!(await isInspectorRunning())) return;
+    }
+    // Best-effort: proceed even if the inspector didn't fully stop.
+  };
+
   const handleConfigure = async () => {
     // When no VMs are selected the user is only updating the configuration
     // (VDDK / credentials). Both are already persisted by their own actions,
@@ -291,23 +312,18 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setGlobalError(null);
 
     try {
-      try {
-        await agentApi.startInspection({
-          startInspectionRequest: { vmIds: selectedVMIds },
-        });
-      } catch (startErr) {
-        // The server keeps the inspector process alive even after all VMs
-        // reach a terminal state, so startInspection rejects with
-        // "already in progress" on re-runs or when adding VMs mid-run.
-        // Stop the stale inspector, wait for teardown, then restart with
-        // the full VM list.
-        if (!(startErr instanceof ResponseError)) throw startErr;
+      // If the inspector is still alive (from a previous run or an active
+      // one), stop it and wait for the server to finish tearing it down
+      // before starting a new run with the full VM list.
+      const inspectorRunning = await isInspectorRunning();
+      if (inspectorRunning) {
         await agentApi.stopInspection();
-        await new Promise((r) => setTimeout(r, 1000));
-        await agentApi.startInspection({
-          startInspectionRequest: { vmIds: selectedVMIds },
-        });
+        await waitForInspectorReady();
       }
+
+      await agentApi.startInspection({
+        startInspectionRequest: { vmIds: selectedVMIds },
+      });
       onInspectionStarted();
       handleClose();
     } catch (err) {
