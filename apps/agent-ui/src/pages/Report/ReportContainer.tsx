@@ -36,6 +36,7 @@ import { Symbols } from "../../main/Symbols";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { Dashboard, VirtualMachinesView } from "./components/index";
 import { StorageOffloadTab } from "./components/StorageOffloadEstimatorModal";
+import { TechnologyPreviewBadge } from "./components/TechnologyPreviewBadge";
 import {
   filtersToByExpression,
   hasActiveFilters,
@@ -732,7 +733,11 @@ export const ReportContainer: React.FC = () => {
             </Tab>
             <Tab
               eventKey={2}
-              title={<TabTitleText>Storage offload estimator</TabTitleText>}
+              title={
+                <TabTitleText>
+                  Storage offload estimator <TechnologyPreviewBadge text="TP" />
+                </TabTitleText>
+              }
             >
               <StorageOffloadTab basePath={forecasterBasePath} />
             </Tab>
