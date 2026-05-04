@@ -128,6 +128,7 @@ type ColumnKey =
   | "name"
   | "vCenterState"
   | "id"
+  | "usedResources"
   | "datacenter"
   | "cluster"
   | "diskSize"
@@ -136,13 +137,27 @@ type ColumnKey =
   | "migratable"
   | "deepInspection";
 
-type SortableColumn = ColumnKey;
+// Backend supports sorting for these columns only
+const SORTABLE_COLUMNS = [
+  "name",
+  "vCenterState",
+  "cluster",
+  "diskSize",
+  "memory",
+  "issues",
+] as const;
+
+type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
+
+const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
+  SORTABLE_COLUMNS.includes(key as SortableColumn);
 
 const Columns: Record<ColumnKey, string> = {
   name: "Name",
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
+  usedResources: "Used resources",
   datacenter: "Data center",
   cluster: "Cluster",
   diskSize: "Disk size",
@@ -158,7 +173,7 @@ const MANDATORY_COLUMNS: ColumnKey[] = ["name"];
 const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [...ALL_COLUMN_KEYS];
 
 const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-const VISIBLE_COLUMNS_VERSION = 2;
+const VISIBLE_COLUMNS_VERSION = 3;
 
 const statusLabels: Record<string, string> = {
   poweredOn: "Powered on",
@@ -225,11 +240,6 @@ interface AppliedFilter {
 // Emotion styles to fix sortable column header layout shifts
 const styles = {
   vmTable: css`
-    table {
-      table-layout: fixed;
-      width: 100%;
-    }
-
     th button {
       display: flex;
       align-items: center;
@@ -432,7 +442,7 @@ export const VMTable: React.FC<VMTableProps> = ({
       }).map((key) => ({
         key,
         label: Columns[key],
-        sortable: true,
+        sortable: isSortableColumn(key),
       })),
     [isColumnVisible, hasInspectionResults],
   );
@@ -699,8 +709,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   // No client-side filtering - handled by backend
   // VMs are already filtered, sorted, and paginated by the backend
 
-  // Backend supports sorting for these columns only
-  const backendFieldMap: Partial<Record<SortableColumn, string>> = {
+  const backendFieldMap: Record<SortableColumn, string> = {
     name: "name",
     vCenterState: "vCenterState",
     cluster: "cluster",
@@ -721,7 +730,7 @@ export const VMTable: React.FC<VMTableProps> = ({
 
   // Sort handler - triggers backend sort, tracks by column key
   const getSortParams = (
-    columnKey: SortableColumn,
+    columnKey: ColumnKey,
     columnIndex: number,
   ): ThProps["sort"] => ({
     sortBy: {
@@ -734,14 +743,13 @@ export const VMTable: React.FC<VMTableProps> = ({
       setSortByColumnKey(columnKey);
       setActiveSortDirection(direction);
 
-      if (columnKey === "deepInspection") {
-        // Client-side only — clear any active backend sort
-        onSortChange?.([]);
-      } else {
+      if (isSortableColumn(columnKey)) {
+        // Backend sort
         const sortField = backendFieldMap[columnKey];
-        if (sortField) {
-          onSortChange?.([`${sortField}:${direction}`]);
-        }
+        onSortChange?.([`${sortField}:${direction}`]);
+      } else {
+        // Client-side only (e.g., deepInspection) — clear any active backend sort
+        onSortChange?.([]);
       }
     },
     columnIndex,
@@ -1462,6 +1470,8 @@ export const VMTable: React.FC<VMTableProps> = ({
                     return 10;
                   case "issues":
                     return 10;
+                  case "usedResources":
+                    return 20;
                   case "deepInspection":
                     return 15;
                   default:
@@ -1552,6 +1562,13 @@ export const VMTable: React.FC<VMTableProps> = ({
                   </Td>
                 )}
                 {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
+                {isColumnVisible("usedResources") && (
+                  <Td dataLabel="Used resources" modifier="fitContent">
+                    CPU: <b>{vm.utilizationCpuP95 || 0}%</b> | Disk:{" "}
+                    <b>{vm.utilizationDisk || 0}%</b> | RAM:{" "}
+                    <b>{vm.utilizationMemP95 || 0}%</b>
+                  </Td>
+                )}
                 {isColumnVisible("datacenter") && (
                   <Td dataLabel="Data center">{vm.datacenter || "—"}</Td>
                 )}
