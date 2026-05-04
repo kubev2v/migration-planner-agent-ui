@@ -4,6 +4,7 @@ import type {
   VirtualMachineDetail,
   VMIssue,
   VmInspectionStatus,
+  VmUtilizationDetails,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
@@ -18,10 +19,13 @@ import {
   DescriptionListGroup,
   DescriptionListTerm,
   ExpandableSection,
-  Flex,
-  FlexItem,
+  Grid,
+  GridItem,
   Icon,
   Label,
+  Progress,
+  ProgressMeasureLocation,
+  ProgressSize,
   Spinner,
   Stack,
   StackItem,
@@ -37,13 +41,13 @@ import {
   InfoCircleIcon,
   NetworkIcon,
   OutlinedHddIcon,
+  ResourcesFullIcon,
   StorageDomainIcon,
 } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
-import { dashboardStyles } from "./dashboardStyles";
 
 const MB_IN_GB = 1024;
 
@@ -51,6 +55,10 @@ const formatMemorySize = (sizeInMB: number): string => {
   const sizeInGB = sizeInMB / MB_IN_GB;
   return `${sizeInGB.toFixed(sizeInGB % 1 === 0 ? 0 : 2)} GB`;
 };
+
+interface VirtualMachineDetailWithUtilization extends VirtualMachineDetail {
+  utilization?: VmUtilizationDetails;
+}
 
 interface VMDetailsPageProps {
   vmId: string;
@@ -64,7 +72,9 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   inspectionStatus,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const [vm, setVm] = useState<VirtualMachineDetail | null>(null);
+  const [vm, setVm] = useState<VirtualMachineDetailWithUtilization | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<
@@ -82,8 +92,15 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     const fetchVMDetails = async () => {
       try {
         setLoading(true);
+        setError(null);
         const vmData = await agentApi.getVM({ id: vmId });
-        setVm(vmData);
+        let utilization: VmUtilizationDetails | undefined;
+        try {
+          utilization = await agentApi.getVMUtilization({ id: vmId });
+        } catch (utilizationError) {
+          console.warn("Error fetching VM utilization:", utilizationError);
+        }
+        setVm({ ...vmData, utilization });
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load VM details";
@@ -201,7 +218,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
 
           return (
             <StackItem>
-              <Card className={dashboardStyles.cardBorder}>
+              <Card>
                 <CardTitle>
                   <ExclamationTriangleIcon /> Deep inspection results
                 </CardTitle>
@@ -262,12 +279,10 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
         })()}
 
       <StackItem>
-        <Flex
-          gap={{ default: "gapMd" }}
-          alignItems={{ default: "alignItemsStretch" }}
-        >
-          <FlexItem flex={{ default: "flex_1" }}>
-            <Card isFullHeight className={dashboardStyles.cardBorder}>
+        <Grid hasGutter>
+          {/* General */}
+          <GridItem span={12} lg={3}>
+            <Card isFullHeight>
               <CardTitle>
                 <InfoCircleIcon /> General
               </CardTitle>
@@ -312,10 +327,11 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                 </DescriptionList>
               </CardBody>
             </Card>
-          </FlexItem>
+          </GridItem>
 
-          <FlexItem flex={{ default: "flex_1" }}>
-            <Card isFullHeight className={dashboardStyles.cardBorder}>
+          {/* Compute */}
+          <GridItem span={12} lg={2}>
+            <Card isFullHeight>
               <CardTitle>
                 <CpuIcon /> Compute
               </CardTitle>
@@ -362,10 +378,11 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                 </DescriptionList>
               </CardBody>
             </Card>
-          </FlexItem>
+          </GridItem>
 
-          <FlexItem flex={{ default: "flex_1" }}>
-            <Card isFullHeight className={dashboardStyles.cardBorder}>
+          {/* Guest OS */}
+          <GridItem span={12} lg={2}>
+            <Card isFullHeight>
               <CardTitle>
                 <OutlinedHddIcon /> Guest OS
               </CardTitle>
@@ -398,42 +415,214 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                 </DescriptionList>
               </CardBody>
             </Card>
-          </FlexItem>
+          </GridItem>
 
-          <FlexItem flex={{ default: "flex_1" }}>
-            <Card isFullHeight className={dashboardStyles.cardBorder}>
-              <CardTitle>
-                <CogIcon /> Features
-              </CardTitle>
-              <CardBody>
-                <DescriptionList isCompact>
-                  <DescriptionListGroup>
-                    <DescriptionListTerm>Template</DescriptionListTerm>
-                    <DescriptionListDescription>
-                      {vm.template ? "Yes" : "No"}
-                    </DescriptionListDescription>
-                  </DescriptionListGroup>
-                  <DescriptionListGroup>
-                    <DescriptionListTerm>Fault Tolerance</DescriptionListTerm>
-                    <DescriptionListDescription>
-                      {vm.faultToleranceEnabled ? "Enabled" : "Disabled"}
-                    </DescriptionListDescription>
-                  </DescriptionListGroup>
-                  <DescriptionListGroup>
-                    <DescriptionListTerm>
-                      Nested Virtualization
-                    </DescriptionListTerm>
-                    <DescriptionListDescription>
-                      {vm.nestedHVEnabled ? "Enabled" : "Disabled"}
-                    </DescriptionListDescription>
-                  </DescriptionListGroup>
-                </DescriptionList>
-              </CardBody>
-            </Card>
-          </FlexItem>
+          {/* Nested block */}
+          <GridItem span={12} lg={5}>
+            <Grid hasGutter>
+              {/* Features */}
+              <GridItem span={12}>
+                <Card isFullHeight>
+                  <CardTitle>
+                    <CogIcon /> Features
+                  </CardTitle>
+                  <CardBody>
+                    <DescriptionList isCompact>
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>Template</DescriptionListTerm>
+                        <DescriptionListDescription>
+                          {vm.template ? "Yes" : "No"}
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>
+                          Fault Tolerance
+                        </DescriptionListTerm>
+                        <DescriptionListDescription>
+                          {vm.faultToleranceEnabled ? "Enabled" : "Disabled"}
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>
+                          Nested Virtualization
+                        </DescriptionListTerm>
+                        <DescriptionListDescription>
+                          {vm.nestedHVEnabled ? "Enabled" : "Disabled"}
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
+                    </DescriptionList>
+                  </CardBody>
+                </Card>
+              </GridItem>
 
-          <FlexItem flex={{ default: "flex_1" }}>
-            <Card isFullHeight className={dashboardStyles.cardBorder}>
+              {/* Right sizing (full width under them) */}
+              <GridItem span={12}>
+                <Card isFullHeight>
+                  <CardTitle>
+                    <ResourcesFullIcon /> Right sizing
+                  </CardTitle>
+                  <CardBody>
+                    {vm.utilization ? (
+                      <Grid hasGutter>
+                        {/* First row - 3 columns */}
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Allocated CPU
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                {`${vm.utilization.provisionedCpus} vCPU${vm.utilization.provisionedCpus === 1 ? "" : "s"}`}
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Max used CPU
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                <Progress
+                                  value={vm.utilization.cpuMax}
+                                  size={ProgressSize.sm}
+                                  measureLocation={
+                                    ProgressMeasureLocation.outside
+                                  }
+                                  aria-label="Max used CPU"
+                                />
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Average used CPU
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                <Progress
+                                  value={vm.utilization.cpuAvg}
+                                  size={ProgressSize.sm}
+                                  measureLocation={
+                                    ProgressMeasureLocation.outside
+                                  }
+                                  aria-label="Average used CPU"
+                                />
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+
+                        {/* Second row - 3 columns */}
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Allocated RAM
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                {formatMemorySize(
+                                  vm.utilization.provisionedMemoryMb,
+                                )}
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Max used RAM
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                <Progress
+                                  value={vm.utilization.memMax}
+                                  size={ProgressSize.sm}
+                                  measureLocation={
+                                    ProgressMeasureLocation.outside
+                                  }
+                                  aria-label="Max used RAM"
+                                />
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Average used RAM
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                <Progress
+                                  value={vm.utilization.memAvg}
+                                  size={ProgressSize.sm}
+                                  measureLocation={
+                                    ProgressMeasureLocation.outside
+                                  }
+                                  aria-label="Average used RAM"
+                                />
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+
+                        {/* Third row - 3 columns */}
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Allocated disk
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                {formatMemorySize(
+                                  vm.utilization.provisionedDiskKb / 1000,
+                                )}
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                        <GridItem span={4}>
+                          <DescriptionList isCompact>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>
+                                Disk usage
+                              </DescriptionListTerm>
+                              <DescriptionListDescription>
+                                <Progress
+                                  value={vm.utilization.disk}
+                                  size={ProgressSize.sm}
+                                  measureLocation={
+                                    ProgressMeasureLocation.outside
+                                  }
+                                  aria-label="Disk usage"
+                                />
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                      </Grid>
+                    ) : (
+                      <span
+                        style={{
+                          color: "var(--pf-t--global--text--color--subtle)",
+                        }}
+                      >
+                        No utilization data available
+                      </span>
+                    )}
+                  </CardBody>
+                </Card>
+              </GridItem>
+            </Grid>
+          </GridItem>
+
+          {/* Network (full width) */}
+          <GridItem span={12}>
+            <Card>
               <CardTitle>
                 <NetworkIcon /> Network
               </CardTitle>
@@ -454,31 +643,14 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                   >
                     <Thead>
                       <Tr>
-                        <Th
-                          style={{
-                            paddingLeft: 0,
-                            paddingTop: 0,
-                            fontSize: "var(--pf-t--global--font--size--sm)",
-                          }}
-                        >
-                          Network
-                        </Th>
-                        <Th
-                          style={{
-                            paddingTop: 0,
-                            fontSize: "var(--pf-t--global--font--size--sm)",
-                          }}
-                        >
-                          MAC
-                        </Th>
+                        <Th>Network</Th>
+                        <Th>MAC</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
                       {(vm.nics ?? []).map((nic) => (
                         <Tr key={nic.mac || `nic-${nic.index}`}>
-                          <Td style={{ paddingLeft: 0 }}>
-                            {nic.network || "—"}
-                          </Td>
+                          <Td>{nic.network || "—"}</Td>
                           <Td>{nic.mac || "—"}</Td>
                         </Tr>
                       ))}
@@ -487,50 +659,55 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                 )}
               </CardBody>
             </Card>
-          </FlexItem>
-        </Flex>
+          </GridItem>
+
+          {/* Storage (last row full width) */}
+          <GridItem span={12}>
+            <Card>
+              <CardTitle>
+                <StorageDomainIcon /> Storage
+              </CardTitle>
+              <CardBody>
+                {(vm.disks?.length ?? 0) === 0 ? (
+                  <div>No disks attached</div>
+                ) : (
+                  <Table
+                    aria-label="Disks table"
+                    variant="compact"
+                    borders={false}
+                  >
+                    <Thead>
+                      <Tr>
+                        <Th>File</Th>
+                        <Th>Size</Th>
+                        <Th>Bus</Th>
+                        <Th>Mode</Th>
+                        <Th>Shared</Th>
+                        <Th>RDM</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {(vm.disks ?? []).map((disk) => (
+                        <Tr key={disk.key || disk.file || `disk-${disk.bus}`}>
+                          <Td>{disk.file || "—"}</Td>
+                          <Td>{disk.capacity ? `${disk.capacity} MB` : "—"}</Td>
+                          <Td>{disk.bus || "—"}</Td>
+                          <Td>{disk.mode || "—"}</Td>
+                          <Td>{disk.shared ? "Yes" : "No"}</Td>
+                          <Td>{disk.rdm ? "Yes" : "No"}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                )}
+              </CardBody>
+            </Card>
+          </GridItem>
+        </Grid>
       </StackItem>
 
       <StackItem>
-        <Card className={dashboardStyles.cardBorder}>
-          <CardTitle>
-            <StorageDomainIcon /> Storage
-          </CardTitle>
-          <CardBody>
-            {(vm.disks?.length ?? 0) === 0 ? (
-              <div>No disks attached</div>
-            ) : (
-              <Table aria-label="Disks table" variant="compact">
-                <Thead>
-                  <Tr>
-                    <Th>File</Th>
-                    <Th>Size</Th>
-                    <Th>Bus</Th>
-                    <Th>Mode</Th>
-                    <Th>Shared</Th>
-                    <Th>RDM</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {(vm.disks ?? []).map((disk) => (
-                    <Tr key={disk.key || disk.file || `disk-${disk.bus}`}>
-                      <Td>{disk.file || "—"}</Td>
-                      <Td>{disk.capacity ? `${disk.capacity} MB` : "—"}</Td>
-                      <Td>{disk.bus || "—"}</Td>
-                      <Td>{disk.mode || "—"}</Td>
-                      <Td>{disk.shared ? "Yes" : "No"}</Td>
-                      <Td>{disk.rdm ? "Yes" : "No"}</Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            )}
-          </CardBody>
-        </Card>
-      </StackItem>
-
-      <StackItem>
-        <Card className={dashboardStyles.cardBorder}>
+        <Card>
           <CardTitle>
             <ExclamationTriangleIcon /> Issues
           </CardTitle>

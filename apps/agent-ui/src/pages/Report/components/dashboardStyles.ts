@@ -40,9 +40,7 @@ export const dashboardStyles = {
   `,
 
   card: css`
-    border: 1px solid #d2d2d2 !important;
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     min-height: 430px;
     max-height: 520px;
     height: 100%;
@@ -50,12 +48,6 @@ export const dashboardStyles = {
     flex-direction: column;
     justify-content: space-between;
     overflow: hidden;
-  `,
-
-  cardBorder: css`
-    border: 1px solid #d2d2d2 !important;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   `,
 
   cardPrint: css`

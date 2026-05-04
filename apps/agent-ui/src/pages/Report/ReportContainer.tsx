@@ -2,6 +2,7 @@ import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   DefaultApiInterface,
   Inventory,
+  RightsizingClusterUtilization,
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
@@ -33,10 +34,6 @@ import {
   DataSharingModal,
 } from "../../common/components/index";
 import { Symbols } from "../../main/Symbols";
-import {
-  fetchClusterRightsizing,
-  getClusterUtilization,
-} from "./api/clusterRightsizing";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { Dashboard, VirtualMachinesView } from "./components/index";
 import { StorageOffloadTab } from "./components/StorageOffloadEstimatorModal";
@@ -67,11 +64,8 @@ export const ReportContainer: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isShareLoading, setIsShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
-  const [utilizationMetrics, setUtilizationMetrics] = useState<{
-    cpu?: number;
-    disk?: number;
-    mem?: number;
-  }>({});
+  const [utilizationMetrics, setUtilizationMetrics] =
+    useState<RightsizingClusterUtilization | null>(null);
   // Derive base path for forecaster API (same root as agent API)
   const forecasterBasePath = useMemo(
     () =>
@@ -217,30 +211,39 @@ export const ReportContainer: React.FC = () => {
   useEffect(() => {
     // Only fetch metrics when a specific cluster is selected
     if (selectedClusterId === "all") {
-      setUtilizationMetrics({});
+      setUtilizationMetrics(null);
       return;
     }
 
+    const abortController = new AbortController();
+
     const fetchUtilizationMetrics = async () => {
       try {
-        const basePath =
-          (agentApi as ApiWithConfig).configuration?.basePath ||
-          `${window.location.origin}/agent/api/v1`;
+        const response = await agentApi.getLatestRightsizingClusters({
+          signal: abortController.signal,
+        });
 
-        const metrics = await fetchClusterRightsizing(basePath);
-        const clusterMetrics = getClusterUtilization(
-          metrics,
-          selectedClusterId,
+        // Find cluster metrics for the selected cluster
+        const clusterMetrics = response.clusters?.find(
+          (cluster) => cluster.clusterId === selectedClusterId,
         );
 
-        setUtilizationMetrics(clusterMetrics || {});
+        setUtilizationMetrics(clusterMetrics || null);
       } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         console.warn("Failed to fetch utilization metrics:", err);
-        setUtilizationMetrics({});
+        setUtilizationMetrics(null);
       }
     };
 
     fetchUtilizationMetrics();
+
+    return () => {
+      abortController.abort();
+    };
   }, [agentApi, selectedClusterId]);
 
   // Compute available concerns and categories from inventory
@@ -675,7 +678,6 @@ export const ReportContainer: React.FC = () => {
             totalVMs={totalVMs}
             totalClusters={totalClusters}
             isConnected={isDataShared}
-            showUtilizationMetrics={clusterView.showUtilizationMetrics}
             utilizationMetrics={utilizationMetrics}
           />
         </StackItem>

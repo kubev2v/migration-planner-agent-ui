@@ -1,3 +1,4 @@
+import type { RightsizingClusterUtilization } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -26,13 +27,7 @@ interface HeaderProps {
   totalClusters?: number;
   isConnected?: boolean;
   lastUpdated?: string;
-  showUtilizationMetrics?: boolean;
-  utilizationMetrics?: {
-    cpu?: number;
-    disk?: number;
-    mem?: number;
-  };
-
+  utilizationMetrics?: RightsizingClusterUtilization | null;
   onExport?: () => void;
   children?: ReactNode;
 }
@@ -42,7 +37,6 @@ export const Header: React.FC<HeaderProps> = ({
   totalClusters = 0,
   isConnected = true,
   lastUpdated,
-  showUtilizationMetrics,
   utilizationMetrics,
   onExport,
   children,
@@ -122,14 +116,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <Content component="p">
                   Detected <strong>{totalVMs.toLocaleString()} VMs</strong> in{" "}
                   <strong>{totalClusters} clusters</strong>.
-                  {showUtilizationMetrics && (
+                  {utilizationMetrics && (
                     <>
                       {" "}
                       Total usage statistics{" "}
                       <VMUtilizationMetrics
-                        cpu={utilizationMetrics?.cpu}
-                        disk={utilizationMetrics?.disk}
-                        ram={utilizationMetrics?.mem}
+                        cpu={utilizationMetrics.cpuAvg}
+                        disk={utilizationMetrics.disk}
+                        ram={utilizationMetrics.memAvg}
                       />
                     </>
                   )}
