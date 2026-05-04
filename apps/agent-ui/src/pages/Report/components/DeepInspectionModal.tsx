@@ -291,9 +291,23 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setGlobalError(null);
 
     try {
-      await agentApi.startInspection({
-        startInspectionRequest: { vmIds: selectedVMIds },
-      });
+      try {
+        await agentApi.startInspection({
+          startInspectionRequest: { vmIds: selectedVMIds },
+        });
+      } catch (startErr) {
+        // The server keeps the inspector process alive even after all VMs
+        // reach a terminal state, so startInspection rejects with
+        // "already in progress" on re-runs or when adding VMs mid-run.
+        // Stop the stale inspector, wait for teardown, then restart with
+        // the full VM list.
+        if (!(startErr instanceof ResponseError)) throw startErr;
+        await agentApi.stopInspection();
+        await new Promise((r) => setTimeout(r, 1000));
+        await agentApi.startInspection({
+          startInspectionRequest: { vmIds: selectedVMIds },
+        });
+      }
       onInspectionStarted();
       handleClose();
     } catch (err) {
