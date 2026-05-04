@@ -50,6 +50,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import useLocalStorage from "../../../hooks/useLocalStorage";
 import { TechnologyPreviewBadge } from "./TechnologyPreviewBadge";
+import { VMUtilizationMetrics } from "./VMUtilizationMetrics";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
 
 const filterStyles = {
@@ -1564,9 +1565,11 @@ export const VMTable: React.FC<VMTableProps> = ({
                 {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
                 {isColumnVisible("usedResources") && (
                   <Td dataLabel="Used resources" modifier="fitContent">
-                    CPU: <b>{vm.utilizationCpuP95 || 0}%</b> | Disk:{" "}
-                    <b>{vm.utilizationDisk || 0}%</b> | RAM:{" "}
-                    <b>{vm.utilizationMemP95 || 0}%</b>
+                    <VMUtilizationMetrics
+                      cpu={vm.utilizationCpuP95}
+                      disk={vm.utilizationDisk}
+                      ram={vm.utilizationMemP95}
+                    />
                   </Td>
                 )}
                 {isColumnVisible("datacenter") && (

@@ -19,12 +19,20 @@ import { CheckCircleIcon, ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
 
 interface HeaderProps {
   totalVMs?: number;
   totalClusters?: number;
   isConnected?: boolean;
   lastUpdated?: string;
+  showUtilizationMetrics?: boolean;
+  utilizationMetrics?: {
+    cpu?: number;
+    disk?: number;
+    mem?: number;
+  };
+
   onExport?: () => void;
   children?: ReactNode;
 }
@@ -34,6 +42,8 @@ export const Header: React.FC<HeaderProps> = ({
   totalClusters = 0,
   isConnected = true,
   lastUpdated,
+  showUtilizationMetrics,
+  utilizationMetrics,
   onExport,
   children,
 }) => {
@@ -111,7 +121,18 @@ export const Header: React.FC<HeaderProps> = ({
               <FlexItem>
                 <Content component="p">
                   Detected <strong>{totalVMs.toLocaleString()} VMs</strong> in{" "}
-                  <strong>{totalClusters} clusters</strong>
+                  <strong>{totalClusters} clusters</strong>.
+                  {showUtilizationMetrics && (
+                    <>
+                      {" "}
+                      Total usage statistics{" "}
+                      <VMUtilizationMetrics
+                        cpu={utilizationMetrics?.cpu}
+                        disk={utilizationMetrics?.disk}
+                        ram={utilizationMetrics?.mem}
+                      />
+                    </>
+                  )}
                 </Content>
               </FlexItem>
             </Flex>

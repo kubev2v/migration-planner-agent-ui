@@ -20,6 +20,7 @@ export type ClusterViewModel = {
   selectionLabel: string;
   clusterOptions: ClusterOption[];
   clusterFound: boolean;
+  showUtilizationMetrics: boolean;
 };
 
 export const getClusterOptions = (clusters?: {
@@ -71,6 +72,7 @@ export const buildClusterViewModel = ({
       selectionLabel: "All clusters",
       clusterOptions: options,
       clusterFound: true,
+      showUtilizationMetrics: false,
     };
   }
 
@@ -92,5 +94,6 @@ export const buildClusterViewModel = ({
     selectionLabel,
     clusterOptions: options,
     clusterFound: Boolean(clusterData),
+    showUtilizationMetrics: true,
   };
 };

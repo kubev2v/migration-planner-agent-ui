@@ -33,6 +33,10 @@ import {
   DataSharingModal,
 } from "../../common/components/index";
 import { Symbols } from "../../main/Symbols";
+import {
+  fetchClusterRightsizing,
+  getClusterUtilization,
+} from "./api/clusterRightsizing";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { Dashboard, VirtualMachinesView } from "./components/index";
 import { StorageOffloadTab } from "./components/StorageOffloadEstimatorModal";
@@ -63,6 +67,11 @@ export const ReportContainer: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isShareLoading, setIsShareLoading] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [utilizationMetrics, setUtilizationMetrics] = useState<{
+    cpu?: number;
+    disk?: number;
+    mem?: number;
+  }>({});
   // Derive base path for forecaster API (same root as agent API)
   const forecasterBasePath = useMemo(
     () =>
@@ -203,6 +212,36 @@ export const ReportContainer: React.FC = () => {
 
     fetchData();
   }, [agentApi]);
+
+  // Fetch cluster utilization metrics
+  useEffect(() => {
+    // Only fetch metrics when a specific cluster is selected
+    if (selectedClusterId === "all") {
+      setUtilizationMetrics({});
+      return;
+    }
+
+    const fetchUtilizationMetrics = async () => {
+      try {
+        const basePath =
+          (agentApi as ApiWithConfig).configuration?.basePath ||
+          `${window.location.origin}/agent/api/v1`;
+
+        const metrics = await fetchClusterRightsizing(basePath);
+        const clusterMetrics = getClusterUtilization(
+          metrics,
+          selectedClusterId,
+        );
+
+        setUtilizationMetrics(clusterMetrics || {});
+      } catch (err) {
+        console.warn("Failed to fetch utilization metrics:", err);
+        setUtilizationMetrics({});
+      }
+    };
+
+    fetchUtilizationMetrics();
+  }, [agentApi, selectedClusterId]);
 
   // Compute available concerns and categories from inventory
   const availableConcerns = useMemo(() => {
@@ -636,6 +675,8 @@ export const ReportContainer: React.FC = () => {
             totalVMs={totalVMs}
             totalClusters={totalClusters}
             isConnected={isDataShared}
+            showUtilizationMetrics={clusterView.showUtilizationMetrics}
+            utilizationMetrics={utilizationMetrics}
           />
         </StackItem>
 
