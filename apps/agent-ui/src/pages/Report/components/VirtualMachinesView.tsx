@@ -54,11 +54,16 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   // carry a terminal inspectionStatus from a previous run at the moment the
   // first refresh returns (before the server updates them to "pending").
   const seenRunningRef = useRef(false);
-  // Fallback: stop polling after this many attempts even if the server never
-  // transitions any VM to running/pending (e.g. the run completes before the
-  // first refresh or a transient error prevents observation).
-  const MAX_POLL_ATTEMPTS = 60; // 60 × 5 s = 5 min ceiling
-  const pollAttemptsRef = useRef(0);
+  // Number of poll responses received since the current run started.
+  // Incremented inside the setInterval callback (not in the render-triggered
+  // effect) so it counts actual server round-trips, not React re-renders.
+  const pollTicksRef = useRef(0);
+  // Minimum poll ticks before we allow the "allDone" check to stop polling.
+  // Gives the server time to transition VMs to "pending" even when the very
+  // first response still carries stale terminal states from a previous run.
+  const MIN_POLL_TICKS_BEFORE_DONE = 2;
+  // Fallback ceiling to avoid polling forever.
+  const MAX_POLL_TICKS = 60; // 60 × 5 s = 5 min
 
   useEffect(() => {
     onRefreshVMsRef.current = onRefreshVMs;
@@ -136,13 +141,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   const handleInspectionStarted = useCallback(() => {
     seenRunningRef.current = false;
-    pollAttemptsRef.current = 0;
+    pollTicksRef.current = 0;
     setInspectionActive(true);
     setSelectedVMs(new Set());
     onRefreshVMsRef.current?.();
 
     stopPolling();
     pollingRef.current = setInterval(() => {
+      pollTicksRef.current += 1;
       onRefreshVMsRef.current?.();
     }, 5000);
   }, [stopPolling]);
@@ -160,18 +166,22 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       seenRunningRef.current = true;
     }
 
-    pollAttemptsRef.current += 1;
+    const ticks = pollTicksRef.current;
 
-    // Only stop polling after the current run has been observed in an active
-    // state at least once. Without this guard, stale terminal statuses from a
-    // previous run would satisfy "allDone" on the very first refresh (before
-    // the server transitions the VMs to "pending"), killing the poll early.
-    // Fallback: if the server never transitions any VM to running/pending
-    // within MAX_POLL_ATTEMPTS refreshes, stop polling to avoid an infinite
-    // loop (e.g. run completes before first observation, transient API error).
-    const exhausted = pollAttemptsRef.current >= MAX_POLL_ATTEMPTS;
-    if ((seenRunningRef.current && !hasRunningOrPending) || exhausted) {
-      seenRunningRef.current = true;
+    // Two ways to know the run finished:
+    // 1. We observed running/pending at some point and now all VMs left that
+    //    state (the original fast-path).
+    // 2. We've waited at least MIN_POLL_TICKS_BEFORE_DONE server round-trips
+    //    and no VM is running/pending. This covers the re-run case where the
+    //    inspection completes so fast that we never catch the transient
+    //    running/pending state — after a few ticks the server has had enough
+    //    time to transition VMs, so terminal states are trustworthy.
+    const seenAndDone = seenRunningRef.current && !hasRunningOrPending;
+    const waitedAndDone =
+      ticks >= MIN_POLL_TICKS_BEFORE_DONE && !hasRunningOrPending;
+    const exhausted = ticks >= MAX_POLL_TICKS;
+
+    if (seenAndDone || waitedAndDone || exhausted) {
       stopPolling();
       setInspectionActive(false);
     }
