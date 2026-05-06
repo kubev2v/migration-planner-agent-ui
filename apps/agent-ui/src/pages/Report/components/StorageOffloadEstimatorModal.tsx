@@ -2045,6 +2045,78 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     return () => stopPolling();
   }, [stopPolling]);
 
+  // On mount (fresh browser session, new tab, etc.), probe the backend to
+  // detect an already-running or recently-completed benchmark. sessionStorage
+  // is tab-scoped, so a new tab/session has no saved state. Without this
+  // probe the estimator would reset to the credentials step even if the
+  // forecaster is actively running on the server.
+  const hadSavedSession = useRef(!!_saved.activeStep);
+  useEffect(() => {
+    // Only act when no session was restored (i.e. truly fresh load)
+    if (hadSavedSession.current) return;
+
+    let cancelled = false;
+
+    const probe = async () => {
+      try {
+        const status = await getForecasterStatus(basePath);
+        if (cancelled) return;
+
+        if (status.state === "running") {
+          // Rebuild pairs from the backend status so the UI has something
+          // to display. Credentials aren't available but polling/display
+          // still works without them.
+          const backendPairs: SelectedPair[] = (status.pairs ?? []).map(
+            (p) => ({
+              id: p.pairName,
+              name: p.pairName,
+              sourceDatastore: p.sourceDatastore,
+              targetDatastore: p.targetDatastore,
+            }),
+          );
+          if (backendPairs.length > 0) setPairs(backendPairs);
+
+          setForecastStatus(status);
+          setBenchmarkDone(false);
+          wasRunningRef.current = true;
+          setActiveStep("running");
+          return;
+        }
+
+        // Forecaster is idle — check if historical runs exist
+        const runs = await getRuns(basePath);
+        if (cancelled || runs.length === 0) return;
+
+        // Derive pair names from historical runs
+        const runsByPair = new Map<string, ForecastRun>();
+        for (const r of runs) {
+          if (!runsByPair.has(r.pairName)) runsByPair.set(r.pairName, r);
+        }
+        const backendPairs: SelectedPair[] = Array.from(
+          runsByPair.entries(),
+        ).map(([name, run]) => ({
+          id: name,
+          name,
+          sourceDatastore: run.sourceDatastore,
+          targetDatastore: run.targetDatastore,
+        }));
+        setPairs(backendPairs);
+        setAllRuns(runs);
+        setBenchmarkDone(true);
+        setActiveStep("results");
+        hasAutoLoadedResultsRef.current = false;
+      } catch (_) {
+        // Forecaster may not be reachable — stay on default step
+      }
+    };
+
+    probe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [basePath]);
+
   // Persist wizard state on every relevant change (password excluded)
   useEffect(() => {
     // Only save when we have at least a url (avoid storing empty state)
