@@ -44,6 +44,14 @@ export class CredentialsForbiddenError extends Error {
   }
 }
 
+/** Thrown when POST /forecaster returns 409 (benchmark already running). */
+export class ForecastConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ForecastConflictError";
+  }
+}
+
 /**
  * POST /collector — triggers the collector with vCenter credentials.
  * Throws CredentialsForbiddenError on 403.
@@ -117,6 +125,7 @@ export async function postDatastores(
  * POST /forecaster — start async benchmark for one or more datastore pairs.
  * Credentials are optional if previously provided in an earlier request.
  * Returns 202 on success.
+ * Throws ForecastConflictError on 409 (benchmark already running).
  */
 export async function startForecast(
   basePath: string,
@@ -127,6 +136,17 @@ export async function startForecast(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
   });
+  if (res.status === 409) {
+    let msg =
+      "A benchmark is already running. Wait for it to finish or cancel it before starting a new one.";
+    try {
+      const body = await res.json();
+      if (body?.error) msg = body.error;
+    } catch (_) {
+      // use default message
+    }
+    throw new ForecastConflictError(msg);
+  }
   return handleResponse<ForecasterStatus>(res);
 }
 
