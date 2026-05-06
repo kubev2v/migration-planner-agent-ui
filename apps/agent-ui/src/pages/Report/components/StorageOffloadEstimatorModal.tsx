@@ -2492,8 +2492,10 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       setBenchmarkDone(false);
       wasRunningRef.current = false;
 
-      const rerunPair = pairs.find((p) => p.name === pair.pairName) ?? {
-        id: pair.pairName,
+      // Always use the datastores from the ForecastPairStatus (the actual
+      // pair that ran), never from the mutable UI `pairs` selection state
+      // which may have been edited since the benchmark started.
+      const rerunPair = {
         name: pair.pairName,
         sourceDatastore: pair.sourceDatastore,
         targetDatastore: pair.targetDatastore,
@@ -2551,10 +2553,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         return;
       }
 
-      const pairNames = pairs
-        .filter((p) => p.sourceDatastore && p.targetDatastore)
-        .map((p) => p.name);
-
       const poll = async () => {
         try {
           const status = await getForecasterStatus(basePath);
@@ -2565,6 +2563,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
           if (wasRunningRef.current && status.state === "ready") {
             stopPolling();
             setBenchmarkDone(true);
+            const pairNames = (status.pairs ?? []).map((p) => p.pairName);
             await loadResults(pairNames);
           }
         } catch (_) {
@@ -2575,7 +2574,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       poll();
       pollRef.current = setInterval(poll, 2000);
     },
-    [basePath, credentials, pairs, stopPolling, loadResults],
+    [basePath, credentials, stopPolling, loadResults],
   );
 
   const canGoToStep2 =
