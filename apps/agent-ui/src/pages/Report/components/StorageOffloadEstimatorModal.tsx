@@ -104,6 +104,15 @@ function formatBytes(bytes: number): string {
   return `${bytes} B`;
 }
 
+function forecastPairToSelectedPair(pair: ForecastPairStatus): SelectedPair {
+  return {
+    id: pair.pairName,
+    name: pair.pairName,
+    sourceDatastore: pair.sourceDatastore,
+    targetDatastore: pair.targetDatastore,
+  };
+}
+
 function pairLabel(pair: SelectedPair): string {
   return `${pair.sourceDatastore} → ${pair.targetDatastore}`;
 }
@@ -2089,13 +2098,8 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
           // Rebuild pairs from the backend status so the UI has something
           // to display. Credentials aren't available but polling/display
           // still works without them.
-          const backendPairs: SelectedPair[] = (status.pairs ?? []).map(
-            (p) => ({
-              id: p.pairName,
-              name: p.pairName,
-              sourceDatastore: p.sourceDatastore,
-              targetDatastore: p.targetDatastore,
-            }),
+          const backendPairs = (status.pairs ?? []).map(
+            forecastPairToSelectedPair,
           );
           if (backendPairs.length > 0) setPairs(backendPairs);
 
@@ -2371,25 +2375,25 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
   // Redirect to the running step showing an existing benchmark's live status.
   // Used when a conflict is detected (another session already started a run).
-  const redirectToRunningBenchmark = useCallback(async () => {
+  const redirectToRunningBenchmark = useCallback(async (): Promise<boolean> => {
     try {
       const status = await getForecasterStatus(basePath);
       setForecastStatus(status);
 
       if (status.state === "running") {
-        const backendPairs: SelectedPair[] = (status.pairs ?? []).map((p) => ({
-          id: p.pairName,
-          name: p.pairName,
-          sourceDatastore: p.sourceDatastore,
-          targetDatastore: p.targetDatastore,
-        }));
+        const backendPairs = (status.pairs ?? []).map(
+          forecastPairToSelectedPair,
+        );
         if (backendPairs.length > 0) setPairs(backendPairs);
         setBenchmarkDone(false);
         wasRunningRef.current = true;
         setActiveStep("running");
+        return true;
       }
+
+      return false;
     } catch (_) {
-      // fall through — the conflict error message is already displayed
+      return false;
     }
   }, [basePath]);
 
@@ -2411,13 +2415,8 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       const currentStatus = await getForecasterStatus(basePath);
       if (currentStatus.state === "running") {
         setForecastStatus(currentStatus);
-        const backendPairs: SelectedPair[] = (currentStatus.pairs ?? []).map(
-          (p) => ({
-            id: p.pairName,
-            name: p.pairName,
-            sourceDatastore: p.sourceDatastore,
-            targetDatastore: p.targetDatastore,
-          }),
+        const backendPairs = (currentStatus.pairs ?? []).map(
+          forecastPairToSelectedPair,
         );
         if (backendPairs.length > 0) setPairs(backendPairs);
         setBenchmarkDone(false);
@@ -2457,7 +2456,25 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       pollRef.current = null; // clear sentinel on failure
 
       if (err instanceof ForecastConflictError) {
-        await redirectToRunningBenchmark();
+        const redirected = await redirectToRunningBenchmark();
+        if (!redirected) {
+          setForecastStatus({
+            state: "ready",
+            pairs: [
+              {
+                pairName: "conflict-error",
+                sourceDatastore: "",
+                targetDatastore: "",
+                state: "error",
+                error:
+                  "A benchmark was started by another session but is no longer running. Please try again.",
+                completedRuns: 0,
+                totalRuns: 0,
+              },
+            ],
+          });
+          setBenchmarkDone(true);
+        }
         return;
       }
 
@@ -2555,7 +2572,25 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       wasRunningRef.current = true;
     } catch (err) {
       if (err instanceof ForecastConflictError) {
-        await redirectToRunningBenchmark();
+        const redirected = await redirectToRunningBenchmark();
+        if (!redirected) {
+          setForecastStatus({
+            state: "ready",
+            pairs: [
+              {
+                pairName: "conflict-error",
+                sourceDatastore: "",
+                targetDatastore: "",
+                state: "error",
+                error:
+                  "A benchmark was started by another session but is no longer running. Please try again.",
+                completedRuns: 0,
+                totalRuns: 0,
+              },
+            ],
+          });
+          setBenchmarkDone(true);
+        }
         return;
       }
 
@@ -2699,7 +2734,26 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         wasRunningRef.current = true;
       } catch (err) {
         if (err instanceof ForecastConflictError) {
-          await redirectToRunningBenchmark();
+          const redirected = await redirectToRunningBenchmark();
+          if (!redirected) {
+            setForecastStatus((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    pairs: (prev.pairs ?? []).map((p) =>
+                      p.pairName === pair.pairName
+                        ? {
+                            ...p,
+                            state: "error" as const,
+                            error:
+                              "A benchmark was started by another session but is no longer running. Please try again.",
+                          }
+                        : p,
+                    ),
+                  }
+                : prev,
+            );
+          }
           return;
         }
 
