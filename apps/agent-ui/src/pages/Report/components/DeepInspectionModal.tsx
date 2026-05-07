@@ -10,6 +10,8 @@ import {
   Button,
   Content,
   FileUpload,
+  Flex,
+  FlexItem,
   Form,
   FormGroup,
   FormHelperText,
@@ -21,6 +23,7 @@ import {
   ModalFooter,
   ModalHeader,
   TextInput,
+  Title,
 } from "@patternfly/react-core";
 import {
   AngleRightIcon,
@@ -29,6 +32,7 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { TechnologyPreviewBadge } from "./TechnologyPreviewBadge";
 
 interface DeepInspectionModalProps {
   isOpen: boolean;
@@ -325,19 +329,27 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       aria-describedby="deep-inspection-modal-body"
       variant="medium"
     >
-      <ModalHeader
-        title="Set up deep inspection"
-        labelId="deep-inspection-modal-title"
-        description={
-          hasVMsSelected
-            ? `Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}`
-            : "Update the VDDK archive and credentials for deep inspection"
-        }
-      />
+      <ModalHeader>
+        {/* Use children instead of title for the tech preview badge popover */}
+        <Flex>
+          <FlexItem>
+            <Title headingLevel="h2">Set up deep inspection</Title>
+          </FlexItem>
+          <FlexItem>
+            <Content component="p">
+              <TechnologyPreviewBadge />
+            </Content>
+          </FlexItem>
+        </Flex>
+      </ModalHeader>
       <ModalBody id="deep-inspection-modal-body">
-        <Content component="p" style={{ marginBottom: "24px" }}>
+        <Content component="p">
           Deep Inspection analyzes a VM&apos;s internal configuration through a
           granular, disk-level scan.
+          <br />
+          {hasVMsSelected
+            ? `Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}`
+            : "Update the VDDK archive and credentials for deep inspection"}
         </Content>
 
         {tooManyVMs && (
