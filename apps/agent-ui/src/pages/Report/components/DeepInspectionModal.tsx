@@ -105,7 +105,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
 }) => {
   // Section expand/collapse
   const [vddkExpanded, setVddkExpanded] = useState(true);
-  const [credentialsExpanded, setCredentialsExpanded] = useState(true);
 
   // VDDK state
   const [vddkFile, setVddkFile] = useState<File | null>(null);
@@ -119,10 +118,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   const [vcenterUrl, setVcenterUrl] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [credentialsStatus, setCredentialsStatus] =
-    useState<SectionStatus>("notConfigured");
-  const [credentialsSaving, setCredentialsSaving] = useState(false);
-  const [credentialsError, setCredentialsError] = useState<string | null>(null);
 
   // Global state
   const [configuring, setConfiguring] = useState(false);
@@ -147,20 +142,12 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     try {
       const status: InspectorStatus = await agentApi.getInspectorStatus({
         includeVddk: true,
-        includeCredentials: true,
       });
 
       if (status.vddk) {
         setVddkStatus("configured");
         setVddkProps(status.vddk);
         setVddkExpanded(false);
-      }
-
-      if (status.credentials) {
-        setCredentialsStatus("configured");
-        setVcenterUrl(status.credentials.url || "");
-        setUsername(status.credentials.username || "");
-        setCredentialsExpanded(false);
       }
     } catch (err) {
       const isExpectedNotConfigured =
@@ -188,13 +175,9 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setVcenterUrl("");
     setUsername("");
     setPassword("");
-    setCredentialsStatus("notConfigured");
-    setCredentialsSaving(false);
-    setCredentialsError(null);
     setConfiguring(false);
     setGlobalError(null);
     setVddkExpanded(true);
-    setCredentialsExpanded(true);
   };
 
   const handleClose = () => {
@@ -240,48 +223,25 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     }
   };
 
-  const handleCredentialsSave = async () => {
-    if (!vcenterUrl || !username || !password) return;
-
-    setCredentialsSaving(true);
-    setCredentialsError(null);
-
-    try {
-      await agentApi.putInspectorCredentials({
-        vcenterCredentials: {
-          url: vcenterUrl,
-          username,
-          password,
-        },
-      });
-      setCredentialsStatus("configured");
-      setCredentialsExpanded(false);
-    } catch (err) {
-      const message = await extractErrorMessage(
-        err,
-        "Failed to validate credentials",
-      );
-      setCredentialsError(message);
-      setCredentialsStatus("error");
-    } finally {
-      setCredentialsSaving(false);
-    }
-  };
-
   const MAX_VMS = 10;
   const tooManyVMs = selectedVMIds.length > MAX_VMS;
 
   const hasVMsSelected = selectedVMIds.length > 0;
 
+  const areCredentialsValid =
+    vcenterUrl.trim() !== "" &&
+    username.trim() !== "" &&
+    password.trim() !== "";
+
   const canConfigure =
     vddkStatus === "configured" &&
-    credentialsStatus === "configured" &&
+    areCredentialsValid &&
     (!hasVMsSelected || !tooManyVMs);
 
   const isInspectorRunning = async (): Promise<boolean> => {
     try {
       const status = await agentApi.getInspectorStatus({});
-      return status.state === "running" || status.state === "Initiating";
+      return status.state === "running";
     } catch {
       // Can't determine state — assume it may be running so the caller
       // attempts a stop, which is harmless if it's already stopped.
@@ -322,7 +282,14 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       }
 
       await agentApi.startInspection({
-        startInspectionRequest: { vmIds: selectedVMIds },
+        startInspectionRequest: {
+          vmIds: selectedVMIds,
+          credentials: {
+            url: vcenterUrl.trim(),
+            username: username.trim(),
+            password: password,
+          },
+        },
       });
       onInspectionStarted();
       handleClose();
@@ -501,11 +468,7 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
 
         {/* Credentials Section */}
         <div className={modalStyles.section}>
-          <button
-            type="button"
-            className={modalStyles.sectionHeader}
-            onClick={() => setCredentialsExpanded(!credentialsExpanded)}
-          >
+          <div className={modalStyles.sectionHeader}>
             <div className={modalStyles.sectionHeaderLeft}>
               <Icon>
                 <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
@@ -517,90 +480,40 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
                 </Content>
               </div>
             </div>
-            <div className={modalStyles.sectionHeaderRight}>
-              {renderSectionStatus(credentialsStatus)}
-              <AngleRightIcon
-                style={{
-                  transition: "transform 0.2s",
-                  transform: credentialsExpanded
-                    ? "rotate(90deg)"
-                    : "rotate(0deg)",
-                }}
-              />
-            </div>
-          </button>
+          </div>
 
-          {credentialsExpanded && (
-            <div className={modalStyles.sectionBody}>
-              {credentialsError && (
-                <Alert
-                  variant="danger"
-                  title="Credentials error"
-                  isInline
-                  style={{ marginBottom: "12px" }}
-                >
-                  {credentialsError}
-                </Alert>
-              )}
-
-              <Form>
-                <FormGroup
-                  label="vCenter server"
-                  isRequired
-                  fieldId="vcenter-url"
-                >
-                  <TextInput
-                    id="vcenter-url"
-                    value={vcenterUrl}
-                    onChange={(_ev, val) => {
-                      setVcenterUrl(val);
-                      if (credentialsStatus === "configured")
-                        setCredentialsStatus("notConfigured");
-                    }}
-                    placeholder="vcenter.example.com"
-                    isDisabled={credentialsSaving}
-                  />
-                </FormGroup>
-                <FormGroup label="Username" isRequired fieldId="vcenter-user">
-                  <TextInput
-                    id="vcenter-user"
-                    value={username}
-                    onChange={(_ev, val) => {
-                      setUsername(val);
-                      if (credentialsStatus === "configured")
-                        setCredentialsStatus("notConfigured");
-                    }}
-                    placeholder="administrator@vsphere.local"
-                    isDisabled={credentialsSaving}
-                  />
-                </FormGroup>
-                <FormGroup label="Password" isRequired fieldId="vcenter-pass">
-                  <TextInput
-                    id="vcenter-pass"
-                    type="password"
-                    value={password}
-                    onChange={(_ev, val) => {
-                      setPassword(val);
-                      if (credentialsStatus === "configured")
-                        setCredentialsStatus("notConfigured");
-                    }}
-                    isDisabled={credentialsSaving}
-                  />
-                </FormGroup>
-              </Form>
-              <Button
-                variant="secondary"
-                onClick={handleCredentialsSave}
-                isLoading={credentialsSaving}
-                isDisabled={
-                  credentialsSaving || !vcenterUrl || !username || !password
-                }
-                style={{ marginTop: "12px" }}
+          <div className={modalStyles.sectionBody}>
+            <Form>
+              <FormGroup
+                label="vCenter server"
+                isRequired
+                fieldId="vcenter-url"
               >
-                Validate credentials
-              </Button>
-            </div>
-          )}
+                <TextInput
+                  id="vcenter-url"
+                  value={vcenterUrl}
+                  onChange={(_ev, val) => setVcenterUrl(val)}
+                  placeholder="vcenter.example.com"
+                />
+              </FormGroup>
+              <FormGroup label="Username" isRequired fieldId="vcenter-user">
+                <TextInput
+                  id="vcenter-user"
+                  value={username}
+                  onChange={(_ev, val) => setUsername(val)}
+                  placeholder="administrator@vsphere.local"
+                />
+              </FormGroup>
+              <FormGroup label="Password" isRequired fieldId="vcenter-pass">
+                <TextInput
+                  id="vcenter-pass"
+                  type="password"
+                  value={password}
+                  onChange={(_ev, val) => setPassword(val)}
+                />
+              </FormGroup>
+            </Form>
+          </div>
         </div>
       </ModalBody>
       <ModalFooter>

@@ -215,34 +215,33 @@ export const ReportContainer: React.FC = () => {
       return;
     }
 
-    const abortController = new AbortController();
+    let cancelled = false;
 
     const fetchUtilizationMetrics = async () => {
       try {
-        const response = await agentApi.getLatestRightsizingClusters({
-          signal: abortController.signal,
-        });
+        const response = await agentApi.getLatestRightsizingClusters({});
 
-        // Find cluster metrics for the selected cluster
-        const clusterMetrics = response.clusters?.find(
-          (cluster) => cluster.clusterId === selectedClusterId,
-        );
+        // Only update state if the effect hasn't been cleaned up
+        if (!cancelled) {
+          // Find cluster metrics for the selected cluster
+          const clusterMetrics = response.clusters?.find(
+            (cluster) => cluster.clusterId === selectedClusterId,
+          );
 
-        setUtilizationMetrics(clusterMetrics || null);
-      } catch (err) {
-        // Ignore abort errors
-        if (err instanceof Error && err.name === "AbortError") {
-          return;
+          setUtilizationMetrics(clusterMetrics || null);
         }
-        console.warn("Failed to fetch utilization metrics:", err);
-        setUtilizationMetrics(null);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("Failed to fetch utilization metrics:", err);
+          setUtilizationMetrics(null);
+        }
       }
     };
 
     fetchUtilizationMetrics();
 
     return () => {
-      abortController.abort();
+      cancelled = true;
     };
   }, [agentApi, selectedClusterId]);
 
