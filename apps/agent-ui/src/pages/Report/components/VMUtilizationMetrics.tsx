@@ -4,7 +4,7 @@ interface VMUtilizationMetricsProps {
   ram?: number;
 }
 
-const formatMetric = (value?: number): string => {
+export const formatMetric = (value?: number): string => {
   if (value === undefined || value === null) {
     return "N/A";
   }

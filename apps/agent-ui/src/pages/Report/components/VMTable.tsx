@@ -49,7 +49,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import useLocalStorage from "../../../hooks/useLocalStorage";
-import { VMUtilizationMetrics } from "./VMUtilizationMetrics";
+import { formatMetric } from "./VMUtilizationMetrics";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
 
 const filterStyles = {
@@ -128,7 +128,9 @@ type ColumnKey =
   | "name"
   | "vCenterState"
   | "id"
-  | "usedResources"
+  | "cpuUsage"
+  | "diskUsage"
+  | "ramUsage"
   | "datacenter"
   | "cluster"
   | "diskSize"
@@ -157,7 +159,9 @@ const Columns: Record<ColumnKey, string> = {
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
-  usedResources: "Used resources",
+  cpuUsage: "CPU usage",
+  diskUsage: "Disk usage",
+  ramUsage: "RAM usage",
   datacenter: "Data center",
   cluster: "Cluster",
   diskSize: "Disk size",
@@ -173,7 +177,7 @@ const MANDATORY_COLUMNS: ColumnKey[] = ["name"];
 const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [...ALL_COLUMN_KEYS];
 
 const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-const VISIBLE_COLUMNS_VERSION = 3;
+const VISIBLE_COLUMNS_VERSION = 4;
 
 const statusLabels: Record<string, string> = {
   poweredOn: "Powered on",
@@ -1469,8 +1473,12 @@ export const VMTable: React.FC<VMTableProps> = ({
                     return 10;
                   case "issues":
                     return 10;
-                  case "usedResources":
-                    return 20;
+                  case "cpuUsage":
+                    return 10;
+                  case "diskUsage":
+                    return 10;
+                  case "ramUsage":
+                    return 10;
                   case "deepInspection":
                     return 15;
                   default:
@@ -1561,13 +1569,19 @@ export const VMTable: React.FC<VMTableProps> = ({
                   </Td>
                 )}
                 {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
-                {isColumnVisible("usedResources") && (
-                  <Td dataLabel="Used resources" modifier="fitContent">
-                    <VMUtilizationMetrics
-                      cpu={vm.utilizationCpuP95}
-                      disk={vm.utilizationDisk}
-                      ram={vm.utilizationMemP95}
-                    />
+                {isColumnVisible("cpuUsage") && (
+                  <Td dataLabel="CPU usage" modifier="fitContent">
+                    {formatMetric(vm.utilizationCpuP95)}
+                  </Td>
+                )}
+                {isColumnVisible("diskUsage") && (
+                  <Td dataLabel="Disk usage" modifier="fitContent">
+                    {formatMetric(vm.utilizationDisk)}
+                  </Td>
+                )}
+                {isColumnVisible("ramUsage") && (
+                  <Td dataLabel="RAM usage" modifier="fitContent">
+                    {formatMetric(vm.utilizationMemP95)}
                   </Td>
                 )}
                 {isColumnVisible("datacenter") && (
