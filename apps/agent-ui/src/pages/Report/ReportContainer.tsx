@@ -73,8 +73,11 @@ export const ReportContainer: React.FC = () => {
     [agentApi],
   );
 
-  // Request ID for race condition prevention in VM fetching
+  // Separate request IDs for the initial/effect-driven fetch vs. polling refresh
+  // so that concurrent calls from different sources don't discard each other's
+  // responses.
   const vmsRequestIdRef = useRef(0);
+  const vmsRefreshIdRef = useRef(0);
 
   // VM pagination state
   const [vmsTotalCount, setVmsTotalCount] = useState(0);
@@ -384,7 +387,7 @@ export const ReportContainer: React.FC = () => {
   ]);
 
   const refreshVMs = useCallback(async () => {
-    const reqId = ++vmsRequestIdRef.current;
+    const reqId = ++vmsRefreshIdRef.current;
     try {
       const byExpression = filtersToByExpression(initialVMFilters);
       const response = await agentApi.getVMs({
@@ -393,7 +396,7 @@ export const ReportContainer: React.FC = () => {
         page: vmsPage,
         pageSize: vmsPageSize,
       });
-      if (vmsRequestIdRef.current === reqId) {
+      if (vmsRefreshIdRef.current === reqId) {
         setVmsList(response.vms || []);
         setVmsTotalCount(response.total || 0);
       }
