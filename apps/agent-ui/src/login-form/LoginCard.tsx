@@ -241,9 +241,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({
           labelId="data-sharing-confirm-title"
         />
         <ModalBody id="data-sharing-confirm-body">
-          <Content component="p">
-            This action cannot be undone. Are you sure you want to proceed?
-          </Content>
+          <Content component="p">Are you sure you want to proceed?</Content>
         </ModalBody>
         <ModalFooter>
           <Button variant="primary" onClick={handleConfirmDataSharing}>

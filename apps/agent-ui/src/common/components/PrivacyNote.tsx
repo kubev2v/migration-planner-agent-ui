@@ -1,4 +1,5 @@
-import { Alert, AlertVariant, List, ListItem } from "@patternfly/react-core";
+import { Alert, AlertVariant } from "@patternfly/react-core";
+import { ExternalLinkAltIcon } from "@patternfly/react-icons";
 import type React from "react";
 
 export const PrivacyNote: React.FC = () => {
@@ -6,15 +7,19 @@ export const PrivacyNote: React.FC = () => {
     <Alert
       variant={AlertVariant.info}
       isInline
-      title="Note about Red Hat data privacy"
+      title="How Red Hat protects your data"
       component="h3"
     >
-      <List isPlain>
-        <ListItem>Red Hat does not store any non-aggregated data.</ListItem>
-        <ListItem>
-          Red Hat does not store your vCenter credentials in any way.
-        </ListItem>
-      </List>
+      Data is anonymized and strictly excludes personally identifiable
+      infrastructure info (VM/host/cluster/disk names). <br />
+      Red Hat never stores your vCenter credentials.{" "}
+      <a
+        href="https://kubev2v.github.io/openshift-migration-advisor-docs/docs/aggregated-data-report/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Learn more <ExternalLinkAltIcon />
+      </a>
     </Alert>
   );
 };
