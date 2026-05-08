@@ -484,14 +484,18 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Max used CPU
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                <Progress
-                                  value={vm.utilization.cpuMax}
-                                  size={ProgressSize.sm}
-                                  measureLocation={
-                                    ProgressMeasureLocation.outside
-                                  }
-                                  aria-label="Max used CPU"
-                                />
+                                {vm.utilization.cpuMax === 0 ? (
+                                  "N/A"
+                                ) : (
+                                  <Progress
+                                    value={vm.utilization.cpuMax}
+                                    size={ProgressSize.sm}
+                                    measureLocation={
+                                      ProgressMeasureLocation.outside
+                                    }
+                                    aria-label="Max used CPU"
+                                  />
+                                )}
                               </DescriptionListDescription>
                             </DescriptionListGroup>
                           </DescriptionList>
@@ -503,14 +507,18 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Average used CPU
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                <Progress
-                                  value={vm.utilization.cpuAvg}
-                                  size={ProgressSize.sm}
-                                  measureLocation={
-                                    ProgressMeasureLocation.outside
-                                  }
-                                  aria-label="Average used CPU"
-                                />
+                                {vm.utilization.cpuAvg === 0 ? (
+                                  "N/A"
+                                ) : (
+                                  <Progress
+                                    value={vm.utilization.cpuAvg}
+                                    size={ProgressSize.sm}
+                                    measureLocation={
+                                      ProgressMeasureLocation.outside
+                                    }
+                                    aria-label="Average used CPU"
+                                  />
+                                )}
                               </DescriptionListDescription>
                             </DescriptionListGroup>
                           </DescriptionList>
@@ -538,14 +546,18 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Max used RAM
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                <Progress
-                                  value={vm.utilization.memMax}
-                                  size={ProgressSize.sm}
-                                  measureLocation={
-                                    ProgressMeasureLocation.outside
-                                  }
-                                  aria-label="Max used RAM"
-                                />
+                                {vm.utilization.memMax === 0 ? (
+                                  "N/A"
+                                ) : (
+                                  <Progress
+                                    value={vm.utilization.memMax}
+                                    size={ProgressSize.sm}
+                                    measureLocation={
+                                      ProgressMeasureLocation.outside
+                                    }
+                                    aria-label="Max used RAM"
+                                  />
+                                )}
                               </DescriptionListDescription>
                             </DescriptionListGroup>
                           </DescriptionList>
@@ -557,14 +569,18 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Average used RAM
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                <Progress
-                                  value={vm.utilization.memAvg}
-                                  size={ProgressSize.sm}
-                                  measureLocation={
-                                    ProgressMeasureLocation.outside
-                                  }
-                                  aria-label="Average used RAM"
-                                />
+                                {vm.utilization.memAvg === 0 ? (
+                                  "N/A"
+                                ) : (
+                                  <Progress
+                                    value={vm.utilization.memAvg}
+                                    size={ProgressSize.sm}
+                                    measureLocation={
+                                      ProgressMeasureLocation.outside
+                                    }
+                                    aria-label="Average used RAM"
+                                  />
+                                )}
                               </DescriptionListDescription>
                             </DescriptionListGroup>
                           </DescriptionList>
@@ -592,14 +608,18 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Disk usage
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                <Progress
-                                  value={vm.utilization.disk}
-                                  size={ProgressSize.sm}
-                                  measureLocation={
-                                    ProgressMeasureLocation.outside
-                                  }
-                                  aria-label="Disk usage"
-                                />
+                                {vm.utilization.disk === 0 ? (
+                                  "N/A"
+                                ) : (
+                                  <Progress
+                                    value={vm.utilization.disk}
+                                    size={ProgressSize.sm}
+                                    measureLocation={
+                                      ProgressMeasureLocation.outside
+                                    }
+                                    aria-label="Disk usage"
+                                  />
+                                )}
                               </DescriptionListDescription>
                             </DescriptionListGroup>
                           </DescriptionList>

@@ -49,7 +49,6 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import useLocalStorage from "../../../hooks/useLocalStorage";
-import { TechnologyPreviewBadge } from "./TechnologyPreviewBadge";
 import { VMUtilizationMetrics } from "./VMUtilizationMetrics";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
 
@@ -1349,7 +1348,6 @@ export const VMTable: React.FC<VMTableProps> = ({
                   Run deep inspection
                 </Button>
               </Tooltip>
-              <TechnologyPreviewBadge />
             </ToolbarItem>
             <ToolbarItem>
               <Dropdown
