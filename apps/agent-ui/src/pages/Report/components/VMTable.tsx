@@ -140,7 +140,7 @@ type ColumnKey =
   | "deepInspection";
 
 // Backend supports sorting for these columns only
-const SORTABLE_COLUMNS = [
+const BACKEND_SORTABLE_COLUMNS = [
   "name",
   "vCenterState",
   "cluster",
@@ -149,10 +149,22 @@ const SORTABLE_COLUMNS = [
   "issues",
 ] as const;
 
-type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
+const FRONTEND_SORTABLE_COLUMNS = ["deepInspection"] as const;
+
+type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
+type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
+
+type SortableColumn = BackendSortableColumn | FrontendSortableColumn;
 
 const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
-  SORTABLE_COLUMNS.includes(key as SortableColumn);
+  (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
+  (FRONTEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
+
+const isBackendSortableColumn = (
+  key: ColumnKey | null,
+): key is BackendSortableColumn =>
+  key !== null &&
+  (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
 
 const Columns: Record<ColumnKey, string> = {
   name: "Name",
@@ -207,18 +219,23 @@ const memorySizeRanges = [
 const MB_IN_GB = 1024;
 const MB_IN_TB = 1024 * 1024;
 
-// Client-side sort order for inspection states (lower index = first in asc order)
-const inspectionStateOrder: Record<string, number> = {
-  running: 0,
-  pending: 1,
-  completed: 2,
-  error: 3,
-  canceled: 4,
-};
+type FrontendSortFunction = (vm: VirtualMachine) => number;
 
-const getInspectionSortValue = (vm: VirtualMachine): number => {
-  const state = vm.inspectionStatus?.state;
-  return state !== undefined ? (inspectionStateOrder[state] ?? 99) : 99;
+const FRONTEND_SORT_METHODS: Record<
+  FrontendSortableColumn,
+  FrontendSortFunction
+> = {
+  deepInspection: (vm) => {
+    const inspectionStateOrder: Record<string, number> = {
+      running: 0,
+      pending: 1,
+      completed: 2,
+      error: 3,
+      canceled: 4,
+    };
+    const state = vm.inspectionStatus?.state;
+    return state === undefined ? 99 : (inspectionStateOrder[state] ?? 99);
+  },
 };
 
 const formatDiskSize = (sizeInMB: number): string => {
@@ -713,7 +730,8 @@ export const VMTable: React.FC<VMTableProps> = ({
   // No client-side filtering - handled by backend
   // VMs are already filtered, sorted, and paginated by the backend
 
-  const backendFieldMap: Record<SortableColumn, string> = {
+  // Backend supports sorting for these columns only
+  const backendFieldMap: Record<BackendSortableColumn, string> = {
     name: "name",
     vCenterState: "vCenterState",
     cluster: "cluster",
@@ -722,12 +740,20 @@ export const VMTable: React.FC<VMTableProps> = ({
     issues: "issues",
   };
 
-  // Apply client-side sort for deepInspection; all other columns use backend sort.
+  // Apply client-side sort for frontend-sortable columns; all other columns use backend sort.
   // Skip reordering while inspection is active so rows don't jump as statuses change.
   const displayVMs = useMemo(() => {
-    if (sortByColumnKey !== "deepInspection" || inspectionActive) return vms;
+    if (
+      sortByColumnKey === null ||
+      isBackendSortableColumn(sortByColumnKey) ||
+      inspectionActive
+    )
+      return vms;
+    const sortFn =
+      FRONTEND_SORT_METHODS[sortByColumnKey as FrontendSortableColumn];
+    if (!sortFn) return vms;
     return [...vms].sort((a, b) => {
-      const diff = getInspectionSortValue(a) - getInspectionSortValue(b);
+      const diff = sortFn(a) - sortFn(b);
       return activeSortDirection === "asc" ? diff : -diff;
     });
   }, [vms, sortByColumnKey, activeSortDirection, inspectionActive]);
@@ -747,7 +773,7 @@ export const VMTable: React.FC<VMTableProps> = ({
       setSortByColumnKey(columnKey);
       setActiveSortDirection(direction);
 
-      if (isSortableColumn(columnKey)) {
+      if (isBackendSortableColumn(columnKey)) {
         // Backend sort
         const sortField = backendFieldMap[columnKey];
         onSortChange?.([`${sortField}:${direction}`]);
