@@ -31,6 +31,7 @@ export const getConfigurationBasePath = (): string => {
 function getConfiguredContainer(): Container {
   const agentApiConfig = new Configuration({
     basePath: getConfigurationBasePath(),
+    fetchApi: (url, init) => fetch(url, { ...init, cache: "no-store" }),
   });
   const container = new Container();
   container.register(Symbols.AgentApi, new DefaultApi(agentApiConfig));
