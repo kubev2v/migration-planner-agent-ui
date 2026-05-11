@@ -174,7 +174,7 @@ const CredentialsStep: React.FC<CredentialsStepProps> = ({
             component="small"
             style={{ color: "var(--pf-t--global--text--color--200)" }}
           >
-            Example: https://eco-vcenter-server.lab.eng.tlv2.redhat.com
+            Example: https://vcenter.example.com
           </Content>
         </FormGroup>
         <FormGroup label="Username" isRequired fieldId="vcenter-username">
@@ -189,7 +189,7 @@ const CredentialsStep: React.FC<CredentialsStepProps> = ({
             component="small"
             style={{ color: "var(--pf-t--global--text--color--200)" }}
           >
-            Example: qe-admin@ecosystem.content.vsphere
+            Example: administrator@vsphere.local
           </Content>
         </FormGroup>
         <FormGroup label="Password" isRequired fieldId="vcenter-password">
@@ -386,18 +386,6 @@ const PairRow: React.FC<PairRowProps> = ({
                   }}
                 >
                   Storage array: <strong>{datastoreArrayLabel(srcDs)}</strong>
-                </Content>
-              )}
-              {hasNoCapabilities && (
-                <Content
-                  component="small"
-                  style={{
-                    display: "block",
-                    marginTop: "4px",
-                    color: "var(--pf-t--global--color--status--danger--100)",
-                  }}
-                >
-                  Select different datastore pair with pair capabilities
                 </Content>
               )}
             </GridItem>
@@ -672,13 +660,14 @@ const SelectPairsStep: React.FC<SelectPairsStepProps> = ({
           <Content component="p">
             <strong>{datastores.length}</strong> datastores discovered across{" "}
             <strong>{groups.length}</strong> storage array group(s).
-            {"\n"}Select one or more source/target pairs to run a storage
-            offload estimate on.
+          </Content>
+          <Content component="p">
+            Select one or more source/target pairs to run a storage
+            offload estimate on.{" "}
             <a
               href="https://docs.redhat.com/en/documentation/migration_toolkit_for_virtualization/2.10/html-single/planning_your_migration_to_red_hat_openshift_virtualization/index#about-storage-copy-offload_vmware"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ marginLeft: "0.5rem" }}
             >
               Learn more <ExternalLinkAltIcon />
             </a>
@@ -1123,10 +1112,18 @@ const RunningStep: React.FC<RunningStepProps> = ({
                             </Content>
                           )}
 
-                          {/* Active states: preparing, running, pending — show both progress bars */}
-                          {(isPreparing ||
-                            pair.state === "running" ||
-                            pair.state === "pending") && (
+                          {/* Pending state — not yet started */}
+                          {pair.state === "pending" && (
+                            <Content
+                              component="small"
+                              style={{ display: "block", fontStyle: "italic" }}
+                            >
+                              Pending
+                            </Content>
+                          )}
+
+                          {/* Active states: preparing or running — show both progress bars */}
+                          {(isPreparing || pair.state === "running") && (
                             <>
                               <Content
                                 component="small"
@@ -1739,9 +1736,16 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                                 completion. You can run again when ready.
                               </Alert>
                             )}
+                            {liveStatus.state === "pending" && (
+                              <Content
+                                component="small"
+                                style={{ display: "block", fontStyle: "italic" }}
+                              >
+                                Pending
+                              </Content>
+                            )}
                             {(isPreparing ||
-                              liveStatus.state === "running" ||
-                              liveStatus.state === "pending") && (
+                              liveStatus.state === "running") && (
                               <>
                                 <Content
                                   component="small"
