@@ -238,6 +238,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({
       >
         <ModalHeader
           title="Confirm data sharing"
+          titleIconVariant="warning"
           labelId="data-sharing-confirm-title"
         />
         <ModalBody id="data-sharing-confirm-body">
