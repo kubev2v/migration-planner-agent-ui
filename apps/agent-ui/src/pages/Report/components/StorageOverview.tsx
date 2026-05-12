@@ -12,6 +12,15 @@ import {
   type MenuToggleElement,
 } from "@patternfly/react-core";
 import { DatabaseIcon } from "@patternfly/react-icons";
+import chart_color_blue_300 from "@patternfly/react-tokens/dist/esm/chart_color_blue_300";
+import chart_color_green_300 from "@patternfly/react-tokens/dist/esm/chart_color_green_300";
+import chart_color_orange_200 from "@patternfly/react-tokens/dist/esm/chart_color_orange_200";
+import chart_color_purple_100 from "@patternfly/react-tokens/dist/esm/chart_color_purple_100";
+import chart_color_purple_300 from "@patternfly/react-tokens/dist/esm/chart_color_purple_300";
+import chart_color_red_orange_300 from "@patternfly/react-tokens/dist/esm/chart_color_red_orange_300";
+import chart_color_teal_200 from "@patternfly/react-tokens/dist/esm/chart_color_teal_200";
+import chart_color_teal_300 from "@patternfly/react-tokens/dist/esm/chart_color_teal_300";
+import chart_color_yellow_400 from "@patternfly/react-tokens/dist/esm/chart_color_yellow_400";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -91,7 +100,7 @@ function buildTierChartData(
       const prefix = getTierPrefix(key);
       const display = prefix
         ? tierConfig[prefix]
-        : { label: key, legendCategory: "Unknown" };
+        : { label: key, legendCategory: key };
       const { count, countDisplay } = selector(tier);
       return {
         name: display.label,
@@ -101,6 +110,30 @@ function buildTierChartData(
       };
     });
 }
+
+const COLOR_PALETTE = [
+  chart_color_blue_300.value,
+  chart_color_purple_300.value,
+  chart_color_purple_100.value,
+  chart_color_teal_300.value,
+  chart_color_yellow_400.value,
+  chart_color_green_300.value,
+  chart_color_orange_200.value,
+  chart_color_red_orange_300.value,
+];
+
+const DISK_TYPE_BAR_COLORS = [
+  chart_color_blue_300.value,
+  chart_color_purple_300.value,
+  chart_color_purple_100.value,
+  chart_color_yellow_400.value,
+  chart_color_teal_200.value,
+];
+
+const SHARED_DISKS_COLORS: Record<string, string> = {
+  "With shared disks": chart_color_yellow_400.value,
+  "No shared disks": chart_color_blue_300.value,
+};
 
 const getContrastColor = (hexColor: string): string => {
   const hex = hexColor.replace("#", "");
@@ -317,18 +350,32 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
     });
   }, [exportAllViews, diskSizeTier]);
 
-  const diskTypeBarColors = [
-    "#0066cc",
-    "#5e40be",
-    "#b6a6e9",
-    "#b98412",
-    "#73C5C5",
-  ];
+  const tierLegend = useMemo(() => {
+    const legendMap: Record<string, string> = {};
+    chartData.forEach((slice, idx) => {
+      legendMap[slice.legendCategory] =
+        COLOR_PALETTE[idx % COLOR_PALETTE.length];
+    });
+    return legendMap;
+  }, [chartData]);
 
-  const sharedDisksColors = {
-    "With shared disks": "#b98412",
-    "No shared disks": "#0066cc",
-  };
+  const tierLegendForVmCount = useMemo(() => {
+    const legendMap: Record<string, string> = {};
+    chartDataForVmCount.forEach((slice, idx) => {
+      legendMap[slice.legendCategory] =
+        COLOR_PALETTE[idx % COLOR_PALETTE.length];
+    });
+    return legendMap;
+  }, [chartDataForVmCount]);
+
+  const tierLegendForTotalSize = useMemo(() => {
+    const legendMap: Record<string, string> = {};
+    chartDataForTotalSize.forEach((slice, idx) => {
+      legendMap[slice.legendCategory] =
+        COLOR_PALETTE[idx % COLOR_PALETTE.length];
+    });
+    return legendMap;
+  }, [chartDataForTotalSize]);
 
   const commonDonutProps = useMemo(
     () => ({
@@ -460,7 +507,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
           viewMode === "vmCountByDiskType" ? (
             <DiskTypeBarChart
               data={diskTypeChartData}
-              colors={diskTypeBarColors}
+              colors={DISK_TYPE_BAR_COLORS}
               isExportMode={isExportMode}
             />
           ) : viewMode === "sharedDisks" ? (
@@ -471,7 +518,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   ...item,
                   countDisplay: `${item.countDisplay} VMs`,
                 }))}
-                customColors={sharedDisksColors}
+                customColors={SHARED_DISKS_COLORS}
                 title={`${totalVMs} VMs`}
                 subTitle={`${totalWithSharedDisks ?? 0} with shared disks`}
                 itemsPerRow={2}
@@ -495,6 +542,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                     ? `${item.countDisplay} TB`
                     : `${item.countDisplay} VMs`,
               }))}
+              legend={tierLegend}
               title={
                 viewMode === "totalSize"
                   ? `${totals.totalSize.toFixed(2)} TB`
@@ -524,7 +572,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
               </div>
               <DiskTypeBarChart
                 data={diskTypeChartData}
-                colors={diskTypeBarColors}
+                colors={DISK_TYPE_BAR_COLORS}
                 isExportMode={isExportMode}
               />
             </div>
@@ -538,6 +586,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   ...item,
                   countDisplay: `${item.countDisplay} VMs`,
                 }))}
+                legend={tierLegendForVmCount}
                 title={`${totals.totalVMs} VMs`}
                 subTitle={`${totals.totalSize.toFixed(2)} TB`}
                 itemsPerRow={Math.ceil(chartDataForVmCount.length / 2)}
@@ -556,6 +605,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   ...item,
                   countDisplay: `${item.countDisplay} TB`,
                 }))}
+                legend={tierLegendForTotalSize}
                 title={`${totals.totalSize.toFixed(2)} TB`}
                 subTitle={`${totals.totalVMs} VMs`}
                 itemsPerRow={Math.ceil(chartDataForTotalSize.length / 2)}
@@ -575,7 +625,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                     ...item,
                     countDisplay: `${item.countDisplay} VMs`,
                   }))}
-                  customColors={sharedDisksColors}
+                  customColors={SHARED_DISKS_COLORS}
                   title={`${totalVMs} VMs`}
                   subTitle={`${totalWithSharedDisks ?? 0} with shared disks`}
                   itemsPerRow={2}
