@@ -115,7 +115,13 @@ export const Header: React.FC<HeaderProps> = ({
               <FlexItem>
                 <Content component="p">
                   Detected <strong>{totalVMs.toLocaleString()} VMs</strong> in{" "}
-                  <strong>{totalClusters} clusters</strong>.
+                  <strong>
+                    {totalClusters}{" "}
+                    {totalClusters === 1
+                      ? "vSphere cluster"
+                      : "vSphere clusters"}
+                  </strong>
+                  .
                   {utilizationMetrics && (
                     <>
                       {" "}
