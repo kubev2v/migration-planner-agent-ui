@@ -48,6 +48,7 @@ import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
+import { formatMetric } from "./VMUtilizationMetrics";
 
 const MB_IN_GB = 1024;
 
@@ -489,6 +490,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 ) : (
                                   <Progress
                                     value={vm.utilization.cpuMax}
+                                    label={formatMetric(vm.utilization.cpuMax)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -512,6 +514,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 ) : (
                                   <Progress
                                     value={vm.utilization.cpuAvg}
+                                    label={formatMetric(vm.utilization.cpuAvg)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -551,6 +554,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 ) : (
                                   <Progress
                                     value={vm.utilization.memMax}
+                                    label={formatMetric(vm.utilization.memMax)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -574,6 +578,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 ) : (
                                   <Progress
                                     value={vm.utilization.memAvg}
+                                    label={formatMetric(vm.utilization.memAvg)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -613,6 +618,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 ) : (
                                   <Progress
                                     value={vm.utilization.disk}
+                                    label={formatMetric(vm.utilization.disk)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
