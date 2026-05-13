@@ -26,9 +26,14 @@ export const getClusterOptions = (clusters?: {
   [key: string]: InventoryData;
 }): ClusterOption[] => {
   const keys = clusters ? Object.keys(clusters) : [];
+  const sorted = keys.sort((a, b) => {
+    const countA = clusters?.[a]?.vms?.total ?? 0;
+    const countB = clusters?.[b]?.vms?.total ?? 0;
+    return countB - countA;
+  });
   return [
     { id: "all", label: "All vSphere clusters" },
-    ...keys.map((key) => ({ id: key, label: key })),
+    ...sorted.map((key) => ({ id: key, label: key })),
   ];
 };
 
