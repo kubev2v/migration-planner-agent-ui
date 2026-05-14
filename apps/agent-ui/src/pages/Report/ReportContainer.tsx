@@ -37,6 +37,7 @@ import { Symbols } from "../../main/Symbols";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { Dashboard, VirtualMachinesView } from "./components/index";
 import { StorageOffloadTab } from "./components/StorageOffloadEstimatorModal";
+import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
 import {
   filtersToByExpression,
   hasActiveFilters,
@@ -679,7 +680,6 @@ export const ReportContainer: React.FC = () => {
             totalVMs={totalVMs}
             totalClusters={totalClusters}
             isConnected={isDataShared}
-            utilizationMetrics={utilizationMetrics}
           />
         </StackItem>
 
@@ -728,6 +728,19 @@ export const ReportContainer: React.FC = () => {
             </SelectList>
           </Select>
         </StackItem>
+
+        {utilizationMetrics && (
+          <StackItem>
+            <Content component="p">
+              Total usage statistics{" "}
+              <VMUtilizationMetrics
+                cpu={utilizationMetrics.cpuAvg}
+                disk={utilizationMetrics.disk}
+                ram={utilizationMetrics.memAvg}
+              />
+            </Content>
+          </StackItem>
+        )}
 
         {/* Tabs */}
         <StackItem>

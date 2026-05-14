@@ -1,4 +1,3 @@
-import type { RightsizingClusterUtilization } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -20,14 +19,12 @@ import { CheckCircleIcon, ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
 
 interface HeaderProps {
   totalVMs?: number;
   totalClusters?: number;
   isConnected?: boolean;
   lastUpdated?: string;
-  utilizationMetrics?: RightsizingClusterUtilization | null;
   onExport?: () => void;
   children?: ReactNode;
 }
@@ -37,7 +34,6 @@ export const Header: React.FC<HeaderProps> = ({
   totalClusters = 0,
   isConnected = true,
   lastUpdated,
-  utilizationMetrics,
   onExport,
   children,
 }) => {
@@ -99,13 +95,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </Flex>
               </FlexItem>
 
-              <FlexItem>
-                <Content component="p">
-                  Presenting the information we were able to fetch from the
-                  discovery process
-                </Content>
-              </FlexItem>
-
               {lastUpdated && (
                 <FlexItem>
                   <Content component="small">{lastUpdated}</Content>
@@ -122,17 +111,6 @@ export const Header: React.FC<HeaderProps> = ({
                       : "vSphere clusters"}
                   </strong>
                   .
-                  {utilizationMetrics && (
-                    <>
-                      {" "}
-                      Total usage statistics{" "}
-                      <VMUtilizationMetrics
-                        cpu={utilizationMetrics.cpuAvg}
-                        disk={utilizationMetrics.disk}
-                        ram={utilizationMetrics.memAvg}
-                      />
-                    </>
-                  )}
                 </Content>
               </FlexItem>
             </Flex>
