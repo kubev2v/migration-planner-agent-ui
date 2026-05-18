@@ -71,8 +71,8 @@ export function ReportTable<DataItem>(
         </Tr>
       </Thead>
       <Tbody>
-        {data.map((item, idx) => (
-          <Tr key={`row-${idx}-${String(item[fields[0]])}`}>
+        {data.map((item) => (
+          <Tr key={`row-${String(item[fields[0]])}`}>
             {fields.map((f) => (
               <Td key={String(f)} hasRightBorder={!withoutBorder}>
                 {renderCell(item, f)}

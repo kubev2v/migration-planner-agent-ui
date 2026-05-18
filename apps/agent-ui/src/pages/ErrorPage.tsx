@@ -72,9 +72,9 @@ const ErrorPage: React.FC<Props> = (props) => {
             <Icon
               className={classes.icon}
               size="xl"
-              status={Number.parseInt(code) < 500 ? "warning" : "danger"}
+              status={Number.parseInt(code, 10) < 500 ? "warning" : "danger"}
             >
-              {Number.parseInt(code) < 500 ? (
+              {Number.parseInt(code, 10) < 500 ? (
                 <WarningTriangleIcon />
               ) : (
                 <ErrorCircleOIcon />

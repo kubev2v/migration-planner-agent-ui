@@ -168,7 +168,7 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   const handleClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Victory chart types are not well-typed
     (event: any) => {
-      if (!onItemClick || !event || !event.datum) return;
+      if (!onItemClick || !event?.datum) return;
 
       // Find the original data item - first try exact name match
       let clickedItem = data.find((item) => item.name === event.datum.x);
@@ -293,6 +293,7 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
           }
         />
         {onTitleClick && title && (
+          // biome-ignore lint/a11y/useSemanticElements: Transparent overlay requires precise positioning and styling that button element would interfere with
           <div
             onClick={onTitleClick}
             style={{
@@ -340,8 +341,8 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
             alignItems={{ default: "alignItemsCenter" }}
             flexWrap={{ default: "wrap" }}
           >
-            {data.map((item, index) => (
-              <FlexItem key={`${item.legendCategory}-${item.name}-${index}`}>
+            {data.map((item) => (
+              <FlexItem key={`${item.legendCategory}-${item.name}`}>
                 <button
                   type="button"
                   onClick={() => onItemClick(item)}

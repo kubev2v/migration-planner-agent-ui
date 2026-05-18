@@ -238,8 +238,8 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                           </Alert>
                         </StackItem>
                       )}
-                      {concerns.map((concern, idx) => (
-                        <StackItem key={`concern-${concern.label}-${idx}`}>
+                      {concerns.map((concern) => (
+                        <StackItem key={`concern-${concern.label}`}>
                           <Alert
                             variant={
                               concern.category === "Critical" ||
@@ -851,9 +851,9 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                         >
                           {count > 0 ? (
                             <Stack hasGutter>
-                              {categoryIssues.map((issue, index) => (
+                              {categoryIssues.map((issue) => (
                                 <StackItem
-                                  key={`issue-${category}-${index}-${issue.label}`}
+                                  key={`issue-${category}-${issue.label}`}
                                 >
                                   <Alert
                                     variant={getAlertVariant(category)}

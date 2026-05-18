@@ -60,8 +60,8 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
     return Object.entries(memoryTierDistribution)
       .filter(([, count]) => count > 0)
       .sort((a, b) => {
-        const minA = Number.parseInt(a[0]) || 0;
-        const minB = Number.parseInt(b[0]) || 0;
+        const minA = Number.parseInt(a[0], 10) || 0;
+        const minB = Number.parseInt(b[0], 10) || 0;
         return minA - minB;
       })
       .map(([tier, count]) => ({
@@ -76,8 +76,8 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
     return Object.entries(cpuTierDistribution)
       .filter(([, count]) => count > 0)
       .sort((a, b) => {
-        const minA = Number.parseInt(a[0]) || 0;
-        const minB = Number.parseInt(b[0]) || 0;
+        const minA = Number.parseInt(a[0], 10) || 0;
+        const minB = Number.parseInt(b[0], 10) || 0;
         return minA - minB;
       })
       .map(([tier, count]) => ({
