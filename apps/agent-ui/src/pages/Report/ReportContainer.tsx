@@ -222,7 +222,10 @@ export const ReportContainer: React.FC = () => {
 
     const fetchUtilizationMetrics = async () => {
       try {
-        const response = await agentApi.getLatestRightsizingClusters({});
+        const byExpression = `cluster_id='${selectedClusterId}'`;
+        const response = await agentApi.getLatestRightsizingClusters({
+          byExpression,
+        });
 
         // Only update state if the effect hasn't been cleaned up
         if (!cancelled) {
