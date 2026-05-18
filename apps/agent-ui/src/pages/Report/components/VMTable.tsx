@@ -51,6 +51,7 @@ import { useSearchParams } from "react-router-dom";
 import useLocalStorage from "../../../hooks/useLocalStorage";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
+import { deepInspectionSort } from "./vmSort";
 
 const filterStyles = {
   dropdownContent: css`
@@ -225,17 +226,7 @@ const FRONTEND_SORT_METHODS: Record<
   FrontendSortableColumn,
   FrontendSortFunction
 > = {
-  deepInspection: (vm) => {
-    const inspectionStateOrder: Record<string, number> = {
-      running: 0,
-      pending: 1,
-      completed: 2,
-      error: 3,
-      canceled: 4,
-    };
-    const state = vm.inspectionStatus?.state;
-    return state === undefined ? 99 : (inspectionStateOrder[state] ?? 99);
-  },
+  deepInspection: deepInspectionSort,
 };
 
 const formatDiskSize = (sizeInMB: number): string => {
@@ -743,11 +734,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Apply client-side sort for frontend-sortable columns; all other columns use backend sort.
   // Skip reordering while inspection is active so rows don't jump as statuses change.
   const displayVMs = useMemo(() => {
-    if (
-      sortByColumnKey === null ||
-      isBackendSortableColumn(sortByColumnKey) ||
-      inspectionActive
-    )
+    if (sortByColumnKey === null || isBackendSortableColumn(sortByColumnKey))
       return vms;
     const sortFn =
       FRONTEND_SORT_METHODS[sortByColumnKey as FrontendSortableColumn];
@@ -756,7 +743,7 @@ export const VMTable: React.FC<VMTableProps> = ({
       const diff = sortFn(a) - sortFn(b);
       return activeSortDirection === "asc" ? diff : -diff;
     });
-  }, [vms, sortByColumnKey, activeSortDirection, inspectionActive]);
+  }, [vms, sortByColumnKey, activeSortDirection]);
 
   // Sort handler - triggers backend sort, tracks by column key
   const getSortParams = (

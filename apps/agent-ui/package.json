@@ -11,7 +11,8 @@
     "preview": "yarn run -T vite preview --host 127.0.0.1 --port 4001",
     "check": "yarn run -T biome check .",
     "check:fix": "yarn run -T biome check --write .",
-    "test": "echo 'No tests configured for this package'"
+    "test": "yarn run -T vitest run",
+    "test:watch": "yarn run -T vitest watch"
   },
   "dependencies": {
     "@emotion/css": "^11.13.0",
