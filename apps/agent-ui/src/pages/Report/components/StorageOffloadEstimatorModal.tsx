@@ -917,6 +917,15 @@ const RunningStep: React.FC<RunningStepProps> = ({
                   <JumpLinksItem
                     key={pair.pairName}
                     href={`#pair-card-${pair.pairName}`}
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      document
+                        .getElementById(`pair-card-${pair.pairName}`)
+                        ?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                    }}
                   >
                     <span
                       style={{
@@ -940,6 +949,7 @@ const RunningStep: React.FC<RunningStepProps> = ({
                 minWidth: 0,
                 maxHeight: "600px",
                 overflowY: "auto",
+                position: "relative",
               }}
             >
               <Stack hasGutter>
@@ -1427,7 +1437,19 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                   liveStatus &&
                   liveStatus.state !== "completed";
                 return (
-                  <JumpLinksItem key={p.name} href={`#result-card-${p.name}`}>
+                  <JumpLinksItem
+                    key={p.name}
+                    href={`#result-card-${p.name}`}
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      document
+                        .getElementById(`result-card-${p.name}`)
+                        ?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                    }}
+                  >
                     <span
                       style={{
                         display: "inline-block",
@@ -1450,7 +1472,16 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                 );
               })}
               {extraRunningPairs.map((p) => (
-                <JumpLinksItem key={p.name} href={`#result-card-${p.name}`}>
+                <JumpLinksItem
+                  key={p.name}
+                  href={`#result-card-${p.name}`}
+                  onClick={(ev) => {
+                    ev.preventDefault();
+                    document
+                      .getElementById(`result-card-${p.name}`)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >
                   <span
                     style={{
                       display: "inline-block",
@@ -1477,6 +1508,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
               minWidth: 0,
               maxHeight: "700px",
               overflowY: "auto",
+              position: "relative",
             }}
           >
             <Stack hasGutter>
