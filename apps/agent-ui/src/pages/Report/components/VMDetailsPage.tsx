@@ -270,7 +270,9 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                           ? "Inspection in progress…"
                           : inspectionStatus.state === "canceled"
                             ? "Inspection was canceled"
-                            : "No issues found"}
+                            : inspectionStatus.state === "error"
+                              ? "Inspection failed"
+                              : "No issues found"}
                     </span>
                   )}
                 </CardBody>
