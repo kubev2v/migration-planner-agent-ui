@@ -7,6 +7,8 @@ import {
   Dropdown,
   DropdownItem,
   DropdownList,
+  Flex,
+  FlexItem,
   Label,
   LabelGroup,
   MenuToggle,
@@ -1039,7 +1041,55 @@ export const VMTable: React.FC<VMTableProps> = ({
       );
     }
 
-    if (state === "completed" || state === "error") {
+    if (state === "error") {
+      const concernCount = vm.inspectionConcernCount || 0;
+
+      if (concernCount === 0) {
+        return (
+          <Tooltip content={status.error || "Deep inspection failed"}>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />
+              {goToDetail ? (
+                <Button variant="link" isInline onClick={goToDetail}>
+                  Error
+                </Button>
+              ) : (
+                "Error"
+              )}
+            </span>
+          </Tooltip>
+        );
+      }
+
+      return (
+        <Flex
+          alignItems={{ default: "alignItemsCenter" }}
+          spaceItems={{ default: "spaceItemsSm" }}
+        >
+          <FlexItem>
+            <Tooltip
+              content={status.error || "Deep inspection encountered an error"}
+            >
+              <ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)" />
+            </Tooltip>
+          </FlexItem>
+
+          <FlexItem>
+            {goToDetail ? (
+              <Button variant="link" isInline onClick={goToDetail}>
+                {`${concernCount} ${concernCount === 1 ? "issue" : "issues"}`}
+              </Button>
+            ) : (
+              <span>
+                {`${concernCount} ${concernCount === 1 ? "issue" : "issues"}`}
+              </span>
+            )}
+          </FlexItem>
+        </Flex>
+      );
+    }
+
+    if (state === "completed") {
       const concernCount = vm.inspectionConcernCount || 0;
       const label = `${concernCount} ${concernCount === 1 ? "issue" : "issues"}`;
       return goToDetail ? (
