@@ -2902,24 +2902,29 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       };
 
       // Optimistically mark this pair as pending in the displayed status
-      setForecastStatus((prev) =>
-        prev
-          ? {
-              ...prev,
-              state: "running",
-              pairs: (prev.pairs ?? []).map((p) =>
+      const pendingPair: ForecastPairStatus = {
+        pairName: pair.pairName,
+        sourceDatastore: pair.sourceDatastore,
+        targetDatastore: pair.targetDatastore,
+        state: "pending" as const,
+        completedRuns: 0,
+        totalRuns: 0,
+      };
+      setForecastStatus((prev) => {
+        const base = prev ?? { state: "ready" as const, pairs: [] };
+        const existingPairs = base.pairs ?? [];
+        return {
+          ...base,
+          state: "running",
+          pairs: existingPairs.some((p) => p.pairName === pair.pairName)
+            ? existingPairs.map((p) =>
                 p.pairName === pair.pairName
-                  ? {
-                      ...p,
-                      state: "pending" as const,
-                      completedRuns: 0,
-                      error: undefined,
-                    }
+                  ? { ...p, ...pendingPair, error: undefined }
                   : p,
-              ),
-            }
-          : prev,
-      );
+              )
+            : [...existingPairs, pendingPair],
+        };
+      });
 
       try {
         await startForecast(basePath, {
@@ -2937,43 +2942,45 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         if (err instanceof ForecastConflictError) {
           const redirected = await redirectToRunningBenchmark();
           if (!redirected) {
-            setForecastStatus((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    pairs: (prev.pairs ?? []).map((p) =>
-                      p.pairName === pair.pairName
-                        ? {
-                            ...p,
-                            state: "error" as const,
-                            error:
-                              "A benchmark was started by another session but is no longer running. Please try again.",
-                          }
-                        : p,
-                    ),
-                  }
-                : prev,
-            );
-          }
-          return;
-        }
-
-        setForecastStatus((prev) =>
-          prev
-            ? {
-                ...prev,
-                pairs: (prev.pairs ?? []).map((p) =>
+            setBenchmarkDone(true);
+            setForecastStatus((prev) => {
+              const base = prev ?? { state: "ready" as const, pairs: [] };
+              return {
+                ...base,
+                state: "ready",
+                pairs: (base.pairs ?? []).map((p) =>
                   p.pairName === pair.pairName
                     ? {
                         ...p,
                         state: "error" as const,
-                        error: err instanceof Error ? err.message : String(err),
+                        error:
+                          "A benchmark was started by another session but is no longer running. Please try again.",
                       }
                     : p,
                 ),
-              }
-            : prev,
-        );
+              };
+            });
+          }
+          return;
+        }
+
+        setBenchmarkDone(true);
+        setForecastStatus((prev) => {
+          const base = prev ?? { state: "ready" as const, pairs: [] };
+          return {
+            ...base,
+            state: "ready",
+            pairs: (base.pairs ?? []).map((p) =>
+              p.pairName === pair.pairName
+                ? {
+                    ...p,
+                    state: "error" as const,
+                    error: err instanceof Error ? err.message : String(err),
+                  }
+                : p,
+            ),
+          };
+        });
         return;
       }
 
