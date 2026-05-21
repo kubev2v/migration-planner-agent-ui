@@ -1941,7 +1941,6 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
                                   Refresh results
                                 </Button>
                                 {onRerun &&
-                                  benchmarkDone &&
                                   forecastStatus?.state !== "running" && (
                                     <Button
                                       variant="link"
@@ -2502,7 +2501,10 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         const status = await getForecasterStatus(basePath);
         if (cancelled) return;
         applyPolledStatus(status);
-        if (status.state !== "running") return;
+        if (status.state !== "running") {
+          setBenchmarkDone(true);
+          return;
+        }
 
         // A benchmark is (still) running — possibly a new one started after
         // the previous one completed. Ensure the UI shows progress cards.
