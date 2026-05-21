@@ -34,9 +34,9 @@ import {
   DataSharingModal,
 } from "../../common/components/index";
 import { Symbols } from "../../main/Symbols";
+import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { Dashboard, VirtualMachinesView } from "./components/index";
-import { StorageOffloadTab } from "./components/StorageOffloadEstimatorModal";
 import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
 import {
   filtersToByExpression,
@@ -44,11 +44,6 @@ import {
   searchParamsToFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
-
-// Helper type to access SDK configuration (workaround for SDK bug)
-type ApiWithConfig = DefaultApiInterface & {
-  configuration?: { basePath?: string };
-};
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
@@ -66,13 +61,6 @@ export const ReportContainer: React.FC = () => {
   const [shareError, setShareError] = useState<string | null>(null);
   const [utilizationMetrics, setUtilizationMetrics] =
     useState<RightsizingClusterUtilization | null>(null);
-  // Derive base path for forecaster API (same root as agent API)
-  const forecasterBasePath = useMemo(
-    () =>
-      (agentApi as ApiWithConfig).configuration?.basePath ||
-      `${window.location.origin}/api/v1`,
-    [agentApi],
-  );
 
   // Separate request IDs for the initial/effect-driven fetch vs. polling refresh
   // so that concurrent calls from different sources don't discard each other's
@@ -93,11 +81,13 @@ export const ReportContainer: React.FC = () => {
     datacenters: string[];
     concernLabels: string[];
     concernCategories: string[];
+    vmLabels: string[];
   }>({
     clusters: [],
     datacenters: [],
     concernLabels: [],
     concernCategories: [],
+    vmLabels: [],
   });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
 
@@ -147,9 +137,7 @@ export const ReportContainer: React.FC = () => {
         // Workaround: Fetch directly with native fetch API to bypass SDK bug
         // The published SDK has a bug where GetInventory200ResponseFromJSONTyped returns {}
         // when it receives snake_case JSON from the API
-        const basePath =
-          (agentApi as ApiWithConfig).configuration?.basePath ||
-          `${window.location.origin}/agent/api/v1`;
+        const basePath = getAgentApiBasePath(agentApi);
 
         const httpResponse = await fetch(`${basePath}/inventory`);
 
@@ -260,12 +248,16 @@ export const ReportContainer: React.FC = () => {
 
     const fetchFilterOptions = async () => {
       try {
-        const response = await agentApi.getVMsFilterOptions();
+        const [response, labelsResponse] = await Promise.all([
+          agentApi.getVMsFilterOptions(),
+          agentApi.getVMLabels().catch(() => ({ labels: [] as string[] })),
+        ]);
         setAvailableFilterOptions({
           clusters: response.clusters || [],
           datacenters: response.datacenters || [],
           concernLabels: response.concernLabels || [],
           concernCategories: response.concernCategories || [],
+          vmLabels: labelsResponse.labels || [],
         });
         setFilterOptionsFetched(true);
       } catch (err) {
@@ -459,9 +451,7 @@ export const ReportContainer: React.FC = () => {
   const handleDownloadInventory = async () => {
     try {
       // Workaround: Fetch directly to bypass SDK bug (same as in the main fetch)
-      const basePath =
-        (agentApi as ApiWithConfig).configuration?.basePath ||
-        `${window.location.origin}/agent/api/v1`;
+      const basePath = getAgentApiBasePath(agentApi);
 
       const httpResponse = await fetch(
         `${basePath}/inventory?withAgentId=true`,
@@ -537,6 +527,7 @@ export const ReportContainer: React.FC = () => {
       newParams.delete("memoryRangeMin");
       newParams.delete("memoryRangeMax");
       newParams.delete("migrationReadiness");
+      newParams.delete("vmLabels");
       newParams.delete("concernLabels");
       newParams.delete("concernCategories");
       setSearchParams(newParams, { replace: true });
@@ -569,6 +560,7 @@ export const ReportContainer: React.FC = () => {
       newParams.delete("memoryRangeMin");
       newParams.delete("memoryRangeMax");
       newParams.delete("migrationReadiness");
+      newParams.delete("vmLabels");
       newParams.delete("concernLabels");
       newParams.delete("concernCategories");
     } else {
@@ -585,6 +577,7 @@ export const ReportContainer: React.FC = () => {
       newParams.delete("memoryRangeMin");
       newParams.delete("memoryRangeMax");
       newParams.delete("migrationReadiness");
+      newParams.delete("vmLabels");
       newParams.delete("concernLabels");
       newParams.delete("concernCategories");
     }
@@ -738,12 +731,6 @@ export const ReportContainer: React.FC = () => {
                   }}
                 />
               </div>
-            </Tab>
-            <Tab
-              eventKey={2}
-              title={<TabTitleText>Storage offload estimator</TabTitleText>}
-            >
-              <StorageOffloadTab basePath={forecasterBasePath} />
             </Tab>
           </Tabs>
         </StackItem>

@@ -8,6 +8,7 @@ export interface VMFilters {
   diskRange?: { min: number; max?: number };
   memoryRange?: { min: number; max?: number };
   migrationReadiness?: string[];
+  vmLabels?: string[];
   concernLabels?: string[];
   concernCategories?: string[];
   showExcludedVMs?: boolean;
@@ -134,9 +135,14 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     }
   }
 
+  // VM user-defined labels (array field; use contains; multiple = AND)
+  if (filters.vmLabels && filters.vmLabels.length > 0) {
+    for (const label of filters.vmLabels) {
+      conditions.push(`labels contains '${escapeFilterValue(label)}'`);
+    }
+  }
+
   // Migration readiness filter
-  // Note: The 'migratable' field might not be supported in backend filters
-  // If the backend doesn't support this field, this filter won't work
   if (filters.migrationReadiness && filters.migrationReadiness.length > 0) {
     const hasReady = filters.migrationReadiness.includes("ready");
     const hasNotReady = filters.migrationReadiness.includes("not-ready");
@@ -206,6 +212,10 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
 
   if (filters.migrationReadiness && filters.migrationReadiness.length > 0) {
     params.set("migrationReadiness", filters.migrationReadiness.join(","));
+  }
+
+  if (filters.vmLabels && filters.vmLabels.length > 0) {
+    params.set("vmLabels", filters.vmLabels.join(","));
   }
 
   if (filters.concernLabels && filters.concernLabels.length > 0) {
@@ -296,6 +306,11 @@ export function searchParamsToFilters(
     filters.migrationReadiness = migrationReadiness.split(",").filter(Boolean);
   }
 
+  const vmLabels = searchParams.get("vmLabels");
+  if (vmLabels) {
+    filters.vmLabels = vmLabels.split(",").filter(Boolean);
+  }
+
   const concernLabels = searchParams.getAll("concernLabels");
   if (concernLabels.length > 0) {
     filters.concernLabels = concernLabels.filter(Boolean);
@@ -322,6 +337,7 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.clusters && filters.clusters.length > 0) ||
     (filters.datacenters && filters.datacenters.length > 0) ||
     (filters.migrationReadiness && filters.migrationReadiness.length > 0) ||
+    (filters.vmLabels && filters.vmLabels.length > 0) ||
     (filters.concernLabels && filters.concernLabels.length > 0) ||
     (filters.concernCategories && filters.concernCategories.length > 0) ||
     filters.search

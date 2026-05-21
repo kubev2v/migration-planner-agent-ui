@@ -1,0 +1,419 @@
+import { css } from "@emotion/css";
+import {
+  Button,
+  Content,
+  Flex,
+  FlexItem,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  TextInput,
+} from "@patternfly/react-core";
+import {
+  CheckIcon,
+  PencilAltIcon,
+  TimesIcon,
+  TrashIcon,
+} from "@patternfly/react-icons";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const styles = {
+  labelList: css`
+    width: 100%;
+  `,
+  labelHeader: css`
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--pf-t--global--border--color--default);
+    font-weight: 700;
+    font-size: 13px;
+  `,
+  labelRow: css`
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--pf-t--global--border--color--default);
+  `,
+  labelRowEditing: css`
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--pf-t--global--border--color--default);
+  `,
+  editInputGroup: css`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  `,
+  actionButtons: css`
+    display: flex;
+    gap: 4px;
+  `,
+};
+
+interface LabelInfo {
+  name: string;
+  vmCount: number;
+}
+
+interface PendingRename {
+  oldName: string;
+  newName: string;
+}
+
+interface ManageLabelsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onLabelsChanged: () => void;
+  basePath: string;
+}
+
+export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
+  isOpen,
+  onClose,
+  onLabelsChanged,
+  basePath,
+}) => {
+  const [labels, setLabels] = useState<LabelInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [deletingLabel, setDeletingLabel] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const pendingDeletes = useRef<string[]>([]);
+  const pendingRenames = useRef<PendingRename[]>([]);
+
+  const fetchLabelsWithCounts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const labelsResponse = await fetch(`${basePath}/vms/labels`);
+      if (!labelsResponse.ok) {
+        setLabels([]);
+        return;
+      }
+      const labelsData = await labelsResponse.json();
+      const labelNames: string[] = labelsData.labels || [];
+
+      const labelCounts: Record<string, number> = {};
+      for (const name of labelNames) {
+        labelCounts[name] = 0;
+      }
+
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const vmsResponse = await fetch(
+          `${basePath}/vms?page=${page}&pageSize=1000`,
+        );
+        if (!vmsResponse.ok) break;
+        const vmsData = await vmsResponse.json();
+        const vms: { labels?: string[] }[] = vmsData.vms || [];
+
+        for (const vm of vms) {
+          if (vm.labels) {
+            for (const lbl of vm.labels) {
+              if (lbl in labelCounts) {
+                labelCounts[lbl]++;
+              }
+            }
+          }
+        }
+
+        const total = vmsData.total || 0;
+        hasMore = page * 1000 < total;
+        page++;
+      }
+
+      setLabels(
+        labelNames.map((name) => ({ name, vmCount: labelCounts[name] || 0 })),
+      );
+    } catch (err) {
+      console.error("Error fetching labels:", err);
+      setLabels([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [basePath]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchLabelsWithCounts();
+      setEditingLabel(null);
+      setEditValue("");
+      setDeletingLabel(null);
+      pendingDeletes.current = [];
+      pendingRenames.current = [];
+    }
+  }, [isOpen, fetchLabelsWithCounts]);
+
+  const handleDeleteLabel = (labelName: string) => {
+    setLabels((prev) => prev.filter((l) => l.name !== labelName));
+    setDeletingLabel(null);
+    pendingDeletes.current.push(labelName);
+
+    // Remove any pending renames involving this label
+    pendingRenames.current = pendingRenames.current.filter(
+      (r) => r.oldName !== labelName && r.newName !== labelName,
+    );
+  };
+
+  const handleRenameLabel = (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) {
+      setEditingLabel(null);
+      return;
+    }
+
+    setLabels((prev) =>
+      prev.map((l) => (l.name === oldName ? { ...l, name: trimmed } : l)),
+    );
+    setEditingLabel(null);
+
+    const existingRename = pendingRenames.current.find(
+      (r) => r.newName === oldName,
+    );
+    if (existingRename) {
+      existingRename.newName = trimmed;
+    } else {
+      pendingRenames.current.push({ oldName, newName: trimmed });
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Process deletes
+      for (const labelName of pendingDeletes.current) {
+        await fetch(`${basePath}/vms/labels/${encodeURIComponent(labelName)}`, {
+          method: "DELETE",
+        });
+      }
+
+      // Process renames (get VMs with old label, add new label, delete old)
+      for (const { oldName, newName } of pendingRenames.current) {
+        const vmIds: string[] = [];
+        let page = 1;
+        let hasMore = true;
+        while (hasMore) {
+          const vmsResponse = await fetch(
+            `${basePath}/vms?page=${page}&pageSize=1000`,
+          );
+          if (!vmsResponse.ok) break;
+          const vmsData = await vmsResponse.json();
+          const vms: { id: string; labels?: string[] }[] = vmsData.vms || [];
+          for (const vm of vms) {
+            if (vm.labels?.includes(oldName)) {
+              vmIds.push(vm.id);
+            }
+          }
+          const total = vmsData.total || 0;
+          hasMore = page * 1000 < total;
+          page++;
+        }
+
+        if (vmIds.length > 0) {
+          await fetch(`${basePath}/vms/labels/${encodeURIComponent(newName)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ add: vmIds }),
+          });
+
+          await fetch(`${basePath}/vms/labels/${encodeURIComponent(oldName)}`, {
+            method: "DELETE",
+          });
+        }
+      }
+
+      pendingDeletes.current = [];
+      pendingRenames.current = [];
+      onLabelsChanged();
+      onClose();
+    } catch (err) {
+      console.error("Error saving labels:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const startEditing = (labelName: string) => {
+    setEditingLabel(labelName);
+    setEditValue(labelName);
+  };
+
+  const cancelEditing = () => {
+    setEditingLabel(null);
+    setEditValue("");
+  };
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen && !deletingLabel}
+        onClose={onClose}
+        aria-labelledby="manage-labels-title"
+        aria-describedby="manage-labels-body"
+        variant="medium"
+      >
+        <ModalHeader title="Manage labels" labelId="manage-labels-title" />
+        <ModalBody id="manage-labels-body">
+          <Content component="p" style={{ marginBottom: "16px" }}>
+            View, rename, or delete labels. Renaming or deleting a label updates
+            every virtual machine that uses it. To create a new label, use the
+            &quot;Add Labels&quot; action on your virtual machines.
+          </Content>
+
+          <div style={{ marginBottom: "8px" }}>
+            <strong>Labels</strong>
+          </div>
+
+          {loading ? (
+            <Content component="p">Loading labels...</Content>
+          ) : labels.length === 0 ? (
+            <Content component="p">
+              No labels created. Create one by adding a label to one or more
+              virtual machines.
+            </Content>
+          ) : (
+            <div className={styles.labelList}>
+              <div className={styles.labelHeader}>
+                <span>Label</span>
+                <span>VMs</span>
+                <span />
+              </div>
+              {labels.map((label) => (
+                <div
+                  key={label.name}
+                  className={
+                    editingLabel === label.name
+                      ? styles.labelRowEditing
+                      : styles.labelRow
+                  }
+                >
+                  {editingLabel === label.name ? (
+                    <div className={styles.editInputGroup}>
+                      <TextInput
+                        type="text"
+                        value={editValue}
+                        onChange={(_e, value) => setEditValue(value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleRenameLabel(label.name, editValue);
+                          } else if (e.key === "Escape") {
+                            cancelEditing();
+                          }
+                        }}
+                        aria-label="Edit label name"
+                        autoFocus
+                      />
+                      <Button
+                        variant="plain"
+                        aria-label="Confirm rename"
+                        onClick={() => handleRenameLabel(label.name, editValue)}
+                      >
+                        <CheckIcon />
+                      </Button>
+                      <Button
+                        variant="plain"
+                        aria-label="Cancel rename"
+                        onClick={cancelEditing}
+                      >
+                        <TimesIcon />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span>{label.name}</span>
+                  )}
+                  <span>{label.vmCount}</span>
+                  {editingLabel !== label.name && (
+                    <div className={styles.actionButtons}>
+                      <Button
+                        variant="plain"
+                        aria-label={`Edit label ${label.name}`}
+                        onClick={() => startEditing(label.name)}
+                      >
+                        <PencilAltIcon />
+                      </Button>
+                      <Button
+                        variant="plain"
+                        aria-label={`Delete label ${label.name}`}
+                        onClick={() => setDeletingLabel(label.name)}
+                      >
+                        <TrashIcon />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Flex gap={{ default: "gapMd" }}>
+            <FlexItem>
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                isLoading={isSaving}
+                isDisabled={isSaving}
+              >
+                Save
+              </Button>
+            </FlexItem>
+            <FlexItem>
+              <Button variant="link" onClick={onClose} isDisabled={isSaving}>
+                Cancel
+              </Button>
+            </FlexItem>
+          </Flex>
+        </ModalFooter>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        isOpen={!!deletingLabel}
+        onClose={() => setDeletingLabel(null)}
+        aria-labelledby="delete-label-title"
+        aria-describedby="delete-label-body"
+        variant="small"
+      >
+        <ModalHeader title="Delete label?" labelId="delete-label-title" />
+        <ModalBody id="delete-label-body">
+          <Content component="p">
+            Remove label <strong>{deletingLabel}</strong> from the catalog and
+            from every virtual machine that uses it?
+          </Content>
+        </ModalBody>
+        <ModalFooter>
+          <Flex gap={{ default: "gapMd" }}>
+            <FlexItem>
+              <Button
+                variant="danger"
+                onClick={() =>
+                  deletingLabel && handleDeleteLabel(deletingLabel)
+                }
+              >
+                Delete
+              </Button>
+            </FlexItem>
+            <FlexItem>
+              <Button variant="link" onClick={() => setDeletingLabel(null)}>
+                Cancel
+              </Button>
+            </FlexItem>
+          </Flex>
+        </ModalFooter>
+      </Modal>
+    </>
+  );
+};
+
+ManageLabelsModal.displayName = "ManageLabelsModal";

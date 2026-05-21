@@ -3,8 +3,11 @@ import type {
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getAgentApiBasePath } from "../agentApiConfig";
+import { AddLabelsModal } from "./AddLabelsModal";
 import { DeepInspectionModal } from "./DeepInspectionModal";
+import { ManageLabelsModal } from "./ManageLabelsModal";
 import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
 import type { VMFilters } from "./vmFilters";
@@ -57,6 +60,7 @@ interface VirtualMachinesViewProps {
     datacenters: string[];
     concernLabels: string[];
     concernCategories: string[];
+    vmLabels: string[];
   };
   agentApi?: DefaultApiInterface;
   onRefreshVMs?: () => void;
@@ -113,6 +117,71 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     hasInspectionResultsRef.current = true;
   }
   const hasInspectionResults = hasInspectionResultsRef.current;
+
+  // Labels state
+  const [isAddLabelsModalOpen, setIsAddLabelsModalOpen] = useState(false);
+  const [isManageLabelsModalOpen, setIsManageLabelsModalOpen] = useState(false);
+  const [addLabelsVMIds, setAddLabelsVMIds] = useState<string[]>([]);
+  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
+
+  const basePath = useMemo(() => getAgentApiBasePath(agentApi), [agentApi]);
+
+  const fetchAvailableLabels = useCallback(async () => {
+    try {
+      const response = await fetch(`${basePath}/vms/labels`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableLabels(data.labels || []);
+      }
+    } catch (err) {
+      console.error("Error fetching labels:", err);
+    }
+  }, [basePath]);
+
+  useEffect(() => {
+    void fetchAvailableLabels();
+  }, [fetchAvailableLabels]);
+
+  const handleAddLabels = useCallback(
+    (vmIds: string[]) => {
+      setAddLabelsVMIds(vmIds);
+      void fetchAvailableLabels();
+      setIsAddLabelsModalOpen(true);
+    },
+    [fetchAvailableLabels],
+  );
+
+  const handleManageLabels = useCallback(() => {
+    setIsManageLabelsModalOpen(true);
+  }, []);
+
+  const refreshLabels = useCallback(async () => {
+    await fetchAvailableLabels();
+    onRefreshVMs?.();
+  }, [fetchAvailableLabels, onRefreshVMs]);
+
+  const handleSubmitLabels = useCallback(
+    async (labels: string[]) => {
+      const vmIds = addLabelsVMIds;
+
+      await Promise.all(
+        labels.map((label) =>
+          fetch(`${basePath}/vms/labels/${encodeURIComponent(label)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ add: vmIds }),
+          }).then((res) => {
+            if (!res.ok) {
+              throw new Error(`Failed to add label "${label}": ${res.status}`);
+            }
+          }),
+        ),
+      );
+
+      await refreshLabels();
+    },
+    [addLabelsVMIds, basePath, refreshLabels],
+  );
 
   const handleVMClick = (vmId: string) => {
     setSelectedVMId(vmId);
@@ -277,6 +346,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onRunDeepInspection={handleRunDeepInspection}
         onExcludeFromReports={handleExcludeFromReports}
         onIncludeInReports={handleIncludeInReports}
+        onAddLabels={handleAddLabels}
+        onManageLabels={handleManageLabels}
         showExcludedVMs={showExcludedVMs}
         onShowExcludedVMsChange={onShowExcludedVMsChange}
         hasInspectionResults={hasInspectionResults || inspectionActive}
@@ -293,6 +364,19 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
           onInspectionStarted={handleInspectionStarted}
         />
       )}
+      <AddLabelsModal
+        isOpen={isAddLabelsModalOpen}
+        onClose={() => setIsAddLabelsModalOpen(false)}
+        onSubmit={handleSubmitLabels}
+        selectedVMCount={addLabelsVMIds.length}
+        existingLabels={availableLabels}
+      />
+      <ManageLabelsModal
+        isOpen={isManageLabelsModalOpen}
+        onClose={() => setIsManageLabelsModalOpen(false)}
+        onLabelsChanged={refreshLabels}
+        basePath={basePath}
+      />
     </>
   );
 };
