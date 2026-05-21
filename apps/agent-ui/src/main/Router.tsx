@@ -30,6 +30,39 @@ export const router = createBrowserRouter(
           Component: ProtectedReportRoute,
         };
       },
+      children: [
+        {
+          index: true,
+          element: <Navigate to="/report/vms-overview" replace />,
+        },
+        {
+          path: "vms-overview",
+          lazy: async () => {
+            const { ReportContainer } = await import(
+              "../pages/Report/ReportContainer.tsx"
+            );
+            return { Component: ReportContainer };
+          },
+        },
+        {
+          path: "groups",
+          lazy: async () => {
+            const { GroupsPage } = await import(
+              "../pages/Report/GroupsPage.tsx"
+            );
+            return { Component: GroupsPage };
+          },
+        },
+        {
+          path: "storage-offload-estimator",
+          lazy: async () => {
+            const { StorageOffloadPage } = await import(
+              "../pages/Report/StorageOffloadPage.tsx"
+            );
+            return { Component: StorageOffloadPage };
+          },
+        },
+      ],
     },
     {
       path: "/error/:code",

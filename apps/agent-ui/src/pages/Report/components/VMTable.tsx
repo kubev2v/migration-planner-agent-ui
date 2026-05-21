@@ -4,6 +4,7 @@ import {
   Button,
   Checkbox,
   Content,
+  Divider,
   Dropdown,
   DropdownItem,
   DropdownList,
@@ -23,6 +24,7 @@ import {
   SelectList,
   SelectOption,
   Spinner,
+  Switch,
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
@@ -121,6 +123,10 @@ interface VMTableProps {
   selectedVMs?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
+  onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
+  onIncludeInReports?: (vmIds: string[]) => Promise<void>;
+  showExcludedVMs?: boolean;
+  onShowExcludedVMsChange?: (show: boolean) => void;
   hasInspectionResults?: boolean;
   inspectionActive?: boolean;
   onCancelInspection?: () => void;
@@ -285,6 +291,10 @@ export const VMTable: React.FC<VMTableProps> = ({
   selectedVMs = new Set<string>(),
   onSelectionChange,
   onRunDeepInspection,
+  onExcludeFromReports,
+  onIncludeInReports,
+  showExcludedVMs = true,
+  onShowExcludedVMsChange,
   hasInspectionResults = false,
   inspectionActive = false,
   onCancelInspection,
@@ -336,9 +346,32 @@ export const VMTable: React.FC<VMTableProps> = ({
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isConcernSelectOpen, setIsConcernSelectOpen] = useState(false);
 
-  // Deep inspection kebab & cancel confirmation
-  const [isInspectionKebabOpen, setIsInspectionKebabOpen] = useState(false);
+  // Cancel deep inspection confirmation
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+
+  // Bulk actions menu
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+
+  // Exclude / Include from reports modals
+  const [isExcludeModalOpen, setIsExcludeModalOpen] = useState(false);
+  const [isExcludeLoading, setIsExcludeLoading] = useState(false);
+  const [isIncludeModalOpen, setIsIncludeModalOpen] = useState(false);
+  const [isIncludeLoading, setIsIncludeLoading] = useState(false);
+
+  const { selectedExcludedIds, selectedIncludedIds } = useMemo(() => {
+    const excluded: string[] = [];
+    const included: string[] = [];
+    for (const vm of vms) {
+      if (selectedVMs.has(vm.id)) {
+        if (vm.migrationExcluded) {
+          excluded.push(vm.id);
+        } else {
+          included.push(vm.id);
+        }
+      }
+    }
+    return { selectedExcludedIds: excluded, selectedIncludedIds: included };
+  }, [vms, selectedVMs]);
 
   // Client-side filter state (applied filters)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
@@ -1119,6 +1152,39 @@ export const VMTable: React.FC<VMTableProps> = ({
       {/* Toolbar */}
       <Toolbar>
         <ToolbarContent>
+          {selectedVMs.size > 0 && (
+            <ToolbarItem>
+              <MenuToggle
+                variant="plainText"
+                splitButtonItems={[
+                  <Checkbox
+                    key="select-all"
+                    id="select-all-vms"
+                    isChecked={
+                      selectedVMs.size === displayVMs.length
+                        ? true
+                        : selectedVMs.size > 0
+                          ? null
+                          : false
+                    }
+                    onChange={(_event, checked) => {
+                      if (checked) {
+                        onSelectionChange?.(
+                          new Set(displayVMs.map((vm) => vm.id)),
+                        );
+                      } else {
+                        onSelectionChange?.(new Set());
+                      }
+                    }}
+                    aria-label="Select all VMs"
+                  />,
+                ]}
+              >
+                {selectedVMs.size} selected
+              </MenuToggle>
+            </ToolbarItem>
+          )}
+
           <ToolbarGroup variant="filter-group">
             <ToolbarItem>
               <SearchInput
@@ -1405,6 +1471,61 @@ export const VMTable: React.FC<VMTableProps> = ({
 
           <ToolbarGroup>
             <ToolbarItem>
+              <Dropdown
+                isOpen={isActionsMenuOpen}
+                onSelect={() => setIsActionsMenuOpen(false)}
+                onOpenChange={setIsActionsMenuOpen}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                  <MenuToggle
+                    ref={toggleRef}
+                    onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                    isExpanded={isActionsMenuOpen}
+                    variant="secondary"
+                    isDisabled={selectedVMs.size === 0}
+                  >
+                    Actions
+                  </MenuToggle>
+                )}
+                popperProps={{ position: "right" }}
+              >
+                <DropdownList>
+                  {selectedIncludedIds.length > 0 && (
+                    <DropdownItem
+                      key="exclude-from-reports"
+                      onClick={() => setIsExcludeModalOpen(true)}
+                    >
+                      Exclude from reports
+                    </DropdownItem>
+                  )}
+                  {selectedExcludedIds.length > 0 && (
+                    <DropdownItem
+                      key="include-in-reports"
+                      onClick={() => setIsIncludeModalOpen(true)}
+                    >
+                      Include in reports
+                    </DropdownItem>
+                  )}
+                  <DropdownItem key="add-label">Add label</DropdownItem>
+                  <DropdownItem key="manage-labels">Manage labels</DropdownItem>
+                  <DropdownItem key="create-group">Create group</DropdownItem>
+                  <DropdownItem key="add-to-group" isDisabled>
+                    Add to group
+                  </DropdownItem>
+                  <Divider key="separator" component="li" />
+                  <DropdownItem key="remove-from-group">
+                    Remove from group
+                  </DropdownItem>
+                  <DropdownItem
+                    key="reset-deep-inspection"
+                    onClick={() => onResetInspection?.()}
+                  >
+                    Reset deep inspection
+                  </DropdownItem>
+                </DropdownList>
+              </Dropdown>
+            </ToolbarItem>
+
+            <ToolbarItem>
               <Tooltip content="Select VMs for deep inspection.">
                 <Button
                   variant="primary"
@@ -1416,62 +1537,46 @@ export const VMTable: React.FC<VMTableProps> = ({
                 </Button>
               </Tooltip>
             </ToolbarItem>
-            <ToolbarItem>
-              <Dropdown
-                isOpen={isInspectionKebabOpen}
-                onSelect={() => setIsInspectionKebabOpen(false)}
-                onOpenChange={setIsInspectionKebabOpen}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    variant="plain"
-                    onClick={() =>
-                      setIsInspectionKebabOpen(!isInspectionKebabOpen)
-                    }
-                    isExpanded={isInspectionKebabOpen}
-                  >
-                    <EllipsisVIcon />
-                  </MenuToggle>
-                )}
-                popperProps={{ position: "right" }}
-              >
-                <DropdownList>
-                  {inspectionActive && (
-                    <DropdownItem
-                      key="cancel-inspection"
-                      onClick={() => setIsCancelConfirmOpen(true)}
-                    >
-                      Cancel deep inspection
-                    </DropdownItem>
-                  )}
-                  <DropdownItem
-                    key="reset-inspection"
-                    onClick={() => onResetInspection?.()}
-                  >
-                    Reset deep inspection
-                  </DropdownItem>
-                </DropdownList>
-              </Dropdown>
-            </ToolbarItem>
             {inspectionActive && (
               <ToolbarItem>
                 <Spinner size="md" />
               </ToolbarItem>
             )}
           </ToolbarGroup>
+        </ToolbarContent>
 
-          <ToolbarItem variant="pagination" align={{ default: "alignEnd" }}>
-            <Pagination
-              itemCount={totalVMs ?? vms.length}
-              perPage={pageSize}
-              page={page}
-              onSetPage={(_event, newPage) => onPageChange?.(newPage, pageSize)}
-              onPerPageSelect={(_event, newPerPage) => {
-                onPageChange?.(1, newPerPage);
-              }}
-              variant="top"
-              isCompact
-            />
+        <ToolbarContent>
+          <ToolbarItem align={{ default: "alignEnd" }}>
+            <Flex
+              alignItems={{ default: "alignItemsCenter" }}
+              gap={{ default: "gapMd" }}
+            >
+              <FlexItem>
+                <Switch
+                  id="show-excluded-vms"
+                  label="Show excluded VMs"
+                  isChecked={showExcludedVMs}
+                  onChange={(_event, checked) =>
+                    onShowExcludedVMsChange?.(checked)
+                  }
+                />
+              </FlexItem>
+              <FlexItem>
+                <Pagination
+                  itemCount={totalVMs ?? vms.length}
+                  perPage={pageSize}
+                  page={page}
+                  onSetPage={(_event, newPage) =>
+                    onPageChange?.(newPage, pageSize)
+                  }
+                  onPerPageSelect={(_event, newPerPage) => {
+                    onPageChange?.(1, newPerPage);
+                  }}
+                  variant="top"
+                  isCompact
+                />
+              </FlexItem>
+            </Flex>
           </ToolbarItem>
         </ToolbarContent>
 
@@ -1616,6 +1721,13 @@ export const VMTable: React.FC<VMTableProps> = ({
                       <Tooltip content={vm.name}>
                         <span>{vm.name}</span>
                       </Tooltip>
+                    )}
+                    {vm.migrationExcluded && (
+                      <div style={{ marginTop: "4px" }}>
+                        <Label isCompact color="grey">
+                          Excluded
+                        </Label>
+                      </div>
                     )}
                   </Td>
                 )}
@@ -1774,6 +1886,142 @@ export const VMTable: React.FC<VMTableProps> = ({
             Confirm
           </Button>
           <Button variant="link" onClick={() => setIsCancelConfirmOpen(false)}>
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Exclude from reports confirmation modal */}
+      <Modal
+        isOpen={isExcludeModalOpen}
+        onClose={() => setIsExcludeModalOpen(false)}
+        aria-labelledby="exclude-reports-title"
+        aria-describedby="exclude-reports-body"
+        variant="small"
+      >
+        <ModalHeader
+          title="Exclude from reports?"
+          labelId="exclude-reports-title"
+        />
+        <ModalBody id="exclude-reports-body">
+          <Content component="p">
+            {(() => {
+              const names = vms
+                .filter((vm) => selectedIncludedIds.includes(vm.id))
+                .map((vm) => vm.name);
+
+              if (names.length === 1) {
+                return (
+                  <>
+                    <strong>{names[0]}</strong> will be excluded from all
+                    assessment reports. You can include it again from the
+                    Actions menu.
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <strong>{names.length} VMs</strong> will be excluded from all
+                  assessment reports. You can include them again from the
+                  Actions menu.
+                </>
+              );
+            })()}
+          </Content>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="primary"
+            isLoading={isExcludeLoading}
+            isDisabled={isExcludeLoading}
+            onClick={async () => {
+              setIsExcludeLoading(true);
+              try {
+                await onExcludeFromReports?.(selectedIncludedIds);
+                setIsExcludeModalOpen(false);
+                onSelectionChange?.(new Set());
+              } catch (err) {
+                console.error("Error excluding VMs from reports:", err);
+              } finally {
+                setIsExcludeLoading(false);
+              }
+            }}
+          >
+            Exclude from reports
+          </Button>
+          <Button
+            variant="link"
+            isDisabled={isExcludeLoading}
+            onClick={() => setIsExcludeModalOpen(false)}
+          >
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Include in reports confirmation modal */}
+      <Modal
+        isOpen={isIncludeModalOpen}
+        onClose={() => setIsIncludeModalOpen(false)}
+        aria-labelledby="include-reports-title"
+        aria-describedby="include-reports-body"
+        variant="small"
+      >
+        <ModalHeader
+          title="Include in reports?"
+          labelId="include-reports-title"
+        />
+        <ModalBody id="include-reports-body">
+          <Content component="p">
+            {(() => {
+              const names = vms
+                .filter((vm) => selectedExcludedIds.includes(vm.id))
+                .map((vm) => vm.name);
+
+              if (names.length === 1) {
+                return (
+                  <>
+                    <strong>{names[0]}</strong> will be included in all
+                    assessment reports again.
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <strong>{names.length} VMs</strong> will be included in all
+                  assessment reports again.
+                </>
+              );
+            })()}
+          </Content>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="primary"
+            isLoading={isIncludeLoading}
+            isDisabled={isIncludeLoading}
+            onClick={async () => {
+              setIsIncludeLoading(true);
+              try {
+                await onIncludeInReports?.(selectedExcludedIds);
+                setIsIncludeModalOpen(false);
+                onSelectionChange?.(new Set());
+              } catch (err) {
+                console.error("Error including VMs in reports:", err);
+              } finally {
+                setIsIncludeLoading(false);
+              }
+            }}
+          >
+            Include in reports
+          </Button>
+          <Button
+            variant="link"
+            isDisabled={isIncludeLoading}
+            onClick={() => setIsIncludeModalOpen(false)}
+          >
             Cancel
           </Button>
         </ModalFooter>

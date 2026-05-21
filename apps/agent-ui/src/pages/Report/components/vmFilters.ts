@@ -10,6 +10,7 @@ export interface VMFilters {
   migrationReadiness?: string[];
   concernLabels?: string[];
   concernCategories?: string[];
+  showExcludedVMs?: boolean;
 }
 
 /**
@@ -148,7 +149,10 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     // If both are selected, don't add a filter (show all)
   }
 
-  // Join all conditions with AND
+  if (filters.showExcludedVMs === false) {
+    conditions.push("migration_excluded = false");
+  }
+
   if (conditions.length === 0) {
     return undefined;
   }

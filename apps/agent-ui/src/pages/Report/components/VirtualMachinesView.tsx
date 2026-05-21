@@ -27,6 +27,8 @@ interface VirtualMachinesViewProps {
   };
   agentApi?: DefaultApiInterface;
   onRefreshVMs?: () => void;
+  showExcludedVMs?: boolean;
+  onShowExcludedVMsChange?: (show: boolean) => void;
 }
 
 export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
@@ -42,6 +44,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   availableFilterOptions,
   agentApi,
   onRefreshVMs,
+  showExcludedVMs,
+  onShowExcludedVMsChange,
 }) => {
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
   const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
@@ -125,6 +129,38 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       console.error("Error canceling inspection:", err);
     }
   }, [agentApi, onRefreshVMs, stopPolling]);
+
+  const handleExcludeFromReports = useCallback(
+    async (vmIds: string[]) => {
+      if (!agentApi) return;
+      await Promise.all(
+        vmIds.map((id) =>
+          agentApi.updateVM({
+            id,
+            virtualMachineUpdateRequest: { migrationExcluded: true },
+          }),
+        ),
+      );
+      onRefreshVMs?.();
+    },
+    [agentApi, onRefreshVMs],
+  );
+
+  const handleIncludeInReports = useCallback(
+    async (vmIds: string[]) => {
+      if (!agentApi) return;
+      await Promise.all(
+        vmIds.map((id) =>
+          agentApi.updateVM({
+            id,
+            virtualMachineUpdateRequest: { migrationExcluded: false },
+          }),
+        ),
+      );
+      onRefreshVMs?.();
+    },
+    [agentApi, onRefreshVMs],
+  );
 
   const handleResetInspection = useCallback(async () => {
     if (!agentApi) return;
@@ -222,6 +258,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         selectedVMs={selectedVMs}
         onSelectionChange={setSelectedVMs}
         onRunDeepInspection={handleRunDeepInspection}
+        onExcludeFromReports={handleExcludeFromReports}
+        onIncludeInReports={handleIncludeInReports}
+        showExcludedVMs={showExcludedVMs}
+        onShowExcludedVMsChange={onShowExcludedVMsChange}
         hasInspectionResults={hasInspectionResults || inspectionActive}
         inspectionActive={inspectionActive}
         onCancelInspection={handleCancelInspection}

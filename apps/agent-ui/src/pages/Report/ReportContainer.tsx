@@ -85,6 +85,7 @@ export const ReportContainer: React.FC = () => {
   const [vmsPage, setVmsPage] = useState(1);
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
+  const [showExcludedVMs, setShowExcludedVMs] = useState(true);
 
   // Store all available filter options (fetched once for filter UI)
   const [availableFilterOptions, setAvailableFilterOptions] = useState<{
@@ -283,17 +284,15 @@ export const ReportContainer: React.FC = () => {
     if (activeTab !== 1) return;
 
     const fetchVMs = async () => {
-      // Increment request ID and capture current value to detect stale responses
       vmsRequestIdRef.current += 1;
       const currentRequestId = vmsRequestIdRef.current;
 
       try {
         setVmsLoading(true);
 
-        // Convert filters to backend expression format
-        const byExpression = filtersToByExpression(initialVMFilters);
+        const effectiveFilters = { ...initialVMFilters, showExcludedVMs };
+        const byExpression = filtersToByExpression(effectiveFilters);
 
-        // Fetch page with backend filtering
         const response = await agentApi.getVMs({
           byExpression,
           sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
@@ -301,20 +300,17 @@ export const ReportContainer: React.FC = () => {
           pageSize: vmsPageSize,
         });
 
-        // Only update state if this is still the latest request
         if (currentRequestId === vmsRequestIdRef.current) {
           setVmsList(response.vms || []);
           setVmsTotalCount(response.total || 0);
         }
       } catch (err) {
         console.error("Error fetching VMs:", err);
-        // Only update state if this is still the latest request
         if (currentRequestId === vmsRequestIdRef.current) {
           setVmsList([]);
           setVmsTotalCount(0);
         }
       } finally {
-        // Only update loading state if this is still the latest request
         if (currentRequestId === vmsRequestIdRef.current) {
           setVmsLoading(false);
         }
@@ -326,6 +322,7 @@ export const ReportContainer: React.FC = () => {
     activeTab,
     agentApi,
     initialVMFilters,
+    showExcludedVMs,
     vmsPage,
     vmsPageSize,
     vmsSortFields,
@@ -334,7 +331,8 @@ export const ReportContainer: React.FC = () => {
   const refreshVMs = useCallback(async () => {
     const reqId = ++vmsRefreshIdRef.current;
     try {
-      const byExpression = filtersToByExpression(initialVMFilters);
+      const effectiveFilters = { ...initialVMFilters, showExcludedVMs };
+      const byExpression = filtersToByExpression(effectiveFilters);
       const response = await agentApi.getVMs({
         byExpression,
         sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
@@ -348,14 +346,21 @@ export const ReportContainer: React.FC = () => {
     } catch (err) {
       console.error("Error refreshing VMs:", err);
     }
-  }, [agentApi, initialVMFilters, vmsSortFields, vmsPage, vmsPageSize]);
+  }, [
+    agentApi,
+    initialVMFilters,
+    showExcludedVMs,
+    vmsSortFields,
+    vmsPage,
+    vmsPageSize,
+  ]);
 
   if (loading) {
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <Header totalVMs={0} totalClusters={0} isConnected={false} />
+            <Header totalVMs={0} totalClusters={0} />
           </StackItem>
           <StackItem>
             <Content component="p">Loading inventory data...</Content>
@@ -370,7 +375,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <Header totalVMs={0} totalClusters={0} isConnected={false} />
+            <Header totalVMs={0} totalClusters={0} />
           </StackItem>
           <StackItem>
             <Alert variant="danger" title="Error loading inventory">
@@ -387,7 +392,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <Header totalVMs={0} totalClusters={0} isConnected={false} />
+            <Header totalVMs={0} totalClusters={0} />
           </StackItem>
           <StackItem>
             <Alert variant="info" title="No inventory available">
@@ -618,16 +623,10 @@ export const ReportContainer: React.FC = () => {
   return (
     <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
       <Stack hasGutter>
-        {/* Header with cluster selector */}
         <StackItem>
-          <Header
-            totalVMs={totalVMs}
-            totalClusters={totalClusters}
-            isConnected={isDataShared}
-          />
+          <Header totalVMs={totalVMs} totalClusters={totalClusters} />
         </StackItem>
 
-        {/* Data Sharing Alert - shown when not shared */}
         {!isDataShared && (
           <StackItem>
             <DataSharingAlert
@@ -689,7 +688,10 @@ export const ReportContainer: React.FC = () => {
         {/* Tabs */}
         <StackItem>
           <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
-            <Tab eventKey={0} title={<TabTitleText>Overview</TabTitleText>}>
+            <Tab
+              eventKey={0}
+              title={<TabTitleText>Assessment report</TabTitleText>}
+            >
               <div style={{ marginTop: "24px" }}>
                 {clusterView.viewInfra && clusterView.viewVms ? (
                   <Dashboard
@@ -729,6 +731,11 @@ export const ReportContainer: React.FC = () => {
                   availableFilterOptions={availableFilterOptions}
                   agentApi={agentApi}
                   onRefreshVMs={refreshVMs}
+                  showExcludedVMs={showExcludedVMs}
+                  onShowExcludedVMsChange={(show) => {
+                    setShowExcludedVMs(show);
+                    setVmsPage(1);
+                  }}
                 />
               </div>
             </Tab>

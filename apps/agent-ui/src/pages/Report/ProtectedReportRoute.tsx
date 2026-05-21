@@ -6,7 +6,7 @@ import { Navigate } from "react-router-dom";
 import { newAbortSignal } from "../../common/AbortSignal";
 import { REQUEST_TIMEOUT_MS } from "../../login-form/Constants";
 import { Symbols } from "../../main/Symbols";
-import ReportPage from "./ReportPage";
+import { ReportLayout } from "./ReportLayout";
 
 /**
  * Protected route wrapper for the report page.
@@ -58,8 +58,7 @@ export const ProtectedReportRoute: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Allow access to report page
-  return <ReportPage />;
+  return <ReportLayout />;
 };
 
 ProtectedReportRoute.displayName = "ProtectedReportRoute";
