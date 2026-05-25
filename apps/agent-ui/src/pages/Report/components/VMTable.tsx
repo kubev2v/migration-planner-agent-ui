@@ -1634,17 +1634,17 @@ export const VMTable: React.FC<VMTableProps> = ({
                 {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
                 {isColumnVisible("cpuUsage") && (
                   <Td dataLabel="CPU usage" modifier="fitContent">
-                    {formatMetric(vm.utilizationCpuP95)}
+                    {formatMetric(vm.utilization_cpu_p95)}
                   </Td>
                 )}
                 {isColumnVisible("diskUsage") && (
                   <Td dataLabel="Disk usage" modifier="fitContent">
-                    {formatMetric(vm.utilizationDisk)}
+                    {formatMetric(vm.utilization_disk)}
                   </Td>
                 )}
                 {isColumnVisible("ramUsage") && (
                   <Td dataLabel="RAM usage" modifier="fitContent">
-                    {formatMetric(vm.utilizationMemP95)}
+                    {formatMetric(vm.utilization_mem_p95)}
                   </Td>
                 )}
                 {isColumnVisible("datacenter") && (

@@ -231,7 +231,7 @@ export const ReportContainer: React.FC = () => {
         if (!cancelled) {
           // Find cluster metrics for the selected cluster
           const clusterMetrics = response.clusters?.find(
-            (cluster) => cluster.clusterId === selectedClusterId,
+            (cluster) => cluster.cluster_id === selectedClusterId,
           );
 
           setUtilizationMetrics(clusterMetrics || null);
@@ -737,9 +737,9 @@ export const ReportContainer: React.FC = () => {
             <Content component="p">
               Total usage statistics{" "}
               <VMUtilizationMetrics
-                cpu={utilizationMetrics.cpuAvg}
+                cpu={utilizationMetrics.cpu_avg}
                 disk={utilizationMetrics.disk}
-                ram={utilizationMetrics.memAvg}
+                ram={utilizationMetrics.mem_avg}
               />
             </Content>
           </StackItem>

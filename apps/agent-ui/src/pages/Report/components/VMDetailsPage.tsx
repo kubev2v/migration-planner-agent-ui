@@ -475,7 +475,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Allocated CPU
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                {`${vm.utilization.provisionedCpus} vCPU${vm.utilization.provisionedCpus === 1 ? "" : "s"}`}
+                                {`${vm.utilization.provisioned_cpus} vCPU${vm.utilization.provisioned_cpus === 1 ? "" : "s"}`}
                               </DescriptionListDescription>
                             </DescriptionListGroup>
                           </DescriptionList>
@@ -487,12 +487,12 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Max used CPU
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                {vm.utilization.cpuMax === 0 ? (
+                                {vm.utilization.cpu_max === 0 ? (
                                   "N/A"
                                 ) : (
                                   <Progress
-                                    value={vm.utilization.cpuMax}
-                                    label={formatMetric(vm.utilization.cpuMax)}
+                                    value={vm.utilization.cpu_max}
+                                    label={formatMetric(vm.utilization.cpu_max)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -511,12 +511,12 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Average used CPU
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                {vm.utilization.cpuAvg === 0 ? (
+                                {vm.utilization.cpu_avg === 0 ? (
                                   "N/A"
                                 ) : (
                                   <Progress
-                                    value={vm.utilization.cpuAvg}
-                                    label={formatMetric(vm.utilization.cpuAvg)}
+                                    value={vm.utilization.cpu_avg}
+                                    label={formatMetric(vm.utilization.cpu_avg)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -538,7 +538,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                               </DescriptionListTerm>
                               <DescriptionListDescription>
                                 {formatMemorySize(
-                                  vm.utilization.provisionedMemoryMb,
+                                  vm.utilization.provisioned_memory_mb,
                                 )}
                               </DescriptionListDescription>
                             </DescriptionListGroup>
@@ -551,12 +551,12 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Max used RAM
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                {vm.utilization.memMax === 0 ? (
+                                {vm.utilization.mem_max === 0 ? (
                                   "N/A"
                                 ) : (
                                   <Progress
-                                    value={vm.utilization.memMax}
-                                    label={formatMetric(vm.utilization.memMax)}
+                                    value={vm.utilization.mem_max}
+                                    label={formatMetric(vm.utilization.mem_max)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -575,12 +575,12 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                                 Average used RAM
                               </DescriptionListTerm>
                               <DescriptionListDescription>
-                                {vm.utilization.memAvg === 0 ? (
+                                {vm.utilization.mem_avg === 0 ? (
                                   "N/A"
                                 ) : (
                                   <Progress
-                                    value={vm.utilization.memAvg}
-                                    label={formatMetric(vm.utilization.memAvg)}
+                                    value={vm.utilization.mem_avg}
+                                    label={formatMetric(vm.utilization.mem_avg)}
                                     size={ProgressSize.sm}
                                     measureLocation={
                                       ProgressMeasureLocation.outside
@@ -602,7 +602,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                               </DescriptionListTerm>
                               <DescriptionListDescription>
                                 {formatMemorySize(
-                                  vm.utilization.provisionedDiskKb / 1000,
+                                  vm.utilization.provisioned_disk_kb / 1000,
                                 )}
                               </DescriptionListDescription>
                             </DescriptionListGroup>

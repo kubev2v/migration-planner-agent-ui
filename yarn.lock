@@ -564,7 +564,7 @@ __metadata:
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@migration-planner-ui/ioc": "workspace:*"
-    "@openshift-migration-advisor/agent-sdk": "npm:0.12.0-d5edcd6935f2"
+    "@openshift-migration-advisor/agent-sdk": "npm:0.12.0-645d2fae3eee"
     "@patternfly/react-charts": "npm:^8.0.0"
     "@patternfly/react-core": "npm:^6.4.3"
     "@patternfly/react-icons": "npm:^6.4.0"
@@ -607,10 +607,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openshift-migration-advisor/agent-sdk@npm:0.12.0-d5edcd6935f2":
-  version: 0.12.0-d5edcd6935f2
-  resolution: "@openshift-migration-advisor/agent-sdk@npm:0.12.0-d5edcd6935f2"
-  checksum: 10c0/c9bc54cc6870bae466c9be999c641002e2b193010ac30c20530cfd871fc1db89f800460948982cfd0777a5cdd2872cf8787c52fad05eac05d863a8f2f505435d
+"@openshift-migration-advisor/agent-sdk@npm:0.12.0-645d2fae3eee":
+  version: 0.12.0-645d2fae3eee
+  resolution: "@openshift-migration-advisor/agent-sdk@npm:0.12.0-645d2fae3eee"
+  checksum: 10c0/82cc2654014a2af7b4826d534a2dd52420a951270cb714a9dbbfffc1ff238473feff2482326965cd102d55729fdb72ec9e3fa2432dc820302d0f9ba0e288f860
   languageName: node
   linkType: hard
 
