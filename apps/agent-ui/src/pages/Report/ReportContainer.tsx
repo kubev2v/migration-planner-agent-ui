@@ -251,37 +251,6 @@ export const ReportContainer: React.FC = () => {
     };
   }, [agentApi, selectedClusterId]);
 
-  // Compute available concerns and categories from inventory
-  const availableConcerns = useMemo(() => {
-    if (!inventory?.vcenter?.vms) return { labels: [], categories: [] };
-
-    const concerns = new Set<string>();
-    const warnings = inventory.vcenter.vms.migrationWarnings || [];
-    const errors = inventory.vcenter.vms.notMigratableReasons || [];
-
-    // Collect all unique concern labels
-    [...warnings, ...errors].forEach((issue) => {
-      if (issue.label) {
-        concerns.add(issue.label);
-      }
-    });
-
-    // All possible categories according to backend
-    const categories = [
-      "Critical",
-      "Warning",
-      "Information",
-      "Advisory",
-      "Error",
-      "Other",
-    ];
-
-    return {
-      labels: Array.from(concerns).sort(),
-      categories: categories,
-    };
-  }, [inventory]);
-
   // Fetch available filter options once when VMs tab is first accessed
   useEffect(() => {
     if (activeTab !== 1) return;
@@ -290,40 +259,12 @@ export const ReportContainer: React.FC = () => {
 
     const fetchFilterOptions = async () => {
       try {
-        // Fetch all VMs with pagination to get complete lists of clusters and datacenters
-        let allVMs: VirtualMachine[] = [];
-        let page = 1;
-        const pageSize = 1000;
-        let hasMore = true;
-
-        while (hasMore) {
-          const response = await agentApi.getVMs({
-            page,
-            pageSize,
-          });
-
-          const vms = response.vms || [];
-          allVMs = allVMs.concat(vms);
-
-          // Check if there are more pages
-          const total = response.total || 0;
-          hasMore = allVMs.length < total;
-          page++;
-        }
-
-        const clusters = new Set<string>();
-        const datacenters = new Set<string>();
-
-        allVMs.forEach((vm) => {
-          if (vm.cluster) clusters.add(vm.cluster);
-          if (vm.datacenter) datacenters.add(vm.datacenter);
-        });
-
+        const response = await agentApi.getVMsFilterOptions();
         setAvailableFilterOptions({
-          clusters: Array.from(clusters).sort(),
-          datacenters: Array.from(datacenters).sort(),
-          concernLabels: availableConcerns.labels,
-          concernCategories: availableConcerns.categories,
+          clusters: response.clusters || [],
+          datacenters: response.datacenters || [],
+          concernLabels: response.concernLabels || [],
+          concernCategories: response.concernCategories || [],
         });
         setFilterOptionsFetched(true);
       } catch (err) {
@@ -335,7 +276,7 @@ export const ReportContainer: React.FC = () => {
     };
 
     fetchFilterOptions();
-  }, [activeTab, agentApi, filterOptionsFetched, availableConcerns, inventory]);
+  }, [activeTab, agentApi, filterOptionsFetched, inventory]);
 
   // Fetch VMs when Virtual Machines tab is active or filters change
   useEffect(() => {
