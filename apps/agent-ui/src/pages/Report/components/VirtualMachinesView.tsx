@@ -9,6 +9,39 @@ import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
 import type { VMFilters } from "./vmFilters";
 
+async function updateVmMigrationExcluded(
+  agentApi: DefaultApiInterface,
+  vmIds: string[],
+  migrationExcluded: boolean,
+  onRefreshVMs?: () => void,
+): Promise<void> {
+  const results = await Promise.allSettled(
+    vmIds.map((id) =>
+      agentApi.updateVM({
+        id,
+        virtualMachineUpdateRequest: { migrationExcluded },
+      }),
+    ),
+  );
+
+  const failedIds: string[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "rejected") {
+      failedIds.push(vmIds[i]);
+      console.error(`Error updating VM ${vmIds[i]}:`, result.reason);
+    }
+  }
+
+  onRefreshVMs?.();
+
+  if (failedIds.length > 0) {
+    throw new Error(
+      `Failed to update ${failedIds.length} of ${vmIds.length} VM(s): ${failedIds.join(", ")}`,
+    );
+  }
+}
+
 interface VirtualMachinesViewProps {
   vms: VirtualMachine[];
   loading?: boolean;
@@ -133,15 +166,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleExcludeFromReports = useCallback(
     async (vmIds: string[]) => {
       if (!agentApi) return;
-      await Promise.all(
-        vmIds.map((id) =>
-          agentApi.updateVM({
-            id,
-            virtualMachineUpdateRequest: { migrationExcluded: true },
-          }),
-        ),
-      );
-      onRefreshVMs?.();
+      await updateVmMigrationExcluded(agentApi, vmIds, true, onRefreshVMs);
     },
     [agentApi, onRefreshVMs],
   );
@@ -149,15 +174,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleIncludeInReports = useCallback(
     async (vmIds: string[]) => {
       if (!agentApi) return;
-      await Promise.all(
-        vmIds.map((id) =>
-          agentApi.updateVM({
-            id,
-            virtualMachineUpdateRequest: { migrationExcluded: false },
-          }),
-        ),
-      );
-      onRefreshVMs?.();
+      await updateVmMigrationExcluded(agentApi, vmIds, false, onRefreshVMs);
     },
     [agentApi, onRefreshVMs],
   );

@@ -1499,7 +1499,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                 popperProps={{ position: "right" }}
               >
                 <DropdownList>
-                  {selectedIncludedIds.length > 0 && (
+                  {onExcludeFromReports && selectedIncludedIds.length > 0 && (
                     <DropdownItem
                       key="exclude-from-reports"
                       onClick={() => setIsExcludeModalOpen(true)}
@@ -1507,7 +1507,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                       Exclude from reports
                     </DropdownItem>
                   )}
-                  {selectedExcludedIds.length > 0 && (
+                  {onIncludeInReports && selectedExcludedIds.length > 0 && (
                     <DropdownItem
                       key="include-in-reports"
                       onClick={() => setIsIncludeModalOpen(true)}
@@ -1902,140 +1902,144 @@ export const VMTable: React.FC<VMTableProps> = ({
       </Modal>
 
       {/* Exclude from reports confirmation modal */}
-      <Modal
-        isOpen={isExcludeModalOpen}
-        onClose={() => setIsExcludeModalOpen(false)}
-        aria-labelledby="exclude-reports-title"
-        aria-describedby="exclude-reports-body"
-        variant="small"
-      >
-        <ModalHeader
-          title="Exclude from reports?"
-          labelId="exclude-reports-title"
-        />
-        <ModalBody id="exclude-reports-body">
-          <Content component="p">
-            {(() => {
-              const names = selectedIncludedIds
-                .map((id) => vmById.get(id)?.name)
-                .filter((name): name is string => Boolean(name));
+      {onExcludeFromReports && (
+        <Modal
+          isOpen={isExcludeModalOpen}
+          onClose={() => setIsExcludeModalOpen(false)}
+          aria-labelledby="exclude-reports-title"
+          aria-describedby="exclude-reports-body"
+          variant="small"
+        >
+          <ModalHeader
+            title="Exclude from reports?"
+            labelId="exclude-reports-title"
+          />
+          <ModalBody id="exclude-reports-body">
+            <Content component="p">
+              {(() => {
+                const names = selectedIncludedIds
+                  .map((id) => vmById.get(id)?.name)
+                  .filter((name): name is string => Boolean(name));
 
-              if (names.length === 1) {
+                if (names.length === 1) {
+                  return (
+                    <>
+                      <strong>{names[0]}</strong> will be excluded from all
+                      assessment reports. You can include it again from the
+                      Actions menu.
+                    </>
+                  );
+                }
+
                 return (
                   <>
-                    <strong>{names[0]}</strong> will be excluded from all
-                    assessment reports. You can include it again from the
+                    <strong>{names.length} VMs</strong> will be excluded from
+                    all assessment reports. You can include them again from the
                     Actions menu.
                   </>
                 );
-              }
-
-              return (
-                <>
-                  <strong>{names.length} VMs</strong> will be excluded from all
-                  assessment reports. You can include them again from the
-                  Actions menu.
-                </>
-              );
-            })()}
-          </Content>
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            variant="primary"
-            isLoading={isExcludeLoading}
-            isDisabled={isExcludeLoading}
-            onClick={async () => {
-              setIsExcludeLoading(true);
-              try {
-                await onExcludeFromReports?.(selectedIncludedIds);
-                setIsExcludeModalOpen(false);
-                onSelectionChange?.(new Set());
-              } catch (err) {
-                console.error("Error excluding VMs from reports:", err);
-              } finally {
-                setIsExcludeLoading(false);
-              }
-            }}
-          >
-            Exclude from reports
-          </Button>
-          <Button
-            variant="link"
-            isDisabled={isExcludeLoading}
-            onClick={() => setIsExcludeModalOpen(false)}
-          >
-            Cancel
-          </Button>
-        </ModalFooter>
-      </Modal>
+              })()}
+            </Content>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="primary"
+              isLoading={isExcludeLoading}
+              isDisabled={isExcludeLoading}
+              onClick={async () => {
+                setIsExcludeLoading(true);
+                try {
+                  await onExcludeFromReports(selectedIncludedIds);
+                  setIsExcludeModalOpen(false);
+                  onSelectionChange?.(new Set());
+                } catch (err) {
+                  console.error("Error excluding VMs from reports:", err);
+                } finally {
+                  setIsExcludeLoading(false);
+                }
+              }}
+            >
+              Exclude from reports
+            </Button>
+            <Button
+              variant="link"
+              isDisabled={isExcludeLoading}
+              onClick={() => setIsExcludeModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
 
       {/* Include in reports confirmation modal */}
-      <Modal
-        isOpen={isIncludeModalOpen}
-        onClose={() => setIsIncludeModalOpen(false)}
-        aria-labelledby="include-reports-title"
-        aria-describedby="include-reports-body"
-        variant="small"
-      >
-        <ModalHeader
-          title="Include in reports?"
-          labelId="include-reports-title"
-        />
-        <ModalBody id="include-reports-body">
-          <Content component="p">
-            {(() => {
-              const names = selectedExcludedIds
-                .map((id) => vmById.get(id)?.name)
-                .filter((name): name is string => Boolean(name));
+      {onIncludeInReports && (
+        <Modal
+          isOpen={isIncludeModalOpen}
+          onClose={() => setIsIncludeModalOpen(false)}
+          aria-labelledby="include-reports-title"
+          aria-describedby="include-reports-body"
+          variant="small"
+        >
+          <ModalHeader
+            title="Include in reports?"
+            labelId="include-reports-title"
+          />
+          <ModalBody id="include-reports-body">
+            <Content component="p">
+              {(() => {
+                const names = selectedExcludedIds
+                  .map((id) => vmById.get(id)?.name)
+                  .filter((name): name is string => Boolean(name));
 
-              if (names.length === 1) {
+                if (names.length === 1) {
+                  return (
+                    <>
+                      <strong>{names[0]}</strong> will be included in all
+                      assessment reports again.
+                    </>
+                  );
+                }
+
                 return (
                   <>
-                    <strong>{names[0]}</strong> will be included in all
+                    <strong>{names.length} VMs</strong> will be included in all
                     assessment reports again.
                   </>
                 );
-              }
-
-              return (
-                <>
-                  <strong>{names.length} VMs</strong> will be included in all
-                  assessment reports again.
-                </>
-              );
-            })()}
-          </Content>
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            variant="primary"
-            isLoading={isIncludeLoading}
-            isDisabled={isIncludeLoading}
-            onClick={async () => {
-              setIsIncludeLoading(true);
-              try {
-                await onIncludeInReports?.(selectedExcludedIds);
-                setIsIncludeModalOpen(false);
-                onSelectionChange?.(new Set());
-              } catch (err) {
-                console.error("Error including VMs in reports:", err);
-              } finally {
-                setIsIncludeLoading(false);
-              }
-            }}
-          >
-            Include in reports
-          </Button>
-          <Button
-            variant="link"
-            isDisabled={isIncludeLoading}
-            onClick={() => setIsIncludeModalOpen(false)}
-          >
-            Cancel
-          </Button>
-        </ModalFooter>
-      </Modal>
+              })()}
+            </Content>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="primary"
+              isLoading={isIncludeLoading}
+              isDisabled={isIncludeLoading}
+              onClick={async () => {
+                setIsIncludeLoading(true);
+                try {
+                  await onIncludeInReports(selectedExcludedIds);
+                  setIsIncludeModalOpen(false);
+                  onSelectionChange?.(new Set());
+                } catch (err) {
+                  console.error("Error including VMs in reports:", err);
+                } finally {
+                  setIsIncludeLoading(false);
+                }
+              }}
+            >
+              Include in reports
+            </Button>
+            <Button
+              variant="link"
+              isDisabled={isIncludeLoading}
+              onClick={() => setIsIncludeModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
     </div>
   );
 };
