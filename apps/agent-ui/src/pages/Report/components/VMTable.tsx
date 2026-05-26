@@ -358,20 +358,30 @@ export const VMTable: React.FC<VMTableProps> = ({
   const [isIncludeModalOpen, setIsIncludeModalOpen] = useState(false);
   const [isIncludeLoading, setIsIncludeLoading] = useState(false);
 
+  const vmByIdCacheRef = useRef(new Map<string, VirtualMachine>());
+  const vmById = useMemo(() => {
+    const map = new Map(vmByIdCacheRef.current);
+    for (const vm of vms) {
+      map.set(vm.id, vm);
+    }
+    vmByIdCacheRef.current = map;
+    return map;
+  }, [vms]);
+
   const { selectedExcludedIds, selectedIncludedIds } = useMemo(() => {
     const excluded: string[] = [];
     const included: string[] = [];
-    for (const vm of vms) {
-      if (selectedVMs.has(vm.id)) {
-        if (vm.migrationExcluded) {
-          excluded.push(vm.id);
-        } else {
-          included.push(vm.id);
-        }
+    for (const id of selectedVMs) {
+      const vm = vmById.get(id);
+      if (!vm) continue;
+      if (vm.migrationExcluded) {
+        excluded.push(id);
+      } else {
+        included.push(id);
       }
     }
     return { selectedExcludedIds: excluded, selectedIncludedIds: included };
-  }, [vms, selectedVMs]);
+  }, [vmById, selectedVMs]);
 
   // Client-side filter state (applied filters)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
@@ -1906,9 +1916,9 @@ export const VMTable: React.FC<VMTableProps> = ({
         <ModalBody id="exclude-reports-body">
           <Content component="p">
             {(() => {
-              const names = vms
-                .filter((vm) => selectedIncludedIds.includes(vm.id))
-                .map((vm) => vm.name);
+              const names = selectedIncludedIds
+                .map((id) => vmById.get(id)?.name)
+                .filter((name): name is string => Boolean(name));
 
               if (names.length === 1) {
                 return (
@@ -1975,9 +1985,9 @@ export const VMTable: React.FC<VMTableProps> = ({
         <ModalBody id="include-reports-body">
           <Content component="p">
             {(() => {
-              const names = vms
-                .filter((vm) => selectedExcludedIds.includes(vm.id))
-                .map((vm) => vm.name);
+              const names = selectedExcludedIds
+                .map((id) => vmById.get(id)?.name)
+                .filter((name): name is string => Boolean(name));
 
               if (names.length === 1) {
                 return (

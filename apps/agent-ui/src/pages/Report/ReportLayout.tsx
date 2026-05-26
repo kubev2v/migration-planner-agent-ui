@@ -36,6 +36,7 @@ export const ReportLayout: React.FC = () => {
 
   return (
     <Page
+      isManagedSidebar
       masthead={
         <Masthead>
           <MastheadToggle>
