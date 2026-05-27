@@ -142,6 +142,12 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     void fetchAvailableLabels();
   }, [fetchAvailableLabels]);
 
+  useEffect(() => {
+    if (isAddLabelsModalOpen) {
+      void fetchAvailableLabels();
+    }
+  }, [isAddLabelsModalOpen, fetchAvailableLabels]);
+
   const handleAddLabels = useCallback(
     (vmIds: string[]) => {
       setAddLabelsVMIds(vmIds);
