@@ -485,6 +485,9 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Selection state
   // const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
 
+  // Bulk select dropdown state
+  const [isBulkSelectOpen, setIsBulkSelectOpen] = useState(false);
+
   // Row actions dropdown state
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
 
@@ -1210,34 +1213,65 @@ export const VMTable: React.FC<VMTableProps> = ({
         <ToolbarContent>
           {selectedVMs.size > 0 && (
             <ToolbarItem>
-              <MenuToggle
-                variant="plainText"
-                splitButtonItems={[
-                  <Checkbox
-                    key="select-all"
-                    id="select-all-vms"
-                    isChecked={
-                      selectedVMs.size === displayVMs.length
-                        ? true
-                        : selectedVMs.size > 0
-                          ? null
-                          : false
-                    }
-                    onChange={(_event, checked) => {
-                      if (checked) {
-                        onSelectionChange?.(
-                          new Set(displayVMs.map((vm) => vm.id)),
-                        );
-                      } else {
-                        onSelectionChange?.(new Set());
-                      }
-                    }}
-                    aria-label="Select all VMs"
-                  />,
-                ]}
+              <Dropdown
+                isOpen={isBulkSelectOpen}
+                onOpenChange={setIsBulkSelectOpen}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                  <MenuToggle
+                    ref={toggleRef}
+                    onClick={() => setIsBulkSelectOpen(!isBulkSelectOpen)}
+                    variant="plainText"
+                    splitButtonItems={[
+                      <Checkbox
+                        key="select-all"
+                        id="select-all-vms"
+                        isChecked={
+                          selectedVMs.size === displayVMs.length
+                            ? true
+                            : selectedVMs.size > 0
+                              ? null
+                              : false
+                        }
+                        onChange={(_event, checked) => {
+                          if (checked) {
+                            onSelectionChange?.(
+                              new Set(displayVMs.map((vm) => vm.id)),
+                            );
+                          } else {
+                            onSelectionChange?.(new Set());
+                          }
+                        }}
+                        aria-label="Select all VMs"
+                      />,
+                    ]}
+                  >
+                    {selectedVMs.size} selected
+                  </MenuToggle>
+                )}
               >
-                {selectedVMs.size} selected
-              </MenuToggle>
+                <DropdownList>
+                  <DropdownItem
+                    key="select-none"
+                    onClick={() => {
+                      onSelectionChange?.(new Set());
+                      setIsBulkSelectOpen(false);
+                    }}
+                  >
+                    Select none (0)
+                  </DropdownItem>
+                  <DropdownItem
+                    key="select-page"
+                    onClick={() => {
+                      onSelectionChange?.(
+                        new Set(displayVMs.map((vm) => vm.id)),
+                      );
+                      setIsBulkSelectOpen(false);
+                    }}
+                  >
+                    Select page ({displayVMs.length})
+                  </DropdownItem>
+                </DropdownList>
+              </Dropdown>
             </ToolbarItem>
           )}
 
@@ -1629,10 +1663,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                   >
                     Manage labels
                   </DropdownItem>
-                  <DropdownItem
-                    key="create-group"
-                    isDisabled={selectedVMs.size === 0}
-                  >
+                  <DropdownItem key="create-group" isDisabled>
                     Create group
                   </DropdownItem>
                   <DropdownItem key="add-to-group" isDisabled>
