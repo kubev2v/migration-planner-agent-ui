@@ -68,19 +68,23 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
     setLabels(labels.filter((l) => l.id !== labelId));
   };
 
-  const onEdit = (nextText: string, index: number) => {
-    const copy = [...labels];
-    copy[index] = {
-      ...labels[index],
-      name: nextText,
-      props: {
-        ...labels[index].props,
-        editableProps: {
-          "aria-label": `Editable label with text ${nextText}`,
-        },
-      },
-    };
-    setLabels(copy);
+  const onEdit = (nextText: string, labelId: number) => {
+    setLabels((prev) =>
+      prev.map((l) =>
+        l.id === labelId
+          ? {
+              ...l,
+              name: nextText,
+              props: {
+                ...l.props,
+                editableProps: {
+                  "aria-label": `Editable label with text ${nextText}`,
+                },
+              },
+            }
+          : l,
+      ),
+    );
   };
 
   const handleSubmit = async () => {
@@ -130,12 +134,12 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
             </Label>
           }
         >
-          {labels.map((label, index) => (
+          {labels.map((label) => (
             <Label
               key={label.id}
               onClose={() => onLabelClose(label.id)}
-              onEditCancel={(_event, prevText) => onEdit(prevText, index)}
-              onEditComplete={(_event, newText) => onEdit(newText, index)}
+              onEditCancel={(_event, prevText) => onEdit(prevText, label.id)}
+              onEditComplete={(_event, newText) => onEdit(newText, label.id)}
               {...label.props}
             >
               {label.name}
