@@ -51,9 +51,10 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textInputRef = useRef<HTMLInputElement>(undefined);
+  const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       setSelected([...currentVMLabels]);
       setInputValue("");
       setIsSelectOpen(false);
@@ -61,6 +62,7 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       setFocusedItemIndex(null);
       setActiveItemId(null);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen, currentVMLabels]);
 
   useEffect(() => {
