@@ -162,6 +162,12 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     return [...labelSet].sort();
   }, [addLabelsVMIds, vms]);
 
+  const selectedVMName = useMemo(() => {
+    if (addLabelsVMIds.length !== 1) return undefined;
+    const vm = vms.find((v) => v.id === addLabelsVMIds[0]);
+    return vm?.name;
+  }, [addLabelsVMIds, vms]);
+
   const handleAddLabels = useCallback(
     (vmIds: string[]) => {
       setAddLabelsVMIds(vmIds);
@@ -402,6 +408,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         selectedVMCount={addLabelsVMIds.length}
         existingLabels={availableLabels}
         currentVMLabels={currentVMLabels}
+        selectedVMName={selectedVMName}
       />
       <ManageLabelsModal
         isOpen={isManageLabelsModalOpen}

@@ -238,7 +238,7 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
         aria-describedby="manage-labels-body"
         variant="medium"
       >
-        <ModalHeader title="Manage labels" labelId="manage-labels-title" />
+        <ModalHeader title="Manage all labels" labelId="manage-labels-title" />
         <ModalBody id="manage-labels-body">
           <Content component="p" style={{ marginBottom: "16px" }}>
             View, rename, or delete labels. Renaming or deleting a label updates

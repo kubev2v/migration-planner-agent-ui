@@ -31,6 +31,7 @@ interface AddLabelsModalProps {
   selectedVMCount: number;
   existingLabels: string[];
   currentVMLabels?: string[];
+  selectedVMName?: string;
 }
 
 export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
@@ -40,11 +41,11 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
   selectedVMCount,
   existingLabels,
   currentVMLabels = [],
+  selectedVMName,
 }) => {
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
-  const [removedLabels, setRemovedLabels] = useState<string[]>([]);
   const [selectOptions, setSelectOptions] = useState<SelectOptionProps[]>([]);
   const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -53,15 +54,14 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setSelected([]);
-      setRemovedLabels([]);
+      setSelected([...currentVMLabels]);
       setInputValue("");
       setIsSelectOpen(false);
       setIsSubmitting(false);
       setFocusedItemIndex(null);
       setActiveItemId(null);
     }
-  }, [isOpen]);
+  }, [isOpen, currentVMLabels]);
 
   useEffect(() => {
     let newOptions: SelectOptionProps[];
@@ -159,7 +159,6 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       const trimmed = inputValue.trim();
       if (trimmed && !selected.includes(trimmed)) {
         setSelected((prev) => [...prev, trimmed]);
-        setRemovedLabels((prev) => prev.filter((l) => l !== trimmed));
       }
       setInputValue("");
       resetActiveAndFocusedItem();
@@ -171,7 +170,6 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       setSelected((prev) => prev.filter((s) => s !== value));
     } else {
       setSelected((prev) => [...prev, value]);
-      setRemovedLabels((prev) => prev.filter((l) => l !== value));
     }
     textInputRef.current?.focus();
   };
@@ -268,18 +266,15 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
     textInputRef.current?.focus();
   };
 
-  const removeCurrentLabel = (label: string) => {
-    setRemovedLabels((prev) => [...prev, label]);
-    setSelected((prev) => prev.filter((s) => s !== label));
-  };
-
-  const hasChanges = selected.length > 0 || removedLabels.length > 0;
+  const labelsToAdd = selected.filter((l) => !currentVMLabels.includes(l));
+  const labelsToRemove = currentVMLabels.filter((l) => !selected.includes(l));
+  const hasChanges = labelsToAdd.length > 0 || labelsToRemove.length > 0;
 
   const handleSubmit = async () => {
     if (!hasChanges) return;
     setIsSubmitting(true);
     try {
-      await onSubmit(selected, removedLabels);
+      await onSubmit(labelsToAdd, labelsToRemove);
       onClose();
     } catch (err) {
       console.error("Error updating labels:", err);
@@ -306,13 +301,13 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
           id="add-labels-typeahead-input"
           autoComplete="off"
           innerRef={textInputRef}
-          placeholder="Select or create labels"
+          placeholder="Type or select labels..."
           {...(activeItemId && { "aria-activedescendant": activeItemId })}
           role="combobox"
           isExpanded={isSelectOpen}
           aria-controls="add-labels-typeahead-listbox"
         >
-          <LabelGroup aria-label="Current selections">
+          <LabelGroup aria-label="Current selections" numLabels={5}>
             {selected.map((selection) => (
               <Label
                 key={selection}
@@ -349,41 +344,23 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       aria-describedby="add-labels-body"
       variant="medium"
     >
-      <ModalHeader title="Edit labels" labelId="add-labels-title" />
+      <ModalHeader
+        title={selectedVMName ? "Edit labels" : "Add labels"}
+        labelId="add-labels-title"
+      />
       <ModalBody id="add-labels-body" style={{ minHeight: "220px" }}>
         <Content component="p" style={{ marginBottom: "16px" }}>
-          Applies to the {selectedVMCount} selected VM
-          {selectedVMCount !== 1 ? "s" : ""}. You can add new labels, select
-          existing ones, or remove current labels.
+          {selectedVMName ? (
+            <>
+              Add or remove labels for <strong>{selectedVMName}</strong>.
+            </>
+          ) : (
+            `Applies to the ${selectedVMCount} selected VM${selectedVMCount !== 1 ? "s" : ""}. You can add a custom label, or select an existing label.`
+          )}
         </Content>
 
-        {currentVMLabels.length > 0 && (
-          <>
-            <div style={{ marginBottom: "8px" }}>
-              <strong>Current labels</strong>
-            </div>
-            <LabelGroup
-              aria-label="Current VM labels"
-              numLabels={20}
-              style={{ marginBottom: "16px" }}
-            >
-              {currentVMLabels
-                .filter((label) => !removedLabels.includes(label))
-                .map((label) => (
-                  <Label
-                    key={label}
-                    color="blue"
-                    onClose={() => removeCurrentLabel(label)}
-                  >
-                    {label}
-                  </Label>
-                ))}
-            </LabelGroup>
-          </>
-        )}
-
         <div style={{ marginBottom: "8px" }}>
-          <strong>Add labels</strong>
+          <strong>Labels</strong>
         </div>
 
         <Select

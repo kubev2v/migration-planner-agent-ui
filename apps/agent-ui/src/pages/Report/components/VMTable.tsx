@@ -1655,13 +1655,13 @@ export const VMTable: React.FC<VMTableProps> = ({
                     isDisabled={selectedVMs.size === 0}
                     onClick={() => onAddLabels?.(Array.from(selectedVMs))}
                   >
-                    Edit labels
+                    Add labels
                   </DropdownItem>
                   <DropdownItem
                     key="manage-labels"
                     onClick={() => onManageLabels?.()}
                   >
-                    Manage labels
+                    Manage all labels
                   </DropdownItem>
                   <DropdownItem key="create-group" isDisabled>
                     Create group
@@ -1903,7 +1903,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                       ).labels;
                       if (vmLabels && vmLabels.length > 0) {
                         return (
-                          <LabelGroup numLabels={3}>
+                          <LabelGroup numLabels={5}>
                             {vmLabels.map((lbl: string) => (
                               <Label key={lbl} isCompact>
                                 {lbl}
