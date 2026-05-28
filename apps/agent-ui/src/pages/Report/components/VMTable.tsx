@@ -123,22 +123,33 @@ interface VMTableProps {
   };
   selectedVMs?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
+  /** Fetches every VM ID matching the table's current filters (all pages). */
+  onFetchAllVmIds?: (filters: VMFilters) => Promise<string[]>;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
   onAddLabels?: (vmIds: string[]) => void;
   onManageLabels?: () => void;
+  onCreateGroup?: (vmIds: string[]) => void;
+  onAddToGroup?: (vmIds: string[]) => void;
+  onRemoveFromGroup?: (vmIds: string[]) => void;
   showExcludedVMs?: boolean;
   onShowExcludedVMsChange?: (show: boolean) => void;
   hasInspectionResults?: boolean;
   inspectionActive?: boolean;
   onCancelInspection?: () => void;
   onResetInspection?: () => void;
+  showGroupsColumn?: boolean;
+  hideToolbarActions?: boolean;
+  disableVmNavigation?: boolean;
+  /** Row kebab menu: overview vs group detail VM list */
+  rowActionsVariant?: "overview" | "group";
 }
 
 type ColumnKey =
   | "name"
   | "labels"
+  | "groups"
   | "vCenterState"
   | "id"
   | "cpuUsage"
@@ -182,6 +193,7 @@ const isBackendSortableColumn = (
 const Columns: Record<ColumnKey, string> = {
   name: "Name",
   labels: "Labels",
+  groups: "Groups",
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
@@ -296,18 +308,27 @@ export const VMTable: React.FC<VMTableProps> = ({
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
+  onFetchAllVmIds,
   onRunDeepInspection,
   onExcludeFromReports,
   onIncludeInReports,
   onAddLabels,
   onManageLabels,
+  onCreateGroup,
+  onAddToGroup,
+  onRemoveFromGroup,
   showExcludedVMs = true,
   onShowExcludedVMsChange,
   hasInspectionResults = false,
   inspectionActive = false,
   onCancelInspection,
   onResetInspection,
+  showGroupsColumn = false,
+  hideToolbarActions = false,
+  disableVmNavigation = false,
+  rowActionsVariant = "overview",
 }) => {
+  const isGroupRowActions = rowActionsVariant === "group";
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Use props for pagination state (controlled by parent)
@@ -321,16 +342,18 @@ export const VMTable: React.FC<VMTableProps> = ({
 
   const [isColumnSelectOpen, setIsColumnSelectOpen] = useState(false);
 
-  const visibleColumns = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
-          ...MANDATORY_COLUMNS,
-        ]),
-      ),
-    [userSelectedColumns],
-  );
+  const visibleColumns = useMemo(() => {
+    const columns = Array.from(
+      new Set([
+        ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
+        ...MANDATORY_COLUMNS,
+      ]),
+    );
+    if (showGroupsColumn && !columns.includes("groups")) {
+      columns.push("groups");
+    }
+    return columns;
+  }, [userSelectedColumns, showGroupsColumn]);
 
   const isColumnVisible = useCallback(
     (key: ColumnKey): boolean => visibleColumns.includes(key),
@@ -376,6 +399,21 @@ export const VMTable: React.FC<VMTableProps> = ({
     vmByIdCacheRef.current = map;
     return map;
   }, [vms]);
+
+  const selectedVmIds = useMemo(() => Array.from(selectedVMs), [selectedVMs]);
+
+  const canRemoveSelectedFromGroup = useMemo(() => {
+    if (isGroupRowActions) {
+      return selectedVMs.size > 0;
+    }
+    for (const id of selectedVMs) {
+      const vm = vmById.get(id);
+      if (vm?.groups && vm.groups.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }, [isGroupRowActions, selectedVMs, vmById]);
 
   const { selectedExcludedIds, selectedIncludedIds } = useMemo(() => {
     const excluded: string[] = [];
@@ -487,6 +525,7 @@ export const VMTable: React.FC<VMTableProps> = ({
 
   // Bulk select dropdown state
   const [isBulkSelectOpen, setIsBulkSelectOpen] = useState(false);
+  const [isSelectingAll, setIsSelectingAll] = useState(false);
 
   // Row actions dropdown state
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
@@ -511,6 +550,9 @@ export const VMTable: React.FC<VMTableProps> = ({
   const columns = useMemo(
     () =>
       ALL_COLUMN_KEYS.filter((key) => {
+        if (key === "groups" && !showGroupsColumn) {
+          return false;
+        }
         if (key === "deepInspection") {
           return isColumnVisible(key) && hasInspectionResults;
         }
@@ -520,7 +562,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         label: Columns[key],
         sortable: isSortableColumn(key),
       })),
-    [isColumnVisible, hasInspectionResults],
+    [isColumnVisible, hasInspectionResults, showGroupsColumn],
   );
 
   // Use filter options from props (pre-fetched from parent)
@@ -822,6 +864,69 @@ export const VMTable: React.FC<VMTableProps> = ({
       return activeSortDirection === "asc" ? diff : -diff;
     });
   }, [vms, sortByColumnKey, activeSortDirection]);
+
+  const currentFilters = useMemo((): VMFilters => {
+    return {
+      statuses: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+      clusters: selectedClusters.length > 0 ? selectedClusters : undefined,
+      datacenters:
+        selectedDatacenters.length > 0 ? selectedDatacenters : undefined,
+      hasIssues: hasIssuesFilter || undefined,
+      noIssues: noIssuesFilter || undefined,
+      search: searchValue || undefined,
+      diskRange: diskRangeFilter || undefined,
+      memoryRange: memoryRangeFilter || undefined,
+      migrationReadiness:
+        selectedMigrationReadiness.length > 0
+          ? selectedMigrationReadiness
+          : undefined,
+      vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
+      concernLabels:
+        selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
+      concernCategories:
+        selectedConcernCategories.length > 0
+          ? selectedConcernCategories
+          : undefined,
+      showExcludedVMs,
+    };
+  }, [
+    selectedStatuses,
+    selectedClusters,
+    selectedDatacenters,
+    hasIssuesFilter,
+    noIssuesFilter,
+    searchValue,
+    diskRangeFilter,
+    memoryRangeFilter,
+    selectedMigrationReadiness,
+    selectedVmLabels,
+    selectedConcernLabels,
+    selectedConcernCategories,
+    showExcludedVMs,
+  ]);
+
+  const pageVmIds = useMemo(() => displayVMs.map((vm) => vm.id), [displayVMs]);
+
+  const allPageSelected =
+    pageVmIds.length > 0 && pageVmIds.every((id) => selectedVMs.has(id));
+
+  const totalMatchingCount = totalVMs ?? vms.length;
+
+  const handleSelectAllMatching = useCallback(async () => {
+    if (!onFetchAllVmIds || !onSelectionChange) {
+      return;
+    }
+    setIsSelectingAll(true);
+    try {
+      const ids = await onFetchAllVmIds(currentFilters);
+      onSelectionChange(new Set(ids));
+    } catch (err) {
+      console.error("Error selecting all VMs:", err);
+    } finally {
+      setIsSelectingAll(false);
+      setIsBulkSelectOpen(false);
+    }
+  }, [currentFilters, onFetchAllVmIds, onSelectionChange]);
 
   // Sort handler - triggers backend sort, tracks by column key
   const getSortParams = (
@@ -1211,7 +1316,7 @@ export const VMTable: React.FC<VMTableProps> = ({
       {/* Toolbar */}
       <Toolbar>
         <ToolbarContent>
-          {selectedVMs.size > 0 && (
+          {onSelectionChange && (
             <ToolbarItem>
               <Dropdown
                 isOpen={isBulkSelectOpen}
@@ -1220,13 +1325,13 @@ export const VMTable: React.FC<VMTableProps> = ({
                   <MenuToggle
                     ref={toggleRef}
                     onClick={() => setIsBulkSelectOpen(!isBulkSelectOpen)}
-                    variant="plainText"
+                    variant="default"
                     splitButtonItems={[
                       <Checkbox
-                        key="select-all"
-                        id="select-all-vms"
+                        key="select-page"
+                        id="select-page-vms"
                         isChecked={
-                          selectedVMs.size === displayVMs.length
+                          allPageSelected
                             ? true
                             : selectedVMs.size > 0
                               ? null
@@ -1234,41 +1339,46 @@ export const VMTable: React.FC<VMTableProps> = ({
                         }
                         onChange={(_event, checked) => {
                           if (checked) {
-                            onSelectionChange?.(
-                              new Set(displayVMs.map((vm) => vm.id)),
-                            );
+                            onSelectionChange(new Set(pageVmIds));
                           } else {
-                            onSelectionChange?.(new Set());
+                            onSelectionChange(new Set());
                           }
                         }}
-                        aria-label="Select all VMs"
+                        aria-label="Select VMs on this page"
                       />,
                     ]}
-                  >
-                    {selectedVMs.size} selected
-                  </MenuToggle>
+                  />
                 )}
               >
                 <DropdownList>
                   <DropdownItem
                     key="select-none"
                     onClick={() => {
-                      onSelectionChange?.(new Set());
+                      onSelectionChange(new Set());
                       setIsBulkSelectOpen(false);
                     }}
                   >
-                    Select none (0)
+                    Select none (0 items)
                   </DropdownItem>
                   <DropdownItem
                     key="select-page"
                     onClick={() => {
-                      onSelectionChange?.(
-                        new Set(displayVMs.map((vm) => vm.id)),
-                      );
+                      onSelectionChange(new Set(pageVmIds));
                       setIsBulkSelectOpen(false);
                     }}
                   >
-                    Select page ({displayVMs.length})
+                    Select page ({pageVmIds.length} items)
+                  </DropdownItem>
+                  <DropdownItem
+                    key="select-all"
+                    isDisabled={!onFetchAllVmIds || isSelectingAll}
+                    onClick={() => {
+                      void handleSelectAllMatching();
+                    }}
+                  >
+                    {isSelectingAll
+                      ? "Selecting all..."
+                      : `Select all (${totalMatchingCount} items)`}
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
@@ -1615,93 +1725,115 @@ export const VMTable: React.FC<VMTableProps> = ({
             </ToolbarItem>
           </ToolbarGroup>
 
-          <ToolbarGroup>
-            <ToolbarItem>
-              <Dropdown
-                isOpen={isActionsMenuOpen}
-                onSelect={() => setIsActionsMenuOpen(false)}
-                onOpenChange={setIsActionsMenuOpen}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                    isExpanded={isActionsMenuOpen}
-                    variant="secondary"
-                  >
-                    Actions
-                  </MenuToggle>
-                )}
-                popperProps={{ position: "right" }}
-              >
-                <DropdownList>
-                  {onExcludeFromReports && selectedIncludedIds.length > 0 && (
-                    <DropdownItem
-                      key="exclude-from-reports"
-                      onClick={() => setIsExcludeModalOpen(true)}
-                    >
-                      Exclude from reports
-                    </DropdownItem>
-                  )}
-                  {onIncludeInReports && selectedExcludedIds.length > 0 && (
-                    <DropdownItem
-                      key="include-in-reports"
-                      onClick={() => setIsIncludeModalOpen(true)}
-                    >
-                      Include in reports
-                    </DropdownItem>
-                  )}
-                  <DropdownItem
-                    key="add-label"
-                    isDisabled={selectedVMs.size === 0}
-                    onClick={() => onAddLabels?.(Array.from(selectedVMs))}
-                  >
-                    Add labels
-                  </DropdownItem>
-                  <DropdownItem
-                    key="manage-labels"
-                    onClick={() => onManageLabels?.()}
-                  >
-                    Manage all labels
-                  </DropdownItem>
-                  <DropdownItem key="create-group" isDisabled>
-                    Create group
-                  </DropdownItem>
-                  <DropdownItem key="add-to-group" isDisabled>
-                    Add to group
-                  </DropdownItem>
-                  <Divider key="separator" component="li" />
-                  <DropdownItem key="remove-from-group" isDisabled>
-                    Remove from group
-                  </DropdownItem>
-                  <DropdownItem
-                    key="reset-deep-inspection"
-                    isDisabled={selectedVMs.size === 0}
-                    onClick={() => onResetInspection?.()}
-                  >
-                    Reset deep inspection
-                  </DropdownItem>
-                </DropdownList>
-              </Dropdown>
-            </ToolbarItem>
-
-            <ToolbarItem>
-              <Tooltip content="Select VMs for deep inspection.">
-                <Button
-                  variant="primary"
-                  icon={<MagicIcon />}
-                  isDisabled={selectedVMs.size === 0}
-                  onClick={() => onRunDeepInspection?.()}
-                >
-                  Run deep inspection
-                </Button>
-              </Tooltip>
-            </ToolbarItem>
-            {inspectionActive && (
+          {!hideToolbarActions && (
+            <ToolbarGroup>
               <ToolbarItem>
-                <Spinner size="md" />
+                <Dropdown
+                  isOpen={isActionsMenuOpen}
+                  onSelect={() => setIsActionsMenuOpen(false)}
+                  onOpenChange={setIsActionsMenuOpen}
+                  toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                    <MenuToggle
+                      ref={toggleRef}
+                      onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                      isExpanded={isActionsMenuOpen}
+                      variant="secondary"
+                    >
+                      Actions
+                    </MenuToggle>
+                  )}
+                  popperProps={{ position: "right" }}
+                >
+                  <DropdownList>
+                    {onExcludeFromReports && selectedIncludedIds.length > 0 && (
+                      <DropdownItem
+                        key="exclude-from-reports"
+                        onClick={() => setIsExcludeModalOpen(true)}
+                      >
+                        Exclude from reports
+                      </DropdownItem>
+                    )}
+                    {onIncludeInReports && selectedExcludedIds.length > 0 && (
+                      <DropdownItem
+                        key="include-in-reports"
+                        onClick={() => setIsIncludeModalOpen(true)}
+                      >
+                        Include in reports
+                      </DropdownItem>
+                    )}
+                    <DropdownItem
+                      key="add-label"
+                      isDisabled={selectedVMs.size === 0}
+                      onClick={() => onAddLabels?.(Array.from(selectedVMs))}
+                    >
+                      Add labels
+                    </DropdownItem>
+                    <DropdownItem
+                      key="manage-labels"
+                      onClick={() => onManageLabels?.()}
+                    >
+                      Manage all labels
+                    </DropdownItem>
+                    {!isGroupRowActions && (
+                      <>
+                        <DropdownItem
+                          key="create-group"
+                          isDisabled={selectedVMs.size === 0 || !onCreateGroup}
+                          onClick={() => onCreateGroup?.(selectedVmIds)}
+                        >
+                          Create group
+                        </DropdownItem>
+                        <DropdownItem
+                          key="add-to-group"
+                          isDisabled={selectedVMs.size === 0 || !onAddToGroup}
+                          onClick={() => onAddToGroup?.(selectedVmIds)}
+                        >
+                          Add to group
+                        </DropdownItem>
+                      </>
+                    )}
+                    <Divider key="separator" component="li" />
+                    <DropdownItem
+                      key="remove-from-group"
+                      isDisabled={
+                        selectedVMs.size === 0 ||
+                        !canRemoveSelectedFromGroup ||
+                        !onRemoveFromGroup
+                      }
+                      onClick={() => onRemoveFromGroup?.(selectedVmIds)}
+                    >
+                      Remove from group
+                    </DropdownItem>
+                    <DropdownItem
+                      key="reset-deep-inspection"
+                      isDisabled={selectedVMs.size === 0}
+                      onClick={() => onResetInspection?.()}
+                    >
+                      Reset deep inspection
+                    </DropdownItem>
+                  </DropdownList>
+                </Dropdown>
               </ToolbarItem>
-            )}
-          </ToolbarGroup>
+
+              <ToolbarItem>
+                <Tooltip content="Select VMs for deep inspection.">
+                  <Button
+                    variant="primary"
+                    icon={<MagicIcon />}
+                    isDisabled={selectedVMs.size === 0}
+                    onClick={() => onRunDeepInspection?.()}
+                  >
+                    Run deep inspection
+                  </Button>
+                </Tooltip>
+              </ToolbarItem>
+              {inspectionActive && (
+                <ToolbarItem>
+                  <Spinner size="md" />
+                </ToolbarItem>
+              )}
+            </ToolbarGroup>
+          )}
         </ToolbarContent>
 
         <ToolbarContent>
@@ -1786,6 +1918,8 @@ export const VMTable: React.FC<VMTableProps> = ({
                     return hasInspectionResults ? 15 : 20;
                   case "labels":
                     return 15;
+                  case "groups":
+                    return 15;
                   case "vCenterState":
                     return hasInspectionResults ? 10 : 15;
                   case "migratable":
@@ -1840,17 +1974,23 @@ export const VMTable: React.FC<VMTableProps> = ({
                 </Th>
               );
             })}
-            <Th width={10} modifier="fitContent" screenReaderText="Actions" />
+            {!hideToolbarActions && (
+              <Th width={10} modifier="fitContent" screenReaderText="Actions" />
+            )}
           </Tr>
         </Thead>
         <Tbody>
           {loading ? (
             <Tr>
-              <Td colSpan={columns.length + 2}>Loading...</Td>
+              <Td colSpan={columns.length + (hideToolbarActions ? 1 : 2)}>
+                Loading...
+              </Td>
             </Tr>
           ) : vms.length === 0 ? (
             <Tr>
-              <Td colSpan={columns.length + 2}>No virtual machines found</Td>
+              <Td colSpan={columns.length + (hideToolbarActions ? 1 : 2)}>
+                No virtual machines found
+              </Td>
             </Tr>
           ) : (
             displayVMs.map((vm, rowIndex) => (
@@ -1871,7 +2011,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                 />
                 {isColumnVisible("name") && (
                   <Td dataLabel="Name" modifier="truncate">
-                    {onVMClick ? (
+                    {onVMClick && !disableVmNavigation ? (
                       <Tooltip content={vm.name}>
                         <Button
                           variant="link"
@@ -1914,6 +2054,21 @@ export const VMTable: React.FC<VMTableProps> = ({
                       }
                       return "–";
                     })()}
+                  </Td>
+                )}
+                {isColumnVisible("groups") && (
+                  <Td dataLabel="Groups">
+                    {vm.groups && vm.groups.length > 0 ? (
+                      <LabelGroup numLabels={3}>
+                        {vm.groups.map((groupName) => (
+                          <Label key={groupName} isCompact>
+                            {groupName}
+                          </Label>
+                        ))}
+                      </LabelGroup>
+                    ) : (
+                      "–"
+                    )}
                   </Td>
                 )}
                 {isColumnVisible("vCenterState") && (
@@ -1970,98 +2125,123 @@ export const VMTable: React.FC<VMTableProps> = ({
                     {renderInspectionStatus(vm)}
                   </Td>
                 )}
-                <Td isActionCell modifier="fitContent">
-                  <Dropdown
-                    isOpen={openActionMenuId === vm.id}
-                    onSelect={() => setOpenActionMenuId(null)}
-                    onOpenChange={(isOpen) =>
-                      setOpenActionMenuId(isOpen ? vm.id : null)
-                    }
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        variant="plain"
-                        onClick={() =>
-                          setOpenActionMenuId(
-                            openActionMenuId === vm.id ? null : vm.id,
-                          )
+                {!hideToolbarActions && (
+                  <Td isActionCell modifier="fitContent">
+                    <Dropdown
+                      isOpen={openActionMenuId === vm.id}
+                      onSelect={(_event, value) => {
+                        setOpenActionMenuId(null);
+                        if (value === "remove-from-group") {
+                          onRemoveFromGroup?.([vm.id]);
                         }
-                        isExpanded={openActionMenuId === vm.id}
-                      >
-                        <EllipsisVIcon />
-                      </MenuToggle>
-                    )}
-                    popperProps={{ position: "right" }}
-                  >
-                    <DropdownList>
-                      <DropdownItem key="remove-from-group" isDisabled>
-                        Remove from group
-                      </DropdownItem>
-                      {(() => {
-                        const vmState = vm.inspectionStatus?.state;
-                        if (vmState === "running" || vmState === "pending") {
+                      }}
+                      onOpenChange={(isOpen) =>
+                        setOpenActionMenuId(isOpen ? vm.id : null)
+                      }
+                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          variant="plain"
+                          onClick={() =>
+                            setOpenActionMenuId(
+                              openActionMenuId === vm.id ? null : vm.id,
+                            )
+                          }
+                          isExpanded={openActionMenuId === vm.id}
+                        >
+                          <EllipsisVIcon />
+                        </MenuToggle>
+                      )}
+                      popperProps={{ position: "right" }}
+                    >
+                      <DropdownList>
+                        {isGroupRowActions && (
+                          <DropdownItem
+                            key="remove-from-group"
+                            value="remove-from-group"
+                            isDisabled={!onRemoveFromGroup}
+                          >
+                            Remove from group
+                          </DropdownItem>
+                        )}
+                        {(() => {
+                          const vmState = vm.inspectionStatus?.state;
+                          if (vmState === "running" || vmState === "pending") {
+                            return (
+                              <DropdownItem
+                                key="cancel-vm-inspection"
+                                onClick={() => setIsCancelConfirmOpen(true)}
+                              >
+                                Cancel deep inspection
+                              </DropdownItem>
+                            );
+                          }
+                          if (
+                            vmState === "completed" ||
+                            vmState === "error" ||
+                            vmState === "canceled"
+                          ) {
+                            return (
+                              <DropdownItem
+                                key="rerun-inspection"
+                                onClick={() => onRunDeepInspection?.(vm.id)}
+                              >
+                                Re-run deep inspection
+                              </DropdownItem>
+                            );
+                          }
                           return (
                             <DropdownItem
-                              key="cancel-vm-inspection"
-                              onClick={() => setIsCancelConfirmOpen(true)}
-                            >
-                              Cancel deep inspection
-                            </DropdownItem>
-                          );
-                        }
-                        if (
-                          vmState === "completed" ||
-                          vmState === "error" ||
-                          vmState === "canceled"
-                        ) {
-                          return (
-                            <DropdownItem
-                              key="rerun-inspection"
+                              key="inspect"
                               onClick={() => onRunDeepInspection?.(vm.id)}
                             >
-                              Re-run deep inspection
+                              Run deep inspection
                             </DropdownItem>
                           );
-                        }
-                        return (
+                        })()}
+                        {vm.migrationExcluded ? (
                           <DropdownItem
-                            key="inspect"
-                            onClick={() => onRunDeepInspection?.(vm.id)}
+                            key="include-in-reports"
+                            onClick={() => onIncludeInReports?.([vm.id])}
                           >
-                            Run deep inspection
+                            Include in reports
                           </DropdownItem>
-                        );
-                      })()}
-                      {vm.migrationExcluded ? (
+                        ) : (
+                          <DropdownItem
+                            key="exclude-from-reports"
+                            onClick={() => onExcludeFromReports?.([vm.id])}
+                          >
+                            Exclude from reports
+                          </DropdownItem>
+                        )}
                         <DropdownItem
-                          key="include-in-reports"
-                          onClick={() => onIncludeInReports?.([vm.id])}
+                          key="edit-labels"
+                          onClick={() => onAddLabels?.([vm.id])}
                         >
-                          Include in reports
+                          Edit labels
                         </DropdownItem>
-                      ) : (
+                        {!isGroupRowActions && onAddToGroup && (
+                          <DropdownItem
+                            key="add-to-group"
+                            value="add-to-group"
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              onAddToGroup([vm.id]);
+                            }}
+                          >
+                            Add to group
+                          </DropdownItem>
+                        )}
                         <DropdownItem
-                          key="exclude-from-reports"
-                          onClick={() => onExcludeFromReports?.([vm.id])}
+                          key="details"
+                          onClick={() => onVMClick?.(vm.id)}
                         >
-                          Exclude from reports
+                          View details
                         </DropdownItem>
-                      )}
-                      <DropdownItem
-                        key="edit-labels"
-                        onClick={() => onAddLabels?.([vm.id])}
-                      >
-                        Edit labels
-                      </DropdownItem>
-                      <DropdownItem
-                        key="details"
-                        onClick={() => onVMClick?.(vm.id)}
-                      >
-                        View details
-                      </DropdownItem>
-                    </DropdownList>
-                  </Dropdown>
-                </Td>
+                      </DropdownList>
+                    </Dropdown>
+                  </Td>
+                )}
               </Tr>
             ))
           )}
