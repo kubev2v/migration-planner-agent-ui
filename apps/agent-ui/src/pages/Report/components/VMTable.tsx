@@ -67,7 +67,7 @@ const filterStyles = {
 
   filterGrid: css`
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     gap: 24px;
   `,
 
@@ -119,12 +119,15 @@ interface VMTableProps {
     datacenters: string[];
     concernLabels: string[];
     concernCategories: string[];
+    vmLabels: string[];
   };
   selectedVMs?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
+  onAddLabels?: (vmIds: string[]) => void;
+  onManageLabels?: () => void;
   showExcludedVMs?: boolean;
   onShowExcludedVMsChange?: (show: boolean) => void;
   hasInspectionResults?: boolean;
@@ -135,6 +138,7 @@ interface VMTableProps {
 
 type ColumnKey =
   | "name"
+  | "labels"
   | "vCenterState"
   | "id"
   | "cpuUsage"
@@ -177,6 +181,7 @@ const isBackendSortableColumn = (
 
 const Columns: Record<ColumnKey, string> = {
   name: "Name",
+  labels: "Labels",
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
@@ -198,7 +203,7 @@ const MANDATORY_COLUMNS: ColumnKey[] = ["name"];
 const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [...ALL_COLUMN_KEYS];
 
 const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-const VISIBLE_COLUMNS_VERSION = 4;
+const VISIBLE_COLUMNS_VERSION = 5;
 
 const statusLabels: Record<string, string> = {
   poweredOn: "Powered on",
@@ -287,12 +292,15 @@ export const VMTable: React.FC<VMTableProps> = ({
     datacenters: [],
     concernLabels: [],
     concernCategories: [],
+    vmLabels: [],
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
   onRunDeepInspection,
   onExcludeFromReports,
   onIncludeInReports,
+  onAddLabels,
+  onManageLabels,
   showExcludedVMs = true,
   onShowExcludedVMsChange,
   hasInspectionResults = false,
@@ -345,6 +353,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   // Filter modal state
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isConcernSelectOpen, setIsConcernSelectOpen] = useState(false);
+  const [isVmLabelSelectOpen, setIsVmLabelSelectOpen] = useState(false);
 
   // Cancel deep inspection confirmation
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
@@ -396,6 +405,9 @@ export const VMTable: React.FC<VMTableProps> = ({
   const [selectedMigrationReadiness, setSelectedMigrationReadiness] = useState<
     string[]
   >(initialFilters?.migrationReadiness || []);
+  const [selectedVmLabels, setSelectedVmLabels] = useState<string[]>(
+    initialFilters?.vmLabels || [],
+  );
   const [selectedConcernLabels, setSelectedConcernLabels] = useState<string[]>(
     initialFilters?.concernLabels || [],
   );
@@ -429,6 +441,9 @@ export const VMTable: React.FC<VMTableProps> = ({
   >([]);
   const [tempSelectedMigrationReadiness, setTempSelectedMigrationReadiness] =
     useState<string[]>([]);
+  const [tempSelectedVmLabels, setTempSelectedVmLabels] = useState<string[]>(
+    [],
+  );
   const [tempSelectedConcernLabels, setTempSelectedConcernLabels] = useState<
     string[]
   >([]);
@@ -460,6 +475,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     setSelectedClusters(initialFilters?.clusters || []);
     setSelectedDatacenters(initialFilters?.datacenters || []);
     setSelectedMigrationReadiness(initialFilters?.migrationReadiness || []);
+    setSelectedVmLabels(initialFilters?.vmLabels || []);
     setSelectedConcernLabels(initialFilters?.concernLabels || []);
     setSelectedConcernCategories(initialFilters?.concernCategories || []);
     setHasIssuesFilter(initialFilters?.hasIssues || false);
@@ -468,6 +484,9 @@ export const VMTable: React.FC<VMTableProps> = ({
   }, [initialFilters, searchParams]);
   // Selection state
   // const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
+
+  // Bulk select dropdown state
+  const [isBulkSelectOpen, setIsBulkSelectOpen] = useState(false);
 
   // Row actions dropdown state
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
@@ -509,6 +528,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   const availableDatacenters = availableFilterOptions.datacenters;
   const availableConcernLabels = availableFilterOptions.concernLabels;
   const availableConcernCategories = availableFilterOptions.concernCategories;
+  const availableVmLabels = availableFilterOptions.vmLabels;
 
   // Track if filter changes come from user interaction (not from URL sync)
   const isUserInteraction = useRef(false);
@@ -534,6 +554,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         selectedClusters.length > 0 ||
         selectedDatacenters.length > 0 ||
         selectedMigrationReadiness.length > 0 ||
+        selectedVmLabels.length > 0 ||
         selectedConcernLabels.length > 0 ||
         selectedConcernCategories.length > 0 ||
         hasIssuesFilter ||
@@ -561,6 +582,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         selectedMigrationReadiness.length > 0
           ? selectedMigrationReadiness
           : undefined,
+      vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -583,6 +605,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     selectedClusters,
     selectedDatacenters,
     selectedMigrationReadiness,
+    selectedVmLabels,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
@@ -705,6 +728,15 @@ export const VMTable: React.FC<VMTableProps> = ({
       });
     });
 
+    // VM label filters
+    selectedVmLabels.forEach((label) => {
+      filters.push({
+        category: "Label",
+        label,
+        key: `vm-label-${label}`,
+      });
+    });
+
     // Concern categories filters
     selectedConcernCategories.forEach((category) => {
       filters.push({
@@ -755,6 +787,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     selectedClusters,
     selectedDatacenters,
     selectedMigrationReadiness,
+    selectedVmLabels,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
@@ -824,6 +857,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     setSelectedClusters(tempSelectedClusters);
     setSelectedDatacenters(tempSelectedDatacenters);
     setSelectedMigrationReadiness(tempSelectedMigrationReadiness);
+    setSelectedVmLabels(tempSelectedVmLabels);
     setSelectedConcernLabels(tempSelectedConcernLabels);
     setSelectedConcernCategories(tempSelectedConcernCategories);
     setHasIssuesFilter(tempHasIssuesFilter);
@@ -833,6 +867,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     onPageChange?.(1, pageSize); // Reset to page 1
     setIsFilterModalOpen(false);
     setIsConcernSelectOpen(false);
+    setIsVmLabelSelectOpen(false);
     // Reset temporary filters after applying
     resetTempFilters();
   };
@@ -841,6 +876,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   const cancelFilterModal = () => {
     setIsFilterModalOpen(false);
     setIsConcernSelectOpen(false);
+    setIsVmLabelSelectOpen(false);
     // Reset temporary filters when canceling
     resetTempFilters();
   };
@@ -851,6 +887,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     setTempSelectedClusters([]);
     setTempSelectedDatacenters([]);
     setTempSelectedMigrationReadiness([]);
+    setTempSelectedVmLabels([]);
     setTempSelectedConcernLabels([]);
     setTempSelectedConcernCategories([]);
     setTempHasIssuesFilter(false);
@@ -868,6 +905,7 @@ export const VMTable: React.FC<VMTableProps> = ({
       setTempSelectedClusters(selectedClusters);
       setTempSelectedDatacenters(selectedDatacenters);
       setTempSelectedMigrationReadiness(selectedMigrationReadiness);
+      setTempSelectedVmLabels(selectedVmLabels);
       setTempSelectedConcernLabels(selectedConcernLabels);
       setTempSelectedConcernCategories(selectedConcernCategories);
       setTempHasIssuesFilter(hasIssuesFilter);
@@ -881,6 +919,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     selectedClusters,
     selectedDatacenters,
     selectedMigrationReadiness,
+    selectedVmLabels,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
@@ -927,6 +966,12 @@ export const VMTable: React.FC<VMTableProps> = ({
       prev.includes(concernLabel)
         ? prev.filter((c) => c !== concernLabel)
         : [...prev, concernLabel],
+    );
+  };
+
+  const toggleTempVmLabel = (label: string) => {
+    setTempSelectedVmLabels((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
     );
   };
 
@@ -981,6 +1026,9 @@ export const VMTable: React.FC<VMTableProps> = ({
       setSelectedMigrationReadiness(
         selectedMigrationReadiness.filter((s) => s !== status),
       );
+    } else if (filterKey.startsWith("vm-label-")) {
+      const label = filterKey.replace("vm-label-", "");
+      setSelectedVmLabels(selectedVmLabels.filter((l) => l !== label));
     } else if (filterKey.startsWith("concern-category-")) {
       const category = filterKey.replace("concern-category-", "");
       setSelectedConcernCategories(
@@ -1006,6 +1054,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     setSelectedClusters([]);
     setSelectedDatacenters([]);
     setSelectedMigrationReadiness([]);
+    setSelectedVmLabels([]);
     setSelectedConcernLabels([]);
     setSelectedConcernCategories([]);
     setHasIssuesFilter(false);
@@ -1164,34 +1213,65 @@ export const VMTable: React.FC<VMTableProps> = ({
         <ToolbarContent>
           {selectedVMs.size > 0 && (
             <ToolbarItem>
-              <MenuToggle
-                variant="plainText"
-                splitButtonItems={[
-                  <Checkbox
-                    key="select-all"
-                    id="select-all-vms"
-                    isChecked={
-                      selectedVMs.size === displayVMs.length
-                        ? true
-                        : selectedVMs.size > 0
-                          ? null
-                          : false
-                    }
-                    onChange={(_event, checked) => {
-                      if (checked) {
-                        onSelectionChange?.(
-                          new Set(displayVMs.map((vm) => vm.id)),
-                        );
-                      } else {
-                        onSelectionChange?.(new Set());
-                      }
-                    }}
-                    aria-label="Select all VMs"
-                  />,
-                ]}
+              <Dropdown
+                isOpen={isBulkSelectOpen}
+                onOpenChange={setIsBulkSelectOpen}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                  <MenuToggle
+                    ref={toggleRef}
+                    onClick={() => setIsBulkSelectOpen(!isBulkSelectOpen)}
+                    variant="plainText"
+                    splitButtonItems={[
+                      <Checkbox
+                        key="select-all"
+                        id="select-all-vms"
+                        isChecked={
+                          selectedVMs.size === displayVMs.length
+                            ? true
+                            : selectedVMs.size > 0
+                              ? null
+                              : false
+                        }
+                        onChange={(_event, checked) => {
+                          if (checked) {
+                            onSelectionChange?.(
+                              new Set(displayVMs.map((vm) => vm.id)),
+                            );
+                          } else {
+                            onSelectionChange?.(new Set());
+                          }
+                        }}
+                        aria-label="Select all VMs"
+                      />,
+                    ]}
+                  >
+                    {selectedVMs.size} selected
+                  </MenuToggle>
+                )}
               >
-                {selectedVMs.size} selected
-              </MenuToggle>
+                <DropdownList>
+                  <DropdownItem
+                    key="select-none"
+                    onClick={() => {
+                      onSelectionChange?.(new Set());
+                      setIsBulkSelectOpen(false);
+                    }}
+                  >
+                    Select none (0)
+                  </DropdownItem>
+                  <DropdownItem
+                    key="select-page"
+                    onClick={() => {
+                      onSelectionChange?.(
+                        new Set(displayVMs.map((vm) => vm.id)),
+                      );
+                      setIsBulkSelectOpen(false);
+                    }}
+                  >
+                    Select page ({displayVMs.length})
+                  </DropdownItem>
+                </DropdownList>
+              </Dropdown>
             </ToolbarItem>
           )}
 
@@ -1426,6 +1506,62 @@ export const VMTable: React.FC<VMTableProps> = ({
                         />
                       </div>
                     </div>
+
+                    {/* VM labels column */}
+                    <div>
+                      <h3 className={filterStyles.columnTitle}>Labels</h3>
+                      <div className={filterStyles.checkboxList}>
+                        {availableVmLabels.length > 0 ? (
+                          <Select
+                            isOpen={isVmLabelSelectOpen}
+                            selected={tempSelectedVmLabels}
+                            onSelect={(_event, selection) => {
+                              toggleTempVmLabel(selection as string);
+                            }}
+                            onOpenChange={setIsVmLabelSelectOpen}
+                            toggle={(
+                              toggleRef: React.Ref<MenuToggleElement>,
+                            ) => (
+                              <MenuToggle
+                                ref={toggleRef}
+                                onClick={() =>
+                                  setIsVmLabelSelectOpen(!isVmLabelSelectOpen)
+                                }
+                                isExpanded={isVmLabelSelectOpen}
+                                className={filterStyles.concernSelect}
+                              >
+                                {tempSelectedVmLabels.length === 0
+                                  ? "Select labels..."
+                                  : `${tempSelectedVmLabels.length} selected`}
+                              </MenuToggle>
+                            )}
+                            isScrollable
+                          >
+                            <SelectList>
+                              {availableVmLabels.map((label) => (
+                                <SelectOption
+                                  key={label}
+                                  value={label}
+                                  hasCheckbox
+                                  isSelected={tempSelectedVmLabels.includes(
+                                    label,
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  {label}
+                                </SelectOption>
+                              ))}
+                            </SelectList>
+                          </Select>
+                        ) : (
+                          <Content component="small">
+                            No labels available
+                          </Content>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Footer with buttons */}
@@ -1491,7 +1627,6 @@ export const VMTable: React.FC<VMTableProps> = ({
                     onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
                     isExpanded={isActionsMenuOpen}
                     variant="secondary"
-                    isDisabled={selectedVMs.size === 0}
                   >
                     Actions
                   </MenuToggle>
@@ -1515,18 +1650,32 @@ export const VMTable: React.FC<VMTableProps> = ({
                       Include in reports
                     </DropdownItem>
                   )}
-                  <DropdownItem key="add-label">Add label</DropdownItem>
-                  <DropdownItem key="manage-labels">Manage labels</DropdownItem>
-                  <DropdownItem key="create-group">Create group</DropdownItem>
+                  <DropdownItem
+                    key="add-label"
+                    isDisabled={selectedVMs.size === 0}
+                    onClick={() => onAddLabels?.(Array.from(selectedVMs))}
+                  >
+                    Add labels
+                  </DropdownItem>
+                  <DropdownItem
+                    key="manage-labels"
+                    onClick={() => onManageLabels?.()}
+                  >
+                    Manage all labels
+                  </DropdownItem>
+                  <DropdownItem key="create-group" isDisabled>
+                    Create group
+                  </DropdownItem>
                   <DropdownItem key="add-to-group" isDisabled>
                     Add to group
                   </DropdownItem>
                   <Divider key="separator" component="li" />
-                  <DropdownItem key="remove-from-group">
+                  <DropdownItem key="remove-from-group" isDisabled>
                     Remove from group
                   </DropdownItem>
                   <DropdownItem
                     key="reset-deep-inspection"
+                    isDisabled={selectedVMs.size === 0}
                     onClick={() => onResetInspection?.()}
                   >
                     Reset deep inspection
@@ -1635,6 +1784,8 @@ export const VMTable: React.FC<VMTableProps> = ({
                 switch (key) {
                   case "name":
                     return hasInspectionResults ? 15 : 20;
+                  case "labels":
+                    return 15;
                   case "vCenterState":
                     return hasInspectionResults ? 10 : 15;
                   case "migratable":
@@ -1667,6 +1818,9 @@ export const VMTable: React.FC<VMTableProps> = ({
               const getModifier = (key: ColumnKey) => {
                 if (key === "issues" || key === "migratable") {
                   return "fitContent";
+                }
+                if (key === "labels") {
+                  return "wrap";
                 }
                 return "nowrap";
               };
@@ -1739,6 +1893,27 @@ export const VMTable: React.FC<VMTableProps> = ({
                         </Label>
                       </div>
                     )}
+                  </Td>
+                )}
+                {isColumnVisible("labels") && (
+                  <Td dataLabel="Labels">
+                    {(() => {
+                      const vmLabels: string[] | undefined = (
+                        vm as VirtualMachine & { labels?: string[] }
+                      ).labels;
+                      if (vmLabels && vmLabels.length > 0) {
+                        return (
+                          <LabelGroup numLabels={5}>
+                            {vmLabels.map((lbl: string) => (
+                              <Label key={lbl} isCompact>
+                                {lbl}
+                              </Label>
+                            ))}
+                          </LabelGroup>
+                        );
+                      }
+                      return "–";
+                    })()}
                   </Td>
                 )}
                 {isColumnVisible("vCenterState") && (
@@ -1819,6 +1994,9 @@ export const VMTable: React.FC<VMTableProps> = ({
                     popperProps={{ position: "right" }}
                   >
                     <DropdownList>
+                      <DropdownItem key="remove-from-group" isDisabled>
+                        Remove from group
+                      </DropdownItem>
                       {(() => {
                         const vmState = vm.inspectionStatus?.state;
                         if (vmState === "running" || vmState === "pending") {
@@ -1854,6 +2032,27 @@ export const VMTable: React.FC<VMTableProps> = ({
                           </DropdownItem>
                         );
                       })()}
+                      {vm.migrationExcluded ? (
+                        <DropdownItem
+                          key="include-in-reports"
+                          onClick={() => onIncludeInReports?.([vm.id])}
+                        >
+                          Include in reports
+                        </DropdownItem>
+                      ) : (
+                        <DropdownItem
+                          key="exclude-from-reports"
+                          onClick={() => onExcludeFromReports?.([vm.id])}
+                        >
+                          Exclude from reports
+                        </DropdownItem>
+                      )}
+                      <DropdownItem
+                        key="edit-labels"
+                        onClick={() => onAddLabels?.([vm.id])}
+                      >
+                        Edit labels
+                      </DropdownItem>
                       <DropdownItem
                         key="details"
                         onClick={() => onVMClick?.(vm.id)}
