@@ -332,14 +332,14 @@ export const ReportContainer: React.FC = () => {
           page: vmsPage,
           pageSize: vmsPageSize,
         }),
-        agentApi.getVMLabels().catch(() => ({ labels: [] as string[] })),
+        agentApi.getVMLabels().catch(() => null),
       ]);
       if (vmsRefreshIdRef.current === reqId) {
         setVmsList(response.vms || []);
         setVmsTotalCount(response.total || 0);
         setAvailableFilterOptions((prev) => ({
           ...prev,
-          vmLabels: labelsResponse.labels || [],
+          vmLabels: labelsResponse?.labels ?? prev.vmLabels,
         }));
       }
     } catch (err) {

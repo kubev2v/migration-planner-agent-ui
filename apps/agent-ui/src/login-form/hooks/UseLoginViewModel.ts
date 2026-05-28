@@ -6,7 +6,6 @@ import type {
 } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTitle } from "react-use";
 import { newAbortSignal } from "../../common/AbortSignal";
 import type { ApiError } from "../../common/components/index";
 import { Symbols } from "../../main/Symbols";
@@ -32,7 +31,6 @@ interface UseLoginViewModelProps {
 export const useLoginViewModel = (
   props?: UseLoginViewModelProps,
 ): LoginViewModelInterface => {
-  useTitle("Login - Migration Discovery VM");
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const navigate = useNavigate();
   const refetchAgentStatus = props?.refetchAgentStatus;

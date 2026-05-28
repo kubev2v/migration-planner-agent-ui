@@ -161,6 +161,7 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       const trimmed = inputValue.trim();
       if (trimmed && !selected.includes(trimmed)) {
         setSelected((prev) => [...prev, trimmed]);
+        setRemovedLabels((prev) => prev.filter((l) => l !== trimmed));
       }
       setInputValue("");
       resetActiveAndFocusedItem();
@@ -168,9 +169,12 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       return;
     }
 
-    setSelected((prev) =>
-      prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value],
-    );
+    if (selected.includes(value)) {
+      setSelected((prev) => prev.filter((s) => s !== value));
+    } else {
+      setSelected((prev) => [...prev, value]);
+      setRemovedLabels((prev) => prev.filter((l) => l !== value));
+    }
     textInputRef.current?.focus();
   };
 
@@ -268,6 +272,7 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
 
   const removeCurrentLabel = (label: string) => {
     setRemovedLabels((prev) => [...prev, label]);
+    setSelected((prev) => prev.filter((s) => s !== label));
   };
 
   const hasChanges = selected.length > 0 || removedLabels.length > 0;
