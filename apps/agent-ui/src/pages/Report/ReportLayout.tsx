@@ -15,6 +15,7 @@ import {
 } from "@patternfly/react-core";
 import { BarsIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 const NAV_ITEMS = [
@@ -33,6 +34,12 @@ export const ReportLayout: React.FC = () => {
   const activeItem = NAV_ITEMS.find((item) =>
     location.pathname.startsWith(item.path),
   );
+
+  useEffect(() => {
+    document.title = activeItem
+      ? `${activeItem.label} | Migration Advisor`
+      : "Migration Advisor";
+  }, [activeItem]);
 
   return (
     <Page

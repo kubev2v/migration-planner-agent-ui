@@ -325,15 +325,22 @@ export const ReportContainer: React.FC = () => {
     try {
       const effectiveFilters = { ...initialVMFilters, showExcludedVMs };
       const byExpression = filtersToByExpression(effectiveFilters);
-      const response = await agentApi.getVMs({
-        byExpression,
-        sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
-        page: vmsPage,
-        pageSize: vmsPageSize,
-      });
+      const [response, labelsResponse] = await Promise.all([
+        agentApi.getVMs({
+          byExpression,
+          sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
+          page: vmsPage,
+          pageSize: vmsPageSize,
+        }),
+        agentApi.getVMLabels().catch(() => ({ labels: [] as string[] })),
+      ]);
       if (vmsRefreshIdRef.current === reqId) {
         setVmsList(response.vms || []);
         setVmsTotalCount(response.total || 0);
+        setAvailableFilterOptions((prev) => ({
+          ...prev,
+          vmLabels: labelsResponse.labels || [],
+        }));
       }
     } catch (err) {
       console.error("Error refreshing VMs:", err);

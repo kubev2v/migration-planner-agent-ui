@@ -148,6 +148,20 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     }
   }, [isAddLabelsModalOpen, fetchAvailableLabels]);
 
+  const currentVMLabels = useMemo(() => {
+    if (addLabelsVMIds.length === 0) return [];
+    const labelSet = new Set<string>();
+    for (const vm of vms) {
+      if (addLabelsVMIds.includes(vm.id)) {
+        const vmLabels = (vm as VirtualMachine & { labels?: string[] }).labels;
+        if (vmLabels) {
+          for (const l of vmLabels) labelSet.add(l);
+        }
+      }
+    }
+    return [...labelSet].sort();
+  }, [addLabelsVMIds, vms]);
+
   const handleAddLabels = useCallback(
     (vmIds: string[]) => {
       setAddLabelsVMIds(vmIds);
@@ -167,23 +181,34 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [fetchAvailableLabels, onRefreshVMs]);
 
   const handleSubmitLabels = useCallback(
-    async (labels: string[]) => {
+    async (labelsToAdd: string[], labelsToRemove: string[]) => {
       const vmIds = addLabelsVMIds;
 
-      await Promise.all(
-        labels.map((label) =>
-          fetch(`${basePath}/vms/labels/${encodeURIComponent(label)}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ add: vmIds }),
-          }).then((res) => {
-            if (!res.ok) {
-              throw new Error(`Failed to add label "${label}": ${res.status}`);
-            }
-          }),
-        ),
+      const addPromises = labelsToAdd.map((label) =>
+        fetch(`${basePath}/vms/labels/${encodeURIComponent(label)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ add: vmIds }),
+        }).then((res) => {
+          if (!res.ok) {
+            throw new Error(`Failed to add label "${label}": ${res.status}`);
+          }
+        }),
       );
 
+      const removePromises = labelsToRemove.map((label) =>
+        fetch(`${basePath}/vms/labels/${encodeURIComponent(label)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ remove: vmIds }),
+        }).then((res) => {
+          if (!res.ok) {
+            throw new Error(`Failed to remove label "${label}": ${res.status}`);
+          }
+        }),
+      );
+
+      await Promise.all([...addPromises, ...removePromises]);
       await refreshLabels();
     },
     [addLabelsVMIds, basePath, refreshLabels],
@@ -376,6 +401,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onSubmit={handleSubmitLabels}
         selectedVMCount={addLabelsVMIds.length}
         existingLabels={availableLabels}
+        currentVMLabels={currentVMLabels}
       />
       <ManageLabelsModal
         isOpen={isManageLabelsModalOpen}

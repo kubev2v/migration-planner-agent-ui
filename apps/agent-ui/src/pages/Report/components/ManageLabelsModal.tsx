@@ -271,10 +271,6 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
             &quot;Add Labels&quot; action on your virtual machines.
           </Content>
 
-          <div style={{ marginBottom: "8px" }}>
-            <strong>Labels</strong>
-          </div>
-
           {loading ? (
             <Content component="p">Loading labels...</Content>
           ) : labels.length === 0 ? (

@@ -1,5 +1,6 @@
 import { AgentModeRequestModeEnum } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
+import { useEffect } from "react";
 import { useAgentStatus } from "../common/AgentStatusContext";
 import { useLoginViewModel } from "../login-form/hooks/UseLoginViewModel";
 import { LoginCard } from "../login-form/LoginCard";
@@ -7,6 +8,10 @@ import { LoginCard } from "../login-form/LoginCard";
 const AgentLoginPage: React.FC = () => {
   const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
   const vm = useLoginViewModel({ refetchAgentStatus });
+
+  useEffect(() => {
+    document.title = "Migration Advisor";
+  }, []);
   return (
     <LoginCard
       version={vm.version}

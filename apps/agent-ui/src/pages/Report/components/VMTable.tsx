@@ -1655,7 +1655,7 @@ export const VMTable: React.FC<VMTableProps> = ({
                     isDisabled={selectedVMs.size === 0}
                     onClick={() => onAddLabels?.(Array.from(selectedVMs))}
                   >
-                    Add labels
+                    Edit labels
                   </DropdownItem>
                   <DropdownItem
                     key="manage-labels"
