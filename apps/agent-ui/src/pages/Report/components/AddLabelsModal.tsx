@@ -96,7 +96,6 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
         newOptions = filtered.map((label) => ({
           value: label,
           children: label,
-          hasCheckbox: true,
           isSelected: selected.includes(label),
         }));
 
@@ -117,7 +116,6 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       newOptions = existingLabels.map((label) => ({
         value: label,
         children: label,
-        hasCheckbox: true,
         isSelected: selected.includes(label),
       }));
     }

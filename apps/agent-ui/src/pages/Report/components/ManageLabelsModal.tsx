@@ -102,39 +102,13 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
       }
       const labelsData = await labelsResponse.json();
       const labelNames: string[] = labelsData.labels || [];
-
-      const labelCounts: Record<string, number> = {};
-      for (const name of labelNames) {
-        labelCounts[name] = 0;
-      }
-
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const vmsResponse = await fetch(
-          `${basePath}/vms?page=${page}&pageSize=1000`,
-        );
-        if (!vmsResponse.ok) break;
-        const vmsData = await vmsResponse.json();
-        const vms: { labels?: string[] }[] = vmsData.vms || [];
-
-        for (const vm of vms) {
-          if (vm.labels) {
-            for (const lbl of vm.labels) {
-              if (lbl in labelCounts) {
-                labelCounts[lbl]++;
-              }
-            }
-          }
-        }
-
-        const total = vmsData.total || 0;
-        hasMore = page * 1000 < total;
-        page++;
-      }
+      const labelCounts: number[] = labelsData.counts || [];
 
       setLabels(
-        labelNames.map((name) => ({ name, vmCount: labelCounts[name] || 0 })),
+        labelNames.map((name, i) => ({
+          name,
+          vmCount: labelCounts[i] || 0,
+        })),
       );
     } catch (err) {
       console.error("Error fetching labels:", err);
@@ -159,8 +133,6 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     setLabels((prev) => prev.filter((l) => l.name !== labelName));
     setDeletingLabel(null);
     pendingDeletes.current.push(labelName);
-
-    // Remove any pending renames involving this label
     pendingRenames.current = pendingRenames.current.filter(
       (r) => r.oldName !== labelName && r.newName !== labelName,
     );
@@ -169,6 +141,11 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
   const handleRenameLabel = (oldName: string, newName: string) => {
     const trimmed = newName.trim();
     if (!trimmed || trimmed === oldName) {
+      setEditingLabel(null);
+      return;
+    }
+
+    if (labels.some((l) => l.name === trimmed && l.name !== oldName)) {
       setEditingLabel(null);
       return;
     }
@@ -188,17 +165,25 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     }
   };
 
+  const startEditing = (labelName: string) => {
+    setEditingLabel(labelName);
+    setEditValue(labelName);
+  };
+
+  const cancelEditing = () => {
+    setEditingLabel(null);
+    setEditValue("");
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Process deletes
       for (const labelName of pendingDeletes.current) {
         await fetch(`${basePath}/vms/labels/${encodeURIComponent(labelName)}`, {
           method: "DELETE",
         });
       }
 
-      // Process renames (get VMs with old label, add new label, delete old)
       for (const { oldName, newName } of pendingRenames.current) {
         const vmIds: string[] = [];
         let page = 1;
@@ -226,11 +211,11 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ add: vmIds }),
           });
-
-          await fetch(`${basePath}/vms/labels/${encodeURIComponent(oldName)}`, {
-            method: "DELETE",
-          });
         }
+
+        await fetch(`${basePath}/vms/labels/${encodeURIComponent(oldName)}`, {
+          method: "DELETE",
+        });
       }
 
       pendingDeletes.current = [];
@@ -242,16 +227,6 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const startEditing = (labelName: string) => {
-    setEditingLabel(labelName);
-    setEditValue(labelName);
-  };
-
-  const cancelEditing = () => {
-    setEditingLabel(null);
-    setEditValue("");
   };
 
   return (
@@ -267,17 +242,13 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
         <ModalBody id="manage-labels-body">
           <Content component="p" style={{ marginBottom: "16px" }}>
             View, rename, or delete labels. Renaming or deleting a label updates
-            every virtual machine that uses it. To create a new label, use the
-            &quot;Add Labels&quot; action on your virtual machines.
+            every virtual machine that uses it.
           </Content>
 
           {loading ? (
             <Content component="p">Loading labels...</Content>
           ) : labels.length === 0 ? (
-            <Content component="p">
-              No labels created. Create one by adding a label to one or more
-              virtual machines.
-            </Content>
+            <Content component="p">No labels found.</Content>
           ) : (
             <div className={styles.labelList}>
               <div className={styles.labelHeader}>
@@ -353,23 +324,17 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
           )}
         </ModalBody>
         <ModalFooter>
-          <Flex gap={{ default: "gapMd" }}>
-            <FlexItem>
-              <Button
-                variant="primary"
-                onClick={handleSave}
-                isLoading={isSaving}
-                isDisabled={isSaving}
-              >
-                Save
-              </Button>
-            </FlexItem>
-            <FlexItem>
-              <Button variant="link" onClick={onClose} isDisabled={isSaving}>
-                Cancel
-              </Button>
-            </FlexItem>
-          </Flex>
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            isLoading={isSaving}
+            isDisabled={isSaving}
+          >
+            Save
+          </Button>
+          <Button variant="link" onClick={onClose} isDisabled={isSaving}>
+            Cancel
+          </Button>
         </ModalFooter>
       </Modal>
 
@@ -384,8 +349,8 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
         <ModalHeader title="Delete label?" labelId="delete-label-title" />
         <ModalBody id="delete-label-body">
           <Content component="p">
-            Remove label <strong>{deletingLabel}</strong> from the catalog and
-            from every virtual machine that uses it?
+            Remove label <strong>{deletingLabel}</strong> from every virtual
+            machine that uses it?
           </Content>
         </ModalBody>
         <ModalFooter>
