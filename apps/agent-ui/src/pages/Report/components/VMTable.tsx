@@ -140,6 +140,10 @@ interface VMTableProps {
   onCancelInspection?: () => void;
   onResetInspection?: () => void;
   showGroupsColumn?: boolean;
+  /** How to render the groups column (overview uses plain comma-separated text). */
+  groupsDisplay?: "labels" | "text";
+  /** Reduced column set for modals and narrow layouts. */
+  columnPreset?: "default" | "compact";
   hideToolbarActions?: boolean;
   disableVmNavigation?: boolean;
   /** Row kebab menu: overview vs group detail VM list */
@@ -213,6 +217,14 @@ const ALL_COLUMN_KEYS = Object.keys(Columns) as ColumnKey[];
 const MANDATORY_COLUMNS: ColumnKey[] = ["name"];
 
 const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [...ALL_COLUMN_KEYS];
+
+const COMPACT_COLUMN_PRESET: ColumnKey[] = [
+  "name",
+  "labels",
+  "vCenterState",
+  "migratable",
+  "cluster",
+];
 
 const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
 const VISIBLE_COLUMNS_VERSION = 5;
@@ -324,6 +336,8 @@ export const VMTable: React.FC<VMTableProps> = ({
   onCancelInspection,
   onResetInspection,
   showGroupsColumn = false,
+  groupsDisplay = "labels",
+  columnPreset = "default",
   hideToolbarActions = false,
   disableVmNavigation = false,
   rowActionsVariant = "overview",
@@ -343,17 +357,22 @@ export const VMTable: React.FC<VMTableProps> = ({
   const [isColumnSelectOpen, setIsColumnSelectOpen] = useState(false);
 
   const visibleColumns = useMemo(() => {
-    const columns = Array.from(
-      new Set([
-        ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
-        ...MANDATORY_COLUMNS,
-      ]),
-    );
-    if (showGroupsColumn && !columns.includes("groups")) {
-      columns.push("groups");
+    const baseColumns =
+      columnPreset === "compact"
+        ? [...COMPACT_COLUMN_PRESET]
+        : Array.from(
+            new Set([
+              ...userSelectedColumns.filter((key) =>
+                ALL_COLUMN_KEYS.includes(key),
+              ),
+              ...MANDATORY_COLUMNS,
+            ]),
+          );
+    if (showGroupsColumn && !baseColumns.includes("groups")) {
+      baseColumns.push("groups");
     }
-    return columns;
-  }, [userSelectedColumns, showGroupsColumn]);
+    return baseColumns;
+  }, [userSelectedColumns, showGroupsColumn, columnPreset]);
 
   const isColumnVisible = useCallback(
     (key: ColumnKey): boolean => visibleColumns.includes(key),
@@ -1688,41 +1707,43 @@ export const VMTable: React.FC<VMTableProps> = ({
             </ToolbarItem>
 
             {/* Manage Columns */}
-            <ToolbarItem>
-              <Select
-                role="menu"
-                isOpen={isColumnSelectOpen}
-                onSelect={(_event, selection) => {
-                  toggleColumn(selection as ColumnKey);
-                }}
-                onOpenChange={setIsColumnSelectOpen}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    onClick={() => setIsColumnSelectOpen((prev) => !prev)}
-                    isExpanded={isColumnSelectOpen}
-                  >
-                    <ColumnsIcon /> Manage columns
-                  </MenuToggle>
-                )}
-              >
-                <SelectList>
-                  {ALL_COLUMN_KEYS.filter(
-                    (key) => key !== "deepInspection" || hasInspectionResults,
-                  ).map((key) => (
-                    <SelectOption
-                      key={key}
-                      value={key}
-                      hasCheckbox
-                      isSelected={isColumnVisible(key)}
-                      isDisabled={MANDATORY_COLUMNS.includes(key)}
+            {columnPreset === "default" && (
+              <ToolbarItem>
+                <Select
+                  role="menu"
+                  isOpen={isColumnSelectOpen}
+                  onSelect={(_event, selection) => {
+                    toggleColumn(selection as ColumnKey);
+                  }}
+                  onOpenChange={setIsColumnSelectOpen}
+                  toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                    <MenuToggle
+                      ref={toggleRef}
+                      onClick={() => setIsColumnSelectOpen((prev) => !prev)}
+                      isExpanded={isColumnSelectOpen}
                     >
-                      {Columns[key]}
-                    </SelectOption>
-                  ))}
-                </SelectList>
-              </Select>
-            </ToolbarItem>
+                      <ColumnsIcon /> Manage columns
+                    </MenuToggle>
+                  )}
+                >
+                  <SelectList>
+                    {ALL_COLUMN_KEYS.filter(
+                      (key) => key !== "deepInspection" || hasInspectionResults,
+                    ).map((key) => (
+                      <SelectOption
+                        key={key}
+                        value={key}
+                        hasCheckbox
+                        isSelected={isColumnVisible(key)}
+                        isDisabled={MANDATORY_COLUMNS.includes(key)}
+                      >
+                        {Columns[key]}
+                      </SelectOption>
+                    ))}
+                  </SelectList>
+                </Select>
+              </ToolbarItem>
+            )}
           </ToolbarGroup>
 
           {!hideToolbarActions && (
@@ -2059,13 +2080,17 @@ export const VMTable: React.FC<VMTableProps> = ({
                 {isColumnVisible("groups") && (
                   <Td dataLabel="Groups">
                     {vm.groups && vm.groups.length > 0 ? (
-                      <LabelGroup numLabels={3}>
-                        {vm.groups.map((groupName) => (
-                          <Label key={groupName} isCompact>
-                            {groupName}
-                          </Label>
-                        ))}
-                      </LabelGroup>
+                      groupsDisplay === "text" ? (
+                        vm.groups.join(", ")
+                      ) : (
+                        <LabelGroup numLabels={3}>
+                          {vm.groups.map((groupName) => (
+                            <Label key={groupName} isCompact>
+                              {groupName}
+                            </Label>
+                          ))}
+                        </LabelGroup>
+                      )
                     ) : (
                       "–"
                     )}

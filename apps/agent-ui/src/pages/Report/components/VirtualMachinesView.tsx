@@ -529,6 +529,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
         rowActionsVariant={effectiveRowActionsVariant}
         showGroupsColumn={showGroupsColumn}
+        groupsDisplay={showGroupsColumn ? "text" : "labels"}
         showExcludedVMs={showExcludedVMs}
         onShowExcludedVMsChange={onShowExcludedVMsChange}
         hasInspectionResults={hasInspectionResults || inspectionActive}

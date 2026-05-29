@@ -17,13 +17,7 @@ import {
   Spinner,
 } from "@patternfly/react-core";
 import type React from "react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
 import { buildGroupFilterAfterRemovingMembers } from "./groupFilters";
 import { fetchAllGroups } from "./groupList";
@@ -73,29 +67,17 @@ async function fetchAllGroupMemberIds(
   return memberIds;
 }
 
-function buildRemovalMessage(vmNames: string[], groupName: string): ReactNode {
-  if (vmNames.length === 1) {
-    return (
-      <>
-        Removing <strong>{vmNames[0]}</strong> from <strong>{groupName}</strong>{" "}
-        will remove it from the group&apos;s assessment report.
-      </>
-    );
+function buildRemovalDescription(vmCount: number): string {
+  if (vmCount === 1) {
+    return "Removing 1 selected virtual machine from the selected group will remove it from the group's assessment report.";
   }
-
-  return (
-    <>
-      Removing <strong>{vmNames.length} selected virtual machines</strong> from{" "}
-      <strong>{groupName}</strong> will remove them from the group&apos;s
-      assessment report.
-    </>
-  );
+  return `Removing ${vmCount} selected virtual machines from the selected group will remove them from the group's assessment report.`;
 }
 
 export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
   isOpen,
   vmIds,
-  vmNames,
+  vmNames: _vmNames,
   fixedGroupId,
   fixedGroupName,
   groupNames = [],
@@ -115,8 +97,6 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
     () => groupOptions.find((group) => group.id === resolvedGroupId),
     [groupOptions, resolvedGroupId],
   );
-  const displayGroupName = fixedGroupName ?? selectedGroup?.name;
-
   const needsGroupPicker = !fixedGroupId && groupOptions.length > 1;
 
   const loadGroups = useCallback(async () => {
@@ -236,6 +216,9 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
         labelId="remove-from-group-title"
       />
       <ModalBody>
+        <Content component="p" style={{ marginBottom: "24px" }}>
+          {buildRemovalDescription(vmIds.length)}
+        </Content>
         {loading ? (
           <Spinner size="lg" />
         ) : groupOptions.length === 0 ? (
@@ -243,51 +226,44 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
             The selected virtual machines are not in any group.
           </Content>
         ) : (
-          <>
-            {needsGroupPicker && (
-              <Form style={{ marginBottom: "24px" }}>
-                <FormGroup
-                  label="Group"
-                  isRequired
-                  fieldId="remove-from-group-select"
+          needsGroupPicker && (
+            <Form>
+              <FormGroup
+                label="Group"
+                isRequired
+                fieldId="remove-from-group-select"
+              >
+                <Select
+                  id="remove-from-group-select"
+                  isOpen={isGroupSelectOpen}
+                  selected={selectedGroupId}
+                  onSelect={handleGroupSelect}
+                  onOpenChange={setIsGroupSelectOpen}
+                  isScrollable
+                  maxMenuHeight="280px"
+                  toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                    <MenuToggle
+                      ref={toggleRef}
+                      onClick={() => setIsGroupSelectOpen((open) => !open)}
+                      isExpanded={isGroupSelectOpen}
+                      style={{ width: "100%" }}
+                    >
+                      {selectedGroup?.name ?? "Select a group"}
+                    </MenuToggle>
+                  )}
+                  shouldFocusToggleOnSelect
                 >
-                  <Select
-                    id="remove-from-group-select"
-                    isOpen={isGroupSelectOpen}
-                    selected={selectedGroupId}
-                    onSelect={handleGroupSelect}
-                    onOpenChange={setIsGroupSelectOpen}
-                    isScrollable
-                    maxMenuHeight="280px"
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        onClick={() => setIsGroupSelectOpen((open) => !open)}
-                        isExpanded={isGroupSelectOpen}
-                        style={{ width: "100%" }}
-                      >
-                        {selectedGroup?.name ?? "Select a group"}
-                      </MenuToggle>
-                    )}
-                    shouldFocusToggleOnSelect
-                  >
-                    <SelectList>
-                      {groupOptions.map((group) => (
-                        <SelectOption key={group.id} value={group.id}>
-                          {group.name}
-                        </SelectOption>
-                      ))}
-                    </SelectList>
-                  </Select>
-                </FormGroup>
-              </Form>
-            )}
-            {displayGroupName && (
-              <Content component="p">
-                {buildRemovalMessage(vmNames, displayGroupName)}
-              </Content>
-            )}
-          </>
+                  <SelectList>
+                    {groupOptions.map((group) => (
+                      <SelectOption key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectOption>
+                    ))}
+                  </SelectList>
+                </Select>
+              </FormGroup>
+            </Form>
+          )
         )}
         {error && (
           <Content

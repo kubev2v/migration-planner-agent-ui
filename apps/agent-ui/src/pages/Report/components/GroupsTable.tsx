@@ -1,10 +1,16 @@
 import { css } from "@emotion/css";
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import {
+  Bullseye,
   Button,
   Dropdown,
   DropdownItem,
   DropdownList,
+  EmptyState,
+  EmptyStateActions,
+  EmptyStateBody,
+  EmptyStateFooter,
+  EmptyStateVariant,
   MenuToggle,
   type MenuToggleElement,
   Pagination,
@@ -18,7 +24,11 @@ import {
   ToolbarGroup,
   ToolbarItem,
 } from "@patternfly/react-core";
-import { EllipsisVIcon, FilterIcon } from "@patternfly/react-icons";
+import {
+  DesktopIcon,
+  EllipsisVIcon,
+  FilterIcon,
+} from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -98,6 +108,11 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
     }
     return `${selectedLabels.length} labels`;
   }, [selectedLabels]);
+
+  const hasActiveFilters =
+    nameFilter.trim().length > 0 || selectedLabels.length > 0;
+  const showWelcomeEmpty =
+    !loading && total === 0 && groups.length === 0 && !hasActiveFilters;
 
   return (
     <>
@@ -197,6 +212,31 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
           {loading ? (
             <Tr>
               <Td colSpan={5}>Loading groups...</Td>
+            </Tr>
+          ) : showWelcomeEmpty ? (
+            <Tr>
+              <Td colSpan={5}>
+                <Bullseye>
+                  <EmptyState
+                    headingLevel="h2"
+                    titleText="No virtual machine groups yet"
+                    icon={DesktopIcon}
+                    variant={EmptyStateVariant.sm}
+                  >
+                    <EmptyStateBody>
+                      Create virtual machine groups to generate targeted
+                      assessment reports and enhanced VM management.
+                    </EmptyStateBody>
+                    <EmptyStateFooter>
+                      <EmptyStateActions>
+                        <Button variant="primary" onClick={onCreateGroup}>
+                          Create VM group
+                        </Button>
+                      </EmptyStateActions>
+                    </EmptyStateFooter>
+                  </EmptyState>
+                </Bullseye>
+              </Td>
             </Tr>
           ) : groups.length === 0 ? (
             <Tr>

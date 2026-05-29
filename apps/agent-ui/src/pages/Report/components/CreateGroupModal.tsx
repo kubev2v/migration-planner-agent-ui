@@ -180,12 +180,15 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       variant="large"
+      width="min(1200px, 95vw)"
       aria-labelledby="create-group-title"
     >
       <ModalHeader title="Create VM group" labelId="create-group-title" />
       <ModalBody>
         <Content component="p" style={{ marginBottom: "16px" }}>
-          Name the group and choose virtual machines to include in it.
+          Create virtual machine groups to generate targeted assessment reports
+          and enhanced VM management. Name the group and choose virtual machines
+          to include in it.
         </Content>
         <Form style={{ marginBottom: "24px" }}>
           <FormGroup label="Group name" isRequired fieldId="create-group-name">
@@ -234,7 +237,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             setShowExcludedVMs(show);
             setPage(1);
           }}
-          showGroupsColumn
+          columnPreset="compact"
           hideToolbarActions
           disableVmNavigation
         />
