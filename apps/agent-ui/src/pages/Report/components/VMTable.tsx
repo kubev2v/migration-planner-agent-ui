@@ -28,6 +28,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   onExcludeFromReports,
   onIncludeInReports,
   onAddLabels,
+  onEditLabels,
   onManageLabels,
   onCreateGroup,
   onAddToGroup,
@@ -105,7 +106,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         onRunDeepInspection={onRunDeepInspection}
         onExcludeFromReports={onExcludeFromReports}
         onIncludeInReports={onIncludeInReports}
-        onAddLabels={onAddLabels}
+        onEditLabels={onEditLabels}
         onAddToGroup={onAddToGroup}
         onRemoveFromGroup={onRemoveFromGroup}
         setIsCancelConfirmOpen={logic.setIsCancelConfirmOpen}
