@@ -365,10 +365,14 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       />
       <ModalBody id="add-labels-body" style={{ minHeight: "220px" }}>
         <Content component="p" style={{ marginBottom: "16px" }}>
-          {mode === "edit" && selectedVMName ? (
-            <>
-              Add or remove labels for <strong>{selectedVMName}</strong>.
-            </>
+          {mode === "edit" ? (
+            selectedVMName ? (
+              <>
+                Add or remove labels for <strong>{selectedVMName}</strong>.
+              </>
+            ) : (
+              "Add or remove labels for this virtual machine."
+            )
           ) : (
             `Applies to the ${selectedVMCount} selected VM${selectedVMCount !== 1 ? "s" : ""}. Add one or more labels. Existing labels on those VMs are not shown and will not be changed.`
           )}
