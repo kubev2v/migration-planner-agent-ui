@@ -17,8 +17,8 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
+import { CompactVMTable } from "./CompactVMTable";
 import { vmIdsToFilterExpression } from "./groupFilters";
-import { VMTable } from "./VMTable";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
 import { fetchAllMatchingVmIds } from "./vmSelection";
 
@@ -212,7 +212,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             {error}
           </Content>
         )}
-        <VMTable
+        <CompactVMTable
           vms={vms}
           loading={loading}
           initialFilters={filters}
@@ -237,9 +237,6 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             setShowExcludedVMs(show);
             setPage(1);
           }}
-          columnPreset="compact"
-          hideToolbarActions
-          disableVmNavigation
         />
       </ModalBody>
       <ModalFooter>

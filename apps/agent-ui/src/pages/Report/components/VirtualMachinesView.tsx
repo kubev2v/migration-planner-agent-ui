@@ -181,6 +181,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     [vms, vmIdToGroupNames],
   );
 
+  const visibleVms = useMemo(() => {
+    if (showExcludedVMs !== false) {
+      return vmsForTable;
+    }
+    return vmsForTable.filter((vm) => !vm.migrationExcluded);
+  }, [showExcludedVMs, vmsForTable]);
+
   const fetchAvailableLabels = useCallback(async () => {
     try {
       const response = await fetch(`${basePath}/vms/labels`);
@@ -497,7 +504,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   return (
     <>
       <VMTable
-        vms={vmsForTable}
+        vms={visibleVms}
         loading={loading}
         onVMClick={handleVMClick}
         initialFilters={initialFilters}
@@ -529,7 +536,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
         rowActionsVariant={effectiveRowActionsVariant}
         showGroupsColumn={showGroupsColumn}
-        groupsDisplay={showGroupsColumn ? "text" : "labels"}
         showExcludedVMs={showExcludedVMs}
         onShowExcludedVMsChange={onShowExcludedVMsChange}
         hasInspectionResults={hasInspectionResults || inspectionActive}
