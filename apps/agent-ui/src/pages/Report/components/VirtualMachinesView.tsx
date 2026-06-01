@@ -406,17 +406,18 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     }
   }, []);
 
-  const handleCancelInspection = useCallback(async () => {
-    if (!agentApi) return;
-    try {
-      await agentApi.stopInspection();
-      stopPolling();
-      setInspectionActive(false);
-      onRefreshVMs?.();
-    } catch (err) {
-      console.error("Error canceling inspection:", err);
-    }
-  }, [agentApi, onRefreshVMs, stopPolling]);
+  const handleCancelInspection = useCallback(
+    async (vmId: string) => {
+      if (!agentApi) return;
+      try {
+        await agentApi.removeVMFromInspection({ id: vmId });
+        onRefreshVMs?.();
+      } catch (err) {
+        console.error("Error canceling inspection:", err);
+      }
+    },
+    [agentApi, onRefreshVMs],
+  );
 
   const handleExcludeFromReports = useCallback(
     async (vmIds: string[]) => {

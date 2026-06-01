@@ -40,7 +40,7 @@ export interface VMTableGridProps {
   onEditLabels?: (vmIds: string[]) => void;
   onAddToGroup?: (vmIds: string[]) => void;
   onRemoveFromGroup?: (vmIds: string[]) => void;
-  setIsCancelConfirmOpen: (open: boolean) => void;
+  openCancelInspectionConfirm: (vmId: string) => void;
 }
 
 export const VMTableGrid: React.FC<VMTableGridProps> = ({
@@ -58,7 +58,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   onEditLabels,
   onAddToGroup,
   onRemoveFromGroup,
-  setIsCancelConfirmOpen,
+  openCancelInspectionConfirm,
 }) => {
   const {
     columns,
@@ -348,7 +348,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                           return (
                             <DropdownItem
                               key="cancel-vm-inspection"
-                              onClick={() => setIsCancelConfirmOpen(true)}
+                              onClick={() => openCancelInspectionConfirm(vm.id)}
                             >
                               Cancel deep inspection
                             </DropdownItem>

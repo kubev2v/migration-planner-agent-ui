@@ -102,8 +102,16 @@ export function useVMTableLogic({
   const [isConcernSelectOpen, setIsConcernSelectOpen] = useState(false);
   const [isVmLabelSelectOpen, setIsVmLabelSelectOpen] = useState(false);
 
-  // Cancel deep inspection confirmation
-  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  // Cancel deep inspection confirmation (vm id when open, null when closed)
+  const [cancelInspectionVmId, setCancelInspectionVmId] = useState<
+    string | null
+  >(null);
+  const openCancelInspectionConfirm = useCallback((vmId: string) => {
+    setCancelInspectionVmId(vmId);
+  }, []);
+  const closeCancelInspectionConfirm = useCallback(() => {
+    setCancelInspectionVmId(null);
+  }, []);
 
   // Bulk actions menu
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
@@ -756,8 +764,9 @@ export function useVMTableLogic({
     setIsConcernSelectOpen,
     isVmLabelSelectOpen,
     setIsVmLabelSelectOpen,
-    isCancelConfirmOpen,
-    setIsCancelConfirmOpen,
+    cancelInspectionVmId,
+    openCancelInspectionConfirm,
+    closeCancelInspectionConfirm,
     isActionsMenuOpen,
     setIsActionsMenuOpen,
     isExcludeModalOpen,

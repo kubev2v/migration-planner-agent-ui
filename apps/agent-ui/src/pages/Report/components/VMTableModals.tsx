@@ -11,7 +11,7 @@ import type { VMTableLogic } from "./vmTableTypes";
 
 export interface VMTableModalsProps {
   logic: VMTableLogic;
-  onCancelInspection?: () => void;
+  onCancelInspection?: (vmId: string) => void;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
   onSelectionChange?: (selected: Set<string>) => void;
@@ -25,8 +25,8 @@ export const VMTableModals: React.FC<VMTableModalsProps> = ({
   onSelectionChange,
 }) => {
   const {
-    isCancelConfirmOpen,
-    setIsCancelConfirmOpen,
+    cancelInspectionVmId,
+    closeCancelInspectionConfirm,
     isExcludeModalOpen,
     setIsExcludeModalOpen,
     isExcludeLoading,
@@ -43,8 +43,8 @@ export const VMTableModals: React.FC<VMTableModalsProps> = ({
   return (
     <>
       <Modal
-        isOpen={isCancelConfirmOpen}
-        onClose={() => setIsCancelConfirmOpen(false)}
+        isOpen={cancelInspectionVmId !== null}
+        onClose={closeCancelInspectionConfirm}
         aria-labelledby="cancel-inspection-title"
         aria-describedby="cancel-inspection-body"
         variant="small"
@@ -55,19 +55,36 @@ export const VMTableModals: React.FC<VMTableModalsProps> = ({
           labelId="cancel-inspection-title"
         />
         <ModalBody id="cancel-inspection-body">
-          <Content component="p">Are you sure you want to proceed?</Content>
+          <Content component="p">
+            {(() => {
+              const vmName = cancelInspectionVmId
+                ? vmById.get(cancelInspectionVmId)?.name
+                : undefined;
+              if (vmName) {
+                return (
+                  <>
+                    Are you sure you want to cancel deep inspection for{" "}
+                    <strong>{vmName}</strong>?
+                  </>
+                );
+              }
+              return <>Are you sure you want to proceed?</>;
+            })()}
+          </Content>
         </ModalBody>
         <ModalFooter>
           <Button
             variant="danger"
             onClick={() => {
-              onCancelInspection?.();
-              setIsCancelConfirmOpen(false);
+              if (cancelInspectionVmId) {
+                onCancelInspection?.(cancelInspectionVmId);
+              }
+              closeCancelInspectionConfirm();
             }}
           >
             Confirm
           </Button>
-          <Button variant="link" onClick={() => setIsCancelConfirmOpen(false)}>
+          <Button variant="link" onClick={closeCancelInspectionConfirm}>
             Cancel
           </Button>
         </ModalFooter>

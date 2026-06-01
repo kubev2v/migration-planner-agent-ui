@@ -40,7 +40,7 @@ export interface VMTableProps {
   onShowExcludedVMsChange?: (show: boolean) => void;
   hasInspectionResults?: boolean;
   inspectionActive?: boolean;
-  onCancelInspection?: () => void;
+  onCancelInspection?: (vmId: string) => void;
   onResetInspection?: () => void;
   variant?: VMTableVariant;
   showGroupsColumn?: boolean;
