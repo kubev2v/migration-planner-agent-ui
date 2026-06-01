@@ -1,0 +1,34 @@
+import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
+
+const VM_FETCH_PAGE_SIZE = 100;
+
+/** Fetches IDs for every VM matching the given query (all pages). */
+export async function fetchAllMatchingVmIds(
+  agentApi: DefaultApiInterface,
+  options: {
+    byExpression?: string;
+    sort?: string[];
+  },
+): Promise<string[]> {
+  const firstPage = await agentApi.getVMs({
+    byExpression: options.byExpression,
+    sort: options.sort,
+    page: 1,
+    pageSize: VM_FETCH_PAGE_SIZE,
+  });
+
+  const ids = firstPage.vms.map((vm) => vm.id);
+  const pageCount = firstPage.pageCount ?? 1;
+
+  for (let page = 2; page <= pageCount; page++) {
+    const response = await agentApi.getVMs({
+      byExpression: options.byExpression,
+      sort: options.sort,
+      page,
+      pageSize: VM_FETCH_PAGE_SIZE,
+    });
+    ids.push(...response.vms.map((vm) => vm.id));
+  }
+
+  return ids;
+}

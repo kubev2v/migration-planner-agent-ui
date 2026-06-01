@@ -54,6 +54,15 @@ export const router = createBrowserRouter(
           },
         },
         {
+          path: "groups/:groupId",
+          lazy: async () => {
+            const { GroupDetailPage } = await import(
+              "../pages/Report/GroupDetailPage.tsx"
+            );
+            return { Component: GroupDetailPage };
+          },
+        },
+        {
           path: "storage-offload-estimator",
           lazy: async () => {
             const { StorageOffloadPage } = await import(
