@@ -209,7 +209,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
           </Tr>
         </Thead>
         <Tbody>
-          {loading && groups.length === 0 ? (
+          {loading ? (
             <Tr>
               <Td colSpan={5}>Loading groups...</Td>
             </Tr>
