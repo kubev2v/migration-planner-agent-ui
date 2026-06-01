@@ -1,3 +1,4 @@
+export { GroupDetailPage } from "./GroupDetailPage";
 export { GroupsPage } from "./GroupsPage";
 export { Header } from "./Header";
 export { ProtectedReportRoute } from "./ProtectedReportRoute";

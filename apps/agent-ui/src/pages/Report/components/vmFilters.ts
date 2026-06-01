@@ -157,6 +157,12 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
 
   if (filters.showExcludedVMs === false) {
     conditions.push("migration_excluded = false");
+  } else if (filters.showExcludedVMs === true) {
+    // Explicitly include excluded VMs. When byExpression is omitted, some agent
+    // versions still apply a default that hides migration_excluded VMs.
+    conditions.push(
+      "(migration_excluded = true or migration_excluded = false)",
+    );
   }
 
   if (conditions.length === 0) {

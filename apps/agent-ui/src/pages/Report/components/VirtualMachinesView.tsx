@@ -6,11 +6,20 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getAgentApiBasePath } from "../agentApiConfig";
 import { AddLabelsModal } from "./AddLabelsModal";
+import { AddToGroupModal } from "./AddToGroupModal";
+import { CreateGroupFromSelectionModal } from "./CreateGroupFromSelectionModal";
 import { DeepInspectionModal } from "./DeepInspectionModal";
+import { combineFilterExpressions } from "./groupFilters";
 import { ManageLabelsModal } from "./ManageLabelsModal";
+import { RemoveFromGroupModal } from "./RemoveFromGroupModal";
 import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
-import type { VMFilters } from "./vmFilters";
+import { filtersToByExpression, type VMFilters } from "./vmFilters";
+import {
+  buildVmIdToGroupNamesMap,
+  mergeVmGroupNames,
+} from "./vmGroupMembership";
+import { fetchAllMatchingVmIds } from "./vmSelection";
 
 async function updateVmMigrationExcluded(
   agentApi: DefaultApiInterface,
@@ -64,8 +73,16 @@ interface VirtualMachinesViewProps {
   };
   agentApi?: DefaultApiInterface;
   onRefreshVMs?: () => void;
+  /** Reload group metadata/filter after add/remove (group detail page). */
+  onGroupMembershipChanged?: () => void | Promise<void>;
   showExcludedVMs?: boolean;
   onShowExcludedVMsChange?: (show: boolean) => void;
+  /** When set, VMs are shown inside this group's detail page */
+  groupContext?: { id: string; name: string };
+  rowActionsVariant?: "overview" | "group";
+  /** Base filter applied before table filters (e.g. group membership). */
+  scopedFilterExpression?: string;
+  sortFields?: string[];
 }
 
 export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
@@ -81,9 +98,16 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   availableFilterOptions,
   agentApi,
   onRefreshVMs,
+  onGroupMembershipChanged,
   showExcludedVMs,
   onShowExcludedVMsChange,
+  groupContext,
+  rowActionsVariant,
+  scopedFilterExpression,
+  sortFields = [],
 }) => {
+  const effectiveRowActionsVariant =
+    rowActionsVariant ?? (groupContext ? "group" : "overview");
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
   const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
@@ -120,11 +144,50 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   // Labels state
   const [isAddLabelsModalOpen, setIsAddLabelsModalOpen] = useState(false);
+  const [addLabelsMode, setAddLabelsMode] = useState<"add" | "edit">("add");
   const [isManageLabelsModalOpen, setIsManageLabelsModalOpen] = useState(false);
   const [addLabelsVMIds, setAddLabelsVMIds] = useState<string[]>([]);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
+  const [isRemoveFromGroupModalOpen, setIsRemoveFromGroupModalOpen] =
+    useState(false);
+  const [groupActionVMIds, setGroupActionVMIds] = useState<string[]>([]);
+  const [vmIdToGroupNames, setVmIdToGroupNames] = useState<
+    Map<string, string[]>
+  >(() => new Map());
+
+  const showGroupsColumn = effectiveRowActionsVariant === "overview";
 
   const basePath = useMemo(() => getAgentApiBasePath(agentApi), [agentApi]);
+
+  const loadVmGroupMembership = useCallback(async () => {
+    if (!agentApi || !showGroupsColumn) {
+      return;
+    }
+    try {
+      const map = await buildVmIdToGroupNamesMap(agentApi);
+      setVmIdToGroupNames(map);
+    } catch (err) {
+      console.error("Error loading VM group membership:", err);
+    }
+  }, [agentApi, showGroupsColumn]);
+
+  useEffect(() => {
+    void loadVmGroupMembership();
+  }, [loadVmGroupMembership]);
+
+  const vmsForTable = useMemo(
+    () => mergeVmGroupNames(vms, vmIdToGroupNames),
+    [vms, vmIdToGroupNames],
+  );
+
+  const visibleVms = useMemo(() => {
+    if (showExcludedVMs !== false) {
+      return vmsForTable;
+    }
+    return vmsForTable.filter((vm) => !vm.migrationExcluded);
+  }, [showExcludedVMs, vmsForTable]);
 
   const fetchAvailableLabels = useCallback(async () => {
     try {
@@ -171,6 +234,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleAddLabels = useCallback(
     (vmIds: string[]) => {
       setAddLabelsVMIds(vmIds);
+      setAddLabelsMode("add");
+      void fetchAvailableLabels();
+      setIsAddLabelsModalOpen(true);
+    },
+    [fetchAvailableLabels],
+  );
+
+  const handleEditLabels = useCallback(
+    (vmIds: string[]) => {
+      setAddLabelsVMIds(vmIds);
+      setAddLabelsMode("edit");
       void fetchAvailableLabels();
       setIsAddLabelsModalOpen(true);
     },
@@ -180,6 +254,81 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleManageLabels = useCallback(() => {
     setIsManageLabelsModalOpen(true);
   }, []);
+
+  const groupNamesForRemoval = useMemo(() => {
+    if (groupContext) {
+      return [groupContext.name];
+    }
+    const names = new Set<string>();
+    for (const vmId of groupActionVMIds) {
+      const vm = vmsForTable.find((v) => v.id === vmId);
+      const groups =
+        vm?.groups && vm.groups.length > 0
+          ? vm.groups
+          : vmIdToGroupNames.get(vmId);
+      if (groups) {
+        for (const groupName of groups) {
+          names.add(groupName);
+        }
+      }
+    }
+    return [...names];
+  }, [groupActionVMIds, groupContext, vmsForTable, vmIdToGroupNames]);
+
+  const groupActionVmNames = useMemo(
+    () =>
+      groupActionVMIds
+        .map((id) => vms.find((vm) => vm.id === id)?.name)
+        .filter((name): name is string => Boolean(name)),
+    [groupActionVMIds, vms],
+  );
+
+  const handleCreateGroup = useCallback((vmIds: string[]) => {
+    setGroupActionVMIds(vmIds);
+    setIsCreateGroupModalOpen(true);
+  }, []);
+
+  const handleAddToGroup = useCallback((vmIds: string[]) => {
+    setGroupActionVMIds(vmIds);
+    setIsAddToGroupModalOpen(true);
+  }, []);
+
+  const handleRemoveFromGroup = useCallback((vmIds: string[]) => {
+    setGroupActionVMIds(vmIds);
+    setIsRemoveFromGroupModalOpen(true);
+  }, []);
+
+  const handleGroupsChanged = useCallback(async () => {
+    if (onGroupMembershipChanged) {
+      await onGroupMembershipChanged();
+      await loadVmGroupMembership();
+      return;
+    }
+    await loadVmGroupMembership();
+    onRefreshVMs?.();
+  }, [loadVmGroupMembership, onGroupMembershipChanged, onRefreshVMs]);
+
+  const handleFetchAllVmIds = useCallback(
+    async (filters: VMFilters) => {
+      if (!agentApi) {
+        return [];
+      }
+      const effectiveFilters =
+        showExcludedVMs === undefined
+          ? filters
+          : { ...filters, showExcludedVMs };
+      const userExpression = filtersToByExpression(effectiveFilters);
+      const byExpression = combineFilterExpressions(
+        scopedFilterExpression,
+        userExpression,
+      );
+      return fetchAllMatchingVmIds(agentApi, {
+        byExpression,
+        sort: sortFields.length > 0 ? sortFields : undefined,
+      });
+    },
+    [agentApi, scopedFilterExpression, showExcludedVMs, sortFields],
+  );
 
   const refreshLabels = useCallback(async () => {
     await fetchAvailableLabels();
@@ -367,7 +516,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   return (
     <>
       <VMTable
-        vms={vms}
+        vms={visibleVms}
         loading={loading}
         onVMClick={handleVMClick}
         initialFilters={initialFilters}
@@ -380,11 +529,26 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         availableFilterOptions={availableFilterOptions}
         selectedVMs={selectedVMs}
         onSelectionChange={setSelectedVMs}
+        onFetchAllVmIds={agentApi ? handleFetchAllVmIds : undefined}
         onRunDeepInspection={handleRunDeepInspection}
         onExcludeFromReports={handleExcludeFromReports}
         onIncludeInReports={handleIncludeInReports}
         onAddLabels={handleAddLabels}
+        onEditLabels={handleEditLabels}
         onManageLabels={handleManageLabels}
+        onCreateGroup={
+          agentApi && effectiveRowActionsVariant === "overview"
+            ? handleCreateGroup
+            : undefined
+        }
+        onAddToGroup={
+          agentApi && effectiveRowActionsVariant === "overview"
+            ? handleAddToGroup
+            : undefined
+        }
+        onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
+        rowActionsVariant={effectiveRowActionsVariant}
+        showGroupsColumn={showGroupsColumn}
         showExcludedVMs={showExcludedVMs}
         onShowExcludedVMsChange={onShowExcludedVMsChange}
         hasInspectionResults={hasInspectionResults || inspectionActive}
@@ -409,6 +573,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         existingLabels={availableLabels}
         currentVMLabels={currentVMLabels}
         selectedVMName={selectedVMName}
+        mode={addLabelsMode}
       />
       <ManageLabelsModal
         isOpen={isManageLabelsModalOpen}
@@ -416,6 +581,32 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onLabelsChanged={refreshLabels}
         basePath={basePath}
       />
+      {agentApi && (
+        <>
+          <CreateGroupFromSelectionModal
+            isOpen={isCreateGroupModalOpen}
+            vmIds={groupActionVMIds}
+            onClose={() => setIsCreateGroupModalOpen(false)}
+            onCreated={handleGroupsChanged}
+          />
+          <AddToGroupModal
+            isOpen={isAddToGroupModalOpen}
+            vmIds={groupActionVMIds}
+            onClose={() => setIsAddToGroupModalOpen(false)}
+            onUpdated={handleGroupsChanged}
+          />
+          <RemoveFromGroupModal
+            isOpen={isRemoveFromGroupModalOpen}
+            vmIds={groupActionVMIds}
+            vmNames={groupActionVmNames}
+            fixedGroupId={groupContext?.id}
+            fixedGroupName={groupContext?.name}
+            groupNames={groupNamesForRemoval}
+            onClose={() => setIsRemoveFromGroupModalOpen(false)}
+            onUpdated={handleGroupsChanged}
+          />
+        </>
+      )}
     </>
   );
 };
