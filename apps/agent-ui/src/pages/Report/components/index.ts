@@ -1,3 +1,4 @@
+export { ClusterDrsConfiguration } from "./ClusterDrsConfiguration";
 export { ClustersOverview } from "./ClustersOverview";
 export { CompactVMTable } from "./CompactVMTable";
 export { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
