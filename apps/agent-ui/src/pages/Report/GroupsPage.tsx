@@ -74,6 +74,8 @@ export const GroupsPage: React.FC = () => {
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
   const requestIdRef = useRef(0);
+  const hasGroupsRef = useRef(false);
+  hasGroupsRef.current = groups.length > 0;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -88,7 +90,9 @@ export const GroupsPage: React.FC = () => {
     const requestId = requestIdRef.current;
 
     try {
-      setLoading(true);
+      if (!hasGroupsRef.current) {
+        setLoading(true);
+      }
 
       if (selectedLabels.length > 0) {
         const allRaw = await fetchAllGroups(agentApi, {
