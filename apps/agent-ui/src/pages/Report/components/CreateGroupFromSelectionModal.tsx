@@ -97,6 +97,10 @@ export const CreateGroupFromSelectionModal: React.FC<
             />
           </FormGroup>
         </Form>
+        <Content component="p" style={{ marginTop: "16px" }}>
+          A targeted assessment report will be generated for the group of
+          virtual machines created.
+        </Content>
         {error && (
           <Content
             component="p"
