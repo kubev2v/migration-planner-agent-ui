@@ -728,6 +728,7 @@ export const ReportContainer: React.FC = () => {
                   onFiltersChange={handleFiltersChange}
                   onPageChange={handlePageChange}
                   onSortChange={handleSortChange}
+                  sortFields={vmsSortFields}
                   availableFilterOptions={availableFilterOptions}
                   agentApi={agentApi}
                   onRefreshVMs={refreshVMs}
