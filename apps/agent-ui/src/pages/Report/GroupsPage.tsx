@@ -75,6 +75,7 @@ export const GroupsPage: React.FC = () => {
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
   const requestIdRef = useRef(0);
 
+  // Debounce search input so API calls use debouncedNameFilter, not nameFilter.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedNameFilter(nameFilter.trim());
@@ -88,8 +89,6 @@ export const GroupsPage: React.FC = () => {
     const requestId = requestIdRef.current;
 
     try {
-      setLoading(true);
-
       if (selectedLabels.length > 0) {
         const allRaw = await fetchAllGroups(agentApi, {
           byName: debouncedNameFilter || undefined,
@@ -149,6 +148,8 @@ export const GroupsPage: React.FC = () => {
     }
   }, [agentApi, debouncedNameFilter, page, pageSize, selectedLabels]);
 
+  // Refetch when debounced search, pagination, or label filters change — not on each keystroke.
+  // loading is only true on initial mount; refetches keep the current list visible until new data arrives.
   useEffect(() => {
     fetchGroups();
   }, [fetchGroups]);
