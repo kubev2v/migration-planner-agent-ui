@@ -19,22 +19,26 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+const VM_COLUMN_WIDTH = "3.5rem";
+const ACTIONS_COLUMN_WIDTH = "4.5rem";
+
 const styles = {
   labelList: css`
     width: 100%;
   `,
   labelHeader: css`
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr ${VM_COLUMN_WIDTH} ${ACTIONS_COLUMN_WIDTH};
     gap: 16px;
     padding: 8px 0;
     border-bottom: 1px solid var(--pf-t--global--border--color--default);
     font-weight: 700;
     font-size: 13px;
+    align-items: end;
   `,
   labelRow: css`
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr ${VM_COLUMN_WIDTH} ${ACTIONS_COLUMN_WIDTH};
     gap: 16px;
     align-items: center;
     padding: 12px 0;
@@ -42,11 +46,18 @@ const styles = {
   `,
   labelRowEditing: css`
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr ${VM_COLUMN_WIDTH} ${ACTIONS_COLUMN_WIDTH};
     gap: 16px;
     align-items: center;
     padding: 8px 0;
     border-bottom: 1px solid var(--pf-t--global--border--color--default);
+  `,
+  vmColumn: css`
+    text-align: left;
+  `,
+  actionsColumn: css`
+    display: flex;
+    justify-content: flex-end;
   `,
   editInputGroup: css`
     display: flex;
@@ -176,6 +187,10 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
   };
 
   const handleSave = async () => {
+    if (editingLabel) {
+      handleRenameLabel(editingLabel, editValue);
+    }
+
     setIsSaving(true);
     try {
       for (const labelName of pendingDeletes.current) {
@@ -242,7 +257,8 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
         <ModalBody id="manage-labels-body">
           <Content component="p" style={{ marginBottom: "16px" }}>
             View, rename, or delete labels. Renaming or deleting a label updates
-            every virtual machine that uses it.
+            every virtual machine that uses it. To create a new label, use the
+            &apos;Add Labels&apos; action on your virtual machines.
           </Content>
 
           {loading ? (
@@ -253,8 +269,8 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
             <div className={styles.labelList}>
               <div className={styles.labelHeader}>
                 <span>Label</span>
-                <span>VMs</span>
-                <span />
+                <span className={styles.vmColumn}>VMs</span>
+                <span className={styles.actionsColumn} aria-hidden="true" />
               </div>
               {labels.map((label) => (
                 <div
@@ -299,9 +315,11 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
                   ) : (
                     <span>{label.name}</span>
                   )}
-                  <span>{label.vmCount}</span>
+                  <span className={styles.vmColumn}>{label.vmCount}</span>
                   {editingLabel !== label.name && (
-                    <div className={styles.actionButtons}>
+                    <div
+                      className={`${styles.actionsColumn} ${styles.actionButtons}`}
+                    >
                       <Button
                         variant="plain"
                         aria-label={`Edit label ${label.name}`}

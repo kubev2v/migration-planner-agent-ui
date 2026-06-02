@@ -144,6 +144,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   // Labels state
   const [isAddLabelsModalOpen, setIsAddLabelsModalOpen] = useState(false);
+  const [addLabelsMode, setAddLabelsMode] = useState<"add" | "edit">("add");
   const [isManageLabelsModalOpen, setIsManageLabelsModalOpen] = useState(false);
   const [addLabelsVMIds, setAddLabelsVMIds] = useState<string[]>([]);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
@@ -233,6 +234,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleAddLabels = useCallback(
     (vmIds: string[]) => {
       setAddLabelsVMIds(vmIds);
+      setAddLabelsMode("add");
+      void fetchAvailableLabels();
+      setIsAddLabelsModalOpen(true);
+    },
+    [fetchAvailableLabels],
+  );
+
+  const handleEditLabels = useCallback(
+    (vmIds: string[]) => {
+      setAddLabelsVMIds(vmIds);
+      setAddLabelsMode("edit");
       void fetchAvailableLabels();
       setIsAddLabelsModalOpen(true);
     },
@@ -522,6 +534,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onExcludeFromReports={handleExcludeFromReports}
         onIncludeInReports={handleIncludeInReports}
         onAddLabels={handleAddLabels}
+        onEditLabels={handleEditLabels}
         onManageLabels={handleManageLabels}
         onCreateGroup={
           agentApi && effectiveRowActionsVariant === "overview"
@@ -560,6 +573,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         existingLabels={availableLabels}
         currentVMLabels={currentVMLabels}
         selectedVMName={selectedVMName}
+        mode={addLabelsMode}
       />
       <ManageLabelsModal
         isOpen={isManageLabelsModalOpen}

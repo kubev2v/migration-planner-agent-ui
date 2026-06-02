@@ -37,7 +37,7 @@ export interface VMTableGridProps {
   onRunDeepInspection?: (includeVmId?: string) => void;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
-  onAddLabels?: (vmIds: string[]) => void;
+  onEditLabels?: (vmIds: string[]) => void;
   onAddToGroup?: (vmIds: string[]) => void;
   onRemoveFromGroup?: (vmIds: string[]) => void;
   setIsCancelConfirmOpen: (open: boolean) => void;
@@ -55,7 +55,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   onRunDeepInspection,
   onExcludeFromReports,
   onIncludeInReports,
-  onAddLabels,
+  onEditLabels,
   onAddToGroup,
   onRemoveFromGroup,
   setIsCancelConfirmOpen,
@@ -394,7 +394,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                       )}
                       <DropdownItem
                         key="edit-labels"
-                        onClick={() => onAddLabels?.([vm.id])}
+                        onClick={() => onEditLabels?.([vm.id])}
                       >
                         Edit labels
                       </DropdownItem>

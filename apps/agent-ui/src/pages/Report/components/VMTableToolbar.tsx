@@ -1,4 +1,4 @@
-import { Toolbar } from "@patternfly/react-core";
+import { Toolbar, ToolbarContent } from "@patternfly/react-core";
 import type React from "react";
 import { VMTableActionBar } from "./VMTableActionBar";
 import { VMTableFilterBar } from "./VMTableFilterBar";
@@ -33,38 +33,45 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     onResetInspection,
   } = props;
 
+  const filterBarProps = {
+    logic,
+    variantUI,
+    hasInspectionResults,
+    selectedVMs,
+    onSelectionChange,
+    onFetchAllVmIds,
+  };
+
+  const actionBarProps = {
+    logic,
+    variantUI,
+    loading,
+    vms,
+    totalVMs,
+    selectedVMs,
+    showExcludedVMs,
+    onShowExcludedVMsChange,
+    onPageChange,
+    inspectionActive,
+    isGroupRowActions,
+    onExcludeFromReports,
+    onIncludeInReports,
+    onAddLabels,
+    onManageLabels,
+    onCreateGroup,
+    onAddToGroup,
+    onRemoveFromGroup,
+    onRunDeepInspection,
+    onResetInspection,
+  };
+
   return (
     <Toolbar>
-      <VMTableFilterBar
-        logic={logic}
-        variantUI={variantUI}
-        hasInspectionResults={hasInspectionResults}
-        selectedVMs={selectedVMs}
-        onSelectionChange={onSelectionChange}
-        onFetchAllVmIds={onFetchAllVmIds}
-      />
-      <VMTableActionBar
-        logic={logic}
-        variantUI={variantUI}
-        loading={loading}
-        vms={vms}
-        totalVMs={totalVMs}
-        selectedVMs={selectedVMs}
-        showExcludedVMs={showExcludedVMs}
-        onShowExcludedVMsChange={onShowExcludedVMsChange}
-        onPageChange={onPageChange}
-        inspectionActive={inspectionActive}
-        isGroupRowActions={isGroupRowActions}
-        onExcludeFromReports={onExcludeFromReports}
-        onIncludeInReports={onIncludeInReports}
-        onAddLabels={onAddLabels}
-        onManageLabels={onManageLabels}
-        onCreateGroup={onCreateGroup}
-        onAddToGroup={onAddToGroup}
-        onRemoveFromGroup={onRemoveFromGroup}
-        onRunDeepInspection={onRunDeepInspection}
-        onResetInspection={onResetInspection}
-      />
+      <ToolbarContent>
+        <VMTableFilterBar {...filterBarProps} part="main" />
+        <VMTableActionBar {...actionBarProps} />
+      </ToolbarContent>
+      <VMTableFilterBar {...filterBarProps} part="applied" />
     </Toolbar>
   );
 };

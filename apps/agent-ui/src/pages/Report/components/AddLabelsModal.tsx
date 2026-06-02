@@ -32,6 +32,7 @@ interface AddLabelsModalProps {
   existingLabels: string[];
   currentVMLabels?: string[];
   selectedVMName?: string;
+  mode?: "add" | "edit";
 }
 
 export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
@@ -42,6 +43,7 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
   existingLabels,
   currentVMLabels = [],
   selectedVMName,
+  mode = "add",
 }) => {
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -55,7 +57,7 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
 
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
-      setSelected([...currentVMLabels]);
+      setSelected(mode === "edit" ? [...currentVMLabels] : []);
       setInputValue("");
       setIsSelectOpen(false);
       setIsSubmitting(false);
@@ -63,7 +65,7 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       setActiveItemId(null);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen, currentVMLabels]);
+  }, [isOpen, currentVMLabels, mode]);
 
   useEffect(() => {
     let newOptions: SelectOptionProps[];
@@ -268,9 +270,16 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
     textInputRef.current?.focus();
   };
 
-  const labelsToAdd = selected.filter((l) => !currentVMLabels.includes(l));
-  const labelsToRemove = currentVMLabels.filter((l) => !selected.includes(l));
-  const hasChanges = labelsToAdd.length > 0 || labelsToRemove.length > 0;
+  const labelsToAdd =
+    mode === "add"
+      ? selected
+      : selected.filter((l) => !currentVMLabels.includes(l));
+  const labelsToRemove =
+    mode === "add" ? [] : currentVMLabels.filter((l) => !selected.includes(l));
+  const hasChanges =
+    mode === "add"
+      ? selected.length > 0
+      : labelsToAdd.length > 0 || labelsToRemove.length > 0;
 
   const handleSubmit = async () => {
     if (!hasChanges) return;
@@ -303,7 +312,11 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
           id="add-labels-typeahead-input"
           autoComplete="off"
           innerRef={textInputRef}
-          placeholder="Type or select labels..."
+          placeholder={
+            mode === "add"
+              ? "Type or select labels to add..."
+              : "Type or select labels..."
+          }
           {...(activeItemId && { "aria-activedescendant": activeItemId })}
           role="combobox"
           isExpanded={isSelectOpen}
@@ -347,17 +360,21 @@ export const AddLabelsModal: React.FC<AddLabelsModalProps> = ({
       variant="medium"
     >
       <ModalHeader
-        title={selectedVMName ? "Edit labels" : "Add labels"}
+        title={mode === "edit" ? "Edit labels" : "Add labels"}
         labelId="add-labels-title"
       />
       <ModalBody id="add-labels-body" style={{ minHeight: "220px" }}>
         <Content component="p" style={{ marginBottom: "16px" }}>
-          {selectedVMName ? (
-            <>
-              Add or remove labels for <strong>{selectedVMName}</strong>.
-            </>
+          {mode === "edit" ? (
+            selectedVMName ? (
+              <>
+                Add or remove labels for <strong>{selectedVMName}</strong>.
+              </>
+            ) : (
+              "Add or remove labels for this virtual machine."
+            )
           ) : (
-            `Applies to the ${selectedVMCount} selected VM${selectedVMCount !== 1 ? "s" : ""}. You can add a custom label, or select an existing label.`
+            `Applies to the ${selectedVMCount} selected VM${selectedVMCount !== 1 ? "s" : ""}. Add one or more labels. Existing labels on those VMs are not shown and will not be changed.`
           )}
         </Content>
 

@@ -12,8 +12,6 @@ import {
   Pagination,
   Spinner,
   Switch,
-  ToolbarContent,
-  ToolbarGroup,
   ToolbarItem,
   Tooltip,
 } from "@patternfly/react-core";
@@ -87,155 +85,149 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   return (
     <>
       {!hideToolbarActions && (
-        <ToolbarContent>
-          <ToolbarGroup>
-            <ToolbarItem>
-              <Dropdown
-                isOpen={isActionsMenuOpen}
-                onSelect={() => setIsActionsMenuOpen(false)}
-                onOpenChange={setIsActionsMenuOpen}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                    isExpanded={isActionsMenuOpen}
-                    variant="secondary"
-                  >
-                    Actions
-                  </MenuToggle>
-                )}
-                popperProps={{ position: "right" }}
-              >
-                <DropdownList>
-                  {onExcludeFromReports && selectedIncludedIds.length > 0 && (
-                    <DropdownItem
-                      key="exclude-from-reports"
-                      onClick={() => setIsExcludeModalOpen(true)}
-                    >
-                      Exclude from reports
-                    </DropdownItem>
-                  )}
-                  {onIncludeInReports && selectedExcludedIds.length > 0 && (
-                    <DropdownItem
-                      key="include-in-reports"
-                      onClick={() => setIsIncludeModalOpen(true)}
-                    >
-                      Include in reports
-                    </DropdownItem>
-                  )}
-                  <DropdownItem
-                    key="add-label"
-                    isDisabled={selectedVMs.size === 0}
-                    onClick={() => onAddLabels?.(Array.from(selectedVMs))}
-                  >
-                    Add labels
-                  </DropdownItem>
-                  <DropdownItem
-                    key="manage-labels"
-                    onClick={() => onManageLabels?.()}
-                  >
-                    Manage all labels
-                  </DropdownItem>
-                  {!isGroupRowActions && (
-                    <>
-                      <DropdownItem
-                        key="create-group"
-                        isDisabled={selectedVMs.size === 0 || !onCreateGroup}
-                        onClick={() => onCreateGroup?.(selectedVmIds)}
-                      >
-                        Create group
-                      </DropdownItem>
-                      <DropdownItem
-                        key="add-to-group"
-                        isDisabled={selectedVMs.size === 0 || !onAddToGroup}
-                        onClick={() => onAddToGroup?.(selectedVmIds)}
-                      >
-                        Add to group
-                      </DropdownItem>
-                    </>
-                  )}
-                  <Divider key="separator" component="li" />
-                  <DropdownItem
-                    key="remove-from-group"
-                    isDisabled={
-                      selectedVMs.size === 0 ||
-                      !canRemoveSelectedFromGroup ||
-                      !onRemoveFromGroup
-                    }
-                    onClick={() => onRemoveFromGroup?.(selectedVmIds)}
-                  >
-                    Remove from group
-                  </DropdownItem>
-                  <DropdownItem
-                    key="reset-deep-inspection"
-                    isDisabled={selectedVMs.size === 0}
-                    onClick={() => onResetInspection?.()}
-                  >
-                    Reset deep inspection
-                  </DropdownItem>
-                </DropdownList>
-              </Dropdown>
-            </ToolbarItem>
-
-            <ToolbarItem>
-              <Tooltip content="Select VMs for deep inspection.">
-                <Button
-                  variant="primary"
-                  icon={<MagicIcon />}
-                  isDisabled={selectedVMs.size === 0}
-                  onClick={() => onRunDeepInspection?.()}
+        <>
+          <ToolbarItem>
+            <Dropdown
+              isOpen={isActionsMenuOpen}
+              onSelect={() => setIsActionsMenuOpen(false)}
+              onOpenChange={setIsActionsMenuOpen}
+              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle
+                  ref={toggleRef}
+                  onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                  isExpanded={isActionsMenuOpen}
+                  variant="secondary"
                 >
-                  Run deep inspection
-                </Button>
-              </Tooltip>
-            </ToolbarItem>
-            {inspectionActive && (
-              <ToolbarItem>
-                <Spinner size="md" />
-              </ToolbarItem>
-            )}
-          </ToolbarGroup>
-        </ToolbarContent>
-      )}
-      <ToolbarContent>
-        <ToolbarItem align={{ default: "alignEnd" }}>
-          <Flex
-            alignItems={{ default: "alignItemsCenter" }}
-            gap={{ default: "gapMd" }}
-          >
-            <FlexItem>
-              {loading && vms.length > 0 && <Spinner size="sm" />}
-            </FlexItem>
-            <FlexItem>
-              {onShowExcludedVMsChange && (
-                <Switch
-                  id={showExcludedSwitchId}
-                  label="Show excluded VMs"
-                  isChecked={showExcludedVMs}
-                  onChange={(_event, checked) => {
-                    onShowExcludedVMsChange(checked);
-                  }}
-                />
+                  Actions
+                </MenuToggle>
               )}
-            </FlexItem>
-            <FlexItem>
-              <Pagination
-                itemCount={totalVMs ?? vms.length}
-                perPage={pageSize}
-                page={page}
-                onSetPage={(_event, newPage) =>
-                  onPageChange?.(newPage, pageSize)
-                }
-                onPerPageSelect={(_event, newPerPage) => {
-                  onPageChange?.(1, newPerPage);
+              popperProps={{ position: "right" }}
+            >
+              <DropdownList>
+                {onExcludeFromReports && selectedIncludedIds.length > 0 && (
+                  <DropdownItem
+                    key="exclude-from-reports"
+                    onClick={() => setIsExcludeModalOpen(true)}
+                  >
+                    Exclude from reports
+                  </DropdownItem>
+                )}
+                {onIncludeInReports && selectedExcludedIds.length > 0 && (
+                  <DropdownItem
+                    key="include-in-reports"
+                    onClick={() => setIsIncludeModalOpen(true)}
+                  >
+                    Include in reports
+                  </DropdownItem>
+                )}
+                <DropdownItem
+                  key="add-label"
+                  isDisabled={selectedVMs.size === 0}
+                  onClick={() => onAddLabels?.(Array.from(selectedVMs))}
+                >
+                  Add labels
+                </DropdownItem>
+                <DropdownItem
+                  key="manage-labels"
+                  onClick={() => onManageLabels?.()}
+                >
+                  Manage all labels
+                </DropdownItem>
+                {!isGroupRowActions && (
+                  <>
+                    <DropdownItem
+                      key="create-group"
+                      isDisabled={selectedVMs.size === 0 || !onCreateGroup}
+                      onClick={() => onCreateGroup?.(selectedVmIds)}
+                    >
+                      Create group
+                    </DropdownItem>
+                    <DropdownItem
+                      key="add-to-group"
+                      isDisabled={selectedVMs.size === 0 || !onAddToGroup}
+                      onClick={() => onAddToGroup?.(selectedVmIds)}
+                    >
+                      Add to group
+                    </DropdownItem>
+                  </>
+                )}
+                <Divider key="separator" component="li" />
+                <DropdownItem
+                  key="remove-from-group"
+                  isDisabled={
+                    selectedVMs.size === 0 ||
+                    !canRemoveSelectedFromGroup ||
+                    !onRemoveFromGroup
+                  }
+                  onClick={() => onRemoveFromGroup?.(selectedVmIds)}
+                >
+                  Remove from group
+                </DropdownItem>
+                <DropdownItem
+                  key="reset-deep-inspection"
+                  isDisabled={selectedVMs.size === 0}
+                  onClick={() => onResetInspection?.()}
+                >
+                  Reset deep inspection
+                </DropdownItem>
+              </DropdownList>
+            </Dropdown>
+          </ToolbarItem>
+
+          <ToolbarItem>
+            <Tooltip content="Select VMs for deep inspection.">
+              <Button
+                variant="primary"
+                icon={<MagicIcon />}
+                isDisabled={selectedVMs.size === 0}
+                onClick={() => onRunDeepInspection?.()}
+              >
+                Run deep inspection
+              </Button>
+            </Tooltip>
+          </ToolbarItem>
+          {inspectionActive && (
+            <ToolbarItem>
+              <Spinner size="md" />
+            </ToolbarItem>
+          )}
+        </>
+      )}
+      <ToolbarItem align={{ default: "alignEnd" }}>
+        <Flex
+          alignItems={{ default: "alignItemsCenter" }}
+          gap={{ default: "gapMd" }}
+        >
+          <FlexItem>
+            {loading && vms.length > 0 && <Spinner size="sm" />}
+          </FlexItem>
+          <FlexItem>
+            {onShowExcludedVMsChange && (
+              <Switch
+                id={showExcludedSwitchId}
+                label="Show excluded VMs"
+                isChecked={showExcludedVMs}
+                onChange={(_event, checked) => {
+                  onShowExcludedVMsChange(checked);
                 }}
-                variant="top"
-                isCompact
               />
-            </FlexItem>
-          </Flex>
-        </ToolbarItem>
-      </ToolbarContent>
+            )}
+          </FlexItem>
+          <FlexItem>
+            <Pagination
+              itemCount={totalVMs ?? vms.length}
+              perPage={pageSize}
+              page={page}
+              onSetPage={(_event, newPage) => onPageChange?.(newPage, pageSize)}
+              onPerPageSelect={(_event, newPerPage) => {
+                onPageChange?.(1, newPerPage);
+              }}
+              variant="top"
+              isCompact
+            />
+          </FlexItem>
+        </Flex>
+      </ToolbarItem>
     </>
   );
 };
