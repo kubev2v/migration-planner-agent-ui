@@ -20,8 +20,11 @@ import {
   renderVmInspectionStatus,
   renderVmStatus,
 } from "./vmTableCellRenderers";
-import type { ColumnKey } from "./vmTableShared";
-import { formatDiskSize, formatMemorySize } from "./vmTableShared";
+import {
+  formatDiskSize,
+  formatMemorySize,
+  getColumnModifier,
+} from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
 import type { VMTableVariantUI } from "./vmTableVariants";
 
@@ -82,69 +85,19 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
       <Thead>
         <Tr>
           <Th screenReaderText="Select" />
-          {columns.map((column, index) => {
-            const getWidth = (key: ColumnKey) => {
-              switch (key) {
-                case "name":
-                  return hasInspectionResults ? 15 : 20;
-                case "labels":
-                  return 15;
-                case "groups":
-                  return 15;
-                case "vCenterState":
-                  return hasInspectionResults ? 10 : 15;
-                case "migratable":
-                  return hasInspectionResults ? 10 : 15;
-                case "id":
-                  return hasInspectionResults ? 10 : 15;
-                case "datacenter":
-                  return 10;
-                case "cluster":
-                  return 10;
-                case "diskSize":
-                  return 10;
-                case "memory":
-                  return 10;
-                case "issues":
-                  return 10;
-                case "cpuUsage":
-                  return 10;
-                case "diskUsage":
-                  return 10;
-                case "ramUsage":
-                  return 10;
-                case "deepInspection":
-                  return 15;
-                default:
-                  return undefined;
+          {columns.map((column, index) => (
+            <Th
+              key={column.key}
+              sort={
+                column.sortable ? getSortParams(column.key, index) : undefined
               }
-            };
-
-            const getModifier = (key: ColumnKey) => {
-              if (key === "issues" || key === "migratable") {
-                return "fitContent";
-              }
-              if (key === "labels") {
-                return "wrap";
-              }
-              return "nowrap";
-            };
-
-            return (
-              <Th
-                key={column.key}
-                sort={
-                  column.sortable ? getSortParams(column.key, index) : undefined
-                }
-                width={getWidth(column.key)}
-                modifier={getModifier(column.key)}
-              >
-                {column.label}
-              </Th>
-            );
-          })}
+              modifier={getColumnModifier(column.key)}
+            >
+              {column.label}
+            </Th>
+          ))}
           {!hideToolbarActions && (
-            <Th width={10} modifier="fitContent" screenReaderText="Actions" />
+            <Th modifier="fitContent" screenReaderText="Actions" />
           )}
         </Tr>
       </Thead>
@@ -262,19 +215,20 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                 </Td>
               )}
               {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
-              {isColumnVisible("cpuUsage") && (
-                <Td dataLabel="CPU usage" modifier="fitContent">
-                  {formatMetric(vm.utilization_cpu_p95)}
+
+              {isColumnVisible("maxCPU") && (
+                <Td dataLabel="Max CPU" modifier="fitContent">
+                  {formatMetric(vm.utilization_cpu_max)}
+                </Td>
+              )}
+              {isColumnVisible("maxRAM") && (
+                <Td dataLabel="Max RAM" modifier="fitContent">
+                  {formatMetric(vm.utilization_mem_max)}
                 </Td>
               )}
               {isColumnVisible("diskUsage") && (
                 <Td dataLabel="Disk usage" modifier="fitContent">
                   {formatMetric(vm.utilization_disk)}
-                </Td>
-              )}
-              {isColumnVisible("ramUsage") && (
-                <Td dataLabel="RAM usage" modifier="fitContent">
-                  {formatMetric(vm.utilization_mem_p95)}
                 </Td>
               )}
               {isColumnVisible("datacenter") && (

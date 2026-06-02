@@ -8,9 +8,9 @@ export type ColumnKey =
   | "groups"
   | "vCenterState"
   | "id"
-  | "cpuUsage"
+  | "maxCPU"
+  | "maxRAM"
   | "diskUsage"
-  | "ramUsage"
   | "datacenter"
   | "cluster"
   | "diskSize"
@@ -41,9 +41,9 @@ export const Columns: Record<ColumnKey, string> = {
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
-  cpuUsage: "CPU usage",
+  maxCPU: "Max CPU",
+  maxRAM: "Max RAM",
   diskUsage: "Disk usage",
-  ramUsage: "RAM usage",
   datacenter: "Data center",
   cluster: "Cluster",
   diskSize: "Disk size",
@@ -65,7 +65,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 5;
+export const VISIBLE_COLUMNS_VERSION = 6;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -76,6 +76,16 @@ export const isBackendSortableColumn = (
 ): key is BackendSortableColumn =>
   key !== null &&
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
+
+export const getColumnModifier = (key: ColumnKey) => {
+  if (key === "issues" || key === "migratable") {
+    return "fitContent";
+  }
+  if (key === "labels") {
+    return "wrap";
+  }
+  return "nowrap";
+};
 
 export const statusLabels: Record<string, string> = {
   poweredOn: "Powered on",
