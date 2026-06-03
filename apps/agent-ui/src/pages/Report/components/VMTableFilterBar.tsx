@@ -20,6 +20,7 @@ import {
 import { FilterIcon } from "@patternfly/react-icons";
 import { ColumnsIcon } from "@patternfly/react-icons/dist/esm/icons/columns-icon";
 import type React from "react";
+import { useRef } from "react";
 import {
   ALL_COLUMN_KEYS,
   type ColumnKey,
@@ -109,6 +110,10 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
   } = logic;
 
   const { showManageColumns } = variantUI;
+  const filterDropdownContentRef = useRef<HTMLDivElement>(null);
+  const nestedSelectPopperProps = {
+    appendTo: () => filterDropdownContentRef.current ?? document.body,
+  };
 
   if (part === "applied") {
     if (appliedFilters.length === 0) {
@@ -241,7 +246,10 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
               maxWidth: "95vw",
             }}
           >
-            <div className={filterStyles.dropdownContent}>
+            <div
+              ref={filterDropdownContentRef}
+              className={filterStyles.dropdownContent}
+            >
               <div className={filterStyles.filterGrid}>
                 {/* Issue categories column */}
                 <div>
@@ -277,6 +285,7 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
                       <Select
                         isOpen={isConcernSelectOpen}
                         selected={tempSelectedConcernLabels}
+                        popperProps={nestedSelectPopperProps}
                         onSelect={(_event, selection) => {
                           const concernLabel = selection as string;
                           toggleTempConcernLabel(concernLabel);
@@ -312,9 +321,6 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
                               isSelected={tempSelectedConcernLabels.includes(
                                 concernLabel,
                               )}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
                             >
                               {concernLabel}
                             </SelectOption>
@@ -444,6 +450,7 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
                       <Select
                         isOpen={isVmLabelSelectOpen}
                         selected={tempSelectedVmLabels}
+                        popperProps={nestedSelectPopperProps}
                         onSelect={(_event, selection) => {
                           toggleTempVmLabel(selection as string);
                         }}
@@ -471,9 +478,6 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
                               value={label}
                               hasCheckbox
                               isSelected={tempSelectedVmLabels.includes(label)}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
                             >
                               {label}
                             </SelectOption>
