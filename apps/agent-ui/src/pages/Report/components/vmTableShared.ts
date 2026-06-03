@@ -142,16 +142,27 @@ export interface AppliedFilter {
   key: string;
 }
 
+/** Keeps the filters panel scrollable inside modals and short viewports. */
+export const FILTER_DROPDOWN_MAX_HEIGHT = "min(70vh, calc(100vh - 12rem))";
+
 export const filterStyles = {
   dropdownContent: css`
     padding: 24px;
-    width: 1400px;
     max-width: 95vw;
-    overflow: visible;
+    width: fit-content;
   `,
-  filterGrid: css`
+  dropdownContentCompact: css`
+    padding: 16px;
+    max-width: 95vw;
+    width: fit-content;
+  `,
+  filtersContent: css`
     display: grid;
     grid-template-columns: repeat(8, 1fr);
+  `,
+  filtersContentCompact: css`
+    display: flex;
+    flex-direction: column;
     gap: 24px;
   `,
   concernsColumn: css`
@@ -160,7 +171,6 @@ export const filterStyles = {
   `,
   concernSelect: css`
     width: 100%;
-    margin-top: 8px;
   `,
   columnTitle: css`
     font-size: 13px;

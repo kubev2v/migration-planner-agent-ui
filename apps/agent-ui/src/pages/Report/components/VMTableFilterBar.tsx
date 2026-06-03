@@ -26,6 +26,7 @@ import {
   type ColumnKey,
   Columns,
   diskSizeRanges,
+  FILTER_DROPDOWN_MAX_HEIGHT,
   filterStyles,
   MANDATORY_COLUMNS,
   memorySizeRanges,
@@ -110,6 +111,15 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
   } = logic;
 
   const { showManageColumns } = variantUI;
+  const isCompactTable = !showManageColumns;
+
+  const handleFilterDropdownOpenChange = (open: boolean) => {
+    if (!open && (isConcernSelectOpen || isVmLabelSelectOpen)) {
+      return;
+    }
+    setIsFilterModalOpen(open);
+  };
+
   const filterDropdownContentRef = useRef<HTMLDivElement>(null);
   const nestedSelectPopperProps = {
     appendTo: () => filterDropdownContentRef.current ?? document.body,
@@ -231,7 +241,9 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
         <ToolbarItem>
           <Dropdown
             isOpen={isFilterModalOpen}
-            onOpenChange={setIsFilterModalOpen}
+            onOpenChange={handleFilterDropdownOpenChange}
+            isScrollable
+            maxMenuHeight={FILTER_DROPDOWN_MAX_HEIGHT}
             toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
               <MenuToggle
                 ref={toggleRef}
@@ -244,13 +256,23 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
             )}
             popperProps={{
               maxWidth: "95vw",
+              appendTo: () => document.body,
             }}
           >
             <div
-              ref={filterDropdownContentRef}
-              className={filterStyles.dropdownContent}
+              className={
+                isCompactTable
+                  ? filterStyles.dropdownContentCompact
+                  : filterStyles.dropdownContent
+              }
             >
-              <div className={filterStyles.filterGrid}>
+              <div
+                className={
+                  isCompactTable
+                    ? filterStyles.filtersContentCompact
+                    : filterStyles.filtersContent
+                }
+              >
                 {/* Issue categories column */}
                 <div>
                   <h3 className={filterStyles.columnTitle}>
