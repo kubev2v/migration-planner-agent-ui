@@ -25,6 +25,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          headerPattern: '^(ECOPROJECT-\d+|NO-JIRA) \| (\w+): (.+)$'
+          headerPatternCorrespondence: scope, type, subject
           types: |
             build
             chore
@@ -36,6 +38,7 @@ jobs:
             refactor
             style
             test
+          requireScope: true
   lint-and-format:
     needs: semantic-commit-check
     if: ${{ !github.event.pull_request.draft && (needs.semantic-commit-check.result == 'success' || needs.semantic-commit-check.result == 'skipped') }}
