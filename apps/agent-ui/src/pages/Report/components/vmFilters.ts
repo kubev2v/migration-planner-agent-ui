@@ -135,10 +135,14 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     }
   }
 
-  // VM user-defined labels (array field; use contains; multiple = AND)
+  // VM user-defined labels (array field; use contains; multiple = OR)
   if (filters.vmLabels && filters.vmLabels.length > 0) {
-    for (const label of filters.vmLabels) {
-      conditions.push(`labels contains '${escapeFilterValue(label)}'`);
+    if (filters.vmLabels?.length) {
+      const condition = filters.vmLabels
+        .map((label) => `labels contains '${escapeFilterValue(label)}'`)
+        .join(" or ");
+
+      conditions.push(`(${condition})`);
     }
   }
 
