@@ -79,7 +79,6 @@ interface VirtualMachinesViewProps {
   onShowExcludedVMsChange?: (show: boolean) => void;
   /** When set, VMs are shown inside this group's detail page */
   groupContext?: { id: string; name: string };
-  rowActionsVariant?: "overview" | "group";
   /** Base filter applied before table filters (e.g. group membership). */
   scopedFilterExpression?: string;
   sortFields?: string[];
@@ -102,12 +101,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   showExcludedVMs,
   onShowExcludedVMsChange,
   groupContext,
-  rowActionsVariant,
   scopedFilterExpression,
   sortFields = [],
 }) => {
-  const effectiveRowActionsVariant =
-    rowActionsVariant ?? (groupContext ? "group" : "overview");
+  const variant = groupContext ? "groups" : "overview";
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
   const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
@@ -157,12 +154,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     Map<string, string[]>
   >(() => new Map());
 
-  const showGroupsColumn = effectiveRowActionsVariant === "overview";
-
   const basePath = useMemo(() => getAgentApiBasePath(agentApi), [agentApi]);
 
   const loadVmGroupMembership = useCallback(async () => {
-    if (!agentApi || !showGroupsColumn) {
+    if (!agentApi) {
       return;
     }
     try {
@@ -171,7 +166,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     } catch (err) {
       console.error("Error loading VM group membership:", err);
     }
-  }, [agentApi, showGroupsColumn]);
+  }, [agentApi]);
 
   useEffect(() => {
     void loadVmGroupMembership();
@@ -538,18 +533,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onEditLabels={handleEditLabels}
         onManageLabels={handleManageLabels}
         onCreateGroup={
-          agentApi && effectiveRowActionsVariant === "overview"
-            ? handleCreateGroup
-            : undefined
+          agentApi && variant === "overview" ? handleCreateGroup : undefined
         }
         onAddToGroup={
-          agentApi && effectiveRowActionsVariant === "overview"
-            ? handleAddToGroup
-            : undefined
+          agentApi && variant === "overview" ? handleAddToGroup : undefined
         }
         onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
-        rowActionsVariant={effectiveRowActionsVariant}
-        showGroupsColumn={showGroupsColumn}
+        variant={variant}
         showExcludedVMs={showExcludedVMs}
         onShowExcludedVMsChange={onShowExcludedVMsChange}
         hasInspectionResults={hasInspectionResults || inspectionActive}

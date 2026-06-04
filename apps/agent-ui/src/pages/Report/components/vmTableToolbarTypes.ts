@@ -1,6 +1,6 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
-import type { VMTableVariantUI } from "./vmTableVariants";
 
 export interface VMTableToolbarProps {
   logic: VMTableLogic;

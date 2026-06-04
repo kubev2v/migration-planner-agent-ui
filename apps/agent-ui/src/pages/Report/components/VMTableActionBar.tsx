@@ -18,8 +18,8 @@ import {
 import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useId } from "react";
+import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
-import type { VMTableVariantUI } from "./vmTableVariants";
 
 export interface VMTableActionBarProps {
   logic: VMTableLogic;

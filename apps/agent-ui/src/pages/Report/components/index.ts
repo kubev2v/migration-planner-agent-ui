@@ -1,5 +1,4 @@
 export { ClustersOverview } from "./ClustersOverview";
-export { CompactVMTable } from "./CompactVMTable";
 export { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
 export { Dashboard } from "./Dashboard";
 export { DeepInspectionModal } from "./DeepInspectionModal";

@@ -24,9 +24,9 @@ import {
   formatDiskSize,
   formatMemorySize,
   getColumnModifier,
+  type VMTableVariantUI,
 } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
-import type { VMTableVariantUI } from "./vmTableVariants";
 
 export interface VMTableGridProps {
   logic: VMTableLogic;

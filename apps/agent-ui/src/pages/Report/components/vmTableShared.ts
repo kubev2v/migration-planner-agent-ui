@@ -204,3 +204,58 @@ export const vmTableStyles = {
     }
   `,
 };
+
+export type VMTableVariant = "overview" | "groups" | "compact";
+
+export type VMTableVariantUI = {
+  showManageColumns: boolean;
+  hideToolbarActions: boolean;
+  disableVmNavigation: boolean;
+  groupsDisplay: "labels" | "text";
+  defaultColumnsKeys: ColumnKey[];
+};
+
+export const VM_TABLE_VARIANT_UI: Record<VMTableVariant, VMTableVariantUI> = {
+  overview: {
+    showManageColumns: true,
+    hideToolbarActions: false,
+    disableVmNavigation: false,
+    groupsDisplay: "text",
+    defaultColumnsKeys: [...ALL_COLUMN_KEYS],
+  },
+  groups: {
+    showManageColumns: true,
+    hideToolbarActions: false,
+    disableVmNavigation: false,
+    groupsDisplay: "text",
+    defaultColumnsKeys: ALL_COLUMN_KEYS.filter((k) => k !== "groups"),
+  },
+  compact: {
+    showManageColumns: false,
+    hideToolbarActions: true,
+    disableVmNavigation: true,
+    groupsDisplay: "labels",
+    defaultColumnsKeys: [...COMPACT_VISIBLE_COLUMNS],
+  },
+};
+
+export function resolveVisibleColumns({
+  variant,
+  userSelectedColumns,
+}: {
+  variant: VMTableVariant;
+  userSelectedColumns: ColumnKey[];
+}): ColumnKey[] {
+  if (variant === "compact") return [...COMPACT_VISIBLE_COLUMNS];
+
+  const baseColumns = Array.from(
+    new Set([
+      ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
+      ...MANDATORY_COLUMNS,
+    ]),
+  );
+
+  if (variant === "groups") return baseColumns.filter((k) => k !== "groups");
+
+  return baseColumns;
+}

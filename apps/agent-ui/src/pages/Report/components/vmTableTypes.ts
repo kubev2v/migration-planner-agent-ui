@@ -1,8 +1,7 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type { ThProps } from "@patternfly/react-table";
 import type { VMFilters } from "./vmFilters";
-import type { ColumnKey } from "./vmTableShared";
-import type { VMTableVariant } from "./vmTableVariants";
+import type { ColumnKey, VMTableVariant } from "./vmTableShared";
 
 export interface VMTableFilterOptions {
   clusters: string[];
@@ -43,8 +42,6 @@ export interface VMTableProps {
   onCancelInspection?: (vmId: string) => void;
   onResetInspection?: () => void;
   variant?: VMTableVariant;
-  showGroupsColumn?: boolean;
-  rowActionsVariant?: "overview" | "group";
 }
 
 export type VMTableColumnDef = {
@@ -70,8 +67,6 @@ export type UseVMTableLogicParams = Pick<
   | "showExcludedVMs"
   | "hasInspectionResults"
   | "variant"
-  | "showGroupsColumn"
-  | "rowActionsVariant"
 >;
 
 export type VMTableLogic = ReturnType<

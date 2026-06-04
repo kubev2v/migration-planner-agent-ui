@@ -24,11 +24,11 @@ import {
   isSortableColumn,
   MANDATORY_COLUMNS,
   memorySizeRanges,
+  resolveVisibleColumns,
   VISIBLE_COLUMNS_KEY,
   VISIBLE_COLUMNS_VERSION,
 } from "./vmTableShared";
 import type { UseVMTableLogicParams } from "./vmTableTypes";
-import { resolveVisibleColumns } from "./vmTableVariants";
 
 export function useVMTableLogic({
   vms,
@@ -52,10 +52,8 @@ export function useVMTableLogic({
   showExcludedVMs = true,
   hasInspectionResults = false,
   variant = "overview",
-  showGroupsColumn = false,
-  rowActionsVariant = "overview",
 }: UseVMTableLogicParams) {
-  const isGroupRowActions = rowActionsVariant === "group";
+  const isGroupRowActions = variant === "groups";
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Use props for pagination state (controlled by parent)
@@ -74,9 +72,8 @@ export function useVMTableLogic({
       resolveVisibleColumns({
         variant,
         userSelectedColumns,
-        showGroupsColumn,
       }),
-    [variant, userSelectedColumns, showGroupsColumn],
+    [variant, userSelectedColumns],
   );
 
   const isColumnVisible = useCallback(
@@ -282,7 +279,7 @@ export function useVMTableLogic({
   const columns = useMemo(
     () =>
       ALL_COLUMN_KEYS.filter((key) => {
-        if (key === "groups" && !showGroupsColumn) {
+        if (key === "groups") {
           return false;
         }
         if (key === "deepInspection") {
@@ -294,7 +291,7 @@ export function useVMTableLogic({
         label: Columns[key],
         sortable: isSortableColumn(key),
       })),
-    [isColumnVisible, hasInspectionResults, showGroupsColumn],
+    [isColumnVisible, hasInspectionResults],
   );
 
   // Use filter options from props (pre-fetched from parent)

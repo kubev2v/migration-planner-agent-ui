@@ -22,7 +22,6 @@ import { ColumnsIcon } from "@patternfly/react-icons/dist/esm/icons/columns-icon
 import type React from "react";
 import { useRef } from "react";
 import {
-  ALL_COLUMN_KEYS,
   type ColumnKey,
   Columns,
   diskSizeRanges,
@@ -31,9 +30,9 @@ import {
   MANDATORY_COLUMNS,
   memorySizeRanges,
   statusLabels,
+  type VMTableVariantUI,
 } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
-import type { VMTableVariantUI } from "./vmTableVariants";
 
 export interface VMTableFilterBarProps {
   logic: VMTableLogic;
@@ -110,7 +109,7 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     availableVmLabels,
   } = logic;
 
-  const { showManageColumns } = variantUI;
+  const { showManageColumns, defaultColumnsKeys } = variantUI;
   const isCompactTable = !showManageColumns;
 
   const handleFilterDropdownOpenChange = (open: boolean) => {
@@ -547,19 +546,21 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
               )}
             >
               <SelectList>
-                {ALL_COLUMN_KEYS.filter(
-                  (key) => key !== "deepInspection" || hasInspectionResults,
-                ).map((key) => (
-                  <SelectOption
-                    key={key}
-                    value={key}
-                    hasCheckbox
-                    isSelected={isColumnVisible(key)}
-                    isDisabled={MANDATORY_COLUMNS.includes(key)}
-                  >
-                    {Columns[key]}
-                  </SelectOption>
-                ))}
+                {defaultColumnsKeys
+                  .filter(
+                    (key) => key !== "deepInspection" || hasInspectionResults,
+                  )
+                  .map((key) => (
+                    <SelectOption
+                      key={key}
+                      value={key}
+                      hasCheckbox
+                      isSelected={isColumnVisible(key)}
+                      isDisabled={MANDATORY_COLUMNS.includes(key)}
+                    >
+                      {Columns[key]}
+                    </SelectOption>
+                  ))}
               </SelectList>
             </Select>
           </ToolbarItem>

@@ -557,7 +557,6 @@ export const GroupDetailPage: React.FC = () => {
                     setVmsPage(1);
                   }}
                   groupContext={{ id: group.id, name: group.name }}
-                  rowActionsVariant="group"
                   scopedFilterExpression={group.filter}
                   sortFields={vmsSortFields}
                 />
