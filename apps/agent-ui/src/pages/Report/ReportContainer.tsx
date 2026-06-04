@@ -36,7 +36,11 @@ import {
 import { Symbols } from "../../main/Symbols";
 import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
-import { Dashboard, VirtualMachinesView } from "./components/index";
+import {
+  ClusterDrsConfiguration,
+  Dashboard,
+  VirtualMachinesView,
+} from "./components/index";
 import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
 import {
   filtersToByExpression,
@@ -624,7 +628,11 @@ export const ReportContainer: React.FC = () => {
     <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
       <Stack hasGutter>
         <StackItem>
-          <Header totalVMs={totalVMs} totalClusters={totalClusters} />
+          <Header
+            totalVMs={totalVMs}
+            totalClusters={totalClusters}
+            vcenterVersion={inventory?.vcenter_version || ""}
+          />
         </StackItem>
 
         {!isDataShared && (
@@ -636,7 +644,6 @@ export const ReportContainer: React.FC = () => {
           </StackItem>
         )}
 
-        {/* Cluster Selector */}
         <StackItem>
           <Select
             isScrollable
@@ -671,6 +678,15 @@ export const ReportContainer: React.FC = () => {
             </SelectList>
           </Select>
         </StackItem>
+
+        {clusterView.selectionId !== "all" ? (
+          <StackItem>
+            <ClusterDrsConfiguration
+              clusters={clusters}
+              selectedClusterId={clusterView.selectionId}
+            />
+          </StackItem>
+        ) : null}
 
         {utilizationMetrics && (
           <StackItem>
