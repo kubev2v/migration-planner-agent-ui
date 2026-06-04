@@ -19,7 +19,6 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     showExcludedVMs,
     onShowExcludedVMsChange,
     onPageChange,
-    hasInspectionResults,
     inspectionActive,
     isGroupRowActions,
     onExcludeFromReports,
@@ -36,7 +35,6 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
   const filterBarProps = {
     logic,
     variantUI,
-    hasInspectionResults,
     selectedVMs,
     onSelectionChange,
     onFetchAllVmIds,

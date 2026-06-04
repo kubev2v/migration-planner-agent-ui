@@ -131,14 +131,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     onRefreshVMsRef.current = onRefreshVMs;
   }, [onRefreshVMs]);
 
-  // Once any VM has inspection data the column must stay visible, even while
-  // the list is momentarily empty during a sort/filter refetch.
-  const hasInspectionResultsRef = useRef(false);
-  if (vms.some((vm) => vm.inspectionStatus != null)) {
-    hasInspectionResultsRef.current = true;
-  }
-  const hasInspectionResults = hasInspectionResultsRef.current;
-
   // Labels state
   const [isAddLabelsModalOpen, setIsAddLabelsModalOpen] = useState(false);
   const [addLabelsMode, setAddLabelsMode] = useState<"add" | "edit">("add");
@@ -542,7 +534,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         variant={variant}
         showExcludedVMs={showExcludedVMs}
         onShowExcludedVMsChange={onShowExcludedVMsChange}
-        hasInspectionResults={hasInspectionResults || inspectionActive}
         inspectionActive={inspectionActive}
         onCancelInspection={handleCancelInspection}
         onResetInspection={handleResetInspection}

@@ -248,12 +248,13 @@ export function resolveVisibleColumns({
 }): ColumnKey[] {
   if (variant === "compact") return [...COMPACT_VISIBLE_COLUMNS];
 
-  const baseColumns = Array.from(
-    new Set([
-      ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
-      ...MANDATORY_COLUMNS,
-    ]),
-  );
+  const selectedSet = new Set([
+    ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
+    ...MANDATORY_COLUMNS,
+  ]);
+
+  // Maintain the order defined in ALL_COLUMN_KEYS
+  const baseColumns = ALL_COLUMN_KEYS.filter((key) => selectedSet.has(key));
 
   if (variant === "groups") return baseColumns.filter((k) => k !== "groups");
 

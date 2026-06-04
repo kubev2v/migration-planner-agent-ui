@@ -12,7 +12,6 @@ import {
   type VMTableFilterSelection,
 } from "./vmTableFilterLogic";
 import {
-  ALL_COLUMN_KEYS,
   type BackendSortableColumn,
   type ColumnKey,
   Columns,
@@ -50,7 +49,6 @@ export function useVMTableLogic({
   onSelectionChange,
   onFetchAllVmIds,
   showExcludedVMs = true,
-  hasInspectionResults = false,
   variant = "overview",
 }: UseVMTableLogicParams) {
   const isGroupRowActions = variant === "groups";
@@ -278,20 +276,12 @@ export function useVMTableLogic({
   // Column definitions - filtered by visibility
   const columns = useMemo(
     () =>
-      ALL_COLUMN_KEYS.filter((key) => {
-        if (key === "groups") {
-          return false;
-        }
-        if (key === "deepInspection") {
-          return isColumnVisible(key) && hasInspectionResults;
-        }
-        return isColumnVisible(key);
-      }).map((key) => ({
+      visibleColumns.map((key) => ({
         key,
         label: Columns[key],
         sortable: isSortableColumn(key),
       })),
-    [isColumnVisible, hasInspectionResults],
+    [visibleColumns],
   );
 
   // Use filter options from props (pre-fetched from parent)
