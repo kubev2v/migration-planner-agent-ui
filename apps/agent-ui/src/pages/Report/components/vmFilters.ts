@@ -4,6 +4,7 @@ export interface VMFilters {
   statuses?: string[];
   clusters?: string[];
   datacenters?: string[];
+  networks?: string[];
   search?: string;
   diskRange?: { min: number; max?: number };
   memoryRange?: { min: number; max?: number };
@@ -69,6 +70,20 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
         .map((d) => `'${escapeFilterValue(d)}'`)
         .join(",");
       conditions.push(`datacenter in [${datacenterList}]`);
+    }
+  }
+
+  // Network filter
+  if (filters.networks && filters.networks.length > 0) {
+    if (filters.networks.length === 1) {
+      conditions.push(
+        `net.network = '${escapeFilterValue(filters.networks[0])}'`,
+      );
+    } else {
+      const networkList = filters.networks
+        .map((n) => `'${escapeFilterValue(n)}'`)
+        .join(",");
+      conditions.push(`net.network in [${networkList}]`);
     }
   }
 
@@ -195,11 +210,19 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
   }
 
   if (filters.clusters && filters.clusters.length > 0) {
-    params.set("clusters", filters.clusters.join(","));
+    for (const cluster of filters.clusters) {
+      params.append("clusters", cluster);
+    }
   }
 
   if (filters.datacenters && filters.datacenters.length > 0) {
     params.set("datacenters", filters.datacenters.join(","));
+  }
+
+  if (filters.networks && filters.networks.length > 0) {
+    for (const network of filters.networks) {
+      params.append("networks", network);
+    }
   }
 
   if (filters.search) {
@@ -266,14 +289,19 @@ export function searchParamsToFilters(
     filters.statuses = statuses.split(",").filter(Boolean);
   }
 
-  const clusters = searchParams.get("clusters");
-  if (clusters) {
-    filters.clusters = clusters.split(",").filter(Boolean);
+  const clusters = searchParams.getAll("clusters");
+  if (clusters.length > 0) {
+    filters.clusters = clusters.filter(Boolean);
   }
 
   const datacenters = searchParams.get("datacenters");
   if (datacenters) {
     filters.datacenters = datacenters.split(",").filter(Boolean);
+  }
+
+  const networks = searchParams.getAll("networks");
+  if (networks.length > 0) {
+    filters.networks = networks.filter(Boolean);
   }
 
   const search = searchParams.get("search");
@@ -346,6 +374,7 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.statuses && filters.statuses.length > 0) ||
     (filters.clusters && filters.clusters.length > 0) ||
     (filters.datacenters && filters.datacenters.length > 0) ||
+    (filters.networks && filters.networks.length > 0) ||
     (filters.migrationReadiness && filters.migrationReadiness.length > 0) ||
     (filters.vmLabels && filters.vmLabels.length > 0) ||
     (filters.concernLabels && filters.concernLabels.length > 0) ||

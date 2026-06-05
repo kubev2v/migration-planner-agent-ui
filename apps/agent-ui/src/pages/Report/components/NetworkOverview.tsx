@@ -17,11 +17,9 @@ import {
 import { TopologyIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { dashboardStyles } from "./dashboardStyles";
 
 import MigrationDonutChart from "./MigrationDonutChart";
-import { createVMFilterURL } from "./vmNavigation";
 
 // Reuse an extended palette similar to ClustersOverview to provide stable colors
 const colorPalette = [
@@ -59,7 +57,6 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
   distributionByNicCount,
   isExportMode = false,
 }) => {
-  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>("networkDistribution");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -252,11 +249,6 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
     setIsDropdownOpen(false);
   };
 
-  const handleTitleClick = () => {
-    // Navigate to all VMs without filters
-    navigate(createVMFilterURL({}));
-  };
-
   return (
     <Card
       className={
@@ -332,7 +324,6 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%\nVLAN: ${legendVlanMap[datum.legendCategory] ?? "-"}`
             }
-            onTitleClick={!isExportMode ? handleTitleClick : undefined}
           />
         )}
         {viewMode === "nicCount" && (
@@ -351,7 +342,6 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%`
             }
-            onTitleClick={!isExportMode ? handleTitleClick : undefined}
           />
         )}
       </CardBody>

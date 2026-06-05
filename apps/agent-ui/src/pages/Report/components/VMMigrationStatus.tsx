@@ -17,13 +17,12 @@ import {
 import { VirtualMachineIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Symbols } from "../../../main/Symbols";
 import { chartColorFailure, chartColorSuccess } from "./constants";
 import { dashboardStyles } from "./dashboardStyles";
 import { combineFilterExpressions } from "./groupFilters";
 import MigrationDonutChart from "./MigrationDonutChart";
-import { createVMFilterURL } from "./vmNavigation";
+import { type NavigateToVMFilters, useChartDrillDown } from "./vmNavigation";
 
 type ViewMode = "issuesVsNoIssues" | "issuesBreakdown";
 
@@ -34,6 +33,7 @@ interface VmMigrationStatusProps {
   };
   isExportMode?: boolean;
   scopedFilterExpression?: string;
+  onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
 const categoryOrder = [
@@ -69,9 +69,10 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   data,
   isExportMode = false,
   scopedFilterExpression,
+  onNavigateToVMFilters,
 }) => {
-  const navigate = useNavigate();
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
   const [viewMode, setViewMode] = useState<ViewMode>("issuesVsNoIssues");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [issuesBreakdown, setIssuesBreakdown] = useState<{
@@ -285,15 +286,21 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
     if (viewMode === "issuesVsNoIssues") {
       const migrationReadiness =
         item.name === "Migratable" ? ["ready"] : ["not-ready"];
-      const url = createVMFilterURL({ migrationReadiness });
-      navigate(url);
+      navigateToVMs({ migrationReadiness });
     }
+  };
+
+  const handleBreakdownClick = (category: string) => {
+    if (isExportMode) return;
+    navigateToVMs({
+      migrationReadiness: ["not-ready"],
+      concernCategories: [category],
+    });
   };
 
   const handleTitleClick = () => {
     if (isExportMode) return;
-    const url = createVMFilterURL({});
-    navigate(url);
+    navigateToVMs({});
   };
 
   const totalVMs = data.migratable + data.nonMigratable;
@@ -371,7 +378,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
             legendLabelFormatter={({ x, countDisplay }) =>
               `${x} (${countDisplay})`
             }
-            onItemClick={handleItemClick}
+            onItemClick={!isExportMode ? handleItemClick : undefined}
             onTitleClick={!isExportMode ? handleTitleClick : undefined}
           />
         ) : isLoadingBreakdown ? (
@@ -441,16 +448,34 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
                           justifyContent: "center",
                         }}
                       >
-                        <div
-                          style={{
-                            width: "60px",
-                            height: `${finalHeightPercentage}%`,
-                            backgroundColor: barColor,
-                            transition: "height 0.3s ease",
-                            borderRadius: "4px 4px 0 0",
-                          }}
-                          title={`${item.name}: ${item.count} VMs`}
-                        />
+                        {!isExportMode ? (
+                          <button
+                            type="button"
+                            onClick={() => handleBreakdownClick(item.name)}
+                            title={`${item.name}: ${item.count} VMs`}
+                            style={{
+                              width: "60px",
+                              height: `${finalHeightPercentage}%`,
+                              backgroundColor: barColor,
+                              transition: "height 0.3s ease",
+                              borderRadius: "4px 4px 0 0",
+                              cursor: "pointer",
+                              border: "none",
+                              padding: 0,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "60px",
+                              height: `${finalHeightPercentage}%`,
+                              backgroundColor: barColor,
+                              transition: "height 0.3s ease",
+                              borderRadius: "4px 4px 0 0",
+                            }}
+                            title={`${item.name}: ${item.count} VMs`}
+                          />
+                        )}
                       </FlexItem>
                       <FlexItem>
                         <Content

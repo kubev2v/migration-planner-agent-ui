@@ -13,6 +13,10 @@ interface OSData {
   count: number;
   legendCategory: string;
   countDisplay?: string;
+  diskRange?: { min: number; max?: number };
+  memoryRange?: { min: number; max?: number };
+  clusterNames?: string[];
+  networkNames?: string[];
 }
 
 interface MigrationDonutChartProps {
@@ -167,16 +171,21 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
 
   const handleClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Victory chart types are not well-typed
-    (event: any) => {
-      if (!onItemClick || !event?.datum) return;
+    (props: any) => {
+      if (!onItemClick) return;
 
-      // Find the original data item - first try exact name match
-      let clickedItem = data.find((item) => item.name === event.datum.x);
+      const datum = props?.datum;
+      if (!datum) return;
 
-      // If no exact name match, fall back to legendCategory match
+      let clickedItem = data.find((item) => item.name === datum.x);
+
+      if (!clickedItem && typeof props.index === "number") {
+        clickedItem = data[props.index];
+      }
+
       if (!clickedItem) {
         clickedItem = data.find(
-          (item) => item.legendCategory === event.datum.legendCategory,
+          (item) => item.legendCategory === datum.legendCategory,
         );
       }
 

@@ -58,6 +58,7 @@ export function clearVmFilterParams(params: URLSearchParams): void {
   params.delete("noIssues");
   params.delete("clusters");
   params.delete("datacenters");
+  params.delete("networks");
   params.delete("search");
   params.delete("diskRangeMin");
   params.delete("diskRangeMax");

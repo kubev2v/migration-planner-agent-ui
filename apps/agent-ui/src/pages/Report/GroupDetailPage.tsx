@@ -45,8 +45,10 @@ import { EditGroupNameModal } from "./components/EditGroupNameModal";
 import { combineFilterExpressions } from "./components/groupFilters";
 import {
   filtersToByExpression,
+  filtersToSearchParams,
   hasActiveFilters,
   searchParamsToFilters,
+  type VMFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
 import {
@@ -112,6 +114,17 @@ export const GroupDetailPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<string | number>(() =>
     resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
+  );
+
+  const handleNavigateToVMFilters = useCallback(
+    (filters: VMFilters) => {
+      setActiveTab(REPORT_TAB.vms);
+      setVmsPage(1);
+      const newParams = filtersToSearchParams(filters);
+      newParams.set("tab", "vms");
+      setSearchParams(newParams, { replace: true });
+    },
+    [setSearchParams],
   );
 
   const groupFilter = group?.filter;
@@ -423,6 +436,13 @@ export const GroupDetailPage: React.FC = () => {
     setVmsPage(1);
   };
 
+  const handleConcernClick = useCallback(
+    (concernLabel: string) => {
+      handleNavigateToVMFilters({ concernLabels: [concernLabel] });
+    },
+    [handleNavigateToVMFilters],
+  );
+
   const handleClusterSelect = (
     _event: React.MouseEvent<Element, MouseEvent> | undefined,
     value: string | number | undefined,
@@ -627,6 +647,8 @@ export const GroupDetailPage: React.FC = () => {
                       isAggregateView={clusterView.isAggregateView}
                       clusterFound={clusterView.clusterFound}
                       scopedFilterExpression={group.filter}
+                      onConcernClick={handleConcernClick}
+                      onNavigateToVMFilters={handleNavigateToVMFilters}
                     />
                   </div>
                 ) : (

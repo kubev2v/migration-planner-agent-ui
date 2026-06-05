@@ -21,6 +21,7 @@ import { NetworkOverview } from "./NetworkOverview";
 import { OSDistribution } from "./OSDistribution";
 import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
+import type { NavigateToVMFilters } from "./vmNavigation";
 import { WarningsTable } from "./WarningsTable";
 
 interface DashboardProps {
@@ -34,6 +35,7 @@ interface DashboardProps {
   clusterFound?: boolean;
   onConcernClick?: (concernLabel: string) => void;
   scopedFilterExpression?: string;
+  onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -47,6 +49,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   clusterFound = true,
   onConcernClick,
   scopedFilterExpression,
+  onNavigateToVMFilters,
 }) => {
   // Transform osInfo to include both count and supported fields
   const osData = vms.osInfo
@@ -113,6 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 }}
                 isExportMode={isExportMode}
                 scopedFilterExpression={scopedFilterExpression}
+                onNavigateToVMFilters={onNavigateToVMFilters}
               />
             </GalleryItem>
             <GalleryItem>
@@ -130,6 +134,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 memoryTierDistribution={vms.distributionByMemoryTier}
                 memoryTotalGB={ramGB?.total}
                 cpuTotalCores={cpuCores?.total}
+                onNavigateToVMFilters={onNavigateToVMFilters}
               />
             </GalleryItem>
             <GalleryItem>
@@ -140,6 +145,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 totalWithSharedDisks={vms.totalWithSharedDisks ?? 0}
                 isExportMode={isExportMode}
                 exportAllViews={isExportMode}
+                onNavigateToVMFilters={onNavigateToVMFilters}
               />
             </GalleryItem>
           </Gallery>

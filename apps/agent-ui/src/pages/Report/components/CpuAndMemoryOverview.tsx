@@ -14,10 +14,10 @@ import {
 import { DataProcessorIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
-import { createVMFilterURL } from "./vmNavigation";
+import { type NavigateToVMFilters, useChartDrillDown } from "./vmNavigation";
+import { parseMemoryTierLabelToRange } from "./vmTableShared";
 
 interface CpuAndMemoryOverviewProps {
   cpuTierDistribution?: Record<string, number>;
@@ -25,6 +25,7 @@ interface CpuAndMemoryOverviewProps {
   memoryTotalGB?: number;
   cpuTotalCores?: number;
   isExportMode?: boolean;
+  onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
 type ViewMode = "memoryTiers" | "vcpuTiers";
@@ -51,8 +52,9 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
   memoryTotalGB,
   cpuTotalCores,
   isExportMode = false,
+  onNavigateToVMFilters,
 }) => {
-  const navigate = useNavigate();
+  const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
   const [viewMode, setViewMode] = useState<ViewMode>("memoryTiers");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -69,6 +71,7 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
         count,
         countDisplay: `${count} VMs`,
         legendCategory: tier,
+        memoryRange: parseMemoryTierLabelToRange(tier),
       }));
   }, [memoryTierDistribution]);
 
@@ -106,50 +109,25 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
   const parseMemoryTierToFilter = (
     tier: string,
   ): { min: number; max?: number } | null => {
-    const MB_IN_GB = 1024;
-    const normalized = tier.trim();
-
-    // Memory range mappings matching VMTable
-    const memoryRangeMappings: Record<
-      string,
-      { min: number; max: number | undefined }
-    > = {
-      "0-4": { min: 0, max: 4 * MB_IN_GB },
-      "0-4 GB": { min: 0, max: 4 * MB_IN_GB },
-      "5-16": { min: 4 * MB_IN_GB + 1, max: 16 * MB_IN_GB },
-      "5-16 GB": { min: 4 * MB_IN_GB + 1, max: 16 * MB_IN_GB },
-      "17-32": { min: 16 * MB_IN_GB + 1, max: 32 * MB_IN_GB },
-      "17-32 GB": { min: 16 * MB_IN_GB + 1, max: 32 * MB_IN_GB },
-      "33-64": { min: 32 * MB_IN_GB + 1, max: 64 * MB_IN_GB },
-      "33-64 GB": { min: 32 * MB_IN_GB + 1, max: 64 * MB_IN_GB },
-      "65-128": { min: 64 * MB_IN_GB + 1, max: 128 * MB_IN_GB },
-      "65-128 GB": { min: 64 * MB_IN_GB + 1, max: 128 * MB_IN_GB },
-      "129-256": { min: 128 * MB_IN_GB + 1, max: 256 * MB_IN_GB },
-      "129-256 GB": { min: 128 * MB_IN_GB + 1, max: 256 * MB_IN_GB },
-      "256+": { min: 256 * MB_IN_GB + 1, max: undefined },
-      "256+ GB": { min: 256 * MB_IN_GB + 1, max: undefined },
-    };
-
-    if (normalized in memoryRangeMappings) {
-      return memoryRangeMappings[normalized];
-    }
-
-    return null;
+    return parseMemoryTierLabelToRange(tier) ?? null;
   };
 
   const handleMemoryTierClick = (item: {
     name: string;
     legendCategory: string;
+    memoryRange?: { min: number; max?: number };
   }) => {
-    const memoryRange = parseMemoryTierToFilter(item.legendCategory);
+    const memoryRange =
+      item.memoryRange ??
+      parseMemoryTierToFilter(item.legendCategory) ??
+      parseMemoryTierToFilter(item.name);
     if (memoryRange) {
-      navigate(createVMFilterURL({ memoryRange }));
+      navigateToVMs({ memoryRange });
     }
   };
 
   const handleTitleClick = () => {
-    // Navigate to all VMs without filters
-    navigate(createVMFilterURL({}));
+    navigateToVMs({});
   };
 
   return (

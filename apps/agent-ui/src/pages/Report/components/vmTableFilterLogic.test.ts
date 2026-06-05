@@ -53,7 +53,7 @@ describe("vmTableFilterLogic", () => {
       },
       {
         category: "Disk size",
-        label: "11-20 TB",
+        label: "100-500GiB",
         key: "diskSize",
       },
     ]);

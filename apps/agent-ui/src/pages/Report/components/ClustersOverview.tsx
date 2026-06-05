@@ -15,11 +15,9 @@ import {
 import { DatabaseIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
-import { createVMFilterURL } from "./vmNavigation";
 
 interface ClustersOverviewProps {
   clustersPerDatacenter: number[];
@@ -151,7 +149,6 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
   isExportMode = false,
   clusters,
 }) => {
-  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>("vmByCluster");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -228,12 +225,8 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
       const rest = ranked.slice(TOP_N);
       const restSum = rest.reduce((acc, r) => acc + r.count, 0);
 
-      // Map display names to actual cluster names
-      const indexToName = new Map<string, string>();
-
       const slices = top.map((item, i) => {
         const displayName = `Cluster ${i + 1}`;
-        indexToName.set(displayName, item.name);
         return {
           name: displayName,
           count: item.count,
@@ -316,11 +309,6 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
       setViewMode(value);
     }
     setIsDropdownOpen(false);
-  };
-
-  const handleTitleClick = () => {
-    // Navigate to all VMs without filters
-    navigate(createVMFilterURL({}));
   };
 
   return (
@@ -442,11 +430,6 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
             itemsPerRow={chartData.length}
             tooltipLabelFormatter={({ datum, percent }) =>
               `${datum.countDisplay}\n${percent.toFixed(1)}%`
-            }
-            onTitleClick={
-              !isExportMode && viewMode === "vmByCluster"
-                ? handleTitleClick
-                : undefined
             }
           />
         )}

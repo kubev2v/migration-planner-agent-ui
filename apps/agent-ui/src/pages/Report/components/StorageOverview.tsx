@@ -23,10 +23,10 @@ import chart_color_teal_300 from "@patternfly/react-tokens/dist/esm/chart_color_
 import chart_color_yellow_400 from "@patternfly/react-tokens/dist/esm/chart_color_yellow_400";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
-import { createVMFilterURL } from "./vmNavigation";
+import { type NavigateToVMFilters, useChartDrillDown } from "./vmNavigation";
+import { parseDiskTierLabelToRange } from "./vmTableShared";
 
 interface DiskTierData {
   vmCount?: number;
@@ -40,6 +40,7 @@ interface StorageOverviewProps {
   totalWithSharedDisks?: number;
   isExportMode?: boolean;
   exportAllViews?: boolean;
+  onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
 type ViewMode = "totalSize" | "vmCount" | "vmCountByDiskType" | "sharedDisks";
@@ -66,6 +67,7 @@ type TierChartDatum = {
   count: number;
   countDisplay: string;
   legendCategory: string;
+  diskRange?: { min: number; max?: number };
 };
 
 function buildTierChartData(
@@ -82,33 +84,38 @@ function buildTierChartData(
   if (!summary) return [];
 
   const getTierPrefix = (key: string): string | null => {
+    const normalizedKey = key.trim().toLowerCase();
     for (const prefix of Object.keys(tierConfig)) {
-      if (key.startsWith(prefix)) return prefix;
+      if (normalizedKey.startsWith(prefix.toLowerCase())) {
+        return prefix;
+      }
     }
     return null;
   };
 
   return Object.entries(summary)
-    .sort(([keyA], [keyB]) => {
-      const prefixA = getTierPrefix(keyA);
-      const prefixB = getTierPrefix(keyB);
-      const orderA = prefixA ? tierConfig[prefixA].order : 999;
-      const orderB = prefixB ? tierConfig[prefixB].order : 999;
-      return orderA - orderB;
-    })
     .map(([key, tier]) => {
       const prefix = getTierPrefix(key);
       const display = prefix
         ? tierConfig[prefix]
         : { label: key, legendCategory: key };
       const { count, countDisplay } = selector(tier);
+      const label = display.label;
       return {
-        name: display.label,
+        name: label,
         count,
         countDisplay,
         legendCategory: display.legendCategory,
+        diskRange:
+          parseDiskTierLabelToRange(key) ?? parseDiskTierLabelToRange(label),
+        sortOrder:
+          parseDiskTierLabelToRange(key)?.min ??
+          parseDiskTierLabelToRange(label)?.min ??
+          (prefix ? tierConfig[prefix].order : 999),
       };
-    });
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(({ sortOrder: _sortOrder, ...datum }) => datum);
 }
 
 const COLOR_PALETTE = [
@@ -264,8 +271,9 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
   totalWithSharedDisks,
   isExportMode = false,
   exportAllViews = false,
+  onNavigateToVMFilters,
 }) => {
-  const navigate = useNavigate();
+  const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
   const [viewMode, setViewMode] = useState<ViewMode>("vmCount");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -407,39 +415,24 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
     setIsDropdownOpen(false);
   };
 
-  const parseDiskTierToFilter = (
-    tier: string,
-  ): { min: number; max?: number } | null => {
-    const MB_IN_TB = 1024 * 1024;
-    const normalized = tier.trim();
-
-    const diskRangeMappings: Record<
-      string,
-      { min: number; max: number | undefined }
-    > = {
-      "0-10 TB": { min: 0, max: 10 * MB_IN_TB },
-      "11-20 TB": { min: 10 * MB_IN_TB + 1, max: 20 * MB_IN_TB },
-      "21-50 TB": { min: 20 * MB_IN_TB + 1, max: 50 * MB_IN_TB },
-      "50+ TB": { min: 50 * MB_IN_TB + 1, max: undefined },
-      "> 50 TB": { min: 50 * MB_IN_TB + 1, max: undefined },
-    };
-
-    if (normalized in diskRangeMappings) {
-      return diskRangeMappings[normalized];
-    }
-
-    return null;
-  };
-
-  const handleDiskTierClick = (item: { name: string }) => {
-    const diskRange = parseDiskTierToFilter(item.name);
+  const handleDiskTierClick = (item: {
+    name: string;
+    legendCategory?: string;
+    diskRange?: { min: number; max?: number };
+  }) => {
+    const diskRange =
+      item.diskRange ??
+      parseDiskTierLabelToRange(item.name) ??
+      (item.legendCategory
+        ? parseDiskTierLabelToRange(item.legendCategory)
+        : undefined);
     if (diskRange) {
-      navigate(createVMFilterURL({ diskRange }));
+      navigateToVMs({ diskRange });
     }
   };
 
   const handleTitleClick = () => {
-    navigate(createVMFilterURL({}));
+    navigateToVMs({});
   };
 
   return (
@@ -560,7 +553,12 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
               tooltipLabelFormatter={({ datum, percent }) =>
                 `${datum.x}: ${datum.countDisplay}\n${percent.toFixed(1)}%`
               }
-              onItemClick={!isExportMode ? handleDiskTierClick : undefined}
+              onItemClick={
+                !isExportMode &&
+                (viewMode === "vmCount" || viewMode === "totalSize")
+                  ? handleDiskTierClick
+                  : undefined
+              }
               onTitleClick={!isExportMode ? handleTitleClick : undefined}
             />
           )

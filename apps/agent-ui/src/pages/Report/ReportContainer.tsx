@@ -44,8 +44,10 @@ import {
 import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
 import {
   filtersToByExpression,
+  filtersToSearchParams,
   hasActiveFilters,
   searchParamsToFilters,
+  type VMFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
 import {
@@ -118,6 +120,17 @@ export const ReportContainer: React.FC = () => {
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
     [searchParams],
+  );
+
+  const handleNavigateToVMFilters = useCallback(
+    (filters: VMFilters) => {
+      setActiveTab(1);
+      setVmsPage(1);
+      const newParams = filtersToSearchParams(filters);
+      newParams.set("tab", "vms");
+      setSearchParams(newParams, { replace: true });
+    },
+    [setSearchParams],
   );
 
   // Determine initial tab based on URL params (only on mount)
@@ -678,6 +691,7 @@ export const ReportContainer: React.FC = () => {
                     isAggregateView={clusterView.isAggregateView}
                     clusterFound={clusterView.clusterFound}
                     onConcernClick={handleConcernClick}
+                    onNavigateToVMFilters={handleNavigateToVMFilters}
                   />
                 ) : (
                   <Content component="p">
