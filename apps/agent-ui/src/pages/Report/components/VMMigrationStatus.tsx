@@ -16,11 +16,12 @@ import {
 } from "@patternfly/react-core";
 import { VirtualMachineIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Symbols } from "../../../main/Symbols";
 import { chartColorFailure, chartColorSuccess } from "./constants";
 import { dashboardStyles } from "./dashboardStyles";
+import { combineFilterExpressions } from "./groupFilters";
 import MigrationDonutChart from "./MigrationDonutChart";
 import { createVMFilterURL } from "./vmNavigation";
 
@@ -32,6 +33,7 @@ interface VmMigrationStatusProps {
     nonMigratable: number;
   };
   isExportMode?: boolean;
+  scopedFilterExpression?: string;
 }
 
 const categoryOrder = [
@@ -66,6 +68,7 @@ const categoryColors: Record<string, string> = {
 export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   data,
   isExportMode = false,
+  scopedFilterExpression,
 }) => {
   const navigate = useNavigate();
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
@@ -81,6 +84,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   const [isLoadingBreakdown, setIsLoadingBreakdown] = useState(false);
   const [isIncompleteData, setIsIncompleteData] = useState(false);
   const [issuesBreakdownError, setIssuesBreakdownError] = useState(false);
+  const cachedBreakdownExpressionRef = useRef<string | null>(null);
 
   const viewModeLabels: Record<ViewMode, string> = {
     issuesVsNoIssues: "No issues vs with issues",
@@ -88,115 +92,156 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   };
 
   useEffect(() => {
-    if (viewMode === "issuesBreakdown" && !issuesBreakdown && !isExportMode) {
-      const fetchIssuesBreakdown = async () => {
-        try {
-          setIsLoadingBreakdown(true);
-          setIsIncompleteData(false);
-          setIssuesBreakdownError(false);
+    if (viewMode !== "issuesBreakdown" || isExportMode) {
+      return;
+    }
 
-          const pageSize = 500;
-          const firstResponse = await agentApi.getVMs({
-            byExpression: "issues_count >= 1 and migratable = false",
-            page: 1,
-            pageSize,
-          });
+    const issuesFilter = "issues_count >= 1 and migratable = false";
+    const byExpression =
+      combineFilterExpressions(scopedFilterExpression, issuesFilter) ??
+      issuesFilter;
 
-          let allVmsWithIssues = [...(firstResponse.vms || [])];
+    if (
+      issuesBreakdown &&
+      cachedBreakdownExpressionRef.current === byExpression
+    ) {
+      return;
+    }
 
-          if (firstResponse.total > allVmsWithIssues.length) {
-            const totalPages = firstResponse.pageCount;
-            const remainingPages = [];
-            for (let page = 2; page <= totalPages; page++) {
-              remainingPages.push(
-                agentApi.getVMs({
-                  byExpression: "issues_count >= 1 and migratable = false",
-                  page,
-                  pageSize,
-                }),
-              );
-            }
+    let cancelled = false;
 
-            const remainingResponses = await Promise.all(remainingPages);
-            const additionalVms = remainingResponses.flatMap(
-              (response) => response.vms || [],
+    const fetchIssuesBreakdown = async () => {
+      try {
+        setIsLoadingBreakdown(true);
+        setIsIncompleteData(false);
+        setIssuesBreakdownError(false);
+
+        const pageSize = 500;
+        const firstResponse = await agentApi.getVMs({
+          byExpression,
+          page: 1,
+          pageSize,
+        });
+
+        let allVmsWithIssues = [...(firstResponse.vms || [])];
+
+        if (firstResponse.total > allVmsWithIssues.length) {
+          const totalPages = firstResponse.pageCount;
+          const remainingPages = [];
+          for (let page = 2; page <= totalPages; page++) {
+            remainingPages.push(
+              agentApi.getVMs({
+                byExpression,
+                page,
+                pageSize,
+              }),
             );
-            allVmsWithIssues = [...allVmsWithIssues, ...additionalVms];
           }
 
-          if (firstResponse.total > allVmsWithIssues.length) {
-            console.warn(
-              `Incomplete data: Expected ${firstResponse.total} VMs, but only received ${allVmsWithIssues.length}`,
-            );
-            setIsIncompleteData(true);
-          }
+          const remainingResponses = await Promise.all(remainingPages);
+          const additionalVms = remainingResponses.flatMap(
+            (response) => response.vms || [],
+          );
+          allVmsWithIssues = [...allVmsWithIssues, ...additionalVms];
+        }
 
-          const categoryCount: Record<string, Set<string>> = {
-            Critical: new Set(),
-            Error: new Set(),
-            Warning: new Set(),
-            Information: new Set(),
-            Advisory: new Set(),
-          };
+        if (cancelled) {
+          return;
+        }
 
-          const batchSize = 50;
-          const vmDetailsResults: PromiseSettledResult<
-            Awaited<ReturnType<typeof agentApi.getVM>>
-          >[] = [];
+        if (firstResponse.total > allVmsWithIssues.length) {
+          console.warn(
+            `Incomplete data: Expected ${firstResponse.total} VMs, but only received ${allVmsWithIssues.length}`,
+          );
+          setIsIncompleteData(true);
+        }
 
-          for (let i = 0; i < allVmsWithIssues.length; i += batchSize) {
-            const batch = allVmsWithIssues.slice(i, i + batchSize);
-            const batchPromises = batch.map((vm) =>
-              agentApi.getVM({ id: vm.id }),
-            );
-            const batchResults = await Promise.allSettled(batchPromises);
-            vmDetailsResults.push(...batchResults);
-          }
+        const categoryCount: Record<string, Set<string>> = {
+          Critical: new Set(),
+          Error: new Set(),
+          Warning: new Set(),
+          Information: new Set(),
+          Advisory: new Set(),
+        };
 
-          let failedVmCount = 0;
-          for (const result of vmDetailsResults) {
-            if (result.status === "fulfilled") {
-              const vmDetail = result.value;
-              const issues = vmDetail.issues || [];
+        const batchSize = 50;
+        const vmDetailsResults: PromiseSettledResult<
+          Awaited<ReturnType<typeof agentApi.getVM>>
+        >[] = [];
 
-              for (const issue of issues) {
-                const category = issue.category;
-                if (categoryCount[category]) {
-                  categoryCount[category].add(vmDetail.id);
-                }
+        for (let i = 0; i < allVmsWithIssues.length; i += batchSize) {
+          const batch = allVmsWithIssues.slice(i, i + batchSize);
+          const batchPromises = batch.map((vm) =>
+            agentApi.getVM({ id: vm.id }),
+          );
+          const batchResults = await Promise.allSettled(batchPromises);
+          vmDetailsResults.push(...batchResults);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        let failedVmCount = 0;
+        for (const result of vmDetailsResults) {
+          if (result.status === "fulfilled") {
+            const vmDetail = result.value;
+            const issues = vmDetail.issues || [];
+
+            for (const issue of issues) {
+              const category = issue.category;
+              if (categoryCount[category]) {
+                categoryCount[category].add(vmDetail.id);
               }
-            } else {
-              failedVmCount++;
-              console.error("Error fetching VM details:", result.reason);
             }
+          } else {
+            failedVmCount++;
+            console.error("Error fetching VM details:", result.reason);
           }
+        }
 
-          if (failedVmCount > 0) {
-            console.warn(
-              `Failed to fetch details for ${failedVmCount} VMs. Chart shows partial data.`,
-            );
-            setIsIncompleteData(true);
-          }
+        if (failedVmCount > 0) {
+          console.warn(
+            `Failed to fetch details for ${failedVmCount} VMs. Chart shows partial data.`,
+          );
+          setIsIncompleteData(true);
+        }
 
-          setIssuesBreakdown({
-            critical: categoryCount.Critical.size,
-            error: categoryCount.Error.size,
-            warning: categoryCount.Warning.size,
-            information: categoryCount.Information.size,
-            advisory: categoryCount.Advisory.size,
-          });
-        } catch (err) {
-          console.error("Error fetching issues breakdown:", err);
-          setIssuesBreakdown(null);
-          setIssuesBreakdownError(true);
-        } finally {
+        setIssuesBreakdown({
+          critical: categoryCount.Critical.size,
+          error: categoryCount.Error.size,
+          warning: categoryCount.Warning.size,
+          information: categoryCount.Information.size,
+          advisory: categoryCount.Advisory.size,
+        });
+        cachedBreakdownExpressionRef.current = byExpression;
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        console.error("Error fetching issues breakdown:", err);
+        setIssuesBreakdown(null);
+        cachedBreakdownExpressionRef.current = null;
+        setIssuesBreakdownError(true);
+      } finally {
+        if (!cancelled) {
           setIsLoadingBreakdown(false);
         }
-      };
+      }
+    };
 
-      fetchIssuesBreakdown();
-    }
-  }, [viewMode, issuesBreakdown, agentApi, isExportMode]);
+    fetchIssuesBreakdown();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    viewMode,
+    issuesBreakdown,
+    agentApi,
+    isExportMode,
+    scopedFilterExpression,
+  ]);
 
   const donutData = [
     {

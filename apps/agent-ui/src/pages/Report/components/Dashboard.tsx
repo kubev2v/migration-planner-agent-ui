@@ -33,6 +33,7 @@ interface DashboardProps {
   isAggregateView?: boolean;
   clusterFound?: boolean;
   onConcernClick?: (concernLabel: string) => void;
+  scopedFilterExpression?: string;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -45,6 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isAggregateView = true,
   clusterFound = true,
   onConcernClick,
+  scopedFilterExpression,
 }) => {
   // Transform osInfo to include both count and supported fields
   const osData = vms.osInfo
@@ -110,6 +112,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   ),
                 }}
                 isExportMode={isExportMode}
+                scopedFilterExpression={scopedFilterExpression}
               />
             </GalleryItem>
             <GalleryItem>
