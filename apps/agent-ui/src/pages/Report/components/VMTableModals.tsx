@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Content,
   Modal,
@@ -7,11 +8,14 @@ import {
   ModalHeader,
 } from "@patternfly/react-core";
 import type React from "react";
+import { useState } from "react";
+import { extractCancelInspectionErrorMessage } from "./vmInspectionUtils";
 import type { VMTableLogic } from "./vmTableTypes";
 
 export interface VMTableModalsProps {
   logic: VMTableLogic;
-  onCancelInspection?: (vmId: string) => void;
+  cancelingInspectionVmIds?: Set<string>;
+  onCancelInspection?: (vmId: string) => Promise<void>;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
   onSelectionChange?: (selected: Set<string>) => void;
@@ -19,11 +23,14 @@ export interface VMTableModalsProps {
 
 export const VMTableModals: React.FC<VMTableModalsProps> = ({
   logic,
+  cancelingInspectionVmIds,
   onCancelInspection,
   onExcludeFromReports,
   onIncludeInReports,
   onSelectionChange,
 }) => {
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
   const {
     cancelInspectionVmId,
     closeCancelInspectionConfirm,
@@ -40,11 +47,19 @@ export const VMTableModals: React.FC<VMTableModalsProps> = ({
     selectedIncludedIds,
   } = logic;
 
+  const isCancelLoading =
+    cancelInspectionVmId !== null &&
+    (cancelingInspectionVmIds?.has(cancelInspectionVmId) ?? false);
+
   return (
     <>
       <Modal
         isOpen={cancelInspectionVmId !== null}
-        onClose={closeCancelInspectionConfirm}
+        onClose={() => {
+          if (isCancelLoading) return;
+          setCancelError(null);
+          closeCancelInspectionConfirm();
+        }}
         aria-labelledby="cancel-inspection-title"
         aria-describedby="cancel-inspection-body"
         variant="small"
@@ -55,6 +70,15 @@ export const VMTableModals: React.FC<VMTableModalsProps> = ({
           labelId="cancel-inspection-title"
         />
         <ModalBody id="cancel-inspection-body">
+          {cancelError && (
+            <Alert
+              variant="danger"
+              title="Unable to cancel inspection"
+              isInline
+            >
+              {cancelError}
+            </Alert>
+          )}
           <Content component="p">
             {(() => {
               const vmName = cancelInspectionVmId
@@ -75,16 +99,30 @@ export const VMTableModals: React.FC<VMTableModalsProps> = ({
         <ModalFooter>
           <Button
             variant="danger"
-            onClick={() => {
-              if (cancelInspectionVmId) {
-                onCancelInspection?.(cancelInspectionVmId);
+            isLoading={isCancelLoading}
+            isDisabled={isCancelLoading}
+            onClick={async () => {
+              if (!cancelInspectionVmId || !onCancelInspection) return;
+              setCancelError(null);
+              try {
+                await onCancelInspection(cancelInspectionVmId);
+                closeCancelInspectionConfirm();
+              } catch (err) {
+                console.error("Error canceling inspection:", err);
+                setCancelError(await extractCancelInspectionErrorMessage(err));
               }
-              closeCancelInspectionConfirm();
             }}
           >
             Confirm
           </Button>
-          <Button variant="link" onClick={closeCancelInspectionConfirm}>
+          <Button
+            variant="link"
+            isDisabled={isCancelLoading}
+            onClick={() => {
+              setCancelError(null);
+              closeCancelInspectionConfirm();
+            }}
+          >
             Cancel
           </Button>
         </ModalFooter>

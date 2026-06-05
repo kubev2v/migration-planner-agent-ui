@@ -43,6 +43,7 @@ export interface VMTableGridProps {
   onAddToGroup?: (vmIds: string[]) => void;
   onRemoveFromGroup?: (vmIds: string[]) => void;
   openCancelInspectionConfirm: (vmId: string) => void;
+  cancelingInspectionVmIds?: Set<string>;
 }
 
 export const VMTableGrid: React.FC<VMTableGridProps> = ({
@@ -60,6 +61,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   onAddToGroup,
   onRemoveFromGroup,
   openCancelInspectionConfirm,
+  cancelingInspectionVmIds,
 }) => {
   const {
     columns,
@@ -252,7 +254,11 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
               )}
               {isColumnVisible("deepInspection") && (
                 <Td dataLabel="Deep inspection">
-                  {renderVmInspectionStatus(vm, onVMClick)}
+                  {renderVmInspectionStatus(
+                    vm,
+                    onVMClick,
+                    cancelingInspectionVmIds,
+                  )}
                 </Td>
               )}
               {!hideToolbarActions && (
@@ -297,9 +303,13 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                       {(() => {
                         const vmState = vm.inspectionStatus?.state;
                         if (vmState === "running" || vmState === "pending") {
+                          const isCanceling = cancelingInspectionVmIds?.has(
+                            vm.id,
+                          );
                           return (
                             <DropdownItem
                               key="cancel-vm-inspection"
+                              isDisabled={isCanceling}
                               onClick={() => openCancelInspectionConfirm(vm.id)}
                             >
                               Cancel deep inspection

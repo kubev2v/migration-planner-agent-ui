@@ -35,6 +35,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   showExcludedVMs = true,
   onShowExcludedVMsChange,
   inspectionActive = false,
+  cancelingInspectionVmIds,
   onCancelInspection,
   onResetInspection,
   variant = "overview",
@@ -101,10 +102,12 @@ export const VMTable: React.FC<VMTableProps> = ({
         onAddToGroup={onAddToGroup}
         onRemoveFromGroup={onRemoveFromGroup}
         openCancelInspectionConfirm={logic.openCancelInspectionConfirm}
+        cancelingInspectionVmIds={cancelingInspectionVmIds}
       />
 
       <VMTableModals
         logic={logic}
+        cancelingInspectionVmIds={cancelingInspectionVmIds}
         onCancelInspection={onCancelInspection}
         onExcludeFromReports={onExcludeFromReports}
         onIncludeInReports={onIncludeInReports}

@@ -13,6 +13,7 @@ import {
   ExclamationTriangleIcon,
 } from "@patternfly/react-icons";
 import type React from "react";
+import { isLikelyCanceledInspectionError } from "./vmInspectionUtils";
 import { statusLabels } from "./vmTableShared";
 
 export function renderVmStatus(vm: VirtualMachine): React.ReactNode {
@@ -49,9 +50,18 @@ export function renderVmStatus(vm: VirtualMachine): React.ReactNode {
 export function renderVmInspectionStatus(
   vm: VirtualMachine,
   onVMClick?: (vmId: string) => void,
+  cancelingVmIds?: Set<string>,
 ): React.ReactNode {
   const status = vm.inspectionStatus;
   if (!status) return "Not run";
+
+  if (cancelingVmIds?.has(vm.id)) {
+    return (
+      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <Spinner size="sm" /> Canceling
+      </span>
+    );
+  }
 
   const state = status.state;
   const goToDetail = onVMClick ? () => onVMClick(vm.id) : undefined;
@@ -65,6 +75,16 @@ export function renderVmInspectionStatus(
   }
 
   if (state === "error") {
+    if (isLikelyCanceledInspectionError(status.error)) {
+      return (
+        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Label color="grey" isCompact>
+            Canceled
+          </Label>
+        </span>
+      );
+    }
+
     const concernCount = vm.inspectionConcernCount || 0;
 
     if (concernCount === 0) {
