@@ -12,7 +12,6 @@ describe("vmTableVariants", () => {
       showManageColumns: false,
       hideToolbarActions: true,
       disableVmNavigation: true,
-      groupsDisplay: "labels",
       defaultColumnsKeys: [
         "name",
         "labels",
@@ -23,8 +22,7 @@ describe("vmTableVariants", () => {
     });
   });
 
-  it("overview variant uses comma-separated groups and full toolbar", () => {
-    expect(VM_TABLE_VARIANT_UI.overview.groupsDisplay).toBe("text");
+  it("overview variant enables full toolbar and column management", () => {
     expect(VM_TABLE_VARIANT_UI.overview.showManageColumns).toBe(true);
     expect(VM_TABLE_VARIANT_UI.overview.hideToolbarActions).toBe(false);
   });
