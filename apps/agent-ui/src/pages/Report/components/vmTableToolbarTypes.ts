@@ -16,7 +16,6 @@ export interface VMTableToolbarProps {
   showExcludedVMs: boolean;
   onShowExcludedVMsChange?: (show: boolean) => void;
   onPageChange?: (page: number, pageSize: number) => void;
-  hasInspectionResults: boolean;
   inspectionActive: boolean;
   isGroupRowActions: boolean;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;

@@ -84,4 +84,33 @@ describe("vmTableVariants", () => {
     });
     expect(columns).not.toContain("groups");
   });
+
+  it("includes deepInspection when user selects it", () => {
+    const result = resolveVisibleColumns({
+      variant: "overview",
+      userSelectedColumns: ["name", "deepInspection"],
+    });
+    expect(result).toContain("deepInspection");
+    expect(result).toContain("name");
+  });
+
+  it("includes deepInspection in groups variant when user selects it", () => {
+    const result = resolveVisibleColumns({
+      variant: "groups",
+      userSelectedColumns: ["name", "deepInspection", "groups"],
+    });
+    expect(result).toContain("deepInspection");
+    expect(result).not.toContain("groups");
+    expect(result).toContain("name");
+  });
+
+  it("maintains column order from ALL_COLUMN_KEYS regardless of user selection order", () => {
+    // User selects columns in reverse order
+    const result = resolveVisibleColumns({
+      variant: "overview",
+      userSelectedColumns: ["issues", "memory", "cluster", "name"],
+    });
+    // Should be reordered to match ALL_COLUMN_KEYS definition
+    expect(result).toEqual(["name", "cluster", "memory", "issues"]);
+  });
 });

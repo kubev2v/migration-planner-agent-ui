@@ -37,7 +37,6 @@ import type { VMTableLogic } from "./vmTableTypes";
 export interface VMTableFilterBarProps {
   logic: VMTableLogic;
   variantUI: VMTableVariantUI;
-  hasInspectionResults: boolean;
   selectedVMs: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
   onFetchAllVmIds?: (
@@ -50,7 +49,6 @@ export interface VMTableFilterBarProps {
 export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
   logic,
   variantUI,
-  hasInspectionResults,
   selectedVMs,
   onSelectionChange,
   onFetchAllVmIds,
@@ -546,21 +544,17 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
               )}
             >
               <SelectList>
-                {defaultColumnsKeys
-                  .filter(
-                    (key) => key !== "deepInspection" || hasInspectionResults,
-                  )
-                  .map((key) => (
-                    <SelectOption
-                      key={key}
-                      value={key}
-                      hasCheckbox
-                      isSelected={isColumnVisible(key)}
-                      isDisabled={MANDATORY_COLUMNS.includes(key)}
-                    >
-                      {Columns[key]}
-                    </SelectOption>
-                  ))}
+                {defaultColumnsKeys.map((key) => (
+                  <SelectOption
+                    key={key}
+                    value={key}
+                    hasCheckbox
+                    isSelected={isColumnVisible(key)}
+                    isDisabled={MANDATORY_COLUMNS.includes(key)}
+                  >
+                    {Columns[key]}
+                  </SelectOption>
+                ))}
               </SelectList>
             </Select>
           </ToolbarItem>

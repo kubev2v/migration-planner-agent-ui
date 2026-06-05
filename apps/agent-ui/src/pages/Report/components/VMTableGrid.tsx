@@ -34,7 +34,6 @@ export interface VMTableGridProps {
   loading: boolean;
   vms: VirtualMachine[];
   selectedVMs: Set<string>;
-  hasInspectionResults: boolean;
   isGroupRowActions: boolean;
   onVMClick?: (vmId: string) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
@@ -52,7 +51,6 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   loading,
   vms,
   selectedVMs,
-  hasInspectionResults,
   isGroupRowActions,
   onVMClick,
   onRunDeepInspection,
@@ -252,7 +250,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                   {vm.issueCount || 0}
                 </Td>
               )}
-              {hasInspectionResults && isColumnVisible("deepInspection") && (
+              {isColumnVisible("deepInspection") && (
                 <Td dataLabel="Deep inspection">
                   {renderVmInspectionStatus(vm, onVMClick)}
                 </Td>
