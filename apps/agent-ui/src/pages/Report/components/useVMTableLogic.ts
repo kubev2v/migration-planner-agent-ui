@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import useLocalStorage from "../../../hooks/useLocalStorage";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
+import type { VirtualMachineWithGroupItems } from "./vmGroupMembership";
 import {
   buildAppliedFilters,
   EMPTY_VM_TABLE_FILTER_SELECTION,
@@ -134,8 +135,8 @@ export function useVMTableLogic({
       return selectedVMs.size > 0;
     }
     for (const id of selectedVMs) {
-      const vm = vmById.get(id);
-      if (vm?.groups && vm.groups.length > 0) {
+      const vm = vmById.get(id) as VirtualMachineWithGroupItems | undefined;
+      if (vm?.groupItems && vm.groupItems.length > 0) {
         return true;
       }
     }

@@ -7,26 +7,38 @@ import { fetchAllMatchingVmIds } from "./vmSelection";
 
 const GROUP_LIST_PAGE_SIZE = 100;
 
-function addGroupName(
-  map: Map<string, string[]>,
+export type GroupListItem = {
+  id: string;
+  name: string;
+};
+
+export type VirtualMachineWithGroupItems = VirtualMachine & {
+  groupItems: GroupListItem[];
+};
+
+export type VmGroupMembershipData = {
+  vmIdToGroups: Record<string, GroupListItem[]>;
+  groupsByName: Record<string, GroupListItem>;
+};
+
+function addGroupToVm(
+  map: Record<string, GroupListItem[]>,
   vmId: string,
-  groupName: string,
+  group: GroupListItem,
 ): void {
-  const existing = map.get(vmId) ?? [];
-  if (existing.includes(groupName)) {
+  const existing = map[vmId] ?? [];
+  if (existing.some((item) => item.id === group.id)) {
     return;
   }
-  map.set(
-    vmId,
-    [...existing, groupName].sort((a, b) => a.localeCompare(b)),
-  );
+  map[vmId] = [...existing, group].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Builds vm id → group names from all groups (for VM overview when /vms omits groups). */
-export async function buildVmIdToGroupNamesMap(
+/** Builds vm id → groups and a name lookup from all groups. */
+export async function buildVmGroupMembership(
   agentApi: DefaultApiInterface,
-): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
+): Promise<VmGroupMembershipData> {
+  const vmIdToGroups = Object.create(null) as Record<string, GroupListItem[]>;
+  const groupsByName = Object.create(null) as Record<string, GroupListItem>;
 
   const firstPage = await agentApi.listGroups({
     page: 1,
@@ -45,10 +57,19 @@ export async function buildVmIdToGroupNamesMap(
   }
 
   for (const group of allGroups) {
+    const groupItem = { id: group.id, name: group.name };
+    const existingByName = groupsByName[group.name];
+    if (existingByName !== undefined && existingByName.id !== group.id) {
+      throw new Error(
+        `Duplicate group name "${group.name}" with different ids: ${existingByName.id} and ${group.id}`,
+      );
+    }
+    groupsByName[group.name] = groupItem;
+
     const explicitIds = parseIdsFromFilter(group.filter);
     if (explicitIds !== null) {
       for (const vmId of explicitIds) {
-        addGroupName(map, vmId, group.name);
+        addGroupToVm(vmIdToGroups, vmId, groupItem);
       }
       continue;
     }
@@ -57,29 +78,29 @@ export async function buildVmIdToGroupNamesMap(
       byExpression: group.filter,
     });
     for (const vmId of matchingIds) {
-      addGroupName(map, vmId, group.name);
+      addGroupToVm(vmIdToGroups, vmId, groupItem);
     }
   }
 
-  return map;
+  return { vmIdToGroups, groupsByName };
 }
 
-export function mergeVmGroupNames(
+export function mergeVmGroupItems(
   vms: VirtualMachine[],
-  vmIdToGroupNames: Map<string, string[]>,
-): VirtualMachine[] {
-  if (vmIdToGroupNames.size === 0) {
-    return vms;
-  }
+  membership: VmGroupMembershipData,
+): VirtualMachineWithGroupItems[] {
+  const { vmIdToGroups, groupsByName } = membership;
 
   return vms.map((vm) => {
-    if (vm.groups && vm.groups.length > 0) {
-      return vm;
+    let groupItems = vmIdToGroups[vm.id];
+
+    if (!groupItems?.length && vm.groups?.length) {
+      groupItems = vm.groups
+        .map((name) => groupsByName[name])
+        .filter((group): group is GroupListItem => group !== undefined)
+        .sort((a, b) => a.name.localeCompare(b.name));
     }
-    const groups = vmIdToGroupNames.get(vm.id);
-    if (!groups || groups.length === 0) {
-      return vm;
-    }
-    return { ...vm, groups };
+
+    return { ...vm, groupItems: groupItems ?? [] };
   });
 }

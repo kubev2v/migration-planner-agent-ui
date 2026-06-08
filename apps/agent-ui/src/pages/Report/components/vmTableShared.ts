@@ -211,7 +211,6 @@ export type VMTableVariantUI = {
   showManageColumns: boolean;
   hideToolbarActions: boolean;
   disableVmNavigation: boolean;
-  groupsDisplay: "labels" | "text";
   defaultColumnsKeys: ColumnKey[];
 };
 
@@ -220,21 +219,18 @@ export const VM_TABLE_VARIANT_UI: Record<VMTableVariant, VMTableVariantUI> = {
     showManageColumns: true,
     hideToolbarActions: false,
     disableVmNavigation: false,
-    groupsDisplay: "text",
     defaultColumnsKeys: [...ALL_COLUMN_KEYS],
   },
   groups: {
     showManageColumns: true,
     hideToolbarActions: false,
     disableVmNavigation: false,
-    groupsDisplay: "text",
     defaultColumnsKeys: ALL_COLUMN_KEYS.filter((k) => k !== "groups"),
   },
   compact: {
     showManageColumns: false,
     hideToolbarActions: true,
     disableVmNavigation: true,
-    groupsDisplay: "labels",
     defaultColumnsKeys: [...COMPACT_VISIBLE_COLUMNS],
   },
 };

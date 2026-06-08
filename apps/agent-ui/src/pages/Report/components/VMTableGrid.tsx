@@ -15,7 +15,9 @@ import {
 import { EllipsisVIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
+import { GroupsList } from "./GroupsList";
 import { formatMetric } from "./VMUtilizationMetrics";
+import type { GroupListItem } from "./vmGroupMembership";
 import {
   renderVmInspectionStatus,
   renderVmStatus,
@@ -73,7 +75,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
     setOpenActionMenuId,
   } = logic;
 
-  const { hideToolbarActions, disableVmNavigation, groupsDisplay } = variantUI;
+  const { hideToolbarActions, disableVmNavigation } = variantUI;
 
   return (
     <Table
@@ -121,269 +123,269 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
             </Td>
           </Tr>
         ) : (
-          displayVMs.map((vm, rowIndex) => (
-            <Tr key={vm.id}>
-              <Td
-                select={{
-                  rowIndex,
-                  onSelect: (_event, isSelected) => onSelectVM(vm, isSelected),
-                  isSelected:
-                    selectedVMs.has(vm.id) ||
-                    vm.inspectionStatus?.state === "running" ||
-                    vm.inspectionStatus?.state === "pending",
-                  isDisabled:
-                    vm.inspectionStatus?.state === "running" ||
-                    vm.inspectionStatus?.state === "pending",
-                }}
-              />
-              {isColumnVisible("name") && (
-                <Td dataLabel="Name" modifier="truncate">
-                  {onVMClick && !disableVmNavigation ? (
-                    <Tooltip content={vm.name}>
-                      <Button
-                        variant="link"
-                        isInline
-                        onClick={() => onVMClick(vm.id)}
-                      >
-                        {vm.name}
-                      </Button>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip content={vm.name}>
-                      <span>{vm.name}</span>
-                    </Tooltip>
-                  )}
-                  {vm.migrationExcluded && (
-                    <div style={{ marginTop: "4px" }}>
-                      <Label isCompact color="grey">
-                        Excluded
-                      </Label>
-                    </div>
-                  )}
-                </Td>
-              )}
-              {isColumnVisible("labels") && (
-                <Td dataLabel="Labels">
-                  {(() => {
-                    const vmLabels: string[] | undefined = (
-                      vm as VirtualMachine & { labels?: string[] }
-                    ).labels;
-                    if (vmLabels && vmLabels.length > 0) {
-                      return (
-                        <LabelGroup numLabels={5}>
-                          {vmLabels.map((lbl: string) => (
-                            <Label key={lbl} isCompact>
-                              {lbl}
-                            </Label>
-                          ))}
-                        </LabelGroup>
-                      );
-                    }
-                    return "–";
-                  })()}
-                </Td>
-              )}
-              {isColumnVisible("groups") && (
-                <Td dataLabel="Groups">
-                  {vm.groups && vm.groups.length > 0 ? (
-                    groupsDisplay === "text" ? (
-                      vm.groups.join(", ")
-                    ) : (
-                      <LabelGroup numLabels={3}>
-                        {vm.groups.map((groupName) => (
-                          <Label key={groupName} isCompact>
-                            {groupName}
-                          </Label>
-                        ))}
-                      </LabelGroup>
-                    )
-                  ) : (
-                    "–"
-                  )}
-                </Td>
-              )}
-              {isColumnVisible("vCenterState") && (
-                <Td dataLabel="Status">{renderVmStatus(vm)}</Td>
-              )}
-              {isColumnVisible("migratable") && (
-                <Td dataLabel="Migration Readiness" modifier="fitContent">
-                  {vm.migratable === true
-                    ? "Ready"
-                    : vm.migratable === false
-                      ? "Not ready"
-                      : "Unknown"}
-                </Td>
-              )}
-              {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
-
-              {isColumnVisible("maxCPU") && (
-                <Td dataLabel="Max CPU" modifier="fitContent">
-                  {formatMetric(vm.utilization_cpu_max)}
-                </Td>
-              )}
-              {isColumnVisible("maxRAM") && (
-                <Td dataLabel="Max RAM" modifier="fitContent">
-                  {formatMetric(vm.utilization_mem_max)}
-                </Td>
-              )}
-              {isColumnVisible("diskUsage") && (
-                <Td dataLabel="Disk usage" modifier="fitContent">
-                  {formatMetric(vm.utilization_disk)}
-                </Td>
-              )}
-              {isColumnVisible("datacenter") && (
-                <Td dataLabel="Data center">{vm.datacenter || "—"}</Td>
-              )}
-              {isColumnVisible("cluster") && (
-                <Td dataLabel="Cluster">{vm.cluster || "—"}</Td>
-              )}
-              {isColumnVisible("diskSize") && (
-                <Td dataLabel="Disk size">
-                  {formatDiskSize(vm.diskSize || 0)}
-                </Td>
-              )}
-              {isColumnVisible("memory") && (
-                <Td dataLabel="Memory size">
-                  {formatMemorySize(vm.memory || 0)}
-                </Td>
-              )}
-              {isColumnVisible("issues") && (
-                <Td dataLabel="Issues" modifier="fitContent">
-                  {vm.issueCount || 0}
-                </Td>
-              )}
-              {isColumnVisible("deepInspection") && (
-                <Td dataLabel="Deep inspection">
-                  {renderVmInspectionStatus(
-                    vm,
-                    onVMClick,
-                    cancelingInspectionVmIds,
-                  )}
-                </Td>
-              )}
-              {!hideToolbarActions && (
-                <Td isActionCell modifier="fitContent">
-                  <Dropdown
-                    isOpen={openActionMenuId === vm.id}
-                    onSelect={(_event, value) => {
-                      setOpenActionMenuId(null);
-                      if (value === "remove-from-group") {
-                        onRemoveFromGroup?.([vm.id]);
-                      }
-                    }}
-                    onOpenChange={(isOpen) =>
-                      setOpenActionMenuId(isOpen ? vm.id : null)
-                    }
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        variant="plain"
-                        onClick={() =>
-                          setOpenActionMenuId(
-                            openActionMenuId === vm.id ? null : vm.id,
-                          )
-                        }
-                        isExpanded={openActionMenuId === vm.id}
-                      >
-                        <EllipsisVIcon />
-                      </MenuToggle>
-                    )}
-                    popperProps={{ position: "right" }}
-                  >
-                    <DropdownList>
-                      {isGroupRowActions && (
-                        <DropdownItem
-                          key="remove-from-group"
-                          value="remove-from-group"
-                          isDisabled={!onRemoveFromGroup}
+          displayVMs.map((vm, rowIndex) => {
+            const groupItems: GroupListItem[] =
+              "groupItems" in vm &&
+              Array.isArray((vm as { groupItems?: unknown }).groupItems)
+                ? (vm as { groupItems: GroupListItem[] }).groupItems
+                : [];
+            return (
+              <Tr key={vm.id}>
+                <Td
+                  select={{
+                    rowIndex,
+                    onSelect: (_event, isSelected) =>
+                      onSelectVM(vm, isSelected),
+                    isSelected:
+                      selectedVMs.has(vm.id) ||
+                      vm.inspectionStatus?.state === "running" ||
+                      vm.inspectionStatus?.state === "pending",
+                    isDisabled:
+                      vm.inspectionStatus?.state === "running" ||
+                      vm.inspectionStatus?.state === "pending",
+                  }}
+                />
+                {isColumnVisible("name") && (
+                  <Td dataLabel="Name" modifier="truncate">
+                    {onVMClick && !disableVmNavigation ? (
+                      <Tooltip content={vm.name}>
+                        <Button
+                          variant="link"
+                          isInline
+                          onClick={() => onVMClick(vm.id)}
                         >
-                          Remove from group
-                        </DropdownItem>
-                      )}
-                      {(() => {
-                        const vmState = vm.inspectionStatus?.state;
-                        if (vmState === "running" || vmState === "pending") {
-                          const isCanceling = cancelingInspectionVmIds?.has(
-                            vm.id,
-                          );
-                          return (
-                            <DropdownItem
-                              key="cancel-vm-inspection"
-                              isDisabled={isCanceling}
-                              onClick={() => openCancelInspectionConfirm(vm.id)}
-                            >
-                              Cancel deep inspection
-                            </DropdownItem>
-                          );
+                          {vm.name}
+                        </Button>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip content={vm.name}>
+                        <span>{vm.name}</span>
+                      </Tooltip>
+                    )}
+                    {vm.migrationExcluded && (
+                      <div style={{ marginTop: "4px" }}>
+                        <Label isCompact color="grey">
+                          Excluded
+                        </Label>
+                      </div>
+                    )}
+                  </Td>
+                )}
+                {isColumnVisible("labels") && (
+                  <Td dataLabel="Labels">
+                    {(() => {
+                      const vmLabels: string[] | undefined = (
+                        vm as VirtualMachine & { labels?: string[] }
+                      ).labels;
+                      if (vmLabels && vmLabels.length > 0) {
+                        return (
+                          <LabelGroup numLabels={5}>
+                            {vmLabels.map((lbl: string) => (
+                              <Label key={lbl} isCompact>
+                                {lbl}
+                              </Label>
+                            ))}
+                          </LabelGroup>
+                        );
+                      }
+                      return "–";
+                    })()}
+                  </Td>
+                )}
+                {isColumnVisible("groups") && (
+                  <Td dataLabel="Groups">
+                    {groupItems.length > 0 ? (
+                      <GroupsList groups={groupItems} />
+                    ) : (
+                      "–"
+                    )}
+                  </Td>
+                )}
+                {isColumnVisible("vCenterState") && (
+                  <Td dataLabel="Status">{renderVmStatus(vm)}</Td>
+                )}
+                {isColumnVisible("migratable") && (
+                  <Td dataLabel="Migration Readiness" modifier="fitContent">
+                    {vm.migratable === true
+                      ? "Ready"
+                      : vm.migratable === false
+                        ? "Not ready"
+                        : "Unknown"}
+                  </Td>
+                )}
+                {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
+
+                {isColumnVisible("maxCPU") && (
+                  <Td dataLabel="Max CPU" modifier="fitContent">
+                    {formatMetric(vm.utilization_cpu_max)}
+                  </Td>
+                )}
+                {isColumnVisible("maxRAM") && (
+                  <Td dataLabel="Max RAM" modifier="fitContent">
+                    {formatMetric(vm.utilization_mem_max)}
+                  </Td>
+                )}
+                {isColumnVisible("diskUsage") && (
+                  <Td dataLabel="Disk usage" modifier="fitContent">
+                    {formatMetric(vm.utilization_disk)}
+                  </Td>
+                )}
+                {isColumnVisible("datacenter") && (
+                  <Td dataLabel="Data center">{vm.datacenter || "—"}</Td>
+                )}
+                {isColumnVisible("cluster") && (
+                  <Td dataLabel="Cluster">{vm.cluster || "—"}</Td>
+                )}
+                {isColumnVisible("diskSize") && (
+                  <Td dataLabel="Disk size">
+                    {formatDiskSize(vm.diskSize || 0)}
+                  </Td>
+                )}
+                {isColumnVisible("memory") && (
+                  <Td dataLabel="Memory size">
+                    {formatMemorySize(vm.memory || 0)}
+                  </Td>
+                )}
+                {isColumnVisible("issues") && (
+                  <Td dataLabel="Issues" modifier="fitContent">
+                    {vm.issueCount || 0}
+                  </Td>
+                )}
+                {isColumnVisible("deepInspection") && (
+                  <Td dataLabel="Deep inspection">
+                    {renderVmInspectionStatus(
+                      vm,
+                      onVMClick,
+                      cancelingInspectionVmIds,
+                    )}
+                  </Td>
+                )}
+                {!hideToolbarActions && (
+                  <Td isActionCell modifier="fitContent">
+                    <Dropdown
+                      isOpen={openActionMenuId === vm.id}
+                      onSelect={(_event, value) => {
+                        setOpenActionMenuId(null);
+                        if (value === "remove-from-group") {
+                          onRemoveFromGroup?.([vm.id]);
                         }
-                        if (
-                          vmState === "completed" ||
-                          vmState === "error" ||
-                          vmState === "canceled"
-                        ) {
+                      }}
+                      onOpenChange={(isOpen) =>
+                        setOpenActionMenuId(isOpen ? vm.id : null)
+                      }
+                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          variant="plain"
+                          onClick={() =>
+                            setOpenActionMenuId(
+                              openActionMenuId === vm.id ? null : vm.id,
+                            )
+                          }
+                          isExpanded={openActionMenuId === vm.id}
+                        >
+                          <EllipsisVIcon />
+                        </MenuToggle>
+                      )}
+                      popperProps={{ position: "right" }}
+                    >
+                      <DropdownList>
+                        {isGroupRowActions && (
+                          <DropdownItem
+                            key="remove-from-group"
+                            value="remove-from-group"
+                            isDisabled={!onRemoveFromGroup}
+                          >
+                            Remove from group
+                          </DropdownItem>
+                        )}
+                        {(() => {
+                          const vmState = vm.inspectionStatus?.state;
+                          if (vmState === "running" || vmState === "pending") {
+                            const isCanceling = cancelingInspectionVmIds?.has(
+                              vm.id,
+                            );
+                            return (
+                              <DropdownItem
+                                key="cancel-vm-inspection"
+                                isDisabled={isCanceling}
+                                onClick={() =>
+                                  openCancelInspectionConfirm(vm.id)
+                                }
+                              >
+                                Cancel deep inspection
+                              </DropdownItem>
+                            );
+                          }
+                          if (
+                            vmState === "completed" ||
+                            vmState === "error" ||
+                            vmState === "canceled"
+                          ) {
+                            return (
+                              <DropdownItem
+                                key="rerun-inspection"
+                                onClick={() => onRunDeepInspection?.(vm.id)}
+                              >
+                                Re-run deep inspection
+                              </DropdownItem>
+                            );
+                          }
                           return (
                             <DropdownItem
-                              key="rerun-inspection"
+                              key="inspect"
                               onClick={() => onRunDeepInspection?.(vm.id)}
                             >
-                              Re-run deep inspection
+                              Run deep inspection
                             </DropdownItem>
                           );
-                        }
-                        return (
+                        })()}
+                        {vm.migrationExcluded ? (
                           <DropdownItem
-                            key="inspect"
-                            onClick={() => onRunDeepInspection?.(vm.id)}
+                            key="include-in-reports"
+                            onClick={() => onIncludeInReports?.([vm.id])}
                           >
-                            Run deep inspection
+                            Include in reports
                           </DropdownItem>
-                        );
-                      })()}
-                      {vm.migrationExcluded ? (
+                        ) : (
+                          <DropdownItem
+                            key="exclude-from-reports"
+                            onClick={() => onExcludeFromReports?.([vm.id])}
+                          >
+                            Exclude from reports
+                          </DropdownItem>
+                        )}
                         <DropdownItem
-                          key="include-in-reports"
-                          onClick={() => onIncludeInReports?.([vm.id])}
+                          key="edit-labels"
+                          onClick={() => onEditLabels?.([vm.id])}
                         >
-                          Include in reports
+                          Edit labels
                         </DropdownItem>
-                      ) : (
+                        {!isGroupRowActions && onAddToGroup && (
+                          <DropdownItem
+                            key="add-to-group"
+                            value="add-to-group"
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              onAddToGroup([vm.id]);
+                            }}
+                          >
+                            Add to group
+                          </DropdownItem>
+                        )}
                         <DropdownItem
-                          key="exclude-from-reports"
-                          onClick={() => onExcludeFromReports?.([vm.id])}
+                          key="details"
+                          onClick={() => onVMClick?.(vm.id)}
                         >
-                          Exclude from reports
+                          View details
                         </DropdownItem>
-                      )}
-                      <DropdownItem
-                        key="edit-labels"
-                        onClick={() => onEditLabels?.([vm.id])}
-                      >
-                        Edit labels
-                      </DropdownItem>
-                      {!isGroupRowActions && onAddToGroup && (
-                        <DropdownItem
-                          key="add-to-group"
-                          value="add-to-group"
-                          onClick={() => {
-                            setOpenActionMenuId(null);
-                            onAddToGroup([vm.id]);
-                          }}
-                        >
-                          Add to group
-                        </DropdownItem>
-                      )}
-                      <DropdownItem
-                        key="details"
-                        onClick={() => onVMClick?.(vm.id)}
-                      >
-                        View details
-                      </DropdownItem>
-                    </DropdownList>
-                  </Dropdown>
-                </Td>
-              )}
-            </Tr>
-          ))
+                      </DropdownList>
+                    </Dropdown>
+                  </Td>
+                )}
+              </Tr>
+            );
+          })
         )}
       </Tbody>
     </Table>

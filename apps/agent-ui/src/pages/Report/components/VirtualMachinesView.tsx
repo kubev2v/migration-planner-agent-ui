@@ -16,8 +16,9 @@ import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
 import {
-  buildVmIdToGroupNamesMap,
-  mergeVmGroupNames,
+  buildVmGroupMembership,
+  mergeVmGroupItems,
+  type VmGroupMembershipData,
 } from "./vmGroupMembership";
 import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds } from "./vmSelection";
@@ -149,9 +150,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [isRemoveFromGroupModalOpen, setIsRemoveFromGroupModalOpen] =
     useState(false);
   const [groupActionVMIds, setGroupActionVMIds] = useState<string[]>([]);
-  const [vmIdToGroupNames, setVmIdToGroupNames] = useState<
-    Map<string, string[]>
-  >(() => new Map());
+  const [vmGroupMembership, setVmGroupMembership] =
+    useState<VmGroupMembershipData>({
+      vmIdToGroups: {},
+      groupsByName: {},
+    });
 
   const basePath = useMemo(() => getAgentApiBasePath(agentApi), [agentApi]);
 
@@ -160,8 +163,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       return;
     }
     try {
-      const map = await buildVmIdToGroupNamesMap(agentApi);
-      setVmIdToGroupNames(map);
+      const membership = await buildVmGroupMembership(agentApi);
+      setVmGroupMembership(membership);
     } catch (err) {
       console.error("Error loading VM group membership:", err);
     }
@@ -172,8 +175,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [loadVmGroupMembership]);
 
   const vmsForTable = useMemo(
-    () => mergeVmGroupNames(vms, vmIdToGroupNames),
-    [vms, vmIdToGroupNames],
+    () => mergeVmGroupItems(vms, vmGroupMembership),
+    [vms, vmGroupMembership],
   );
 
   const visibleVms = useMemo(() => {
@@ -256,18 +259,12 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     const names = new Set<string>();
     for (const vmId of groupActionVMIds) {
       const vm = vmsForTable.find((v) => v.id === vmId);
-      const groups =
-        vm?.groups && vm.groups.length > 0
-          ? vm.groups
-          : vmIdToGroupNames.get(vmId);
-      if (groups) {
-        for (const groupName of groups) {
-          names.add(groupName);
-        }
+      for (const group of vm?.groupItems ?? []) {
+        names.add(group.name);
       }
     }
     return [...names];
-  }, [groupActionVMIds, groupContext, vmsForTable, vmIdToGroupNames]);
+  }, [groupActionVMIds, groupContext, vmsForTable]);
 
   const groupActionVmNames = useMemo(
     () =>
