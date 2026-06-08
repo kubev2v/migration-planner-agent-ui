@@ -19,6 +19,7 @@ import {
   buildVmIdToGroupNamesMap,
   mergeVmGroupNames,
 } from "./vmGroupMembership";
+import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds } from "./vmSelection";
 
 async function updateVmMigrationExcluded(
@@ -125,7 +126,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   // first response still carries stale terminal states from a previous run.
   const MIN_POLL_TICKS_BEFORE_DONE = 2;
   // Fallback ceiling to avoid polling forever.
-  const MAX_POLL_TICKS = 60; // 60 × 5 s = 5 min
+  const MAX_POLL_TICKS = 60;
+  const POLL_INTERVAL_MS = 5000;
+  const CANCEL_POLL_INTERVAL_MS = 2000;
+
+  const [cancelingInspectionVmIds, setCancelingInspectionVmIds] = useState(
+    () => new Set<string>(),
+  );
 
   useEffect(() => {
     onRefreshVMsRef.current = onRefreshVMs;
@@ -393,14 +400,42 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     }
   }, []);
 
+  const shouldPoll = inspectionActive || cancelingInspectionVmIds.size > 0;
+  const pollIntervalMs =
+    cancelingInspectionVmIds.size > 0
+      ? CANCEL_POLL_INTERVAL_MS
+      : POLL_INTERVAL_MS;
+
+  useEffect(() => {
+    if (!shouldPoll) {
+      stopPolling();
+      return;
+    }
+
+    stopPolling();
+    pollingRef.current = setInterval(() => {
+      pollTicksRef.current += 1;
+      onRefreshVMsRef.current?.();
+    }, pollIntervalMs);
+
+    return () => stopPolling();
+  }, [shouldPoll, pollIntervalMs, stopPolling]);
+
   const handleCancelInspection = useCallback(
     async (vmId: string) => {
       if (!agentApi) return;
+
+      setCancelingInspectionVmIds((prev) => new Set(prev).add(vmId));
       try {
-        await agentApi.removeVMFromInspection({ id: vmId });
-        onRefreshVMs?.();
+        await cancelVmInspectionWithRetry(agentApi, vmId);
+        await onRefreshVMs?.();
       } catch (err) {
-        console.error("Error canceling inspection:", err);
+        setCancelingInspectionVmIds((prev) => {
+          const next = new Set(prev);
+          next.delete(vmId);
+          return next;
+        });
+        throw err;
       }
     },
     [agentApi, onRefreshVMs],
@@ -426,14 +461,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     if (!agentApi) return;
     try {
       await agentApi.stopInspection();
-      stopPolling();
       setInspectionActive(false);
       onRefreshVMs?.();
     } catch (err) {
       console.error("Error stopping inspection for reset:", err);
     }
     setIsInspectionModalOpen(true);
-  }, [agentApi, onRefreshVMs, stopPolling]);
+  }, [agentApi, onRefreshVMs]);
 
   const handleInspectionStarted = useCallback(() => {
     seenRunningRef.current = false;
@@ -441,13 +475,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     setInspectionActive(true);
     setSelectedVMs(new Set());
     onRefreshVMsRef.current?.();
-
-    stopPolling();
-    pollingRef.current = setInterval(() => {
-      pollTicksRef.current += 1;
-      onRefreshVMsRef.current?.();
-    }, 5000);
-  }, [stopPolling]);
+  }, []);
 
   useEffect(() => {
     if (!inspectionActive) return;
@@ -481,10 +509,27 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     const exhausted = ticks >= MAX_POLL_TICKS && !hasRunningOrPending;
 
     if (seenAndDone || waitedAndDone || exhausted) {
-      stopPolling();
       setInspectionActive(false);
     }
-  }, [vms, inspectionActive, stopPolling]);
+  }, [vms, inspectionActive]);
+
+  useEffect(() => {
+    if (cancelingInspectionVmIds.size === 0) return;
+
+    setCancelingInspectionVmIds((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const vmId of prev) {
+        const vm = vms.find((v) => v.id === vmId);
+        const state = vm?.inspectionStatus?.state;
+        if (state && state !== "running" && state !== "pending") {
+          next.delete(vmId);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [vms, cancelingInspectionVmIds.size]);
 
   useEffect(() => {
     return () => stopPolling();
@@ -535,6 +580,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         showExcludedVMs={showExcludedVMs}
         onShowExcludedVMsChange={onShowExcludedVMsChange}
         inspectionActive={inspectionActive}
+        cancelingInspectionVmIds={cancelingInspectionVmIds}
         onCancelInspection={handleCancelInspection}
         onResetInspection={handleResetInspection}
       />

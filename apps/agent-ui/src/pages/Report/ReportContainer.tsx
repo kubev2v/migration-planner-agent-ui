@@ -211,19 +211,13 @@ export const ReportContainer: React.FC = () => {
 
     const fetchUtilizationMetrics = async () => {
       try {
-        const byExpression = `cluster_id='${selectedClusterId}'`;
-        const response = await agentApi.getLatestRightsizingClusters({
-          byExpression,
+        const response = await agentApi.getClusterUtilization({
+          clusterId: selectedClusterId,
         });
 
         // Only update state if the effect hasn't been cleaned up
         if (!cancelled) {
-          // Find cluster metrics for the selected cluster
-          const clusterMetrics = response.clusters?.find(
-            (cluster) => cluster.cluster_id === selectedClusterId,
-          );
-
-          setUtilizationMetrics(clusterMetrics || null);
+          setUtilizationMetrics(response.cluster);
         }
       } catch (err) {
         if (!cancelled) {
