@@ -1,10 +1,15 @@
 import type {
+  GetInventory200Response,
   Infra,
   Inventory,
   InventoryData,
   VMs,
 } from "@openshift-migration-advisor/agent-sdk";
-import { InventoryFromJSON } from "@openshift-migration-advisor/agent-sdk";
+import {
+  InventoryFromJSON,
+  instanceOfInventory,
+  instanceOfUpdateInventory,
+} from "@openshift-migration-advisor/agent-sdk";
 
 /** Parse inventory JSON from GET /groups/{id} or GET /inventory. */
 export function parseInventoryFromJson(json: unknown): Inventory | null {
@@ -17,6 +22,25 @@ export function parseInventoryFromJson(json: unknown): Inventory | null {
   }
   if ("vcenter_id" in record && "clusters" in record) {
     return InventoryFromJSON(json);
+  }
+  return null;
+}
+
+/** Extract inventory from GET /inventory SDK response. */
+export function inventoryFromGetInventoryResponse(
+  response: GetInventory200Response | null | undefined,
+): Inventory | null {
+  if (!response || typeof response !== "object") {
+    return null;
+  }
+  if (Object.keys(response).length === 0) {
+    return null;
+  }
+  if (instanceOfInventory(response)) {
+    return response;
+  }
+  if (instanceOfUpdateInventory(response) && response.inventory) {
+    return response.inventory;
   }
   return null;
 }

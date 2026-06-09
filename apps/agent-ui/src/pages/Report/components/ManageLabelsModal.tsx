@@ -1,4 +1,5 @@
 import { css } from "@emotion/css";
+import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -84,14 +85,14 @@ interface ManageLabelsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLabelsChanged: () => void;
-  basePath: string;
+  agentApi: DefaultApiInterface;
 }
 
 export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
   isOpen,
   onClose,
   onLabelsChanged,
-  basePath,
+  agentApi,
 }) => {
   const [labels, setLabels] = useState<LabelInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,19 +107,11 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
   const fetchLabelsWithCounts = useCallback(async () => {
     setLoading(true);
     try {
-      const labelsResponse = await fetch(`${basePath}/vms/labels`);
-      if (!labelsResponse.ok) {
-        setLabels([]);
-        return;
-      }
-      const labelsData = await labelsResponse.json();
-      const labelNames: string[] = labelsData.labels || [];
-      const labelCounts: number[] = labelsData.counts || [];
-
+      const data = await agentApi.getVMLabels();
       setLabels(
-        labelNames.map((name, i) => ({
+        (data.labels ?? []).map((name, i) => ({
           name,
-          vmCount: labelCounts[i] || 0,
+          vmCount: data.counts?.[i] ?? 0,
         })),
       );
     } catch (err) {
@@ -127,7 +120,7 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [basePath]);
+  }, [agentApi]);
 
   useEffect(() => {
     if (isOpen) {
@@ -194,9 +187,7 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     setIsSaving(true);
     try {
       for (const labelName of pendingDeletes.current) {
-        await fetch(`${basePath}/vms/labels/${encodeURIComponent(labelName)}`, {
-          method: "DELETE",
-        });
+        await agentApi.deleteLabelGlobally({ label: labelName });
       }
 
       for (const { oldName, newName } of pendingRenames.current) {
@@ -204,33 +195,25 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
         let page = 1;
         let hasMore = true;
         while (hasMore) {
-          const vmsResponse = await fetch(
-            `${basePath}/vms?page=${page}&pageSize=1000`,
-          );
-          if (!vmsResponse.ok) break;
-          const vmsData = await vmsResponse.json();
-          const vms: { id: string; labels?: string[] }[] = vmsData.vms || [];
-          for (const vm of vms) {
+          const vmsData = await agentApi.getVMs({ page, pageSize: 1000 });
+          for (const vm of vmsData.vms ?? []) {
             if (vm.labels?.includes(oldName)) {
               vmIds.push(vm.id);
             }
           }
-          const total = vmsData.total || 0;
+          const total = vmsData.total ?? 0;
           hasMore = page * 1000 < total;
           page++;
         }
 
         if (vmIds.length > 0) {
-          await fetch(`${basePath}/vms/labels/${encodeURIComponent(newName)}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ add: vmIds }),
+          await agentApi.updateLabelVMs({
+            label: newName,
+            updateLabelVMsRequest: { add: vmIds },
           });
         }
 
-        await fetch(`${basePath}/vms/labels/${encodeURIComponent(oldName)}`, {
-          method: "DELETE",
-        });
+        await agentApi.deleteLabelGlobally({ label: oldName });
       }
 
       pendingDeletes.current = [];

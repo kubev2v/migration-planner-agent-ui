@@ -6,9 +6,9 @@ import type {
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
-  InventoryFromJSON,
+  instanceOfInventory,
+  instanceOfUpdateInventory,
   ResponseError,
-  UpdateInventoryFromJSON,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
@@ -34,9 +34,12 @@ import {
   DataSharingModal,
 } from "../../common/components/index";
 import { Symbols } from "../../main/Symbols";
-import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
-import { Dashboard, VirtualMachinesView } from "./components/index";
+import {
+  ApplicationsView,
+  Dashboard,
+  VirtualMachinesView,
+} from "./components/index";
 import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
 import {
   filtersToByExpression,
@@ -44,6 +47,17 @@ import {
   searchParamsToFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
+import { inventoryFromGetInventoryResponse } from "./inventoryParsing";
+import {
+  buildApplicationsTabUrl,
+  buildOverviewTabUrl,
+  buildVmDetailUrl,
+  buildVmsTabUrl,
+  clearVmFilterParams,
+  REPORT_TAB,
+  resolveReportTab,
+} from "./reportTabNavigation";
+import { useApplicationsData } from "./useApplicationsData";
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
@@ -91,40 +105,29 @@ export const ReportContainer: React.FC = () => {
   });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
 
-  // Parse filters from URL (recalculates when URL changes)
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
     [searchParams],
   );
 
   // Determine initial tab based on URL params (only on mount)
-  const [activeTab, setActiveTab] = useState<string | number>(() => {
-    const tabParam = searchParams.get("tab");
-    if (tabParam === "vms") return 1;
-    if (tabParam === "storage-offload") return 2;
-    // If there are VM filters in URL, open Virtual Machines tab
-    if (hasActiveFilters(initialVMFilters)) return 1;
-    return 0;
-  });
+  const [activeTab, setActiveTab] = useState<string | number>(() =>
+    resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
+  );
 
-  // Sync active tab with URL changes
+  const {
+    applications: applicationsList,
+    loading: applicationsLoading,
+    error: applicationsError,
+  } = useApplicationsData(agentApi, activeTab === REPORT_TAB.applications);
+
   useEffect(() => {
-    const tabParam = searchParams.get("tab");
-    if (tabParam === "vms" && activeTab !== 1) {
-      setActiveTab(1);
-    } else if (tabParam === "storage-offload" && activeTab !== 2) {
-      setActiveTab(2);
-    } else if ((tabParam === "overview" || !tabParam) && activeTab !== 0) {
-      // Switch to overview if tab is explicitly "overview" or no tab param
-      // Only check for VM filters if no tab param is set (legacy behavior)
-      if (tabParam === "overview") {
-        setActiveTab(0);
-      } else if (!tabParam) {
-        const currentFilters = searchParamsToFilters(searchParams);
-        if (!hasActiveFilters(currentFilters)) {
-          setActiveTab(0);
-        }
-      }
+    const nextTab = resolveReportTab(
+      searchParams,
+      hasActiveFilters(searchParamsToFilters(searchParams)),
+    );
+    if (nextTab !== activeTab) {
+      setActiveTab(nextTab);
     }
   }, [searchParams, activeTab]);
 
@@ -133,56 +136,11 @@ export const ReportContainer: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
-        // Workaround: Fetch directly with native fetch API to bypass SDK bug
-        // The published SDK has a bug where GetInventory200ResponseFromJSONTyped returns {}
-        // when it receives snake_case JSON from the API
-        const basePath = getAgentApiBasePath(agentApi);
-
-        const httpResponse = await fetch(`${basePath}/inventory`);
-
-        if (!httpResponse.ok) {
-          throw new Error(
-            `HTTP ${httpResponse.status}: ${httpResponse.statusText}`,
-          );
-        }
-
-        const jsonData = await httpResponse.json();
-
-        if (!jsonData) {
-          setInventory(null);
-          return;
-        }
-
-        // Check if response is an empty object - means inventory not collected yet
-        if (
-          typeof jsonData === "object" &&
-          Object.keys(jsonData).length === 0
-        ) {
-          setInventory(null);
-          return;
-        }
-
-        // Manually parse the JSON using the SDK converters
-        let actualInventory: Inventory | null = null;
-
-        // Check raw JSON structure (before SDK conversion)
-        if ("vcenter_id" in jsonData && "clusters" in jsonData) {
-          // It's an Inventory - parse it manually
-          actualInventory = InventoryFromJSON(jsonData);
-        } else if ("inventory" in jsonData) {
-          // It's UpdateInventory - parse and extract
-          const updateInventory = UpdateInventoryFromJSON(jsonData);
-          if (updateInventory.inventory) {
-            actualInventory = updateInventory.inventory;
-          }
-        }
-
-        setInventory(actualInventory);
+        const response = await agentApi.getInventory({});
+        setInventory(inventoryFromGetInventoryResponse(response));
       } catch (err) {
         console.error("Error fetching inventory:", err);
 
-        // Handle 404 specifically - inventory not collected yet
         if (err instanceof ResponseError && err.response?.status === 404) {
           setInventory(null);
           setError(null);
@@ -236,7 +194,7 @@ export const ReportContainer: React.FC = () => {
 
   // Fetch available filter options once when VMs tab is first accessed
   useEffect(() => {
-    if (activeTab !== 1) return;
+    if (activeTab !== REPORT_TAB.vms) return;
     if (filterOptionsFetched) return;
     if (!inventory) return;
 
@@ -267,7 +225,7 @@ export const ReportContainer: React.FC = () => {
 
   // Fetch VMs when Virtual Machines tab is active or filters change
   useEffect(() => {
-    if (activeTab !== 1) return;
+    if (activeTab !== REPORT_TAB.vms) return;
 
     const fetchVMs = async () => {
       vmsRequestIdRef.current += 1;
@@ -451,29 +409,13 @@ export const ReportContainer: React.FC = () => {
 
   const handleDownloadInventory = async () => {
     try {
-      // Workaround: Fetch directly to bypass SDK bug (same as in the main fetch)
-      const basePath = getAgentApiBasePath(agentApi);
+      const response = await agentApi.getInventory({ withAgentId: true });
 
-      const httpResponse = await fetch(
-        `${basePath}/inventory?withAgentId=true`,
-      );
-
-      if (!httpResponse.ok) {
-        throw new Error(
-          `HTTP ${httpResponse.status}: ${httpResponse.statusText}`,
-        );
-      }
-
-      const jsonData = await httpResponse.json();
-
-      // Ensure the downloaded JSON is in UpdateInventory format
-      // The API may return a plain Inventory (with vcenter_id at top level)
-      // or an UpdateInventory wrapper ({ agent_id: "...", inventory: {...} })
-      let downloadData = jsonData;
-      if (jsonData && !("inventory" in jsonData) && "vcenter_id" in jsonData) {
-        const agentId = jsonData.agent_id || jsonData.agentId || "";
-        delete jsonData.agent_id;
-        downloadData = { agent_id: agentId, inventory: jsonData };
+      let downloadData: unknown = response;
+      if (instanceOfInventory(response)) {
+        downloadData = { agent_id: "", inventory: response };
+      } else if (!instanceOfUpdateInventory(response)) {
+        throw new Error("Unexpected inventory response format");
       }
 
       const jsonString = JSON.stringify(downloadData, null, 2);
@@ -511,26 +453,11 @@ export const ReportContainer: React.FC = () => {
   ): void => {
     if (typeof value === "string") {
       setSelectedClusterId(value);
-      // Reset to Overview tab when changing cluster
-      setActiveTab(0);
-      // Update URL to reflect tab change and clear all VM filters
+      setActiveTab(REPORT_TAB.overview);
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("tab");
-      // Clear all VM filter keys (same as handleTabSelect does)
-      newParams.delete("statuses");
-      newParams.delete("hasIssues");
-      newParams.delete("noIssues");
-      newParams.delete("clusters");
-      newParams.delete("datacenters");
-      newParams.delete("search");
-      newParams.delete("diskRangeMin");
-      newParams.delete("diskRangeMax");
-      newParams.delete("memoryRangeMin");
-      newParams.delete("memoryRangeMax");
-      newParams.delete("migrationReadiness");
-      newParams.delete("vmLabels");
-      newParams.delete("concernLabels");
-      newParams.delete("concernCategories");
+      newParams.delete("vmId");
+      clearVmFilterParams(newParams);
       setSearchParams(newParams, { replace: true });
     }
     setIsClusterSelectOpen(false);
@@ -541,48 +468,22 @@ export const ReportContainer: React.FC = () => {
     tabIndex: string | number,
   ) => {
     setActiveTab(tabIndex);
-    // Update URL with tab parameter
-    const newParams = new URLSearchParams(searchParams);
-    if (tabIndex === 1) {
-      newParams.set("tab", "vms");
-      // Reset pagination when switching to VMs tab
+    let newParams: URLSearchParams;
+    if (tabIndex === REPORT_TAB.vms) {
+      newParams = buildVmsTabUrl(searchParams);
       setVmsPage(1);
-    } else if (tabIndex === 2) {
-      newParams.set("tab", "storage-offload");
-      // Clear all VM filters when switching to storage offload tab
-      newParams.delete("statuses");
-      newParams.delete("hasIssues");
-      newParams.delete("noIssues");
-      newParams.delete("clusters");
-      newParams.delete("datacenters");
-      newParams.delete("search");
-      newParams.delete("diskRangeMin");
-      newParams.delete("diskRangeMax");
-      newParams.delete("memoryRangeMin");
-      newParams.delete("memoryRangeMax");
-      newParams.delete("migrationReadiness");
-      newParams.delete("vmLabels");
-      newParams.delete("concernLabels");
-      newParams.delete("concernCategories");
+    } else if (tabIndex === REPORT_TAB.applications) {
+      newParams = buildApplicationsTabUrl(searchParams);
     } else {
-      newParams.set("tab", "overview");
-      // Clear all VM filters when switching away from VMs tab
-      newParams.delete("statuses");
-      newParams.delete("hasIssues");
-      newParams.delete("noIssues");
-      newParams.delete("clusters");
-      newParams.delete("datacenters");
-      newParams.delete("search");
-      newParams.delete("diskRangeMin");
-      newParams.delete("diskRangeMax");
-      newParams.delete("memoryRangeMin");
-      newParams.delete("memoryRangeMax");
-      newParams.delete("migrationReadiness");
-      newParams.delete("vmLabels");
-      newParams.delete("concernLabels");
-      newParams.delete("concernCategories");
+      newParams = buildOverviewTabUrl(searchParams);
     }
     setSearchParams(newParams, { replace: true });
+  };
+
+  const handleNavigateToVm = (vmId: string) => {
+    setActiveTab(REPORT_TAB.vms);
+    setSearchParams(buildVmDetailUrl(searchParams, vmId), { replace: true });
+    setVmsPage(1);
   };
 
   const handleFiltersChange = () => {
@@ -601,16 +502,10 @@ export const ReportContainer: React.FC = () => {
   };
 
   const handleConcernClick = (concernLabel: string) => {
-    // Switch to VMs tab and apply concern filter
-    setActiveTab(1);
-
-    // Update URL with concern filter
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("tab", "vms");
+    setActiveTab(REPORT_TAB.vms);
+    const newParams = buildVmsTabUrl(searchParams);
     newParams.set("concernLabels", concernLabel);
     setSearchParams(newParams, { replace: true });
-
-    // Reset pagination
     setVmsPage(1);
   };
 
@@ -683,7 +578,7 @@ export const ReportContainer: React.FC = () => {
         <StackItem>
           <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
             <Tab
-              eventKey={0}
+              eventKey={REPORT_TAB.overview}
               title={<TabTitleText>Assessment report</TabTitleText>}
             >
               <div style={{ marginTop: "24px" }}>
@@ -708,7 +603,7 @@ export const ReportContainer: React.FC = () => {
               </div>
             </Tab>
             <Tab
-              eventKey={1}
+              eventKey={REPORT_TAB.vms}
               title={<TabTitleText>Virtual Machines</TabTitleText>}
             >
               <div style={{ marginTop: "24px" }}>
@@ -731,6 +626,19 @@ export const ReportContainer: React.FC = () => {
                     setShowExcludedVMs(show);
                     setVmsPage(1);
                   }}
+                />
+              </div>
+            </Tab>
+            <Tab
+              eventKey={REPORT_TAB.applications}
+              title={<TabTitleText>Applications</TabTitleText>}
+            >
+              <div style={{ marginTop: "24px" }}>
+                <ApplicationsView
+                  applications={applicationsList}
+                  loading={applicationsLoading}
+                  error={applicationsError}
+                  onNavigateToVm={handleNavigateToVm}
                 />
               </div>
             </Tab>

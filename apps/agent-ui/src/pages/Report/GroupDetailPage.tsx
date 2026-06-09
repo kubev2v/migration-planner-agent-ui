@@ -2,8 +2,8 @@ import { useInjection } from "@migration-planner-ui/ioc";
 import {
   type DefaultApiInterface,
   type Group,
-  GroupFromJSON,
   type Inventory,
+  ResponseError,
   type VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
@@ -37,9 +37,8 @@ import {
 } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
 import { Symbols } from "../../main/Symbols";
-import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
-import { Dashboard, VirtualMachinesView } from "./components";
+import { ApplicationsView, Dashboard, VirtualMachinesView } from "./components";
 import { DeleteGroupModal } from "./components/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/EditGroupNameModal";
 import { combineFilterExpressions } from "./components/groupFilters";
@@ -49,10 +48,17 @@ import {
   searchParamsToFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
+import { getInventoryAggregateView } from "./inventoryParsing";
 import {
-  getInventoryAggregateView,
-  parseInventoryFromJson,
-} from "./inventoryParsing";
+  buildApplicationsTabUrl,
+  buildOverviewTabUrl,
+  buildVmDetailUrl,
+  buildVmsTabUrl,
+  clearVmFilterParams,
+  REPORT_TAB,
+  resolveReportTab,
+} from "./reportTabNavigation";
+import { useApplicationsData } from "./useApplicationsData";
 
 export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -95,14 +101,31 @@ export const GroupDetailPage: React.FC = () => {
     [searchParams],
   );
 
-  const [activeTab, setActiveTab] = useState<string | number>(() => {
-    const tabParam = searchParams.get("tab");
-    if (tabParam === "vms") return 1;
-    if (hasActiveFilters(initialVMFilters)) return 1;
-    return 0;
-  });
+  const [activeTab, setActiveTab] = useState<string | number>(() =>
+    resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
+  );
 
   const groupFilter = group?.filter;
+
+  const {
+    applications: applicationsList,
+    loading: applicationsLoading,
+    error: applicationsError,
+  } = useApplicationsData(
+    agentApi,
+    activeTab === REPORT_TAB.applications,
+    groupFilter,
+  );
+
+  useEffect(() => {
+    const nextTab = resolveReportTab(
+      searchParams,
+      hasActiveFilters(searchParamsToFilters(searchParams)),
+    );
+    if (nextTab !== activeTab) {
+      setActiveTab(nextTab);
+    }
+  }, [searchParams, activeTab]);
 
   useEffect(() => {
     if (!groupId) {
@@ -116,34 +139,24 @@ export const GroupDetailPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const basePath = getAgentApiBasePath(agentApi);
-        const httpResponse = await fetch(
-          `${basePath}/groups/${encodeURIComponent(groupId)}?page=1&pageSize=1`,
-          { cache: "no-store" },
-        );
+        const response = await agentApi.getGroup({
+          id: groupId,
+          page: 1,
+          pageSize: 1,
+        });
 
-        if (httpResponse.status === 404) {
-          setError("Group not found.");
-          return;
-        }
-        if (!httpResponse.ok) {
-          throw new Error(
-            `HTTP ${httpResponse.status}: ${httpResponse.statusText}`,
-          );
-        }
-
-        const jsonData = await httpResponse.json();
-        if (!jsonData?.group) {
-          setError("Group not found.");
-          return;
-        }
-
-        setGroup(GroupFromJSON(jsonData.group));
-        setVmsTotalCount(jsonData.total ?? 0);
-        setInventory(parseInventoryFromJson(jsonData.inventory));
+        setGroup(response.group);
+        setVmsTotalCount(response.total ?? 0);
+        setInventory(response.inventory ?? null);
       } catch (err) {
         console.error("Error loading group detail:", err);
-        setError(err instanceof Error ? err.message : "Failed to load group.");
+        if (err instanceof ResponseError && err.response?.status === 404) {
+          setError("Group not found.");
+        } else {
+          setError(
+            err instanceof Error ? err.message : "Failed to load group.",
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -153,7 +166,7 @@ export const GroupDetailPage: React.FC = () => {
   }, [agentApi, groupId]);
 
   useEffect(() => {
-    if (activeTab !== 1 || filterOptionsFetched) {
+    if (activeTab !== REPORT_TAB.vms || filterOptionsFetched) {
       return;
     }
 
@@ -181,7 +194,7 @@ export const GroupDetailPage: React.FC = () => {
   }, [activeTab, agentApi, filterOptionsFetched]);
 
   useEffect(() => {
-    if (activeTab !== 1 || !groupFilter) {
+    if (activeTab !== REPORT_TAB.vms || !groupFilter) {
       return;
     }
 
@@ -282,23 +295,14 @@ export const GroupDetailPage: React.FC = () => {
     }
 
     try {
-      const basePath = getAgentApiBasePath(agentApi);
-      const httpResponse = await fetch(
-        `${basePath}/groups/${encodeURIComponent(groupId)}?page=1&pageSize=1`,
-        { cache: "no-store" },
-      );
-      if (!httpResponse.ok) {
-        return;
-      }
-
-      const jsonData = await httpResponse.json();
-      if (!jsonData?.group) {
-        return;
-      }
-
-      setGroup(GroupFromJSON(jsonData.group));
-      setInventory(parseInventoryFromJson(jsonData.inventory));
-      setVmsTotalCount(jsonData.total ?? 0);
+      const response = await agentApi.getGroup({
+        id: groupId,
+        page: 1,
+        pageSize: 1,
+      });
+      setGroup(response.group);
+      setInventory(response.inventory ?? null);
+      setVmsTotalCount(response.total ?? 0);
       setVmsPage(1);
     } catch (err) {
       console.error("Error reloading group after membership change:", err);
@@ -310,14 +314,22 @@ export const GroupDetailPage: React.FC = () => {
     tabIndex: string | number,
   ) => {
     setActiveTab(tabIndex);
-    const newParams = new URLSearchParams(searchParams);
-    if (tabIndex === 1) {
-      newParams.set("tab", "vms");
+    let newParams: URLSearchParams;
+    if (tabIndex === REPORT_TAB.vms) {
+      newParams = buildVmsTabUrl(searchParams);
       setVmsPage(1);
+    } else if (tabIndex === REPORT_TAB.applications) {
+      newParams = buildApplicationsTabUrl(searchParams);
     } else {
-      newParams.set("tab", "overview");
+      newParams = buildOverviewTabUrl(searchParams);
     }
     setSearchParams(newParams, { replace: true });
+  };
+
+  const handleNavigateToVm = (vmId: string) => {
+    setActiveTab(REPORT_TAB.vms);
+    setSearchParams(buildVmDetailUrl(searchParams, vmId), { replace: true });
+    setVmsPage(1);
   };
 
   const handleClusterSelect = (
@@ -326,9 +338,11 @@ export const GroupDetailPage: React.FC = () => {
   ): void => {
     if (typeof value === "string") {
       setSelectedClusterId(value);
-      setActiveTab(0);
+      setActiveTab(REPORT_TAB.overview);
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("tab");
+      newParams.delete("vmId");
+      clearVmFilterParams(newParams);
       setSearchParams(newParams, { replace: true });
     }
     setIsClusterSelectOpen(false);
@@ -499,7 +513,7 @@ export const GroupDetailPage: React.FC = () => {
         <StackItem>
           <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
             <Tab
-              eventKey={0}
+              eventKey={REPORT_TAB.overview}
               title={<TabTitleText>Assessment report</TabTitleText>}
             >
               <div style={{ marginTop: "24px" }}>
@@ -531,7 +545,7 @@ export const GroupDetailPage: React.FC = () => {
               </div>
             </Tab>
             <Tab
-              eventKey={1}
+              eventKey={REPORT_TAB.vms}
               title={<TabTitleText>Virtual machines</TabTitleText>}
             >
               <div style={{ marginTop: "24px" }}>
@@ -560,6 +574,19 @@ export const GroupDetailPage: React.FC = () => {
                   groupContext={{ id: group.id, name: group.name }}
                   scopedFilterExpression={group.filter}
                   sortFields={vmsSortFields}
+                />
+              </div>
+            </Tab>
+            <Tab
+              eventKey={REPORT_TAB.applications}
+              title={<TabTitleText>Applications</TabTitleText>}
+            >
+              <div style={{ marginTop: "24px" }}>
+                <ApplicationsView
+                  applications={applicationsList}
+                  loading={applicationsLoading}
+                  error={applicationsError}
+                  onNavigateToVm={handleNavigateToVm}
                 />
               </div>
             </Tab>

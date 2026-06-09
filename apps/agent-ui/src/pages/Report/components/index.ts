@@ -1,3 +1,4 @@
+export { ApplicationsView } from "./ApplicationsView";
 export { ClustersOverview } from "./ClustersOverview";
 export { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
 export { Dashboard } from "./Dashboard";

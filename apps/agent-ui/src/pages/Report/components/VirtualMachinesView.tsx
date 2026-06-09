@@ -4,6 +4,7 @@ import type {
 } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getAgentApiBasePath } from "../agentApiConfig";
 import { AddLabelsModal } from "./AddLabelsModal";
 import { AddToGroupModal } from "./AddToGroupModal";
@@ -106,6 +107,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   scopedFilterExpression,
   sortFields = [],
 }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const variant = groupContext ? "groups" : "overview";
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
   const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
@@ -139,6 +141,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     onRefreshVMsRef.current = onRefreshVMs;
   }, [onRefreshVMs]);
 
+  const vmIdParam = searchParams.get("vmId");
+
+  useEffect(() => {
+    if (vmIdParam) {
+      setSelectedVMId(vmIdParam);
+    }
+  }, [vmIdParam]);
+
   // Labels state
   const [isAddLabelsModalOpen, setIsAddLabelsModalOpen] = useState(false);
   const [addLabelsMode, setAddLabelsMode] = useState<"add" | "edit">("add");
@@ -156,7 +166,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       groupsByName: {},
     });
 
-  const basePath = useMemo(() => getAgentApiBasePath(agentApi), [agentApi]);
+  const basePath = useMemo(
+    () => (agentApi ? getAgentApiBasePath(agentApi) : ""),
+    [agentApi],
+  );
 
   const loadVmGroupMembership = useCallback(async () => {
     if (!agentApi) {
@@ -187,16 +200,16 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [showExcludedVMs, vmsForTable]);
 
   const fetchAvailableLabels = useCallback(async () => {
+    if (!agentApi) {
+      return;
+    }
     try {
-      const response = await fetch(`${basePath}/vms/labels`);
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableLabels(data.labels || []);
-      }
+      const data = await agentApi.getVMLabels();
+      setAvailableLabels(data.labels ?? []);
     } catch (err) {
       console.error("Error fetching labels:", err);
     }
-  }, [basePath]);
+  }, [agentApi]);
 
   useEffect(() => {
     void fetchAvailableLabels();
@@ -328,36 +341,29 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   const handleSubmitLabels = useCallback(
     async (labelsToAdd: string[], labelsToRemove: string[]) => {
+      if (!agentApi) {
+        return;
+      }
       const vmIds = addLabelsVMIds;
 
       const addPromises = labelsToAdd.map((label) =>
-        fetch(`${basePath}/vms/labels/${encodeURIComponent(label)}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ add: vmIds }),
-        }).then((res) => {
-          if (!res.ok) {
-            throw new Error(`Failed to add label "${label}": ${res.status}`);
-          }
+        agentApi.updateLabelVMs({
+          label,
+          updateLabelVMsRequest: { add: vmIds },
         }),
       );
 
       const removePromises = labelsToRemove.map((label) =>
-        fetch(`${basePath}/vms/labels/${encodeURIComponent(label)}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ remove: vmIds }),
-        }).then((res) => {
-          if (!res.ok) {
-            throw new Error(`Failed to remove label "${label}": ${res.status}`);
-          }
+        agentApi.updateLabelVMs({
+          label,
+          updateLabelVMsRequest: { remove: vmIds },
         }),
       );
 
       await Promise.all([...addPromises, ...removePromises]);
       await refreshLabels();
     },
-    [addLabelsVMIds, basePath, refreshLabels],
+    [addLabelsVMIds, agentApi, refreshLabels],
   );
 
   const handleVMClick = (vmId: string) => {
@@ -366,6 +372,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   const handleBack = () => {
     setSelectedVMId(null);
+    if (searchParams.has("vmId")) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("vmId");
+      setSearchParams(newParams, { replace: true });
+    }
   };
 
   const handleRunDeepInspection = (includeVmId?: string) => {
@@ -600,14 +611,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         selectedVMName={selectedVMName}
         mode={addLabelsMode}
       />
-      <ManageLabelsModal
-        isOpen={isManageLabelsModalOpen}
-        onClose={() => setIsManageLabelsModalOpen(false)}
-        onLabelsChanged={refreshLabels}
-        basePath={basePath}
-      />
       {agentApi && (
         <>
+          <ManageLabelsModal
+            isOpen={isManageLabelsModalOpen}
+            onClose={() => setIsManageLabelsModalOpen(false)}
+            onLabelsChanged={refreshLabels}
+            agentApi={agentApi}
+          />
           <CreateGroupFromSelectionModal
             isOpen={isCreateGroupModalOpen}
             vmIds={groupActionVMIds}
