@@ -424,7 +424,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
       setCancelingInspectionVmIds((prev) => new Set(prev).add(vmId));
       try {
-        await cancelVmInspectionWithRetry(agentApi, vmId);
+        await cancelVmInspectionWithRetry(basePath, vmId);
         await onRefreshVMs?.();
       } catch (err) {
         setCancelingInspectionVmIds((prev) => {
@@ -435,7 +435,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         throw err;
       }
     },
-    [agentApi, onRefreshVMs],
+    [agentApi, basePath, onRefreshVMs],
   );
 
   const handleExcludeFromReports = useCallback(
