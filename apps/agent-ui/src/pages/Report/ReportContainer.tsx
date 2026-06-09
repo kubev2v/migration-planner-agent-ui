@@ -34,6 +34,7 @@ import {
   DataSharingModal,
 } from "../../common/components/index";
 import { Symbols } from "../../main/Symbols";
+import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import {
   ApplicationsView,
@@ -47,7 +48,14 @@ import {
   searchParamsToFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
-import { inventoryFromGetInventoryResponse } from "./inventoryParsing";
+import {
+  adjustInventoryForMigrationExcludedChange,
+  fetchInventoryAfterMigrationChange,
+  fetchInventoryFromApi,
+  getInventoryAggregateView,
+  type MigrationExcludedInventoryChange,
+  resolveInventoryOnReload,
+} from "./inventoryParsing";
 import {
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
@@ -58,6 +66,7 @@ import {
   resolveReportTab,
 } from "./reportTabNavigation";
 import { useApplicationsData } from "./useApplicationsData";
+import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
@@ -88,6 +97,7 @@ export const ReportContainer: React.FC = () => {
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
   const [showExcludedVMs, setShowExcludedVMs] = useState(true);
+  const [inventoryRevision, setInventoryRevision] = useState(0);
 
   // Store all available filter options (fetched once for filter UI)
   const [availableFilterOptions, setAvailableFilterOptions] = useState<{
@@ -131,13 +141,92 @@ export const ReportContainer: React.FC = () => {
     }
   }, [searchParams, activeTab]);
 
+  const fetchInventory = useCallback(async (): Promise<Inventory | null> => {
+    const basePath = getAgentApiBasePath(agentApi);
+    return fetchInventoryFromApi(basePath);
+  }, [agentApi]);
+
+  const reloadAssessmentInventory = useCallback(async () => {
+    try {
+      const fetchedInventory = await fetchInventory();
+      if (!fetchedInventory) {
+        return;
+      }
+
+      setInventory((current) => {
+        if (!current) {
+          return fetchedInventory;
+        }
+
+        return resolveInventoryOnReload(current, fetchedInventory);
+      });
+    } catch (err) {
+      console.error("Error reloading assessment inventory:", err);
+    }
+  }, [fetchInventory]);
+
+  const refreshInventory = useCallback(
+    async (change: MigrationExcludedInventoryChange): Promise<void> => {
+      setVmsList((current) =>
+        current.map((vm) =>
+          change.vmIds.includes(vm.id)
+            ? { ...vm, migrationExcluded: change.excluded }
+            : vm,
+        ),
+      );
+
+      let previousTotal: number | undefined;
+      let optimisticInventory: Inventory | null = null;
+
+      setInventory((current) => {
+        if (!current) {
+          return current;
+        }
+        previousTotal = getInventoryAggregateView(current).vms?.total;
+        optimisticInventory = adjustInventoryForMigrationExcludedChange(
+          current,
+          change.vmIds,
+          change.excluded,
+          change.affectedVms,
+        );
+        return optimisticInventory;
+      });
+
+      if (optimisticInventory) {
+        setInventoryRevision((revision) => revision + 1);
+      }
+
+      try {
+        const basePath = getAgentApiBasePath(agentApi);
+        const resolved = await fetchInventoryAfterMigrationChange(
+          basePath,
+          change,
+          previousTotal,
+          optimisticInventory,
+        );
+        if (resolved) {
+          setInventory((current) => {
+            if (!current) {
+              return resolved;
+            }
+            return resolveInventoryOnReload(current, resolved);
+          });
+          setInventoryRevision((revision) => revision + 1);
+        }
+      } catch (err) {
+        console.error("Error refreshing inventory:", err);
+      }
+    },
+    [agentApi],
+  );
+
   // Fetch inventory only (agent status comes from context)
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await agentApi.getInventory({});
-        setInventory(inventoryFromGetInventoryResponse(response));
+        const nextInventory = await fetchInventory();
+        setInventory(nextInventory);
       } catch (err) {
         console.error("Error fetching inventory:", err);
 
@@ -155,7 +244,7 @@ export const ReportContainer: React.FC = () => {
     };
 
     fetchData();
-  }, [agentApi]);
+  }, [fetchInventory]);
 
   // Fetch cluster utilization metrics
   useEffect(() => {
@@ -245,7 +334,7 @@ export const ReportContainer: React.FC = () => {
         });
 
         if (currentRequestId === vmsRequestIdRef.current) {
-          setVmsList(response.vms || []);
+          setVmsList(normalizeVirtualMachines(response.vms));
           setVmsTotalCount(response.total || 0);
         }
       } catch (err) {
@@ -287,7 +376,7 @@ export const ReportContainer: React.FC = () => {
         agentApi.getVMLabels().catch(() => null),
       ]);
       if (vmsRefreshIdRef.current === reqId) {
-        setVmsList(response.vms || []);
+        setVmsList(normalizeVirtualMachines(response.vms));
         setVmsTotalCount(response.total || 0);
         setAvailableFilterOptions((prev) => ({
           ...prev,
@@ -356,19 +445,14 @@ export const ReportContainer: React.FC = () => {
     );
   }
 
-  // Extract data from inventory
-  const infra = inventory.vcenter?.infra;
-  const vms = inventory.vcenter?.vms;
-  const clusters = inventory.clusters || {};
+  const aggregateView = getInventoryAggregateView(inventory);
+  const totalVMs = aggregateView.vms?.total ?? 0;
+  const totalClusters = Object.keys(aggregateView.clusters).length;
 
-  const totalVMs = vms?.total || 0;
-  const totalClusters = Object.keys(clusters).length;
-
-  // Build cluster view model
   const clusterView = buildClusterViewModel({
-    infra,
-    vms,
-    clusters,
+    infra: aggregateView.infra,
+    vms: aggregateView.vms,
+    clusters: aggregateView.clusters,
     selectedClusterId,
   });
 
@@ -476,6 +560,7 @@ export const ReportContainer: React.FC = () => {
       newParams = buildApplicationsTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
+      void reloadAssessmentInventory();
     }
     setSearchParams(newParams, { replace: true });
   };
@@ -584,6 +669,7 @@ export const ReportContainer: React.FC = () => {
               <div style={{ marginTop: "24px" }}>
                 {clusterView.viewInfra && clusterView.viewVms ? (
                   <Dashboard
+                    key={`assessment-${inventoryRevision}-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
                     infra={clusterView.viewInfra}
                     cpuCores={clusterView.cpuCores}
                     ramGB={clusterView.ramGB}
@@ -621,6 +707,7 @@ export const ReportContainer: React.FC = () => {
                   availableFilterOptions={availableFilterOptions}
                   agentApi={agentApi}
                   onRefreshVMs={refreshVMs}
+                  onRefreshInventory={refreshInventory}
                   showExcludedVMs={showExcludedVMs}
                   onShowExcludedVMsChange={(show) => {
                     setShowExcludedVMs(show);

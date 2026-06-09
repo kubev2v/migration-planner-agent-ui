@@ -37,6 +37,7 @@ import {
 } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
 import { Symbols } from "../../main/Symbols";
+import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { ApplicationsView, Dashboard, VirtualMachinesView } from "./components";
 import { DeleteGroupModal } from "./components/DeleteGroupModal";
@@ -48,7 +49,14 @@ import {
   searchParamsToFilters,
 } from "./components/vmFilters";
 import { Header } from "./Header";
-import { getInventoryAggregateView } from "./inventoryParsing";
+import {
+  adjustInventoryForMigrationExcludedChange,
+  fetchInventoryAfterMigrationChange,
+  fetchInventoryFromApi,
+  getInventoryAggregateView,
+  type MigrationExcludedInventoryChange,
+  resolveInventoryOnReload,
+} from "./inventoryParsing";
 import {
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
@@ -59,6 +67,7 @@ import {
   resolveReportTab,
 } from "./reportTabNavigation";
 import { useApplicationsData } from "./useApplicationsData";
+import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
 export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -219,7 +228,7 @@ export const GroupDetailPage: React.FC = () => {
         });
 
         if (currentRequestId === vmsRequestIdRef.current) {
-          setVmsList(response.vms || []);
+          setVmsList(normalizeVirtualMachines(response.vms));
           setVmsTotalCount(response.total || 0);
         }
       } catch (err) {
@@ -269,7 +278,7 @@ export const GroupDetailPage: React.FC = () => {
         agentApi.getVMLabels().catch(() => null),
       ]);
       if (vmsRefreshIdRef.current === reqId) {
-        setVmsList(response.vms || []);
+        setVmsList(normalizeVirtualMachines(response.vms));
         setVmsTotalCount(response.total || 0);
         setAvailableFilterOptions((prev) => ({
           ...prev,
@@ -288,6 +297,87 @@ export const GroupDetailPage: React.FC = () => {
     vmsPage,
     vmsPageSize,
   ]);
+
+  const reloadAssessmentInventory = useCallback(async () => {
+    if (!groupId) {
+      return;
+    }
+
+    try {
+      const basePath = getAgentApiBasePath(agentApi);
+      const fetchedInventory = await fetchInventoryFromApi(basePath, {
+        groupId,
+      });
+      if (!fetchedInventory) {
+        return;
+      }
+
+      setInventory((current) => {
+        if (!current) {
+          return fetchedInventory;
+        }
+
+        return resolveInventoryOnReload(current, fetchedInventory);
+      });
+    } catch (err) {
+      console.error("Error reloading group assessment inventory:", err);
+    }
+  }, [agentApi, groupId]);
+
+  const refreshGroupInventory = useCallback(
+    async (change: MigrationExcludedInventoryChange): Promise<void> => {
+      if (!groupId) {
+        return;
+      }
+
+      setVmsList((current) =>
+        current.map((vm) =>
+          change.vmIds.includes(vm.id)
+            ? { ...vm, migrationExcluded: change.excluded }
+            : vm,
+        ),
+      );
+
+      let previousTotal: number | undefined;
+      let optimisticInventory: Inventory | null = null;
+
+      setInventory((current) => {
+        if (!current) {
+          return current;
+        }
+        previousTotal = getInventoryAggregateView(current).vms?.total;
+        optimisticInventory = adjustInventoryForMigrationExcludedChange(
+          current,
+          change.vmIds,
+          change.excluded,
+          change.affectedVms,
+        );
+        return optimisticInventory;
+      });
+
+      try {
+        const basePath = getAgentApiBasePath(agentApi);
+        const resolved = await fetchInventoryAfterMigrationChange(
+          basePath,
+          change,
+          previousTotal,
+          optimisticInventory,
+          { groupId },
+        );
+        if (resolved) {
+          setInventory((current) => {
+            if (!current) {
+              return resolved;
+            }
+            return resolveInventoryOnReload(current, resolved);
+          });
+        }
+      } catch (err) {
+        console.error("Error refreshing group inventory:", err);
+      }
+    },
+    [agentApi, groupId],
+  );
 
   const reloadGroupMembership = useCallback(async () => {
     if (!groupId) {
@@ -322,6 +412,7 @@ export const GroupDetailPage: React.FC = () => {
       newParams = buildApplicationsTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
+      void reloadAssessmentInventory();
     }
     setSearchParams(newParams, { replace: true });
   };
@@ -527,6 +618,7 @@ export const GroupDetailPage: React.FC = () => {
                 {clusterView.viewInfra && clusterView.viewVms ? (
                   <div style={{ marginTop: "24px" }}>
                     <Dashboard
+                      key={`group-assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
                       infra={clusterView.viewInfra}
                       cpuCores={clusterView.cpuCores}
                       ramGB={clusterView.ramGB}
@@ -565,6 +657,7 @@ export const GroupDetailPage: React.FC = () => {
                   availableFilterOptions={availableFilterOptions}
                   agentApi={agentApi}
                   onRefreshVMs={refreshVMs}
+                  onRefreshInventory={refreshGroupInventory}
                   onGroupMembershipChanged={reloadGroupMembership}
                   showExcludedVMs={showExcludedVMs}
                   onShowExcludedVMsChange={(show) => {
