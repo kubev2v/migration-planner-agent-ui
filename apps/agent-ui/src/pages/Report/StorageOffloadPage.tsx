@@ -5,7 +5,7 @@ import type React from "react";
 import { useMemo } from "react";
 import { Symbols } from "../../main/Symbols";
 import { getAgentApiBasePath } from "./agentApiConfig";
-import { StorageOffloadTab } from "./components/StorageOffloadEstimatorModal";
+import { StorageOffloadTab } from "./components/storageOffload/StorageOffloadTab";
 
 export const StorageOffloadPage: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);

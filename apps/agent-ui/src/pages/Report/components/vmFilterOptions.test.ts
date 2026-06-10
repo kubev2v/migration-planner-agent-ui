@@ -8,6 +8,7 @@ import {
 describe("createRefreshVmTableFilterOptions", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("skips refresh within the TTL unless forced", async () => {
@@ -43,6 +44,7 @@ describe("createRefreshVmTableFilterOptions", () => {
 
   it("allows immediate retry after a failed refresh", async () => {
     vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     const agentApi = {
       getVMsFilterOptions: vi
