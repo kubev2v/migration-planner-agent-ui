@@ -6,6 +6,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { getAgentApiBasePath } from "../agentApiConfig";
+import type { MigrationExcludedInventoryChange } from "../inventoryParsing";
 import { AddLabelsModal } from "./AddLabelsModal";
 import { AddToGroupModal } from "./AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "./CreateGroupFromSelectionModal";
@@ -28,7 +29,11 @@ async function updateVmMigrationExcluded(
   agentApi: DefaultApiInterface,
   vmIds: string[],
   migrationExcluded: boolean,
-  onRefreshVMs?: () => void,
+  knownVms: VirtualMachine[],
+  onRefreshVMs?: () => void | Promise<void>,
+  onRefreshInventory?: (
+    change: MigrationExcludedInventoryChange,
+  ) => void | Promise<void>,
 ): Promise<void> {
   const results = await Promise.allSettled(
     vmIds.map((id) =>
@@ -48,7 +53,17 @@ async function updateVmMigrationExcluded(
     }
   }
 
-  onRefreshVMs?.();
+  const successfulIds = vmIds.filter((id) => !failedIds.includes(id));
+  const affectedVms = knownVms.filter((vm) => successfulIds.includes(vm.id));
+
+  if (successfulIds.length > 0) {
+    await onRefreshInventory?.({
+      vmIds: successfulIds,
+      excluded: migrationExcluded,
+      affectedVms,
+    });
+  }
+  await onRefreshVMs?.();
 
   if (failedIds.length > 0) {
     throw new Error(
@@ -76,6 +91,10 @@ interface VirtualMachinesViewProps {
   };
   agentApi?: DefaultApiInterface;
   onRefreshVMs?: () => void;
+  /** Refresh assessment report inventory after exclude/include from migration. */
+  onRefreshInventory?: (
+    change: MigrationExcludedInventoryChange,
+  ) => void | Promise<void>;
   /** Reload group metadata/filter after add/remove (group detail page). */
   onGroupMembershipChanged?: () => void | Promise<void>;
   showExcludedVMs?: boolean;
@@ -100,6 +119,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   availableFilterOptions,
   agentApi,
   onRefreshVMs,
+  onRefreshInventory,
   onGroupMembershipChanged,
   showExcludedVMs,
   onShowExcludedVMsChange,
@@ -452,17 +472,31 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleExcludeFromReports = useCallback(
     async (vmIds: string[]) => {
       if (!agentApi) return;
-      await updateVmMigrationExcluded(agentApi, vmIds, true, onRefreshVMs);
+      await updateVmMigrationExcluded(
+        agentApi,
+        vmIds,
+        true,
+        vmsForTable,
+        onRefreshVMs,
+        onRefreshInventory,
+      );
     },
-    [agentApi, onRefreshVMs],
+    [agentApi, onRefreshVMs, onRefreshInventory, vmsForTable],
   );
 
   const handleIncludeInReports = useCallback(
     async (vmIds: string[]) => {
       if (!agentApi) return;
-      await updateVmMigrationExcluded(agentApi, vmIds, false, onRefreshVMs);
+      await updateVmMigrationExcluded(
+        agentApi,
+        vmIds,
+        false,
+        vmsForTable,
+        onRefreshVMs,
+        onRefreshInventory,
+      );
     },
-    [agentApi, onRefreshVMs],
+    [agentApi, onRefreshVMs, onRefreshInventory, vmsForTable],
   );
 
   const handleResetInspection = useCallback(async () => {
