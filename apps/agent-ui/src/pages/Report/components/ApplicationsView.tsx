@@ -16,6 +16,8 @@ import {
   EmptyState,
   EmptyStateBody,
   EmptyStateVariant,
+  Flex,
+  FlexItem,
   Label,
   LabelGroup,
   MenuToggle,
@@ -41,6 +43,7 @@ import {
   paginateItems,
 } from "./applicationFilters";
 import type { ApplicationOverview } from "./applicationsApi";
+import { TechnologyPreviewBadge } from "./TechnologyPreviewBadge";
 
 const styles = {
   drawerPanel: css`
@@ -55,6 +58,9 @@ const styles = {
     margin-bottom: 16px;
   `,
   appliedFilters: css`
+    margin-bottom: 16px;
+  `,
+  header: css`
     margin-bottom: 16px;
   `,
   vmFilterMenu: css`
@@ -223,6 +229,21 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
     <Drawer isExpanded={drawerApplication !== null} isInline position="end">
       <DrawerContent panelContent={panelContent}>
         <DrawerContentBody>
+          <Flex
+            className={styles.header}
+            alignItems={{ default: "alignItemsCenter" }}
+            spaceItems={{ default: "spaceItemsSm" }}
+          >
+            <FlexItem>
+              <Title headingLevel="h2" size="lg">
+                Applications
+              </Title>
+            </FlexItem>
+            <FlexItem>
+              <TechnologyPreviewBadge />
+            </FlexItem>
+          </Flex>
+
           {error && (
             <Alert
               variant="danger"
