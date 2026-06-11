@@ -51,12 +51,8 @@ import {
 } from "./components/vmFilters";
 import { Header } from "./Header";
 import {
-  adjustInventoryForMigrationExcludedChange,
-  fetchInventoryAfterMigrationChange,
   fetchInventoryFromApi,
   getInventoryAggregateView,
-  type MigrationExcludedInventoryChange,
-  resolveInventoryOnReload,
 } from "./inventoryParsing";
 import {
   buildApplicationsTabUrl,
@@ -68,6 +64,7 @@ import {
   resolveReportTab,
 } from "./reportTabNavigation";
 import { useApplicationsData } from "./useApplicationsData";
+import { useMigrationInventoryRefresh } from "./useMigrationInventoryRefresh";
 import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
 export const ReportContainer: React.FC = () => {
@@ -159,79 +156,17 @@ export const ReportContainer: React.FC = () => {
     return fetchInventoryFromApi(basePath);
   }, [agentApi]);
 
-  const reloadAssessmentInventory = useCallback(async () => {
-    try {
-      const fetchedInventory = await fetchInventory();
-      if (!fetchedInventory) {
-        return;
-      }
+  const bumpInventoryRevision = useCallback(() => {
+    setInventoryRevision((revision) => revision + 1);
+  }, []);
 
-      setInventory((current) => {
-        if (!current) {
-          return fetchedInventory;
-        }
-
-        return resolveInventoryOnReload(current, fetchedInventory);
-      });
-    } catch (err) {
-      console.error("Error reloading assessment inventory:", err);
-    }
-  }, [fetchInventory]);
-
-  const refreshInventory = useCallback(
-    async (change: MigrationExcludedInventoryChange): Promise<void> => {
-      setVmsList((current) =>
-        current.map((vm) =>
-          change.vmIds.includes(vm.id)
-            ? { ...vm, migrationExcluded: change.excluded }
-            : vm,
-        ),
-      );
-
-      let previousTotal: number | undefined;
-      let optimisticInventory: Inventory | null = null;
-
-      setInventory((current) => {
-        if (!current) {
-          return current;
-        }
-        previousTotal = getInventoryAggregateView(current).vms?.total;
-        optimisticInventory = adjustInventoryForMigrationExcludedChange(
-          current,
-          change.vmIds,
-          change.excluded,
-          change.affectedVms,
-        );
-        return optimisticInventory;
-      });
-
-      if (optimisticInventory) {
-        setInventoryRevision((revision) => revision + 1);
-      }
-
-      try {
-        const basePath = getAgentApiBasePath(agentApi);
-        const resolved = await fetchInventoryAfterMigrationChange(
-          basePath,
-          change,
-          previousTotal,
-          optimisticInventory,
-        );
-        if (resolved) {
-          setInventory((current) => {
-            if (!current) {
-              return resolved;
-            }
-            return resolveInventoryOnReload(current, resolved);
-          });
-          setInventoryRevision((revision) => revision + 1);
-        }
-      } catch (err) {
-        console.error("Error refreshing inventory:", err);
-      }
-    },
-    [agentApi],
-  );
+  const { refreshInventory, reloadAssessmentInventory } =
+    useMigrationInventoryRefresh({
+      agentApi,
+      setInventory,
+      setVmsList,
+      onInventoryRevisionBump: bumpInventoryRevision,
+    });
 
   // Fetch inventory only (agent status comes from context)
   useEffect(() => {

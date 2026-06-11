@@ -120,6 +120,55 @@ describe("getInventoryAggregateView", () => {
   });
 });
 
+describe("sequential migration excluded changes", () => {
+  it("restores totals after exclude then include", () => {
+    let inventory = baseInventory;
+    inventory = adjustInventoryForMigrationExcludedChange(
+      inventory,
+      ["vm-1"],
+      true,
+      [vm],
+    );
+    inventory = adjustInventoryForMigrationExcludedChange(
+      inventory,
+      ["vm-1"],
+      false,
+      [{ ...vm, migrationExcluded: true }],
+    );
+
+    expect(getInventoryAggregateView(inventory).vms?.total).toBe(2);
+  });
+
+  it("applies bulk exclude then bulk include", () => {
+    const vm2: VirtualMachine = { ...vm, id: "vm-2", name: "web-2" };
+    const inventoryWithTwo: Inventory = {
+      ...baseInventory,
+      vcenter: {
+        infra: testInfra(1),
+        vms: testVms(2, 2),
+      },
+    };
+
+    let inventory = adjustInventoryForMigrationExcludedChange(
+      inventoryWithTwo,
+      ["vm-1", "vm-2"],
+      true,
+      [vm, vm2],
+    );
+    inventory = adjustInventoryForMigrationExcludedChange(
+      inventory,
+      ["vm-1", "vm-2"],
+      false,
+      [
+        { ...vm, migrationExcluded: true },
+        { ...vm2, migrationExcluded: true },
+      ],
+    );
+
+    expect(getInventoryAggregateView(inventory).vms?.total).toBe(2);
+  });
+});
+
 describe("resolveInventoryAfterMigrationChange", () => {
   it("keeps optimistic inventory when server response is stale", () => {
     const optimistic = adjustInventoryForMigrationExcludedChange(

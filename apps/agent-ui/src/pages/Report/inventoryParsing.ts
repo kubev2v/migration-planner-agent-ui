@@ -334,23 +334,6 @@ export async function fetchInventoryAfterMigrationChange(
   return optimisticInventory;
 }
 
-/** Keep optimistic totals when reloading inventory before the server catches up. */
-export function resolveInventoryOnReload(
-  currentInventory: Inventory,
-  fetchedInventory: Inventory,
-): Inventory {
-  const currentTotal = getInventoryAggregateView(currentInventory).vms?.total;
-  const fetchedTotal = getInventoryAggregateView(fetchedInventory).vms?.total;
-  if (
-    currentTotal !== undefined &&
-    fetchedTotal !== undefined &&
-    fetchedTotal !== currentTotal
-  ) {
-    return currentInventory;
-  }
-  return fetchedInventory;
-}
-
 export type InventoryAggregateView = {
   infra?: Infra;
   vms?: VMs;
