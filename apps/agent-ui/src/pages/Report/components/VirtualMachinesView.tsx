@@ -54,7 +54,24 @@ async function updateVmMigrationExcluded(
   }
 
   const successfulIds = vmIds.filter((id) => !failedIds.includes(id));
-  const affectedVms = knownVms.filter((vm) => successfulIds.includes(vm.id));
+  // Use pre-change exclusion state so bulk exclude/include stays accurate even if
+  // the table list has not refreshed yet from a prior operation.
+  const affectedVms = successfulIds.map((id) => {
+    const vm = knownVms.find((candidate) => candidate.id === id);
+    return {
+      ...(vm ?? {
+        id,
+        name: id,
+        vCenterState: "",
+        cluster: "",
+        datacenter: "",
+        diskSize: 0,
+        memory: 0,
+        issueCount: 0,
+      }),
+      migrationExcluded: !migrationExcluded,
+    };
+  });
 
   if (successfulIds.length > 0) {
     await onRefreshInventory?.({
