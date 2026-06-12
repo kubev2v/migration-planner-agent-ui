@@ -1,111 +1,129 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { CredentialsProvider } from "../credentials/CredentialsContext.tsx";
+
+function AppLayout() {
+  return (
+    <CredentialsProvider>
+      <Outlet />
+    </CredentialsProvider>
+  );
+}
 
 export const router = createBrowserRouter(
   [
     {
-      path: "/",
-      index: true,
-      element: <Navigate to="/login" />,
-    },
-    {
-      path: "/login",
-      lazy: async () => {
-        const { default: AgentLoginPage } = await import(
-          "../pages/AgentLoginPage.tsx"
-        );
-
-        return {
-          Component: AgentLoginPage,
-        };
-      },
-    },
-    {
-      path: "/report",
-      lazy: async () => {
-        const { ProtectedReportRoute } = await import(
-          "../pages/Report/ProtectedReportRoute.tsx"
-        );
-
-        return {
-          Component: ProtectedReportRoute,
-        };
-      },
+      element: <AppLayout />,
       children: [
         {
+          path: "/",
           index: true,
-          element: <Navigate to="/report/vms-overview" replace />,
+          element: <Navigate to="/login" />,
         },
         {
-          path: "vms-overview",
+          path: "/login",
           lazy: async () => {
-            const { ReportContainer } = await import(
-              "../pages/Report/ReportContainer.tsx"
+            const { default: AgentLoginPage } = await import(
+              "../pages/AgentLoginPage.tsx"
             );
-            return { Component: ReportContainer };
+
+            return {
+              Component: AgentLoginPage,
+            };
           },
         },
         {
-          path: "groups",
+          path: "/report",
           lazy: async () => {
-            const { GroupsPage } = await import(
-              "../pages/Report/GroupsPage.tsx"
+            const { ProtectedReportRoute } = await import(
+              "../pages/Report/ProtectedReportRoute.tsx"
             );
-            return { Component: GroupsPage };
+
+            return {
+              Component: ProtectedReportRoute,
+            };
+          },
+          children: [
+            {
+              index: true,
+              element: <Navigate to="/report/vms-overview" replace />,
+            },
+            {
+              path: "vms-overview",
+              lazy: async () => {
+                const { ReportContainer } = await import(
+                  "../pages/Report/ReportContainer.tsx"
+                );
+                return { Component: ReportContainer };
+              },
+            },
+            {
+              path: "groups",
+              lazy: async () => {
+                const { GroupsPage } = await import(
+                  "../pages/Report/GroupsPage.tsx"
+                );
+                return { Component: GroupsPage };
+              },
+            },
+            {
+              path: "groups/:groupId",
+              lazy: async () => {
+                const { GroupDetailPage } = await import(
+                  "../pages/Report/GroupDetailPage.tsx"
+                );
+                return { Component: GroupDetailPage };
+              },
+            },
+            {
+              path: "storage-offload-estimator",
+              lazy: async () => {
+                const { StorageOffloadPage } = await import(
+                  "../pages/Report/StorageOffloadPage.tsx"
+                );
+                return { Component: StorageOffloadPage };
+              },
+            },
+          ],
+        },
+        {
+          path: "/error/:code",
+          lazy: async () => {
+            const { default: ErrorPage } = await import(
+              "../pages/ErrorPage.tsx"
+            );
+
+            return {
+              Component: ErrorPage,
+            };
           },
         },
         {
-          path: "groups/:groupId",
+          path: "*",
           lazy: async () => {
-            const { GroupDetailPage } = await import(
-              "../pages/Report/GroupDetailPage.tsx"
+            const { default: ErrorPage } = await import(
+              "../pages/ErrorPage.tsx"
             );
-            return { Component: GroupDetailPage };
-          },
-        },
-        {
-          path: "storage-offload-estimator",
-          lazy: async () => {
-            const { StorageOffloadPage } = await import(
-              "../pages/Report/StorageOffloadPage.tsx"
-            );
-            return { Component: StorageOffloadPage };
+
+            return {
+              element: (
+                <ErrorPage
+                  code="404"
+                  message="We lost that page"
+                  actions={[
+                    {
+                      children: "Go back",
+                      component: "a",
+                      onClick: (_event): void => {
+                        history.back();
+                      },
+                    },
+                  ]}
+                />
+              ),
+            };
           },
         },
       ],
-    },
-    {
-      path: "/error/:code",
-      lazy: async () => {
-        const { default: ErrorPage } = await import("../pages/ErrorPage.tsx");
-
-        return {
-          Component: ErrorPage,
-        };
-      },
-    },
-    {
-      path: "*",
-      lazy: async () => {
-        const { default: ErrorPage } = await import("../pages/ErrorPage.tsx");
-
-        return {
-          element: (
-            <ErrorPage
-              code="404"
-              message="We lost that page"
-              actions={[
-                {
-                  children: "Go back",
-                  component: "a",
-                  onClick: (_event): void => {
-                    history.back();
-                  },
-                },
-              ]}
-            />
-          ),
-        };
-      },
     },
   ],
   {},

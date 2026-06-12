@@ -8,7 +8,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { newAbortSignal } from "../../common/AbortSignal";
 import type { ApiError } from "../../common/components/index";
+import { putCredentials } from "../../credentials/credentialsApi";
+import { persistUsername } from "../../credentials/credentialsTypes";
 import { Symbols } from "../../main/Symbols";
+import { getAgentApiBasePath } from "../../pages/Report/agentApiConfig";
 import { REQUEST_TIMEOUT_MS } from "../Constants";
 import type { Credentials } from "../LoginFormComponent";
 
@@ -204,6 +207,19 @@ export const useLoginViewModel = (
           { collectorStartRequest: collectorRequest },
           { signal },
         );
+
+        // Store credentials for deep inspection, storage offload, and the user menu.
+        try {
+          await putCredentials(getAgentApiBasePath(agentApi), {
+            url: credentials.url,
+            username: credentials.username,
+            password: credentials.password,
+          });
+          persistUsername(credentials.username);
+        } catch (storeErr) {
+          console.warn("Failed to store credentials:", storeErr);
+        }
+
         // Status will be updated by the polling effect
       } catch (err) {
         setIsCollecting(false);

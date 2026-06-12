@@ -14,8 +14,6 @@ import {
   ExpandableSection,
   Flex,
   FlexItem,
-  Form,
-  FormGroup,
   Grid,
   GridItem,
   JumpLinks,
@@ -38,7 +36,6 @@ import {
   Spinner,
   Stack,
   StackItem,
-  TextInput,
 } from "@patternfly/react-core";
 import {
   CheckCircleIcon,
@@ -53,22 +50,20 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCredentials } from "../../../credentials/CredentialsContext";
+import { MissingPermissionsAlert } from "../../../credentials/MissingPermissionsAlert";
 import {
-  CredentialsForbiddenError,
   cancelForecastPair,
   ForecastConflictError,
   getForecasterStatus,
   getPairCapabilities,
   getRuns,
   getStats,
-  postCredentials,
   postDatastores,
-  putCredentials,
   startForecast,
 } from "./forecasterApi";
 import type {
   DatastoreGroup,
-  ForecasterCredentials,
   ForecasterDatastore,
   ForecasterStatus,
   ForecastPairStatus,
@@ -196,106 +191,6 @@ const TempResourcesAcknowledgement: React.FC<
       </a>
     </div>
   </Alert>
-);
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-interface CredentialsStepProps {
-  credentials: ForecasterCredentials;
-  onChange: (c: ForecasterCredentials) => void;
-  error: string | null;
-  missingPrivileges: string[];
-  isLoading: boolean;
-  acknowledged: boolean;
-  onAcknowledgedChange: (checked: boolean) => void;
-}
-
-const CredentialsStep: React.FC<CredentialsStepProps> = ({
-  credentials,
-  onChange,
-  error,
-  missingPrivileges,
-  isLoading,
-  acknowledged,
-  onAcknowledgedChange,
-}) => (
-  <Stack hasGutter>
-    <StackItem>
-      <Content component="p">
-        Enter your vCenter credentials. These are required to discover available
-        datastores and run the benchmark.
-      </Content>
-    </StackItem>
-    {error && (
-      <StackItem>
-        <Alert variant="danger" title="Error" isInline>
-          {error}
-          {missingPrivileges.length > 0 && (
-            <div style={{ marginTop: "8px" }}>
-              <strong>Missing privileges:</strong>
-              <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
-                {missingPrivileges.map((p) => (
-                  <li key={p}>
-                    <code>{p}</code>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Alert>
-      </StackItem>
-    )}
-    <StackItem>
-      <Form>
-        <FormGroup label="vCenter URL" isRequired fieldId="vcenter-url">
-          <TextInput
-            id="vcenter-url"
-            value={credentials.url}
-            onChange={(_e, v) => onChange({ ...credentials, url: v })}
-            placeholder="https://vcenter.example.com"
-            isDisabled={isLoading}
-          />
-          <Content
-            component="small"
-            style={{ color: "var(--pf-t--global--text--color--200)" }}
-          >
-            Example: https://vcenter.example.com
-          </Content>
-        </FormGroup>
-        <FormGroup label="Username" isRequired fieldId="vcenter-username">
-          <TextInput
-            id="vcenter-username"
-            value={credentials.username}
-            onChange={(_e, v) => onChange({ ...credentials, username: v })}
-            placeholder="administrator@vsphere.local"
-            isDisabled={isLoading}
-          />
-          <Content
-            component="small"
-            style={{ color: "var(--pf-t--global--text--color--200)" }}
-          >
-            Example: administrator@vsphere.local
-          </Content>
-        </FormGroup>
-        <FormGroup label="Password" isRequired fieldId="vcenter-password">
-          <TextInput
-            id="vcenter-password"
-            type="password"
-            value={credentials.password}
-            onChange={(_e, v) => onChange({ ...credentials, password: v })}
-            isDisabled={isLoading}
-          />
-        </FormGroup>
-      </Form>
-    </StackItem>
-    <StackItem>
-      <TempResourcesAcknowledgement
-        id="cred-acknowledge-temp-resources"
-        isChecked={acknowledged}
-        onChange={onAcknowledgedChange}
-      />
-    </StackItem>
-  </Stack>
 );
 
 // ── Pair Selector ────────────────────────────────────────────────────────────
@@ -2120,7 +2015,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({
 
 // ── Storage Offload Tab ───────────────────────────────────────────────────────
 
-type WizardStepId = "credentials" | "select-pairs" | "running" | "results";
+type WizardStepId = "select-pairs" | "running" | "results";
 
 interface StorageOffloadTabProps {
   basePath: string;
@@ -2134,8 +2029,6 @@ interface StorageOffloadTabProps {
 const SESSION_KEY = "forecaster-wizard-state";
 
 interface PersistedWizardState {
-  url: string;
-  username: string;
   activeStep: WizardStepId;
   datastores: ForecasterDatastore[];
   pairs: SelectedPair[];
@@ -2170,26 +2063,14 @@ function clearWizardState(): void {
 export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   basePath,
 }) => {
-  // Restore the full wizard state from sessionStorage on mount so that tab
-  // switches don't reset the form or reload datastores.
+  const { forecasterPermissions, checkPermissions } = useCredentials();
   const _saved = loadWizardState();
 
-  const [activeStep, setActiveStep] = useState<WizardStepId>(
-    _saved.activeStep ?? "credentials",
-  );
-
-  // Credentials — url/username are restored from sessionStorage on mount.
-  // Password is never persisted (mirrors the deep inspector pattern).
-  const [credentials, setCredentials] = useState<ForecasterCredentials>({
-    url: _saved.url ?? "",
-    username: _saved.username ?? "",
-    password: "",
+  const [activeStep, setActiveStep] = useState<WizardStepId>(() => {
+    const savedStep = _saved.activeStep as string | undefined;
+    if (savedStep === "credentials" || !savedStep) return "select-pairs";
+    return savedStep as WizardStepId;
   });
-  const [credError, setCredError] = useState<string | null>(null);
-  const [credMissingPrivileges, setCredMissingPrivileges] = useState<string[]>(
-    [],
-  );
-  const [credLoading, setCredLoading] = useState(false);
 
   // Datastores & pair selection — restored from sessionStorage when available
   const [datastores, setDatastores] = useState<ForecasterDatastore[]>(
@@ -2221,8 +2102,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     null,
   );
 
-  // "I understand" checkbox state — credentials step
-  const [credAcknowledged, setCredAcknowledged] = useState(false);
   // "I understand" checkbox state — select-pairs step
   const [pairsVmAcknowledged, setPairsVmAcknowledged] = useState(false);
   // "I understand" checkbox state — add-pairs modal
@@ -2349,28 +2228,47 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     };
   }, [basePath]);
 
-  // Persist wizard state on every relevant change (password excluded)
+  // Load datastores using stored credentials and refresh permission state.
   useEffect(() => {
-    // Only save when we have at least a url (avoid storing empty state)
-    if (!credentials.url && !activeStep) return;
-    saveWizardState({
-      url: credentials.url,
-      username: credentials.username,
-      activeStep,
-      datastores,
-      pairs,
-    });
-  }, [credentials.url, credentials.username, activeStep, datastores, pairs]);
+    if (datastores.length > 0) return;
+
+    let cancelled = false;
+    const load = async () => {
+      setDsLoading(true);
+      setDsError(null);
+      try {
+        await checkPermissions("forecaster");
+        const dsList = await postDatastores(basePath);
+        if (!cancelled) {
+          setDatastores(dsList);
+          setDsGroups(groupDatastoresByArray(dsList));
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setDsError(e instanceof Error ? e.message : String(e));
+        }
+      } finally {
+        if (!cancelled) setDsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [basePath, checkPermissions, datastores.length]);
+
+  // Persist wizard state on every relevant change
+  useEffect(() => {
+    saveWizardState({ activeStep, datastores, pairs });
+  }, [activeStep, datastores, pairs]);
 
   const reset = useCallback(() => {
     stopPolling();
     wasRunningRef.current = false;
     hasAutoLoadedResultsRef.current = false;
     clearWizardState();
-    setActiveStep("credentials");
-    setCredentials({ url: "", username: "", password: "" });
-    setCredError(null);
-    setCredMissingPrivileges([]);
+    setActiveStep("select-pairs");
     setDatastores([]);
     setDsGroups([]);
     setPairs([
@@ -2385,47 +2283,11 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setBenchmarkDone(false);
     setStatsMap({});
     setAllRuns([]);
-    setCredAcknowledged(false);
     setPairsVmAcknowledged(false);
     setModalVmAcknowledged(false);
     setPairsHaveNoCaps(false);
     setModalPairsHaveNoCaps(false);
   }, [stopPolling]);
-
-  // ── Step 1 → Step 2: validate credentials & fetch datastores ──
-  const handleSaveCredentials = useCallback(async () => {
-    if (!credentials.url || !credentials.username || !credentials.password) {
-      setCredError("All fields are required.");
-      return;
-    }
-    setCredError(null);
-    setCredMissingPrivileges([]);
-    setCredLoading(true);
-    try {
-      // Call both endpoints: POST /collector (triggers collection) and
-      // PUT /forecaster/credentials (forecaster preflight check).
-      await Promise.all([
-        postCredentials(basePath, credentials),
-        putCredentials(basePath, credentials),
-      ]);
-      setDsLoading(true);
-      setActiveStep("select-pairs");
-      const dsList = await postDatastores(basePath);
-      setDatastores(dsList);
-      setDsGroups(groupDatastoresByArray(dsList));
-    } catch (e) {
-      if (e instanceof CredentialsForbiddenError) {
-        setCredError(e.message);
-        setCredMissingPrivileges(e.missingPrivileges);
-      } else {
-        setCredError(e instanceof Error ? e.message : String(e));
-      }
-      setActiveStep("credentials");
-    } finally {
-      setCredLoading(false);
-      setDsLoading(false);
-    }
-  }, [basePath, credentials]);
 
   const loadResults = useCallback(
     async (pairNames: string[]) => {
@@ -2671,7 +2533,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
     try {
       await startForecast(basePath, {
-        credentials,
         pairs: validPairs.map((p) => ({
           name: p.name,
           sourceDatastore: p.sourceDatastore,
@@ -2754,7 +2615,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     pollRef.current = setInterval(poll, 2000);
   }, [
     basePath,
-    credentials,
     pairs,
     stopPolling,
     loadResults,
@@ -2794,7 +2654,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
     try {
       await startForecast(basePath, {
-        credentials,
         pairs: validPairs.map((p) => ({
           name: p.name,
           sourceDatastore: p.sourceDatastore,
@@ -2880,7 +2739,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     pollRef.current = setInterval(poll, 2000);
   }, [
     basePath,
-    credentials,
     pairs,
     modalPairs,
     closeAddPairsModal,
@@ -2962,7 +2820,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
       try {
         await startForecast(basePath, {
-          credentials,
           pairs: [
             {
               name: rerunPair.name,
@@ -3041,7 +2898,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     },
     [
       basePath,
-      credentials,
       stopPolling,
       loadResults,
       redirectToRunningBenchmark,
@@ -3049,20 +2905,18 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     ],
   );
 
-  const canGoToStep2 =
-    !!credentials.url &&
-    !!credentials.username &&
-    !!credentials.password &&
-    credAcknowledged;
+  const missingForecasterPrivileges = forecasterPermissions.checked
+    ? forecasterPermissions.missingPrivileges
+    : [];
 
   const canStartBenchmark =
+    missingForecasterPrivileges.length === 0 &&
     pairs.some((p) => p.sourceDatastore && p.targetDatastore) &&
     !pairsHaveNoCaps &&
     pairsVmAcknowledged;
 
   // ── Step indicator ──
   const steps: { id: WizardStepId; name: string }[] = [
-    { id: "credentials", name: "Set credentials" },
     { id: "select-pairs", name: "Select pairs" },
     { id: "running", name: "Run benchmark" },
     { id: "results", name: "Results" },
@@ -3071,35 +2925,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
   const renderActions = () => {
     switch (activeStep) {
-      case "credentials":
-        return (
-          <Flex style={{ marginTop: "24px" }} gap={{ default: "gapSm" }}>
-            <FlexItem>
-              <Button
-                variant="primary"
-                onClick={handleSaveCredentials}
-                isLoading={credLoading}
-                isDisabled={!canGoToStep2 || credLoading}
-              >
-                Next
-              </Button>
-            </FlexItem>
-            <FlexItem>
-              <Button
-                variant="link"
-                onClick={() => {
-                  setCredentials({ url: "", username: "", password: "" });
-                  setCredError(null);
-                  setCredMissingPrivileges([]);
-                  setCredAcknowledged(false);
-                }}
-                isDisabled={credLoading}
-              >
-                Clear credentials
-              </Button>
-            </FlexItem>
-          </Flex>
-        );
       case "select-pairs":
         return (
           <Flex style={{ marginTop: "24px" }} gap={{ default: "gapSm" }}>
@@ -3110,14 +2935,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
                 isDisabled={!canStartBenchmark}
               >
                 Run estimation
-              </Button>
-            </FlexItem>
-            <FlexItem>
-              <Button
-                variant="secondary"
-                onClick={() => setActiveStep("credentials")}
-              >
-                Back
               </Button>
             </FlexItem>
             <FlexItem>
@@ -3232,17 +3049,10 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
       {/* Step content */}
       <StackItem>
-        {activeStep === "credentials" && (
-          <CredentialsStep
-            credentials={credentials}
-            onChange={setCredentials}
-            error={credError}
-            missingPrivileges={credMissingPrivileges}
-            isLoading={credLoading}
-            acknowledged={credAcknowledged}
-            onAcknowledgedChange={setCredAcknowledged}
-          />
-        )}
+        <MissingPermissionsAlert
+          feature="storage offload estimator"
+          missingPrivileges={missingForecasterPrivileges}
+        />
         {activeStep === "select-pairs" && (
           <SelectPairsStep
             datastores={datastores}
