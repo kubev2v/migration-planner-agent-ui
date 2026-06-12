@@ -22,7 +22,6 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
-  TextInput,
   Title,
 } from "@patternfly/react-core";
 import {
@@ -32,6 +31,8 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { useCredentials } from "../../../credentials/CredentialsContext";
+import { MissingPermissionsAlert } from "../../../credentials/MissingPermissionsAlert";
 import { TechnologyPreviewBadge } from "./TechnologyPreviewBadge";
 
 interface DeepInspectionModalProps {
@@ -107,23 +108,15 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   agentApi,
   onInspectionStarted,
 }) => {
-  // Section expand/collapse
-  const [vddkExpanded, setVddkExpanded] = useState(true);
+  const { inspectorPermissions, checkPermissions } = useCredentials();
 
-  // VDDK state
+  const [vddkExpanded, setVddkExpanded] = useState(true);
   const [vddkFile, setVddkFile] = useState<File | null>(null);
   const [vddkFileName, setVddkFileName] = useState("");
   const [vddkUploading, setVddkUploading] = useState(false);
   const [vddkStatus, setVddkStatus] = useState<SectionStatus>("notConfigured");
   const [vddkError, setVddkError] = useState<string | null>(null);
   const [vddkProps, setVddkProps] = useState<VddkProperties | null>(null);
-
-  // Credentials state
-  const [vcenterUrl, setVcenterUrl] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-
-  // Global state
   const [configuring, setConfiguring] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
@@ -166,8 +159,11 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchExistingStatus();
+      checkPermissions("inspector").catch((err) => {
+        console.error("Failed to check inspector permissions:", err);
+      });
     }
-  }, [isOpen, fetchExistingStatus]);
+  }, [isOpen, fetchExistingStatus, checkPermissions]);
 
   const resetState = () => {
     setVddkFile(null);
@@ -176,9 +172,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setVddkStatus("notConfigured");
     setVddkError(null);
     setVddkProps(null);
-    setVcenterUrl("");
-    setUsername("");
-    setPassword("");
     setConfiguring(false);
     setGlobalError(null);
     setVddkExpanded(true);
@@ -229,17 +222,14 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
 
   const MAX_VMS = 10;
   const tooManyVMs = selectedVMIds.length > MAX_VMS;
-
   const hasVMsSelected = selectedVMIds.length > 0;
-
-  const areCredentialsValid =
-    vcenterUrl.trim() !== "" &&
-    username.trim() !== "" &&
-    password.trim() !== "";
+  const missingInspectorPrivileges = inspectorPermissions.checked
+    ? inspectorPermissions.missingPrivileges
+    : [];
 
   const canConfigure =
     vddkStatus === "configured" &&
-    areCredentialsValid &&
+    missingInspectorPrivileges.length === 0 &&
     (!hasVMsSelected || !tooManyVMs);
 
   const isInspectorRunning = async (): Promise<boolean> => {
@@ -247,8 +237,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       const status = await agentApi.getInspectorStatus({});
       return status.state === "running";
     } catch {
-      // Can't determine state — assume it may be running so the caller
-      // attempts a stop, which is harmless if it's already stopped.
       return true;
     }
   };
@@ -260,13 +248,9 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       if (!(await isInspectorRunning())) return;
     }
-    // Best-effort: proceed even if the inspector didn't fully stop.
   };
 
   const handleConfigure = async () => {
-    // When no VMs are selected the user is only updating the configuration
-    // (VDDK / credentials). Both are already persisted by their own actions,
-    // so there is nothing left to do — just close the modal.
     if (!hasVMsSelected) {
       handleClose();
       return;
@@ -276,9 +260,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setGlobalError(null);
 
     try {
-      // If the inspector is still alive (from a previous run or an active
-      // one), stop it and wait for the server to finish tearing it down
-      // before starting a new run with the full VM list.
       const inspectorRunning = await isInspectorRunning();
       if (inspectorRunning) {
         await agentApi.stopInspection();
@@ -288,12 +269,9 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       await agentApi.startInspection({
         startInspectionRequest: {
           vmIds: selectedVMIds,
-          credentials: {
-            url: vcenterUrl.trim(),
-            username: username.trim(),
-            password: password,
-          },
-        },
+        } as Parameters<
+          DefaultApiInterface["startInspection"]
+        >[0]["startInspectionRequest"],
       });
       onInspectionStarted();
       handleClose();
@@ -330,7 +308,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       variant="medium"
     >
       <ModalHeader>
-        {/* Use children instead of title for the tech preview badge popover */}
         <Flex>
           <FlexItem>
             <Title headingLevel="h2">Set up deep inspection</Title>
@@ -343,13 +320,18 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
         </Flex>
       </ModalHeader>
       <ModalBody id="deep-inspection-modal-body">
+        <MissingPermissionsAlert
+          feature="deep inspection"
+          missingPrivileges={missingInspectorPrivileges}
+        />
+
         <Content component="p">
           Deep Inspection analyzes a VM&apos;s internal configuration through a
           granular, disk-level scan.
           <br />
           {hasVMsSelected
-            ? `Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}`
-            : "Update the VDDK archive and credentials for deep inspection"}
+            ? `Upload a VDDK package file to run deep inspection on ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}.`
+            : "Update the VDDK archive for deep inspection."}
         </Content>
 
         {tooManyVMs && (
@@ -374,7 +356,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
           </Alert>
         )}
 
-        {/* VDDK Configuration Section */}
         <div className={modalStyles.section}>
           <button
             type="button"
@@ -386,8 +367,10 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
                 <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
               </Icon>
               <div className={modalStyles.sectionTitle}>
-                <strong>VDDK configuration</strong>
-                <Content component="small">Upload a VDDK archive</Content>
+                <strong>VDDK package file</strong>
+                <Content component="small">
+                  Upload a VMware VDDK .tar.gz archive (max 64 MB)
+                </Content>
               </div>
             </div>
             <div className={modalStyles.sectionHeaderRight}>
@@ -476,56 +459,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
               )}
             </div>
           )}
-        </div>
-
-        {/* Credentials Section */}
-        <div className={modalStyles.section}>
-          <div className={modalStyles.sectionHeader}>
-            <div className={modalStyles.sectionHeaderLeft}>
-              <Icon>
-                <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
-              </Icon>
-              <div className={modalStyles.sectionTitle}>
-                <strong>Credentials</strong>
-                <Content component="small">
-                  Provide vCenter credentials for deep inspection
-                </Content>
-              </div>
-            </div>
-          </div>
-
-          <div className={modalStyles.sectionBody}>
-            <Form>
-              <FormGroup
-                label="vCenter server"
-                isRequired
-                fieldId="vcenter-url"
-              >
-                <TextInput
-                  id="vcenter-url"
-                  value={vcenterUrl}
-                  onChange={(_ev, val) => setVcenterUrl(val)}
-                  placeholder="vcenter.example.com"
-                />
-              </FormGroup>
-              <FormGroup label="Username" isRequired fieldId="vcenter-user">
-                <TextInput
-                  id="vcenter-user"
-                  value={username}
-                  onChange={(_ev, val) => setUsername(val)}
-                  placeholder="administrator@vsphere.local"
-                />
-              </FormGroup>
-              <FormGroup label="Password" isRequired fieldId="vcenter-pass">
-                <TextInput
-                  id="vcenter-pass"
-                  type="password"
-                  value={password}
-                  onChange={(_ev, val) => setPassword(val)}
-                />
-              </FormGroup>
-            </Form>
-          </div>
         </div>
       </ModalBody>
       <ModalFooter>

@@ -1,3 +1,4 @@
+import { css } from "@emotion/css";
 import {
   Masthead,
   MastheadBrand,
@@ -12,11 +13,15 @@ import {
   PageSidebarBody,
   PageToggleButton,
   Title,
+  Toolbar,
+  ToolbarContent,
+  ToolbarItem,
 } from "@patternfly/react-core";
 import { BarsIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { UserCredentialsMenu } from "../../credentials/UserCredentialsMenu";
 
 const NAV_ITEMS = [
   { path: "/report/vms-overview", label: "Virtual machines overview" },
@@ -26,6 +31,10 @@ const NAV_ITEMS = [
     label: "Storage offload estimator",
   },
 ] as const;
+
+const mastheadContentStyles = css`
+  margin-inline-start: auto;
+`;
 
 export const ReportLayout: React.FC = () => {
   const location = useLocation();
@@ -58,7 +67,15 @@ export const ReportLayout: React.FC = () => {
               </Title>
             </MastheadBrand>
           </MastheadMain>
-          <MastheadContent />
+          <MastheadContent className={mastheadContentStyles}>
+            <Toolbar isFullHeight isStatic>
+              <ToolbarContent align={{ default: "alignEnd" }}>
+                <ToolbarItem>
+                  <UserCredentialsMenu />
+                </ToolbarItem>
+              </ToolbarContent>
+            </Toolbar>
+          </MastheadContent>
         </Masthead>
       }
       sidebar={
