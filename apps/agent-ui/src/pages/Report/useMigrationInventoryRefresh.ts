@@ -50,47 +50,54 @@ export function useMigrationInventoryRefresh({
 
       try {
         await enqueueRef.current(async () => {
-          setVmsList((current) =>
-            current.map((vm) =>
-              change.vmIds.includes(vm.id)
-                ? { ...vm, migrationExcluded: change.excluded }
-                : vm,
-            ),
-          );
-
-          let previousTotal: number | undefined;
-          let optimisticInventory: Inventory | null = null;
-
-          setInventory((current) => {
-            if (!current) {
-              return current;
-            }
-            previousTotal = getInventoryAggregateView(current).vms?.total;
-            optimisticInventory = adjustInventoryForMigrationExcludedChange(
-              current,
-              change.vmIds,
-              change.excluded,
-              change.affectedVms,
+          try {
+            setVmsList((current) =>
+              current.map((vm) =>
+                change.vmIds.includes(vm.id)
+                  ? { ...vm, migrationExcluded: change.excluded }
+                  : vm,
+              ),
             );
-            return optimisticInventory;
-          });
 
-          if (optimisticInventory) {
-            onInventoryRevisionBump?.();
-          }
+            let previousTotal: number | undefined;
+            let optimisticInventory: Inventory | null = null;
 
-          const basePath = getAgentApiBasePath(agentApi);
-          const resolved = await fetchInventoryAfterMigrationChange(
-            basePath,
-            change,
-            previousTotal,
-            optimisticInventory,
-            groupId ? { groupId } : undefined,
-          );
+            setInventory((current) => {
+              if (!current) {
+                return current;
+              }
+              previousTotal = getInventoryAggregateView(current).vms?.total;
+              optimisticInventory = adjustInventoryForMigrationExcludedChange(
+                current,
+                change.vmIds,
+                change.excluded,
+                change.affectedVms,
+              );
+              return optimisticInventory;
+            });
 
-          if (resolved) {
-            setInventory(resolved);
-            onInventoryRevisionBump?.();
+            if (optimisticInventory) {
+              onInventoryRevisionBump?.();
+            }
+
+            const basePath = getAgentApiBasePath(agentApi);
+            const resolved = await fetchInventoryAfterMigrationChange(
+              basePath,
+              change,
+              previousTotal,
+              optimisticInventory,
+              groupId ? { groupId } : undefined,
+            );
+
+            if (resolved) {
+              setInventory((current) => resolved ?? current);
+              onInventoryRevisionBump?.();
+            }
+          } catch (err) {
+            console.error(
+              "Error refreshing inventory after migration change:",
+              err,
+            );
           }
         });
       } finally {
