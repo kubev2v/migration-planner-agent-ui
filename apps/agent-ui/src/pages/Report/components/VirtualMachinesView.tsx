@@ -68,6 +68,7 @@ async function updateVmMigrationExcluded(
         diskSize: 0,
         memory: 0,
         issueCount: 0,
+        migratable: false,
       }),
       migrationExcluded: !migrationExcluded,
     };
