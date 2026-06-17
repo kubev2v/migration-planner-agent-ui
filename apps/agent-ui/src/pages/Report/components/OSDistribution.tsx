@@ -55,14 +55,14 @@ export const OSDistribution: React.FC<OSDistributionProps> = ({
     name: os,
     count: osInfo.count,
     legendCategory: osInfo.supported
-      ? "Supported by MTV"
-      : "Not supported by MTV",
+      ? "Recommended In Scope"
+      : "Recommended Out of Scope",
     infoText: osInfo.upgradeRecommendation,
   }));
 
   const customLegend = {
-    "Supported by MTV": chartColorSuccess,
-    "Not supported by MTV": chartColorFailure,
+    "Recommended In Scope": chartColorSuccess,
+    "Recommended Out of Scope": chartColorFailure,
   };
 
   return (
