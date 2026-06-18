@@ -59,10 +59,7 @@ const styles = {
   `,
   nameSearchToolbarItem: css`
     flex: 1;
-    min-width: 200px;
-  `,
-  nameSearchInput: css`
-    width: 100%;
+    min-width: 212px;
   `,
   appliedFilters: css`
     margin-bottom: 16px;
@@ -266,7 +263,6 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
               <ToolbarGroup variant="filter-group">
                 <ToolbarItem className={styles.nameSearchToolbarItem}>
                   <SearchInput
-                    className={styles.nameSearchInput}
                     placeholder="Find by application name"
                     value={nameSearch}
                     onChange={(_event, value) => applyNameSearch(value)}
