@@ -74,10 +74,10 @@ export function createRefreshVmTableFilterOptions(
     if (!force && now - lastRefreshAt < FILTER_OPTIONS_REFRESH_TTL_MS) {
       return;
     }
-    lastRefreshAt = now;
 
     try {
       setOptions(await fetchVmTableFilterOptions(agentApi));
+      lastRefreshAt = now;
     } catch (err) {
       console.error("Error refreshing filter options:", err);
     }

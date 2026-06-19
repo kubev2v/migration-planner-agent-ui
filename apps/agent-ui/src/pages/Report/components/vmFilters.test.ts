@@ -75,15 +75,16 @@ describe("groups URL params", () => {
     ]);
   });
 
+  it("preserves a single group name containing a comma", () => {
+    const params = new URLSearchParams();
+    params.append("groups", "team,a");
+    expect(searchParamsToFilters(params).groups).toEqual(["team,a"]);
+  });
+
   it("preserves group names containing commas", () => {
     const filters = { groups: ["team,a", "team,b"] };
     const roundTripped = searchParamsToFilters(filtersToSearchParams(filters));
     expect(roundTripped.groups).toEqual(["team,a", "team,b"]);
-  });
-
-  it("still parses legacy comma-separated groups param", () => {
-    const params = new URLSearchParams("groups=prod,staging");
-    expect(searchParamsToFilters(params).groups).toEqual(["prod", "staging"]);
   });
 });
 

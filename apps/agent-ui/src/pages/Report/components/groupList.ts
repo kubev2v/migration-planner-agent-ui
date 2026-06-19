@@ -6,20 +6,22 @@ import type {
 const GROUP_LIST_PAGE_SIZE = 100;
 const GROUP_LIST_CACHE_TTL_MS = 30_000;
 
+type GroupListAgentApi = Pick<DefaultApiInterface, "listGroups">;
+
 type GroupListCacheEntry = {
   expiresAt: number;
   promise: Promise<Group[]>;
 };
 
-const groupListCache = new WeakMap<DefaultApiInterface, GroupListCacheEntry>();
+const groupListCache = new WeakMap<GroupListAgentApi, GroupListCacheEntry>();
 
 /** Clears cached group list so the next fetch hits the API. */
-export function invalidateAllGroupsCache(agentApi: DefaultApiInterface): void {
+export function invalidateAllGroupsCache(agentApi: GroupListAgentApi): void {
   groupListCache.delete(agentApi);
 }
 
 async function fetchAllGroupsUncached(
-  agentApi: DefaultApiInterface,
+  agentApi: GroupListAgentApi,
   options?: { byName?: string },
 ): Promise<Group[]> {
   const allGroups: Group[] = [];
@@ -42,7 +44,7 @@ async function fetchAllGroupsUncached(
 
 /** Fetches every group across all pages. Results are cached briefly and deduped in-flight. */
 export async function fetchAllGroups(
-  agentApi: DefaultApiInterface,
+  agentApi: GroupListAgentApi,
   options?: { byName?: string },
 ): Promise<Group[]> {
   if (options?.byName !== undefined) {

@@ -472,12 +472,7 @@ export function searchParamsToFilters(
 
   const groups = searchParams.getAll("groups");
   if (groups.length > 0) {
-    // Legacy URLs used a single comma-separated value (?groups=a,b).
-    if (groups.length === 1 && groups[0].includes(",")) {
-      filters.groups = groups[0].split(",").filter(Boolean);
-    } else {
-      filters.groups = groups.filter(Boolean);
-    }
+    filters.groups = groups.filter(Boolean);
   }
 
   const concernLabels = searchParams.getAll("concernLabels");

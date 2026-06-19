@@ -313,7 +313,8 @@ export const filterStyles = {
   `,
   filtersContent: css`
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 2em;
+    grid-template-columns: repeat(2, 1fr);
   `,
   filtersContentCompact: css`
     display: flex;

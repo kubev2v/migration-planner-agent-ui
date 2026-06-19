@@ -40,6 +40,35 @@ describe("createRefreshVmTableFilterOptions", () => {
     await refresh({ force: true });
     expect(setOptions).toHaveBeenCalledTimes(3);
   });
+
+  it("allows immediate retry after a failed refresh", async () => {
+    vi.useFakeTimers();
+
+    const agentApi = {
+      getVMsFilterOptions: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("network error"))
+        .mockResolvedValue({
+          clusters: [],
+          datacenters: [],
+          concernLabels: [],
+          concernCategories: [],
+        }),
+      getVMLabels: vi.fn().mockResolvedValue({ labels: [] }),
+      listGroups: vi.fn().mockResolvedValue({ groups: [], pageCount: 1 }),
+    };
+    const setOptions = vi.fn();
+    const refresh = createRefreshVmTableFilterOptions(
+      agentApi as never,
+      setOptions,
+    );
+
+    await refresh();
+    await refresh();
+
+    expect(setOptions).toHaveBeenCalledTimes(1);
+    expect(agentApi.getVMsFilterOptions).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("mergeGroupNamesIntoFilterOptions", () => {
