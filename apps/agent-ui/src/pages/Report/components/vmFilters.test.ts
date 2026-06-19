@@ -21,6 +21,26 @@ describe("filtersToByExpression vmLabels", () => {
   });
 });
 
+describe("filtersToByExpression utilization ranges", () => {
+  it("filters by CPU usage range", () => {
+    expect(
+      filtersToByExpression({ cpuUsageRange: { min: 76, max: 100 } }),
+    ).toBe("utilization.cpu_max >= 76 and utilization.cpu_max <= 100");
+  });
+
+  it("filters by RAM usage range", () => {
+    expect(filtersToByExpression({ ramUsageRange: { min: 0, max: 25 } })).toBe(
+      "utilization.mem_max >= 0 and utilization.mem_max <= 25",
+    );
+  });
+
+  it("filters by disk usage range", () => {
+    expect(
+      filtersToByExpression({ diskUsageRange: { min: 51, max: 75 } }),
+    ).toBe("utilization.disk >= 51 and utilization.disk <= 75");
+  });
+});
+
 describe("filtersToByExpression showExcludedVMs", () => {
   it("hides excluded VMs when the toggle is off", () => {
     expect(filtersToByExpression({ showExcludedVMs: false })).toBe(

@@ -8,6 +8,9 @@ export interface VMFilters {
   search?: string;
   diskRange?: { min: number; max?: number };
   memoryRange?: { min: number; max?: number };
+  cpuUsageRange?: { min: number; max?: number };
+  ramUsageRange?: { min: number; max?: number };
+  diskUsageRange?: { min: number; max?: number };
   migrationReadiness?: string[];
   vmLabels?: string[];
   concernLabels?: string[];
@@ -150,6 +153,42 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     }
   }
 
+  // CPU usage filter (utilization.cpu_max field, values in %)
+  if (filters.cpuUsageRange) {
+    const { min, max } = filters.cpuUsageRange;
+    if (max !== undefined) {
+      conditions.push(
+        `utilization.cpu_max >= ${min} and utilization.cpu_max <= ${max}`,
+      );
+    } else {
+      conditions.push(`utilization.cpu_max >= ${min}`);
+    }
+  }
+
+  // RAM usage filter (utilization.mem_max field, values in %)
+  if (filters.ramUsageRange) {
+    const { min, max } = filters.ramUsageRange;
+    if (max !== undefined) {
+      conditions.push(
+        `utilization.mem_max >= ${min} and utilization.mem_max <= ${max}`,
+      );
+    } else {
+      conditions.push(`utilization.mem_max >= ${min}`);
+    }
+  }
+
+  // Disk usage filter (utilization.disk field, values in %)
+  if (filters.diskUsageRange) {
+    const { min, max } = filters.diskUsageRange;
+    if (max !== undefined) {
+      conditions.push(
+        `utilization.disk >= ${min} and utilization.disk <= ${max}`,
+      );
+    } else {
+      conditions.push(`utilization.disk >= ${min}`);
+    }
+  }
+
   // VM user-defined labels (array field; use contains; multiple = OR)
   if (filters.vmLabels && filters.vmLabels.length > 0) {
     if (filters.vmLabels?.length) {
@@ -240,6 +279,27 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
     params.set("memoryRangeMin", filters.memoryRange.min.toString());
     if (filters.memoryRange.max !== undefined) {
       params.set("memoryRangeMax", filters.memoryRange.max.toString());
+    }
+  }
+
+  if (filters.cpuUsageRange) {
+    params.set("cpuUsageRangeMin", filters.cpuUsageRange.min.toString());
+    if (filters.cpuUsageRange.max !== undefined) {
+      params.set("cpuUsageRangeMax", filters.cpuUsageRange.max.toString());
+    }
+  }
+
+  if (filters.ramUsageRange) {
+    params.set("ramUsageRangeMin", filters.ramUsageRange.min.toString());
+    if (filters.ramUsageRange.max !== undefined) {
+      params.set("ramUsageRangeMax", filters.ramUsageRange.max.toString());
+    }
+  }
+
+  if (filters.diskUsageRange) {
+    params.set("diskUsageRangeMin", filters.diskUsageRange.min.toString());
+    if (filters.diskUsageRange.max !== undefined) {
+      params.set("diskUsageRangeMax", filters.diskUsageRange.max.toString());
     }
   }
 
@@ -339,6 +399,51 @@ export function searchParamsToFilters(
     }
   }
 
+  const cpuUsageRangeMin = searchParams.get("cpuUsageRangeMin");
+  const cpuUsageRangeMax = searchParams.get("cpuUsageRangeMax");
+  if (cpuUsageRangeMin !== null) {
+    const min = Number.parseInt(cpuUsageRangeMin, 10);
+    if (!Number.isNaN(min)) {
+      filters.cpuUsageRange = { min };
+      if (cpuUsageRangeMax !== null) {
+        const max = Number.parseInt(cpuUsageRangeMax, 10);
+        if (!Number.isNaN(max)) {
+          filters.cpuUsageRange.max = max;
+        }
+      }
+    }
+  }
+
+  const ramUsageRangeMin = searchParams.get("ramUsageRangeMin");
+  const ramUsageRangeMax = searchParams.get("ramUsageRangeMax");
+  if (ramUsageRangeMin !== null) {
+    const min = Number.parseInt(ramUsageRangeMin, 10);
+    if (!Number.isNaN(min)) {
+      filters.ramUsageRange = { min };
+      if (ramUsageRangeMax !== null) {
+        const max = Number.parseInt(ramUsageRangeMax, 10);
+        if (!Number.isNaN(max)) {
+          filters.ramUsageRange.max = max;
+        }
+      }
+    }
+  }
+
+  const diskUsageRangeMin = searchParams.get("diskUsageRangeMin");
+  const diskUsageRangeMax = searchParams.get("diskUsageRangeMax");
+  if (diskUsageRangeMin !== null) {
+    const min = Number.parseInt(diskUsageRangeMin, 10);
+    if (!Number.isNaN(min)) {
+      filters.diskUsageRange = { min };
+      if (diskUsageRangeMax !== null) {
+        const max = Number.parseInt(diskUsageRangeMax, 10);
+        if (!Number.isNaN(max)) {
+          filters.diskUsageRange.max = max;
+        }
+      }
+    }
+  }
+
   const migrationReadiness = searchParams.get("migrationReadiness");
   if (migrationReadiness) {
     filters.migrationReadiness = migrationReadiness.split(",").filter(Boolean);
@@ -371,6 +476,9 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     filters.noIssues !== undefined ||
     (filters.diskRange !== undefined && filters.diskRange !== null) ||
     (filters.memoryRange !== undefined && filters.memoryRange !== null) ||
+    (filters.cpuUsageRange !== undefined && filters.cpuUsageRange !== null) ||
+    (filters.ramUsageRange !== undefined && filters.ramUsageRange !== null) ||
+    (filters.diskUsageRange !== undefined && filters.diskUsageRange !== null) ||
     (filters.statuses && filters.statuses.length > 0) ||
     (filters.clusters && filters.clusters.length > 0) ||
     (filters.datacenters && filters.datacenters.length > 0) ||

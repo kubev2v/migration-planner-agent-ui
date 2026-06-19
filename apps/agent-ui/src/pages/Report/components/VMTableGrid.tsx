@@ -215,13 +215,13 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                 )}
                 {isColumnVisible("id") && <Td dataLabel="ID">{vm.id}</Td>}
 
-                {isColumnVisible("maxCPU") && (
-                  <Td dataLabel="Max CPU" modifier="fitContent">
+                {isColumnVisible("cpuUsage") && (
+                  <Td dataLabel="CPU usage" modifier="fitContent">
                     {formatMetric(vm.utilization_cpu_max)}
                   </Td>
                 )}
-                {isColumnVisible("maxRAM") && (
-                  <Td dataLabel="Max RAM" modifier="fitContent">
+                {isColumnVisible("ramUsage") && (
+                  <Td dataLabel="RAM usage" modifier="fitContent">
                     {formatMetric(vm.utilization_mem_max)}
                   </Td>
                 )}

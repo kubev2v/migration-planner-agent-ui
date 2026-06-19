@@ -8,8 +8,8 @@ export type ColumnKey =
   | "groups"
   | "vCenterState"
   | "id"
-  | "maxCPU"
-  | "maxRAM"
+  | "cpuUsage"
+  | "ramUsage"
   | "diskUsage"
   | "datacenter"
   | "cluster"
@@ -23,6 +23,9 @@ export const BACKEND_SORTABLE_COLUMNS = [
   "name",
   "vCenterState",
   "cluster",
+  "cpuUsage",
+  "ramUsage",
+  "diskUsage",
   "diskSize",
   "memory",
   "issues",
@@ -41,8 +44,8 @@ export const Columns: Record<ColumnKey, string> = {
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
-  maxCPU: "Max CPU",
-  maxRAM: "Max RAM",
+  cpuUsage: "CPU usage",
+  ramUsage: "RAM usage",
   diskUsage: "Disk usage",
   datacenter: "Data center",
   cluster: "Cluster",
@@ -65,7 +68,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 6;
+export const VISIBLE_COLUMNS_VERSION = 7;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -77,8 +80,21 @@ export const isBackendSortableColumn = (
   key !== null &&
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
 
+export const utilizationPercentRanges = [
+  { label: "0-25%", min: 0, max: 25 },
+  { label: "26-50%", min: 26, max: 50 },
+  { label: "51-75%", min: 51, max: 75 },
+  { label: "76-100%", min: 76, max: 100 },
+];
+
 export const getColumnModifier = (key: ColumnKey) => {
-  if (key === "issues" || key === "migratable") {
+  if (
+    key === "issues" ||
+    key === "migratable" ||
+    key === "cpuUsage" ||
+    key === "ramUsage" ||
+    key === "diskUsage"
+  ) {
     return "fitContent";
   }
   if (key === "labels") {
@@ -297,7 +313,7 @@ export const filterStyles = {
   `,
   filtersContent: css`
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   `,
   filtersContentCompact: css`
     display: flex;

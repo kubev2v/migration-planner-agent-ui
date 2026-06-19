@@ -64,6 +64,12 @@ export function clearVmFilterParams(params: URLSearchParams): void {
   params.delete("diskRangeMax");
   params.delete("memoryRangeMin");
   params.delete("memoryRangeMax");
+  params.delete("cpuUsageRangeMin");
+  params.delete("cpuUsageRangeMax");
+  params.delete("ramUsageRangeMin");
+  params.delete("ramUsageRangeMax");
+  params.delete("diskUsageRangeMin");
+  params.delete("diskUsageRangeMax");
   params.delete("migrationReadiness");
   params.delete("vmLabels");
   params.delete("concernLabels");

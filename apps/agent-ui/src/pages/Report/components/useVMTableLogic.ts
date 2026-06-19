@@ -25,6 +25,7 @@ import {
   MANDATORY_COLUMNS,
   memorySizeRanges,
   resolveVisibleColumns,
+  utilizationPercentRanges,
   VISIBLE_COLUMNS_KEY,
   VISIBLE_COLUMNS_VERSION,
 } from "./vmTableShared";
@@ -194,6 +195,18 @@ export function useVMTableLogic({
     min: number;
     max?: number;
   } | null>(initialFilters?.memoryRange || null);
+  const [cpuUsageRangeFilter, setCpuUsageRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(initialFilters?.cpuUsageRange || null);
+  const [ramUsageRangeFilter, setRamUsageRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(initialFilters?.ramUsageRange || null);
+  const [diskUsageRangeFilter, setDiskUsageRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(initialFilters?.diskUsageRange || null);
 
   // Temporary filter state (for modal, not yet applied)
   const [tempSelectedStatuses, setTempSelectedStatuses] = useState<string[]>(
@@ -225,6 +238,18 @@ export function useVMTableLogic({
     min: number;
     max?: number;
   } | null>(null);
+  const [tempCpuUsageRangeFilter, setTempCpuUsageRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(null);
+  const [tempRamUsageRangeFilter, setTempRamUsageRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(null);
+  const [tempDiskUsageRangeFilter, setTempDiskUsageRangeFilter] = useState<{
+    min: number;
+    max?: number;
+  } | null>(null);
 
   // Sync local state with initialFilters when they change (e.g., from chart navigation)
   useEffect(() => {
@@ -237,6 +262,9 @@ export function useVMTableLogic({
 
     setDiskRangeFilter(initialFilters?.diskRange || null);
     setMemoryRangeFilter(initialFilters?.memoryRange || null);
+    setCpuUsageRangeFilter(initialFilters?.cpuUsageRange || null);
+    setRamUsageRangeFilter(initialFilters?.ramUsageRange || null);
+    setDiskUsageRangeFilter(initialFilters?.diskUsageRange || null);
     setSelectedStatuses(initialFilters?.statuses || []);
     setSelectedClusters(initialFilters?.clusters || []);
     setSelectedDatacenters(initialFilters?.datacenters || []);
@@ -323,7 +351,10 @@ export function useVMTableLogic({
         noIssuesFilter ||
         searchValue ||
         diskRangeFilter ||
-        memoryRangeFilter
+        memoryRangeFilter ||
+        cpuUsageRangeFilter ||
+        ramUsageRangeFilter ||
+        diskUsageRangeFilter
       );
       if (!hasAnyFilter) {
         return;
@@ -340,6 +371,9 @@ export function useVMTableLogic({
       search: searchValue || undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
+      cpuUsageRange: cpuUsageRangeFilter || undefined,
+      ramUsageRange: ramUsageRangeFilter || undefined,
+      diskUsageRange: diskUsageRangeFilter || undefined,
       migrationReadiness:
         selectedMigrationReadiness.length > 0
           ? selectedMigrationReadiness
@@ -375,6 +409,9 @@ export function useVMTableLogic({
     searchValue,
     diskRangeFilter,
     memoryRangeFilter,
+    cpuUsageRangeFilter,
+    ramUsageRangeFilter,
+    diskUsageRangeFilter,
     searchParams,
     setSearchParams,
     onFiltersChange,
@@ -394,6 +431,9 @@ export function useVMTableLogic({
       noIssuesFilter,
       diskRangeFilter,
       memoryRangeFilter,
+      cpuUsageRangeFilter,
+      ramUsageRangeFilter,
+      diskUsageRangeFilter,
     }),
     [
       selectedStatuses,
@@ -407,6 +447,9 @@ export function useVMTableLogic({
       noIssuesFilter,
       diskRangeFilter,
       memoryRangeFilter,
+      cpuUsageRangeFilter,
+      ramUsageRangeFilter,
+      diskUsageRangeFilter,
     ],
   );
 
@@ -428,6 +471,9 @@ export function useVMTableLogic({
       setNoIssuesFilter(selection.noIssuesFilter);
       setDiskRangeFilter(selection.diskRangeFilter);
       setMemoryRangeFilter(selection.memoryRangeFilter);
+      setCpuUsageRangeFilter(selection.cpuUsageRangeFilter);
+      setRamUsageRangeFilter(selection.ramUsageRangeFilter);
+      setDiskUsageRangeFilter(selection.diskUsageRangeFilter);
     },
     [],
   );
@@ -440,6 +486,9 @@ export function useVMTableLogic({
     name: "name",
     vCenterState: "vCenterState",
     cluster: "cluster",
+    cpuUsage: "cpuUsage",
+    ramUsage: "ramUsage",
+    diskUsage: "diskUsage",
     diskSize: "diskSize",
     memory: "memory",
     issues: "issues",
@@ -470,6 +519,9 @@ export function useVMTableLogic({
       search: searchValue || undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
+      cpuUsageRange: cpuUsageRangeFilter || undefined,
+      ramUsageRange: ramUsageRangeFilter || undefined,
+      diskUsageRange: diskUsageRangeFilter || undefined,
       migrationReadiness:
         selectedMigrationReadiness.length > 0
           ? selectedMigrationReadiness
@@ -492,6 +544,9 @@ export function useVMTableLogic({
     searchValue,
     diskRangeFilter,
     memoryRangeFilter,
+    cpuUsageRangeFilter,
+    ramUsageRangeFilter,
+    diskUsageRangeFilter,
     selectedMigrationReadiness,
     selectedVmLabels,
     selectedConcernLabels,
@@ -563,6 +618,9 @@ export function useVMTableLogic({
     setNoIssuesFilter(tempNoIssuesFilter);
     setDiskRangeFilter(tempDiskRangeFilter);
     setMemoryRangeFilter(tempMemoryRangeFilter);
+    setCpuUsageRangeFilter(tempCpuUsageRangeFilter);
+    setRamUsageRangeFilter(tempRamUsageRangeFilter);
+    setDiskUsageRangeFilter(tempDiskUsageRangeFilter);
     onPageChange?.(1, pageSize); // Reset to page 1
     setIsFilterModalOpen(false);
     setIsConcernSelectOpen(false);
@@ -593,6 +651,9 @@ export function useVMTableLogic({
     setTempNoIssuesFilter(false);
     setTempDiskRangeFilter(null);
     setTempMemoryRangeFilter(null);
+    setTempCpuUsageRangeFilter(null);
+    setTempRamUsageRangeFilter(null);
+    setTempDiskUsageRangeFilter(null);
   };
 
   // Initialize temporary filters when opening modal
@@ -611,6 +672,9 @@ export function useVMTableLogic({
       setTempNoIssuesFilter(noIssuesFilter);
       setTempDiskRangeFilter(diskRangeFilter);
       setTempMemoryRangeFilter(memoryRangeFilter);
+      setTempCpuUsageRangeFilter(cpuUsageRangeFilter);
+      setTempRamUsageRangeFilter(ramUsageRangeFilter);
+      setTempDiskUsageRangeFilter(diskUsageRangeFilter);
     }
   }, [
     isFilterModalOpen,
@@ -625,6 +689,9 @@ export function useVMTableLogic({
     noIssuesFilter,
     diskRangeFilter,
     memoryRangeFilter,
+    cpuUsageRangeFilter,
+    ramUsageRangeFilter,
+    diskUsageRangeFilter,
   ]);
 
   // Toggle temporary filter selections in modal
@@ -699,6 +766,41 @@ export function useVMTableLogic({
       tempMemoryRangeFilter?.max === range.max;
     setTempMemoryRangeFilter(
       isSameRange ? null : { min: range.min, max: range.max },
+    );
+  };
+
+  const toggleTempUtilizationRange = (
+    index: number,
+    currentFilter: { min: number; max?: number } | null,
+    setFilter: (value: { min: number; max?: number } | null) => void,
+  ) => {
+    const range = utilizationPercentRanges[index];
+    const isSameRange =
+      currentFilter?.min === range.min && currentFilter?.max === range.max;
+    setFilter(isSameRange ? null : { min: range.min, max: range.max });
+  };
+
+  const toggleTempCpuUsageRange = (index: number) => {
+    toggleTempUtilizationRange(
+      index,
+      tempCpuUsageRangeFilter,
+      setTempCpuUsageRangeFilter,
+    );
+  };
+
+  const toggleTempRamUsageRange = (index: number) => {
+    toggleTempUtilizationRange(
+      index,
+      tempRamUsageRangeFilter,
+      setTempRamUsageRangeFilter,
+    );
+  };
+
+  const toggleTempDiskUsageRange = (index: number) => {
+    toggleTempUtilizationRange(
+      index,
+      tempDiskUsageRangeFilter,
+      setTempDiskUsageRangeFilter,
     );
   };
 
@@ -792,6 +894,9 @@ export function useVMTableLogic({
     setTempNoIssuesFilter,
     tempDiskRangeFilter,
     tempMemoryRangeFilter,
+    tempCpuUsageRangeFilter,
+    tempRamUsageRangeFilter,
+    tempDiskUsageRangeFilter,
     toggleTempStatus,
     toggleTempCluster,
     toggleTempDatacenter,
@@ -801,6 +906,9 @@ export function useVMTableLogic({
     toggleTempConcernCategory,
     toggleTempDiskRange,
     toggleTempMemoryRange,
+    toggleTempCpuUsageRange,
+    toggleTempRamUsageRange,
+    toggleTempDiskUsageRange,
     removeFilter,
     clearAllFilters,
     handleSearchChange,

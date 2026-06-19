@@ -4,7 +4,11 @@ import {
   EMPTY_VM_TABLE_FILTER_SELECTION,
   removeFilterFromSelection,
 } from "./vmTableFilterLogic";
-import { diskSizeRanges, memorySizeRanges } from "./vmTableShared";
+import {
+  diskSizeRanges,
+  memorySizeRanges,
+  utilizationPercentRanges,
+} from "./vmTableShared";
 
 describe("vmTableFilterLogic", () => {
   it("returns no chips for empty selection", () => {
@@ -134,6 +138,25 @@ describe("vmTableFilterLogic", () => {
     ).toBeNull();
     expect(
       removeFilterFromSelection(selection, "diskSize").diskRangeFilter,
+    ).toBeNull();
+  });
+
+  it("clears utilization range filters by chip key", () => {
+    const selection = {
+      ...EMPTY_VM_TABLE_FILTER_SELECTION,
+      cpuUsageRangeFilter: utilizationPercentRanges[0],
+      ramUsageRangeFilter: utilizationPercentRanges[1],
+      diskUsageRangeFilter: utilizationPercentRanges[2],
+    };
+
+    expect(
+      removeFilterFromSelection(selection, "cpuUsage").cpuUsageRangeFilter,
+    ).toBeNull();
+    expect(
+      removeFilterFromSelection(selection, "ramUsage").ramUsageRangeFilter,
+    ).toBeNull();
+    expect(
+      removeFilterFromSelection(selection, "diskUsage").diskUsageRangeFilter,
     ).toBeNull();
   });
 });

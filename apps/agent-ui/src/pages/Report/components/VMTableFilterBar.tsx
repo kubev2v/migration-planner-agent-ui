@@ -30,6 +30,7 @@ import {
   MANDATORY_COLUMNS,
   memorySizeRanges,
   statusLabels,
+  utilizationPercentRanges,
   type VMTableVariantUI,
 } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
@@ -79,6 +80,9 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     tempSelectedClusters,
     tempDiskRangeFilter,
     tempMemoryRangeFilter,
+    tempCpuUsageRangeFilter,
+    tempRamUsageRangeFilter,
+    tempDiskUsageRangeFilter,
     tempSelectedStatuses,
     tempSelectedMigrationReadiness,
     tempSelectedVmLabels,
@@ -90,6 +94,9 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     toggleTempCluster,
     toggleTempDiskRange,
     toggleTempMemoryRange,
+    toggleTempCpuUsageRange,
+    toggleTempRamUsageRange,
+    toggleTempDiskUsageRange,
     toggleTempStatus,
     toggleTempMigrationReadiness,
     toggleTempVmLabel,
@@ -415,6 +422,63 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
                           tempMemoryRangeFilter?.max === range.max
                         }
                         onChange={() => toggleTempMemoryRange(index)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* CPU usage column */}
+                <div>
+                  <h3 className={filterStyles.columnTitle}>CPU usage</h3>
+                  <div className={filterStyles.checkboxList}>
+                    {utilizationPercentRanges.map((range, index) => (
+                      <Checkbox
+                        key={range.label}
+                        id={`cpu-usage-${index}`}
+                        label={range.label}
+                        isChecked={
+                          tempCpuUsageRangeFilter?.min === range.min &&
+                          tempCpuUsageRangeFilter?.max === range.max
+                        }
+                        onChange={() => toggleTempCpuUsageRange(index)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* RAM usage column */}
+                <div>
+                  <h3 className={filterStyles.columnTitle}>RAM usage</h3>
+                  <div className={filterStyles.checkboxList}>
+                    {utilizationPercentRanges.map((range, index) => (
+                      <Checkbox
+                        key={range.label}
+                        id={`ram-usage-${index}`}
+                        label={range.label}
+                        isChecked={
+                          tempRamUsageRangeFilter?.min === range.min &&
+                          tempRamUsageRangeFilter?.max === range.max
+                        }
+                        onChange={() => toggleTempRamUsageRange(index)}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Disk usage column */}
+                <div>
+                  <h3 className={filterStyles.columnTitle}>Disk usage</h3>
+                  <div className={filterStyles.checkboxList}>
+                    {utilizationPercentRanges.map((range, index) => (
+                      <Checkbox
+                        key={range.label}
+                        id={`disk-usage-${index}`}
+                        label={range.label}
+                        isChecked={
+                          tempDiskUsageRangeFilter?.min === range.min &&
+                          tempDiskUsageRangeFilter?.max === range.max
+                        }
+                        onChange={() => toggleTempDiskUsageRange(index)}
                       />
                     ))}
                   </div>

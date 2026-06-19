@@ -3,6 +3,7 @@ import {
   diskSizeRanges,
   memorySizeRanges,
   statusLabels,
+  utilizationPercentRanges,
 } from "./vmTableShared";
 
 export type RangeFilter = { min: number; max?: number };
@@ -19,6 +20,9 @@ export type VMTableFilterSelection = {
   noIssuesFilter: boolean;
   diskRangeFilter: RangeFilter | null;
   memoryRangeFilter: RangeFilter | null;
+  cpuUsageRangeFilter: RangeFilter | null;
+  ramUsageRangeFilter: RangeFilter | null;
+  diskUsageRangeFilter: RangeFilter | null;
 };
 
 export const EMPTY_VM_TABLE_FILTER_SELECTION: VMTableFilterSelection = {
@@ -33,6 +37,9 @@ export const EMPTY_VM_TABLE_FILTER_SELECTION: VMTableFilterSelection = {
   noIssuesFilter: false,
   diskRangeFilter: null,
   memoryRangeFilter: null,
+  cpuUsageRangeFilter: null,
+  ramUsageRangeFilter: null,
+  diskUsageRangeFilter: null,
 };
 
 function formatMemoryRangeLabel(memoryRangeFilter: RangeFilter): string {
@@ -61,6 +68,28 @@ function formatMemoryRangeLabel(memoryRangeFilter: RangeFilter): string {
     return `≤ ${maxGB} GB`;
   }
   return "";
+}
+
+function formatUtilizationRangeLabel(
+  rangeFilter: RangeFilter,
+  category: string,
+): string {
+  const matchingRange = utilizationPercentRanges.find(
+    (range) => range.min === rangeFilter.min && range.max === rangeFilter.max,
+  );
+  if (matchingRange) {
+    return matchingRange.label;
+  }
+  if (rangeFilter.min !== undefined && rangeFilter.max !== undefined) {
+    return `${rangeFilter.min}-${rangeFilter.max}%`;
+  }
+  if (rangeFilter.min !== undefined) {
+    return `≥ ${rangeFilter.min}%`;
+  }
+  if (rangeFilter.max !== undefined) {
+    return `≤ ${rangeFilter.max}%`;
+  }
+  return category;
 }
 
 function formatDiskRangeLabel(diskRangeFilter: RangeFilter): string {
@@ -100,6 +129,48 @@ export function buildAppliedFilters(
         category: "Memory",
         label,
         key: "memorySize",
+      });
+    }
+  }
+
+  if (selection.cpuUsageRangeFilter) {
+    const label = formatUtilizationRangeLabel(
+      selection.cpuUsageRangeFilter,
+      "CPU usage",
+    );
+    if (label) {
+      filters.push({
+        category: "CPU usage",
+        label,
+        key: "cpuUsage",
+      });
+    }
+  }
+
+  if (selection.ramUsageRangeFilter) {
+    const label = formatUtilizationRangeLabel(
+      selection.ramUsageRangeFilter,
+      "RAM usage",
+    );
+    if (label) {
+      filters.push({
+        category: "RAM usage",
+        label,
+        key: "ramUsage",
+      });
+    }
+  }
+
+  if (selection.diskUsageRangeFilter) {
+    const label = formatUtilizationRangeLabel(
+      selection.diskUsageRangeFilter,
+      "Disk usage",
+    );
+    if (label) {
+      filters.push({
+        category: "Disk usage",
+        label,
+        key: "diskUsage",
       });
     }
   }
@@ -205,6 +276,15 @@ export function removeFilterFromSelection(
 ): VMTableFilterSelection {
   if (filterKey === "memorySize") {
     return { ...selection, memoryRangeFilter: null };
+  }
+  if (filterKey === "cpuUsage") {
+    return { ...selection, cpuUsageRangeFilter: null };
+  }
+  if (filterKey === "ramUsage") {
+    return { ...selection, ramUsageRangeFilter: null };
+  }
+  if (filterKey === "diskUsage") {
+    return { ...selection, diskUsageRangeFilter: null };
   }
   if (filterKey === "diskSize") {
     return { ...selection, diskRangeFilter: null };
