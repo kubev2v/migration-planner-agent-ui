@@ -42,6 +42,7 @@ import {
   VirtualMachinesView,
 } from "./components/index";
 import { VMUtilizationMetrics } from "./components/VMUtilizationMetrics";
+import { createRefreshVmTableFilterOptions } from "./components/vmFilterOptions";
 import {
   filtersToByExpression,
   filtersToSearchParams,
@@ -105,14 +106,22 @@ export const ReportContainer: React.FC = () => {
     concernLabels: string[];
     concernCategories: string[];
     vmLabels: string[];
+    groups: string[];
   }>({
     clusters: [],
     datacenters: [],
     concernLabels: [],
     concernCategories: [],
     vmLabels: [],
+    groups: [],
   });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
+
+  const refreshFilterOptions = useMemo(
+    () =>
+      createRefreshVmTableFilterOptions(agentApi, setAvailableFilterOptions),
+    [agentApi],
+  );
 
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
@@ -237,17 +246,7 @@ export const ReportContainer: React.FC = () => {
 
     const fetchFilterOptions = async () => {
       try {
-        const [response, labelsResponse] = await Promise.all([
-          agentApi.getVMsFilterOptions(),
-          agentApi.getVMLabels().catch(() => ({ labels: [] as string[] })),
-        ]);
-        setAvailableFilterOptions({
-          clusters: response.clusters || [],
-          datacenters: response.datacenters || [],
-          concernLabels: response.concernLabels || [],
-          concernCategories: response.concernCategories || [],
-          vmLabels: labelsResponse.labels || [],
-        });
+        await refreshFilterOptions();
         setFilterOptionsFetched(true);
       } catch (err) {
         console.error("Error fetching filter options:", err);
@@ -258,7 +257,7 @@ export const ReportContainer: React.FC = () => {
     };
 
     fetchFilterOptions();
-  }, [activeTab, agentApi, filterOptionsFetched, inventory]);
+  }, [activeTab, filterOptionsFetched, inventory, refreshFilterOptions]);
 
   // Fetch VMs when Virtual Machines tab is active or filters change
   useEffect(() => {
@@ -657,6 +656,7 @@ export const ReportContainer: React.FC = () => {
                   agentApi={agentApi}
                   onRefreshVMs={refreshVMs}
                   onRefreshInventory={refreshInventory}
+                  onRefreshFilterOptions={refreshFilterOptions}
                   showExcludedVMs={showExcludedVMs}
                   onShowExcludedVMsChange={(show) => {
                     setShowExcludedVMs(show);

@@ -13,6 +13,7 @@ export interface VMFilters {
   diskUsageRange?: { min: number; max?: number };
   migrationReadiness?: string[];
   vmLabels?: string[];
+  groups?: string[];
   concernLabels?: string[];
   concernCategories?: string[];
   showExcludedVMs?: boolean;
@@ -200,6 +201,15 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     }
   }
 
+  // VM group membership (array field; use contains; multiple = OR)
+  if (filters.groups && filters.groups.length > 0) {
+    const condition = filters.groups
+      .map((group) => `groups contains '${escapeFilterValue(group)}'`)
+      .join(" or ");
+
+    conditions.push(`(${condition})`);
+  }
+
   // Migration readiness filter
   if (filters.migrationReadiness && filters.migrationReadiness.length > 0) {
     const hasReady = filters.migrationReadiness.includes("ready");
@@ -309,6 +319,12 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
 
   if (filters.vmLabels && filters.vmLabels.length > 0) {
     params.set("vmLabels", filters.vmLabels.join(","));
+  }
+
+  if (filters.groups && filters.groups.length > 0) {
+    for (const group of filters.groups) {
+      params.append("groups", group);
+    }
   }
 
   if (filters.concernLabels && filters.concernLabels.length > 0) {
@@ -454,6 +470,16 @@ export function searchParamsToFilters(
     filters.vmLabels = vmLabels.split(",").filter(Boolean);
   }
 
+  const groups = searchParams.getAll("groups");
+  if (groups.length > 0) {
+    // Legacy URLs used a single comma-separated value (?groups=a,b).
+    if (groups.length === 1 && groups[0].includes(",")) {
+      filters.groups = groups[0].split(",").filter(Boolean);
+    } else {
+      filters.groups = groups.filter(Boolean);
+    }
+  }
+
   const concernLabels = searchParams.getAll("concernLabels");
   if (concernLabels.length > 0) {
     filters.concernLabels = concernLabels.filter(Boolean);
@@ -485,6 +511,7 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.networks && filters.networks.length > 0) ||
     (filters.migrationReadiness && filters.migrationReadiness.length > 0) ||
     (filters.vmLabels && filters.vmLabels.length > 0) ||
+    (filters.groups && filters.groups.length > 0) ||
     (filters.concernLabels && filters.concernLabels.length > 0) ||
     (filters.concernCategories && filters.concernCategories.length > 0) ||
     filters.search

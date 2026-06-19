@@ -42,6 +42,7 @@ import { ApplicationsView, Dashboard, VirtualMachinesView } from "./components";
 import { DeleteGroupModal } from "./components/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/EditGroupNameModal";
 import { combineFilterExpressions } from "./components/groupFilters";
+import { createRefreshVmTableFilterOptions } from "./components/vmFilterOptions";
 import {
   filtersToByExpression,
   filtersToSearchParams,
@@ -95,8 +96,15 @@ export const GroupDetailPage: React.FC = () => {
     concernLabels: [] as string[],
     concernCategories: [] as string[],
     vmLabels: [] as string[],
+    groups: [] as string[],
   });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
+
+  const refreshFilterOptions = useMemo(
+    () =>
+      createRefreshVmTableFilterOptions(agentApi, setAvailableFilterOptions),
+    [agentApi],
+  );
 
   const vmsRequestIdRef = useRef(0);
   const vmsRefreshIdRef = useRef(0);
@@ -188,17 +196,7 @@ export const GroupDetailPage: React.FC = () => {
 
     const fetchFilterOptions = async () => {
       try {
-        const [response, labelsResponse] = await Promise.all([
-          agentApi.getVMsFilterOptions(),
-          agentApi.getVMLabels().catch(() => ({ labels: [] as string[] })),
-        ]);
-        setAvailableFilterOptions({
-          clusters: response.clusters || [],
-          datacenters: response.datacenters || [],
-          concernLabels: response.concernLabels || [],
-          concernCategories: response.concernCategories || [],
-          vmLabels: labelsResponse.labels || [],
-        });
+        await refreshFilterOptions();
         setFilterOptionsFetched(true);
       } catch (err) {
         console.error("Error fetching filter options:", err);
@@ -207,7 +205,7 @@ export const GroupDetailPage: React.FC = () => {
     };
 
     fetchFilterOptions();
-  }, [activeTab, agentApi, filterOptionsFetched]);
+  }, [activeTab, filterOptionsFetched, refreshFilterOptions]);
 
   useEffect(() => {
     if (activeTab !== REPORT_TAB.vms || !groupFilter) {
@@ -607,6 +605,7 @@ export const GroupDetailPage: React.FC = () => {
                   onRefreshVMs={refreshVMs}
                   onRefreshInventory={refreshGroupInventory}
                   onGroupMembershipChanged={reloadGroupMembership}
+                  onRefreshFilterOptions={refreshFilterOptions}
                   showExcludedVMs={showExcludedVMs}
                   onShowExcludedVMsChange={(show) => {
                     setShowExcludedVMs(show);

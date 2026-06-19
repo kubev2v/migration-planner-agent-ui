@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
 import { vmIdsToFilterExpression } from "./groupFilters";
 import { VMTable } from "./VMTable";
+import { fetchVmTableFilterOptions } from "./vmFilterOptions";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
 import { fetchAllMatchingVmIds } from "./vmSelection";
 
@@ -52,6 +53,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     concernLabels: [] as string[],
     concernCategories: [] as string[],
     vmLabels: [] as string[],
+    groups: [] as string[],
   });
   const requestIdRef = useRef(0);
 
@@ -74,17 +76,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
     const fetchFilterOptions = async () => {
       try {
-        const [response, labelsResponse] = await Promise.all([
-          agentApi.getVMsFilterOptions(),
-          agentApi.getVMLabels().catch(() => ({ labels: [] as string[] })),
-        ]);
-        setAvailableFilterOptions({
-          clusters: response.clusters || [],
-          datacenters: response.datacenters || [],
-          concernLabels: response.concernLabels || [],
-          concernCategories: response.concernCategories || [],
-          vmLabels: labelsResponse.labels || [],
-        });
+        setAvailableFilterOptions(await fetchVmTableFilterOptions(agentApi));
       } catch (err) {
         console.error("Error fetching VM filter options:", err);
       }
