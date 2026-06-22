@@ -46,10 +46,12 @@ export function useVMTableLogic({
     concernLabels: [],
     concernCategories: [],
     vmLabels: [],
+    groups: [],
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
   onFetchAllVmIds,
+  onRefreshFilterOptions,
   showExcludedVMs = true,
   variant = "overview",
 }: UseVMTableLogicParams) {
@@ -98,6 +100,7 @@ export function useVMTableLogic({
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isConcernSelectOpen, setIsConcernSelectOpen] = useState(false);
   const [isVmLabelSelectOpen, setIsVmLabelSelectOpen] = useState(false);
+  const [isGroupSelectOpen, setIsGroupSelectOpen] = useState(false);
 
   // Cancel deep inspection confirmation (vm id when open, null when closed)
   const [cancelInspectionVmId, setCancelInspectionVmId] = useState<
@@ -175,6 +178,9 @@ export function useVMTableLogic({
   const [selectedVmLabels, setSelectedVmLabels] = useState<string[]>(
     initialFilters?.vmLabels || [],
   );
+  const [selectedGroups, setSelectedGroups] = useState<string[]>(
+    initialFilters?.groups || [],
+  );
   const [selectedConcernLabels, setSelectedConcernLabels] = useState<string[]>(
     initialFilters?.concernLabels || [],
   );
@@ -223,6 +229,7 @@ export function useVMTableLogic({
   const [tempSelectedVmLabels, setTempSelectedVmLabels] = useState<string[]>(
     [],
   );
+  const [tempSelectedGroups, setTempSelectedGroups] = useState<string[]>([]);
   const [tempSelectedConcernLabels, setTempSelectedConcernLabels] = useState<
     string[]
   >([]);
@@ -270,6 +277,7 @@ export function useVMTableLogic({
     setSelectedDatacenters(initialFilters?.datacenters || []);
     setSelectedMigrationReadiness(initialFilters?.migrationReadiness || []);
     setSelectedVmLabels(initialFilters?.vmLabels || []);
+    setSelectedGroups(initialFilters?.groups || []);
     setSelectedConcernLabels(initialFilters?.concernLabels || []);
     setSelectedConcernCategories(initialFilters?.concernCategories || []);
     setHasIssuesFilter(initialFilters?.hasIssues || false);
@@ -319,6 +327,7 @@ export function useVMTableLogic({
   const availableConcernLabels = availableFilterOptions.concernLabels;
   const availableConcernCategories = availableFilterOptions.concernCategories;
   const availableVmLabels = availableFilterOptions.vmLabels;
+  const availableGroups = availableFilterOptions.groups;
 
   // Track if filter changes come from user interaction (not from URL sync)
   const isUserInteraction = useRef(false);
@@ -345,6 +354,7 @@ export function useVMTableLogic({
         selectedDatacenters.length > 0 ||
         selectedMigrationReadiness.length > 0 ||
         selectedVmLabels.length > 0 ||
+        selectedGroups.length > 0 ||
         selectedConcernLabels.length > 0 ||
         selectedConcernCategories.length > 0 ||
         hasIssuesFilter ||
@@ -379,6 +389,7 @@ export function useVMTableLogic({
           ? selectedMigrationReadiness
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
+      groups: selectedGroups.length > 0 ? selectedGroups : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -402,6 +413,7 @@ export function useVMTableLogic({
     selectedDatacenters,
     selectedMigrationReadiness,
     selectedVmLabels,
+    selectedGroups,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
@@ -425,6 +437,7 @@ export function useVMTableLogic({
       selectedDatacenters,
       selectedMigrationReadiness,
       selectedVmLabels,
+      selectedGroups,
       selectedConcernLabels,
       selectedConcernCategories,
       hasIssuesFilter,
@@ -441,6 +454,7 @@ export function useVMTableLogic({
       selectedDatacenters,
       selectedMigrationReadiness,
       selectedVmLabels,
+      selectedGroups,
       selectedConcernLabels,
       selectedConcernCategories,
       hasIssuesFilter,
@@ -465,6 +479,7 @@ export function useVMTableLogic({
       setSelectedDatacenters(selection.selectedDatacenters);
       setSelectedMigrationReadiness(selection.selectedMigrationReadiness);
       setSelectedVmLabels(selection.selectedVmLabels);
+      setSelectedGroups(selection.selectedGroups);
       setSelectedConcernLabels(selection.selectedConcernLabels);
       setSelectedConcernCategories(selection.selectedConcernCategories);
       setHasIssuesFilter(selection.hasIssuesFilter);
@@ -527,6 +542,7 @@ export function useVMTableLogic({
           ? selectedMigrationReadiness
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
+      groups: selectedGroups.length > 0 ? selectedGroups : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -549,6 +565,7 @@ export function useVMTableLogic({
     diskUsageRangeFilter,
     selectedMigrationReadiness,
     selectedVmLabels,
+    selectedGroups,
     selectedConcernLabels,
     selectedConcernCategories,
     showExcludedVMs,
@@ -612,6 +629,7 @@ export function useVMTableLogic({
     setSelectedDatacenters(tempSelectedDatacenters);
     setSelectedMigrationReadiness(tempSelectedMigrationReadiness);
     setSelectedVmLabels(tempSelectedVmLabels);
+    setSelectedGroups(tempSelectedGroups);
     setSelectedConcernLabels(tempSelectedConcernLabels);
     setSelectedConcernCategories(tempSelectedConcernCategories);
     setHasIssuesFilter(tempHasIssuesFilter);
@@ -625,6 +643,7 @@ export function useVMTableLogic({
     setIsFilterModalOpen(false);
     setIsConcernSelectOpen(false);
     setIsVmLabelSelectOpen(false);
+    setIsGroupSelectOpen(false);
     // Reset temporary filters after applying
     resetTempFilters();
   };
@@ -634,6 +653,7 @@ export function useVMTableLogic({
     setIsFilterModalOpen(false);
     setIsConcernSelectOpen(false);
     setIsVmLabelSelectOpen(false);
+    setIsGroupSelectOpen(false);
     // Reset temporary filters when canceling
     resetTempFilters();
   };
@@ -645,6 +665,7 @@ export function useVMTableLogic({
     setTempSelectedDatacenters([]);
     setTempSelectedMigrationReadiness([]);
     setTempSelectedVmLabels([]);
+    setTempSelectedGroups([]);
     setTempSelectedConcernLabels([]);
     setTempSelectedConcernCategories([]);
     setTempHasIssuesFilter(false);
@@ -656,6 +677,13 @@ export function useVMTableLogic({
     setTempDiskUsageRangeFilter(null);
   };
 
+  // Refresh filter options when the modal opens so groups/labels stay current.
+  useEffect(() => {
+    if (isFilterModalOpen) {
+      void onRefreshFilterOptions?.();
+    }
+  }, [isFilterModalOpen, onRefreshFilterOptions]);
+
   // Initialize temporary filters when opening modal
   // Always sync temp filters with current applied filters when modal opens
   useEffect(() => {
@@ -666,6 +694,7 @@ export function useVMTableLogic({
       setTempSelectedDatacenters(selectedDatacenters);
       setTempSelectedMigrationReadiness(selectedMigrationReadiness);
       setTempSelectedVmLabels(selectedVmLabels);
+      setTempSelectedGroups(selectedGroups);
       setTempSelectedConcernLabels(selectedConcernLabels);
       setTempSelectedConcernCategories(selectedConcernCategories);
       setTempHasIssuesFilter(hasIssuesFilter);
@@ -683,6 +712,7 @@ export function useVMTableLogic({
     selectedDatacenters,
     selectedMigrationReadiness,
     selectedVmLabels,
+    selectedGroups,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
@@ -738,6 +768,12 @@ export function useVMTableLogic({
   const toggleTempVmLabel = (label: string) => {
     setTempSelectedVmLabels((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
+    );
+  };
+
+  const toggleTempGroup = (group: string) => {
+    setTempSelectedGroups((prev) =>
+      prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group],
     );
   };
 
@@ -854,6 +890,8 @@ export function useVMTableLogic({
     setIsConcernSelectOpen,
     isVmLabelSelectOpen,
     setIsVmLabelSelectOpen,
+    isGroupSelectOpen,
+    setIsGroupSelectOpen,
     cancelInspectionVmId,
     openCancelInspectionConfirm,
     closeCancelInspectionConfirm,
@@ -886,6 +924,7 @@ export function useVMTableLogic({
     tempSelectedDatacenters,
     tempSelectedMigrationReadiness,
     tempSelectedVmLabels,
+    tempSelectedGroups,
     tempSelectedConcernLabels,
     tempSelectedConcernCategories,
     tempHasIssuesFilter,
@@ -903,6 +942,7 @@ export function useVMTableLogic({
     toggleTempMigrationReadiness,
     toggleTempConcernLabel,
     toggleTempVmLabel,
+    toggleTempGroup,
     toggleTempConcernCategory,
     toggleTempDiskRange,
     toggleTempMemoryRange,
@@ -920,6 +960,7 @@ export function useVMTableLogic({
     availableConcernLabels,
     availableConcernCategories,
     availableVmLabels,
+    availableGroups,
     isBulkSelectOpen,
     setIsBulkSelectOpen,
     isSelectingAll,

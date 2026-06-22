@@ -15,12 +15,13 @@ describe("vmTableFilterLogic", () => {
     expect(buildAppliedFilters(EMPTY_VM_TABLE_FILTER_SELECTION)).toEqual([]);
   });
 
-  it("builds chips for status, cluster, and label filters", () => {
+  it("builds chips for status, cluster, label, and group filters", () => {
     const chips = buildAppliedFilters({
       ...EMPTY_VM_TABLE_FILTER_SELECTION,
       selectedStatuses: ["poweredOn"],
       selectedClusters: ["prod-cluster"],
       selectedVmLabels: ["tier-1"],
+      selectedGroups: ["production"],
     });
 
     expect(chips).toEqual([
@@ -38,6 +39,11 @@ describe("vmTableFilterLogic", () => {
         category: "Label",
         label: "tier-1",
         key: "vm-label-tier-1",
+      },
+      {
+        category: "Group",
+        label: "production",
+        key: "group-production",
       },
     ]);
   });

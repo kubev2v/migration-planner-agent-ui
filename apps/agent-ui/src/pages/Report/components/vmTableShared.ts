@@ -313,7 +313,8 @@ export const filterStyles = {
   `,
   filtersContent: css`
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 2em;
+    grid-template-columns: repeat(2, 1fr);
   `,
   filtersContentCompact: css`
     display: flex;
@@ -366,6 +367,7 @@ export type VMTableVariantUI = {
   showManageColumns: boolean;
   hideToolbarActions: boolean;
   disableVmNavigation: boolean;
+  showGroupsFilter: boolean;
   defaultColumnsKeys: ColumnKey[];
 };
 
@@ -374,18 +376,21 @@ export const VM_TABLE_VARIANT_UI: Record<VMTableVariant, VMTableVariantUI> = {
     showManageColumns: true,
     hideToolbarActions: false,
     disableVmNavigation: false,
+    showGroupsFilter: true,
     defaultColumnsKeys: [...ALL_COLUMN_KEYS],
   },
   groups: {
     showManageColumns: true,
     hideToolbarActions: false,
     disableVmNavigation: false,
+    showGroupsFilter: false,
     defaultColumnsKeys: ALL_COLUMN_KEYS.filter((k) => k !== "groups"),
   },
   compact: {
     showManageColumns: false,
     hideToolbarActions: true,
     disableVmNavigation: true,
+    showGroupsFilter: true,
     defaultColumnsKeys: [...COMPACT_VISIBLE_COLUMNS],
   },
 };

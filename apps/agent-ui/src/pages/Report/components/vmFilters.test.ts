@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { filtersToByExpression } from "./vmFilters";
+import {
+  filtersToByExpression,
+  filtersToSearchParams,
+  searchParamsToFilters,
+} from "./vmFilters";
 
 describe("filtersToByExpression vmLabels", () => {
   it("uses a single contains check for one label", () => {
@@ -38,6 +42,49 @@ describe("filtersToByExpression utilization ranges", () => {
     expect(
       filtersToByExpression({ diskUsageRange: { min: 51, max: 75 } }),
     ).toBe("utilization.disk >= 51 and utilization.disk <= 75");
+  });
+});
+
+describe("filtersToByExpression groups", () => {
+  it("uses a single contains check for one group", () => {
+    expect(filtersToByExpression({ groups: ["production"] })).toBe(
+      "(groups contains 'production')",
+    );
+  });
+
+  it("uses OR when multiple groups are selected", () => {
+    expect(filtersToByExpression({ groups: ["prod", "staging"] })).toBe(
+      "(groups contains 'prod' or groups contains 'staging')",
+    );
+  });
+
+  it("escapes single quotes in group names", () => {
+    expect(filtersToByExpression({ groups: ["it's", "ok"] })).toBe(
+      "(groups contains 'it\\'s' or groups contains 'ok')",
+    );
+  });
+});
+
+describe("groups URL params", () => {
+  it("round-trips multiple groups via repeated params", () => {
+    const params = filtersToSearchParams({ groups: ["production", "staging"] });
+    expect(params.getAll("groups")).toEqual(["production", "staging"]);
+    expect(searchParamsToFilters(params).groups).toEqual([
+      "production",
+      "staging",
+    ]);
+  });
+
+  it("preserves a single group name containing a comma", () => {
+    const params = new URLSearchParams();
+    params.append("groups", "team,a");
+    expect(searchParamsToFilters(params).groups).toEqual(["team,a"]);
+  });
+
+  it("preserves group names containing commas", () => {
+    const filters = { groups: ["team,a", "team,b"] };
+    const roundTripped = searchParamsToFilters(filtersToSearchParams(filters));
+    expect(roundTripped.groups).toEqual(["team,a", "team,b"]);
   });
 });
 

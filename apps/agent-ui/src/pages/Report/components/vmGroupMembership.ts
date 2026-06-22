@@ -3,9 +3,8 @@ import type {
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import { parseIdsFromFilter } from "./groupFilters";
+import { fetchAllGroups } from "./groupList";
 import { fetchAllMatchingVmIds } from "./vmSelection";
-
-const GROUP_LIST_PAGE_SIZE = 100;
 
 export type GroupListItem = {
   id: string;
@@ -40,21 +39,7 @@ export async function buildVmGroupMembership(
   const vmIdToGroups = Object.create(null) as Record<string, GroupListItem[]>;
   const groupsByName = Object.create(null) as Record<string, GroupListItem>;
 
-  const firstPage = await agentApi.listGroups({
-    page: 1,
-    pageSize: GROUP_LIST_PAGE_SIZE,
-  });
-
-  const allGroups = [...(firstPage.groups ?? [])];
-  const pageCount = firstPage.pageCount ?? 1;
-
-  for (let page = 2; page <= pageCount; page++) {
-    const response = await agentApi.listGroups({
-      page,
-      pageSize: GROUP_LIST_PAGE_SIZE,
-    });
-    allGroups.push(...(response.groups ?? []));
-  }
+  const allGroups = await fetchAllGroups(agentApi);
 
   for (const group of allGroups) {
     const groupItem = { id: group.id, name: group.name };

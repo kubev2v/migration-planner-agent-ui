@@ -72,6 +72,8 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     setIsConcernSelectOpen,
     isVmLabelSelectOpen,
     setIsVmLabelSelectOpen,
+    isGroupSelectOpen,
+    setIsGroupSelectOpen,
     applyFilters,
     cancelFilterModal,
     tempSelectedConcernCategories,
@@ -86,6 +88,7 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     tempSelectedStatuses,
     tempSelectedMigrationReadiness,
     tempSelectedVmLabels,
+    tempSelectedGroups,
     setTempHasIssuesFilter,
     setTempNoIssuesFilter,
     toggleTempConcernCategory,
@@ -100,6 +103,7 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     toggleTempStatus,
     toggleTempMigrationReadiness,
     toggleTempVmLabel,
+    toggleTempGroup,
     appliedFilters,
     removeFilter,
     clearAllFilters,
@@ -112,13 +116,17 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     availableDatacenters,
     availableClusters,
     availableVmLabels,
+    availableGroups,
   } = logic;
 
-  const { showManageColumns, defaultColumnsKeys } = variantUI;
+  const { showManageColumns, showGroupsFilter, defaultColumnsKeys } = variantUI;
   const isCompactTable = !showManageColumns;
 
   const handleFilterDropdownOpenChange = (open: boolean) => {
-    if (!open && (isConcernSelectOpen || isVmLabelSelectOpen)) {
+    if (
+      !open &&
+      (isConcernSelectOpen || isVmLabelSelectOpen || isGroupSelectOpen)
+    ) {
       return;
     }
     setIsFilterModalOpen(open);
@@ -572,6 +580,56 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Groups column */}
+                {showGroupsFilter && (
+                  <div>
+                    <h3 className={filterStyles.columnTitle}>Groups</h3>
+                    <div className={filterStyles.checkboxList}>
+                      {availableGroups.length > 0 ? (
+                        <Select
+                          isOpen={isGroupSelectOpen}
+                          selected={tempSelectedGroups}
+                          popperProps={nestedSelectPopperProps}
+                          onSelect={(_event, selection) => {
+                            toggleTempGroup(selection as string);
+                          }}
+                          onOpenChange={setIsGroupSelectOpen}
+                          toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                            <MenuToggle
+                              ref={toggleRef}
+                              onClick={() =>
+                                setIsGroupSelectOpen(!isGroupSelectOpen)
+                              }
+                              isExpanded={isGroupSelectOpen}
+                              className={filterStyles.concernSelect}
+                            >
+                              {tempSelectedGroups.length === 0
+                                ? "Select groups..."
+                                : `${tempSelectedGroups.length} selected`}
+                            </MenuToggle>
+                          )}
+                          isScrollable
+                        >
+                          <SelectList>
+                            {availableGroups.map((group) => (
+                              <SelectOption
+                                key={group}
+                                value={group}
+                                hasCheckbox
+                                isSelected={tempSelectedGroups.includes(group)}
+                              >
+                                {group}
+                              </SelectOption>
+                            ))}
+                          </SelectList>
+                        </Select>
+                      ) : (
+                        <Content component="small">No groups available</Content>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Footer with buttons */}

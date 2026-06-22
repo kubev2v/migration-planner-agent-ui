@@ -12,10 +12,15 @@ import { AddToGroupModal } from "./AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "./CreateGroupFromSelectionModal";
 import { DeepInspectionModal } from "./DeepInspectionModal";
 import { combineFilterExpressions } from "./groupFilters";
+import { invalidateAllGroupsCache } from "./groupList";
 import { ManageLabelsModal } from "./ManageLabelsModal";
 import { RemoveFromGroupModal } from "./RemoveFromGroupModal";
 import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
+import {
+  mergeGroupNamesIntoFilterOptions,
+  type RefreshFilterOptionsFn,
+} from "./vmFilterOptions";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
 import {
   buildVmGroupMembership,
@@ -106,6 +111,7 @@ interface VirtualMachinesViewProps {
     concernLabels: string[];
     concernCategories: string[];
     vmLabels: string[];
+    groups: string[];
   };
   agentApi?: DefaultApiInterface;
   onRefreshVMs?: () => void;
@@ -115,6 +121,8 @@ interface VirtualMachinesViewProps {
   ) => void | Promise<void>;
   /** Reload group metadata/filter after add/remove (group detail page). */
   onGroupMembershipChanged?: () => void | Promise<void>;
+  /** Refresh filter dropdown options (e.g. after groups or labels change). */
+  onRefreshFilterOptions?: RefreshFilterOptionsFn;
   showExcludedVMs?: boolean;
   onShowExcludedVMsChange?: (show: boolean) => void;
   /** When set, VMs are shown inside this group's detail page */
@@ -139,6 +147,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   onRefreshVMs,
   onRefreshInventory,
   onGroupMembershipChanged,
+  onRefreshFilterOptions,
   showExcludedVMs,
   onShowExcludedVMsChange,
   groupContext,
@@ -228,6 +237,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const vmsForTable = useMemo(
     () => mergeVmGroupItems(vms, vmGroupMembership),
     [vms, vmGroupMembership],
+  );
+
+  const mergedFilterOptions = useMemo(
+    () =>
+      mergeGroupNamesIntoFilterOptions(
+        availableFilterOptions,
+        Object.values(vmGroupMembership.groupsByName).map(
+          (group) => group.name,
+        ),
+      ),
+    [availableFilterOptions, vmGroupMembership.groupsByName],
   );
 
   const visibleVms = useMemo(() => {
@@ -341,6 +361,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, []);
 
   const handleGroupsChanged = useCallback(async () => {
+    if (agentApi) {
+      invalidateAllGroupsCache(agentApi);
+    }
+    await onRefreshFilterOptions?.({ force: true });
     if (onGroupMembershipChanged) {
       await onGroupMembershipChanged();
       await loadVmGroupMembership();
@@ -348,7 +372,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     }
     await loadVmGroupMembership();
     onRefreshVMs?.();
-  }, [loadVmGroupMembership, onGroupMembershipChanged, onRefreshVMs]);
+  }, [
+    agentApi,
+    loadVmGroupMembership,
+    onGroupMembershipChanged,
+    onRefreshFilterOptions,
+    onRefreshVMs,
+  ]);
 
   const handleFetchAllVmIds = useCallback(
     async (filters: VMFilters) => {
@@ -619,10 +649,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onFiltersChange={onFiltersChange}
         onPageChange={onPageChange}
         onSortChange={onSortChange}
-        availableFilterOptions={availableFilterOptions}
+        availableFilterOptions={mergedFilterOptions}
         selectedVMs={selectedVMs}
         onSelectionChange={setSelectedVMs}
         onFetchAllVmIds={agentApi ? handleFetchAllVmIds : undefined}
+        onRefreshFilterOptions={onRefreshFilterOptions}
         onRunDeepInspection={handleRunDeepInspection}
         onExcludeFromReports={handleExcludeFromReports}
         onIncludeInReports={handleIncludeInReports}
