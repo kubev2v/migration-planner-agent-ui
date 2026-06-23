@@ -97,7 +97,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
       return;
     }
 
-    const issuesFilter = "issues_count >= 1 and migratable = false";
+    const issuesFilter = "issues_count >= 1";
     const byExpression =
       combineFilterExpressions(scopedFilterExpression, issuesFilter) ??
       issuesFilter;
@@ -293,7 +293,6 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   const handleBreakdownClick = (category: string) => {
     if (isExportMode) return;
     navigateToVMs({
-      migrationReadiness: ["not-ready"],
       concernCategories: [category],
     });
   };
