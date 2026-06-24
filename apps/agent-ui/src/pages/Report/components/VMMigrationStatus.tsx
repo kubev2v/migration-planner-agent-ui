@@ -97,7 +97,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
       return;
     }
 
-    const issuesFilter = "issues_count >= 1";
+    const issuesFilter = "issues_count >= 1 and migration_excluded = false";
     const byExpression =
       combineFilterExpressions(scopedFilterExpression, issuesFilter) ??
       issuesFilter;
