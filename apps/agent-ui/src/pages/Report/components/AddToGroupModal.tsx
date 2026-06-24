@@ -23,7 +23,7 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
 import { addVmsToGroupFilter } from "./groupFilters";
-import { fetchAllGroups } from "./groupList";
+import { fetchAllGroups, invalidateAllGroupsCache } from "./groupList";
 
 interface AddToGroupModalProps {
   isOpen: boolean;
@@ -110,6 +110,7 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
           filter: addVmsToGroupFilter(selectedGroup.filter, vmIds),
         },
       });
+      invalidateAllGroupsCache(agentApi);
       onUpdated();
       onClose();
     } catch (err) {

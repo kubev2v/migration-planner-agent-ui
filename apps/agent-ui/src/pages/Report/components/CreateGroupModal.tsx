@@ -18,6 +18,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
 import { vmIdsToFilterExpression } from "./groupFilters";
+import { invalidateAllGroupsCache } from "./groupList";
 import { VMTable } from "./VMTable";
 import { fetchVmTableFilterOptions } from "./vmFilterOptions";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
@@ -158,6 +159,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           filter: vmIdsToFilterExpression(Array.from(selectedVMs)),
         },
       });
+      invalidateAllGroupsCache(agentApi);
       onCreated();
       onClose();
     } catch (err) {

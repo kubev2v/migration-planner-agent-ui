@@ -12,7 +12,10 @@ import { DeleteGroupModal } from "./components/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/EditGroupNameModal";
 import type { GroupRow } from "./components/GroupsTable";
 import { GroupsTable } from "./components/GroupsTable";
-import { fetchAllGroups } from "./components/groupList";
+import {
+  fetchAllGroups,
+  invalidateAllGroupsCache,
+} from "./components/groupList";
 
 const GROUP_VM_PAGE_SIZE = 100;
 
@@ -184,6 +187,7 @@ export const GroupsPage: React.FC = () => {
       id: editingGroup.id,
       updateGroupRequest: { name },
     });
+    invalidateAllGroupsCache(agentApi);
     await fetchGroups();
   };
 
@@ -192,6 +196,7 @@ export const GroupsPage: React.FC = () => {
       return;
     }
     await agentApi.deleteGroup({ id: deletingGroup.id });
+    invalidateAllGroupsCache(agentApi);
     await fetchGroups();
   };
 

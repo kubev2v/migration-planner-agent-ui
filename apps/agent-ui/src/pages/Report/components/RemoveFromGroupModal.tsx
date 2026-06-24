@@ -20,7 +20,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
 import { buildGroupFilterAfterRemovingMembers } from "./groupFilters";
-import { fetchAllGroups } from "./groupList";
+import { fetchAllGroups, invalidateAllGroupsCache } from "./groupList";
 
 interface GroupOption {
   id: string;
@@ -192,6 +192,7 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
         },
       });
 
+      invalidateAllGroupsCache(agentApi);
       onUpdated();
       onClose();
     } catch (err) {

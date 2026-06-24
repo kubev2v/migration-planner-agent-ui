@@ -15,6 +15,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Symbols } from "../../../main/Symbols";
 import { vmIdsToFilterExpression } from "./groupFilters";
+import { invalidateAllGroupsCache } from "./groupList";
 
 interface CreateGroupFromSelectionModalProps {
   isOpen: boolean;
@@ -58,6 +59,7 @@ export const CreateGroupFromSelectionModal: React.FC<
           filter: vmIdsToFilterExpression(vmIds),
         },
       });
+      invalidateAllGroupsCache(agentApi);
       onCreated();
       onClose();
     } catch (err) {
