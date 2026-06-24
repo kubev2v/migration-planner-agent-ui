@@ -11,6 +11,7 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { parseApiError } from "../../../common/parseApiError";
 
 interface EditGroupNameModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export const EditGroupNameModal: React.FC<EditGroupNameModalProps> = ({
       await onSave(trimmed);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update group.");
+      setError(await parseApiError(err, "Failed to update group."));
     } finally {
       setIsSaving(false);
     }
@@ -72,7 +73,13 @@ export const EditGroupNameModal: React.FC<EditGroupNameModalProps> = ({
     >
       <ModalHeader title="Edit group name" labelId="edit-group-name-title" />
       <ModalBody>
-        <Form>
+        <Form
+          id="edit-group-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+        >
           <FormGroup label="Group name" isRequired fieldId="edit-group-name">
             <TextInput
               id="edit-group-name"
@@ -99,7 +106,8 @@ export const EditGroupNameModal: React.FC<EditGroupNameModalProps> = ({
       <ModalFooter>
         <Button
           variant="primary"
-          onClick={handleSave}
+          type="submit"
+          form="edit-group-form"
           isLoading={isSaving}
           isDisabled={isSaving || !group || !name.trim()}
         >

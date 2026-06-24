@@ -13,6 +13,7 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { parseApiError } from "../../../common/parseApiError";
 import { Symbols } from "../../../main/Symbols";
 import { vmIdsToFilterExpression } from "./groupFilters";
 import { invalidateAllGroupsCache } from "./groupList";
@@ -63,7 +64,7 @@ export const CreateGroupFromSelectionModal: React.FC<
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create group.");
+      setError(await parseApiError(err, "Failed to create group."));
     } finally {
       setIsCreating(false);
     }
@@ -89,7 +90,13 @@ export const CreateGroupFromSelectionModal: React.FC<
           A targeted assessment report will be generated for the group of
           virtual machines created.
         </Content>
-        <Form>
+        <Form
+          id="create-group-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreate();
+          }}
+        >
           <FormGroup
             label="Group name"
             isRequired
@@ -119,7 +126,8 @@ export const CreateGroupFromSelectionModal: React.FC<
       <ModalFooter>
         <Button
           variant="primary"
-          onClick={handleCreate}
+          type="submit"
+          form="create-group-form"
           isLoading={isCreating}
           isDisabled={isCreating || !name.trim()}
         >
