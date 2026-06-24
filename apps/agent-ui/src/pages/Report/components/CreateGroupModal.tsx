@@ -145,11 +145,6 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       setError("Group name is required.");
       return;
     }
-    if (selectedVMs.size === 0) {
-      setError("Select at least one virtual machine.");
-      return;
-    }
-
     setIsCreating(true);
     setError(null);
     try {
@@ -239,7 +234,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           variant="primary"
           onClick={handleCreate}
           isLoading={isCreating}
-          isDisabled={isCreating || !name.trim() || selectedVMs.size === 0}
+          isDisabled={isCreating || !name.trim()}
         >
           Create
         </Button>
