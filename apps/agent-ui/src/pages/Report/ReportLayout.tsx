@@ -1,7 +1,10 @@
+import { css } from "@emotion/css";
 import {
+  Brand,
   Masthead,
   MastheadBrand,
   MastheadContent,
+  MastheadLogo,
   MastheadMain,
   MastheadToggle,
   Nav,
@@ -13,10 +16,10 @@ import {
   PageToggleButton,
   Title,
 } from "@patternfly/react-core";
-import { BarsIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import RedHatOpenShiftLogo from "../../assets/RedHatOpenShiftLogo.png";
 
 const NAV_ITEMS = [
   { path: "/report/vms-overview", label: "Virtual machines overview" },
@@ -26,6 +29,11 @@ const NAV_ITEMS = [
     label: "Storage offload estimator",
   },
 ] as const;
+
+const appTitleStyle = css`
+  padding: var(--pf-t--global--spacer--md);
+  border-bottom: 2px solid var(--pf-t--global--color--nonstatus--gray--100);
+`;
 
 export const ReportLayout: React.FC = () => {
   const location = useLocation();
@@ -46,16 +54,21 @@ export const ReportLayout: React.FC = () => {
       isManagedSidebar
       masthead={
         <Masthead>
-          <MastheadToggle>
-            <PageToggleButton variant="plain" aria-label="Global navigation">
-              <BarsIcon />
-            </PageToggleButton>
-          </MastheadToggle>
           <MastheadMain>
+            <MastheadToggle>
+              <PageToggleButton
+                isHamburgerButton
+                aria-label="Global navigation"
+              />
+            </MastheadToggle>
             <MastheadBrand>
-              <Title headingLevel="h1" size="lg">
-                Migration Advisor
-              </Title>
+              <MastheadLogo>
+                <Brand
+                  src={RedHatOpenShiftLogo}
+                  alt="Red Hat OpenShift Logo"
+                  heights={{ default: "36px" }}
+                />
+              </MastheadLogo>
             </MastheadBrand>
           </MastheadMain>
           <MastheadContent />
@@ -64,6 +77,9 @@ export const ReportLayout: React.FC = () => {
       sidebar={
         <PageSidebar>
           <PageSidebarBody>
+            <Title headingLevel="h1" size="lg" className={appTitleStyle}>
+              Migration Advisor
+            </Title>
             <Nav aria-label="Main navigation">
               <NavList>
                 {NAV_ITEMS.map((item) => (
