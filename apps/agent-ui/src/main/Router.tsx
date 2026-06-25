@@ -23,7 +23,7 @@ export const router = createBrowserRouter(
       path: "/report",
       lazy: async () => {
         const { ProtectedReportRoute } = await import(
-          "../pages/Report/ProtectedReportRoute.tsx"
+          "../pages/ProtectedReportRoute.tsx"
         );
 
         return {
@@ -39,7 +39,7 @@ export const router = createBrowserRouter(
           path: "vms-overview",
           lazy: async () => {
             const { ReportContainer } = await import(
-              "../pages/Report/ReportContainer.tsx"
+              "../pages/VirtualMachinesOverview/VirtualMachinesOverviewPage.tsx"
             );
             return { Component: ReportContainer };
           },
@@ -48,7 +48,7 @@ export const router = createBrowserRouter(
           path: "groups",
           lazy: async () => {
             const { GroupsPage } = await import(
-              "../pages/Report/GroupsPage.tsx"
+              "../pages/Groups/GroupsPage.tsx"
             );
             return { Component: GroupsPage };
           },
@@ -57,7 +57,7 @@ export const router = createBrowserRouter(
           path: "groups/:groupId",
           lazy: async () => {
             const { GroupDetailPage } = await import(
-              "../pages/Report/GroupDetailPage.tsx"
+              "../pages/Groups/GroupDetailPage.tsx"
             );
             return { Component: GroupDetailPage };
           },
@@ -66,7 +66,7 @@ export const router = createBrowserRouter(
           path: "storage-offload-estimator",
           lazy: async () => {
             const { StorageOffloadPage } = await import(
-              "../pages/Report/StorageOffloadPage.tsx"
+              "../pages/StorageOffloadEstimator/StorageOffloadPage.tsx"
             );
             return { Component: StorageOffloadPage };
           },
