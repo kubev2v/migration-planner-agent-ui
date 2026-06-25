@@ -4,18 +4,23 @@ import type {
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
+  Alert,
   Button,
   Content,
   Form,
+  FormAlert,
   FormGroup,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Stack,
+  StackItem,
   TextInput,
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { parseApiError } from "../../../common/parseApiError";
 import { Symbols } from "../../../main/Symbols";
 import { vmIdsToFilterExpression } from "./groupFilters";
 import { invalidateAllGroupsCache } from "./groupList";
@@ -158,7 +163,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create group.");
+      setError(await parseApiError(err, "Failed to create group."));
     } finally {
       setIsCreating(false);
     }
@@ -174,65 +179,84 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     >
       <ModalHeader title="Create VM group" labelId="create-group-title" />
       <ModalBody>
-        <Content component="p" style={{ marginBottom: "16px" }}>
-          Create virtual machine groups to generate targeted assessment reports
-          and enhanced VM management. Name the group and choose virtual machines
-          to include in it.
-        </Content>
-        <Form style={{ marginBottom: "24px" }}>
-          <FormGroup label="Group name" isRequired fieldId="create-group-name">
-            <TextInput
-              id="create-group-name"
-              value={name}
-              onChange={(_event, value) => setName(value)}
-              validated={error && !name.trim() ? "error" : "default"}
+        <Stack hasGutter>
+          <StackItem>
+            <Content component="p">
+              Create virtual machine groups to generate targeted assessment
+              reports and enhanced VM management. Name the group and choose
+              virtual machines to include in it.
+            </Content>
+          </StackItem>
+          {error && (
+            <StackItem>
+              <FormAlert>
+                <Alert
+                  variant="danger"
+                  title={error}
+                  aria-live="polite"
+                  isInline
+                />
+              </FormAlert>
+            </StackItem>
+          )}
+          <StackItem>
+            <Form
+              id="create-group-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreate();
+              }}
+            >
+              <FormGroup
+                label="Group name"
+                isRequired
+                fieldId="create-group-name"
+              >
+                <TextInput
+                  id="create-group-name"
+                  value={name}
+                  onChange={(_event, value) => setName(value)}
+                  validated={error && !name.trim() ? "error" : "default"}
+                />
+              </FormGroup>
+            </Form>
+          </StackItem>
+          <StackItem>
+            <VMTable
+              variant="compact"
+              vms={vms}
+              loading={loading}
+              initialFilters={filters}
+              totalVMs={totalVMs}
+              currentPage={page}
+              pageSize={pageSize}
+              onFiltersChange={(nextFilters) => {
+                setFilters(nextFilters);
+                setPage(1);
+              }}
+              onPageChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+              onSortChange={setSortFields}
+              availableFilterOptions={availableFilterOptions}
+              selectedVMs={selectedVMs}
+              onSelectionChange={setSelectedVMs}
+              onFetchAllVmIds={handleFetchAllVmIds}
+              showExcludedVMs={showExcludedVMs}
+              onShowExcludedVMsChange={(show) => {
+                setShowExcludedVMs(show);
+                setPage(1);
+              }}
             />
-          </FormGroup>
-        </Form>
-        {error && (
-          <Content
-            component="p"
-            style={{
-              color:
-                "var(--pf-t--global--text--color--status--danger--default)",
-              marginBottom: "16px",
-            }}
-          >
-            {error}
-          </Content>
-        )}
-        <VMTable
-          variant="compact"
-          vms={vms}
-          loading={loading}
-          initialFilters={filters}
-          totalVMs={totalVMs}
-          currentPage={page}
-          pageSize={pageSize}
-          onFiltersChange={(nextFilters) => {
-            setFilters(nextFilters);
-            setPage(1);
-          }}
-          onPageChange={(nextPage, nextPageSize) => {
-            setPage(nextPage);
-            setPageSize(nextPageSize);
-          }}
-          onSortChange={setSortFields}
-          availableFilterOptions={availableFilterOptions}
-          selectedVMs={selectedVMs}
-          onSelectionChange={setSelectedVMs}
-          onFetchAllVmIds={handleFetchAllVmIds}
-          showExcludedVMs={showExcludedVMs}
-          onShowExcludedVMsChange={(show) => {
-            setShowExcludedVMs(show);
-            setPage(1);
-          }}
-        />
+          </StackItem>
+        </Stack>
       </ModalBody>
       <ModalFooter>
         <Button
           variant="primary"
-          onClick={handleCreate}
+          type="submit"
+          form="create-group-form"
           isLoading={isCreating}
           isDisabled={isCreating || !name.trim()}
         >
