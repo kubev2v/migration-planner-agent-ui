@@ -1,0 +1,548 @@
+import { css } from "@emotion/css";
+import type {
+  DefaultApiInterface,
+  InspectorStatus,
+  VddkProperties,
+} from "@openshift-migration-advisor/agent-sdk";
+import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
+import {
+  Alert,
+  Button,
+  Content,
+  FileUpload,
+  Flex,
+  FlexItem,
+  Form,
+  FormGroup,
+  FormHelperText,
+  HelperText,
+  HelperTextItem,
+  Icon,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  TextInput,
+  Title,
+} from "@patternfly/react-core";
+import {
+  AngleRightIcon,
+  CheckCircleIcon,
+  InfoCircleIcon,
+} from "@patternfly/react-icons";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
+import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
+
+interface DeepInspectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selectedVMIds: string[];
+  agentApi: DefaultApiInterface;
+  onInspectionStarted: () => void;
+}
+
+type SectionStatus = "notConfigured" | "configured" | "error";
+
+const modalStyles = {
+  section: css`
+    border: 1px solid var(--pf-t--global--border--color--default);
+    border-radius: var(--pf-t--global--border--radius--small);
+    margin-bottom: 16px;
+    overflow: hidden;
+  `,
+  sectionHeader: css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    gap: 12px;
+
+    &:hover {
+      background: var(--pf-t--global--background--color--secondary--default);
+    }
+  `,
+  sectionHeaderLeft: css`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  `,
+  sectionHeaderRight: css`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  `,
+  sectionTitle: css`
+    display: flex;
+    flex-direction: column;
+  `,
+  sectionBody: css`
+    padding: 0 20px 20px 20px;
+  `,
+  statusConfigured: css`
+    color: var(--pf-t--global--icon--color--status--success--default);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  `,
+  statusNotConfigured: css`
+    color: var(--pf-t--global--text--color--subtle);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  `,
+};
+
+export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
+  isOpen,
+  onClose,
+  selectedVMIds,
+  agentApi,
+  onInspectionStarted,
+}) => {
+  // Section expand/collapse
+  const [vddkExpanded, setVddkExpanded] = useState(true);
+
+  // VDDK state
+  const [vddkFile, setVddkFile] = useState<File | null>(null);
+  const [vddkFileName, setVddkFileName] = useState("");
+  const [vddkUploading, setVddkUploading] = useState(false);
+  const [vddkStatus, setVddkStatus] = useState<SectionStatus>("notConfigured");
+  const [vddkError, setVddkError] = useState<string | null>(null);
+  const [vddkProps, setVddkProps] = useState<VddkProperties | null>(null);
+
+  // Credentials state
+  const [vcenterUrl, setVcenterUrl] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Global state
+  const [configuring, setConfiguring] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+
+  const extractErrorMessage = async (
+    err: unknown,
+    fallback: string,
+  ): Promise<string> => {
+    if (err instanceof ResponseError) {
+      try {
+        const body = await err.response.json();
+        if (body?.error) return body.error;
+      } catch {
+        // response body not parseable
+      }
+    }
+    return err instanceof Error ? err.message : fallback;
+  };
+
+  const fetchExistingStatus = useCallback(async () => {
+    try {
+      const status: InspectorStatus = await agentApi.getInspectorStatus({
+        includeVddk: true,
+      });
+
+      if (status.vddk) {
+        setVddkStatus("configured");
+        setVddkProps(status.vddk);
+        setVddkExpanded(false);
+      }
+    } catch (err) {
+      const isExpectedNotConfigured =
+        err instanceof ResponseError &&
+        (err.response?.status === 404 || err.response?.status === 400);
+      if (!isExpectedNotConfigured) {
+        console.error("Error fetching inspector status:", err);
+      }
+    }
+  }, [agentApi]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchExistingStatus();
+    }
+  }, [isOpen, fetchExistingStatus]);
+
+  const resetState = () => {
+    setVddkFile(null);
+    setVddkFileName("");
+    setVddkUploading(false);
+    setVddkStatus("notConfigured");
+    setVddkError(null);
+    setVddkProps(null);
+    setVcenterUrl("");
+    setUsername("");
+    setPassword("");
+    setConfiguring(false);
+    setGlobalError(null);
+    setVddkExpanded(true);
+  };
+
+  const handleClose = () => {
+    resetState();
+    onClose();
+  };
+
+  const handleVddkFileChange = (
+    _event: React.ChangeEvent | React.DragEvent,
+    file: File,
+  ) => {
+    setVddkFile(file);
+    setVddkFileName(file.name);
+    setVddkError(null);
+    setVddkStatus("notConfigured");
+  };
+
+  const handleVddkClear = () => {
+    setVddkFile(null);
+    setVddkFileName("");
+    setVddkError(null);
+    setVddkStatus("notConfigured");
+    setVddkProps(null);
+  };
+
+  const handleVddkUpload = async () => {
+    if (!vddkFile) return;
+
+    setVddkUploading(true);
+    setVddkError(null);
+
+    try {
+      const props = await agentApi.putInspectorVddk({ file: vddkFile });
+      setVddkProps(props);
+      setVddkStatus("configured");
+      setVddkExpanded(false);
+    } catch (err) {
+      const message = await extractErrorMessage(err, "Failed to upload VDDK");
+      setVddkError(message);
+      setVddkStatus("error");
+    } finally {
+      setVddkUploading(false);
+    }
+  };
+
+  const MAX_VMS = 10;
+  const tooManyVMs = selectedVMIds.length > MAX_VMS;
+
+  const hasVMsSelected = selectedVMIds.length > 0;
+
+  const areCredentialsValid =
+    vcenterUrl.trim() !== "" &&
+    username.trim() !== "" &&
+    password.trim() !== "";
+
+  const canConfigure =
+    vddkStatus === "configured" &&
+    areCredentialsValid &&
+    (!hasVMsSelected || !tooManyVMs);
+
+  const isInspectorRunning = async (): Promise<boolean> => {
+    try {
+      const status = await agentApi.getInspectorStatus({});
+      return status.state === "running";
+    } catch {
+      // Can't determine state — assume it may be running so the caller
+      // attempts a stop, which is harmless if it's already stopped.
+      return true;
+    }
+  };
+
+  const waitForInspectorReady = async (): Promise<void> => {
+    const MAX_WAIT_ATTEMPTS = 10;
+    const POLL_INTERVAL_MS = 500;
+    for (let i = 0; i < MAX_WAIT_ATTEMPTS; i++) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      if (!(await isInspectorRunning())) return;
+    }
+    // Best-effort: proceed even if the inspector didn't fully stop.
+  };
+
+  const handleConfigure = async () => {
+    // When no VMs are selected the user is only updating the configuration
+    // (VDDK / credentials). Both are already persisted by their own actions,
+    // so there is nothing left to do — just close the modal.
+    if (!hasVMsSelected) {
+      handleClose();
+      return;
+    }
+
+    setConfiguring(true);
+    setGlobalError(null);
+
+    try {
+      // If the inspector is still alive (from a previous run or an active
+      // one), stop it and wait for the server to finish tearing it down
+      // before starting a new run with the full VM list.
+      const inspectorRunning = await isInspectorRunning();
+      if (inspectorRunning) {
+        await agentApi.stopInspection();
+        await waitForInspectorReady();
+      }
+
+      await agentApi.startInspection({
+        startInspectionRequest: {
+          vmIds: selectedVMIds,
+          credentials: {
+            url: vcenterUrl.trim(),
+            username: username.trim(),
+            password: password,
+          },
+        },
+      });
+      onInspectionStarted();
+      handleClose();
+    } catch (err) {
+      const message = await extractErrorMessage(
+        err,
+        "Failed to start deep inspection",
+      );
+      setGlobalError(message);
+    } finally {
+      setConfiguring(false);
+    }
+  };
+
+  const renderSectionStatus = (status: SectionStatus) => {
+    if (status === "configured") {
+      return (
+        <span className={modalStyles.statusConfigured}>
+          <CheckCircleIcon /> Configured
+        </span>
+      );
+    }
+    return (
+      <span className={modalStyles.statusNotConfigured}>Not configured</span>
+    );
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      aria-labelledby="deep-inspection-modal-title"
+      aria-describedby="deep-inspection-modal-body"
+      variant="medium"
+    >
+      <ModalHeader>
+        {/* Use children instead of title for the tech preview badge popover */}
+        <Flex>
+          <FlexItem>
+            <Title headingLevel="h2">Set up deep inspection</Title>
+          </FlexItem>
+          <FlexItem>
+            <Content component="p">
+              <TechnologyPreviewBadge />
+            </Content>
+          </FlexItem>
+        </Flex>
+      </ModalHeader>
+      <ModalBody id="deep-inspection-modal-body">
+        <Content component="p">
+          Deep Inspection analyzes a VM&apos;s internal configuration through a
+          granular, disk-level scan.
+          <br />
+          {hasVMsSelected
+            ? `Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}`
+            : "Update the VDDK archive and credentials for deep inspection"}
+        </Content>
+
+        {tooManyVMs && (
+          <Alert
+            variant="warning"
+            title={`Deep inspection can be run on up to ${MAX_VMS} VMs at a time.`}
+            isInline
+            style={{ marginBottom: "16px" }}
+          >
+            You have selected {selectedVMIds.length} VMs.
+          </Alert>
+        )}
+
+        {globalError && (
+          <Alert
+            variant="danger"
+            title="Error"
+            isInline
+            style={{ marginBottom: "16px" }}
+          >
+            {globalError}
+          </Alert>
+        )}
+
+        {/* VDDK Configuration Section */}
+        <div className={modalStyles.section}>
+          <button
+            type="button"
+            className={modalStyles.sectionHeader}
+            onClick={() => setVddkExpanded(!vddkExpanded)}
+          >
+            <div className={modalStyles.sectionHeaderLeft}>
+              <Icon>
+                <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
+              </Icon>
+              <div className={modalStyles.sectionTitle}>
+                <strong>VDDK configuration</strong>
+                <Content component="small">Upload a VDDK archive</Content>
+              </div>
+            </div>
+            <div className={modalStyles.sectionHeaderRight}>
+              {renderSectionStatus(vddkStatus)}
+              <AngleRightIcon
+                style={{
+                  transition: "transform 0.2s",
+                  transform: vddkExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                }}
+              />
+            </div>
+          </button>
+
+          {vddkExpanded && (
+            <div className={modalStyles.sectionBody}>
+              {vddkError && (
+                <Alert
+                  variant="danger"
+                  title="Upload failed"
+                  isInline
+                  style={{ marginBottom: "12px" }}
+                >
+                  {vddkError}
+                </Alert>
+              )}
+
+              <Form>
+                <FormGroup
+                  label="VDDK package file"
+                  isRequired
+                  fieldId="vddk-file"
+                >
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem
+                        icon={<InfoCircleIcon />}
+                        variant="indeterminate"
+                      >
+                        Upload a VMware VDDK .tar.gz archive (max 64 MB)
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <FileUpload
+                      id="vddk-file-upload"
+                      value={vddkFile ?? undefined}
+                      filename={vddkFileName}
+                      onFileInputChange={(_ev, file) =>
+                        handleVddkFileChange(_ev as React.ChangeEvent, file)
+                      }
+                      onClearClick={handleVddkClear}
+                      browseButtonText="Upload"
+                      isLoading={vddkUploading}
+                      isDisabled={vddkUploading}
+                      accept=".tar.gz,.tgz"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  {vddkProps && (
+                    <HelperText>
+                      <HelperTextItem>
+                        Selected: {vddkFileName || `VDDK v${vddkProps.version}`}{" "}
+                        ({((vddkProps.bytes || 0) / (1024 * 1024)).toFixed(2)}{" "}
+                        MB)
+                      </HelperTextItem>
+                    </HelperText>
+                  )}
+                </FormGroup>
+              </Form>
+              {vddkFile && vddkStatus !== "configured" && (
+                <Button
+                  variant="secondary"
+                  onClick={handleVddkUpload}
+                  isLoading={vddkUploading}
+                  isDisabled={vddkUploading}
+                  style={{ marginTop: "12px" }}
+                >
+                  Upload VDDK
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Credentials Section */}
+        <div className={modalStyles.section}>
+          <div className={modalStyles.sectionHeader}>
+            <div className={modalStyles.sectionHeaderLeft}>
+              <Icon>
+                <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
+              </Icon>
+              <div className={modalStyles.sectionTitle}>
+                <strong>Credentials</strong>
+                <Content component="small">
+                  Provide vCenter credentials for deep inspection
+                </Content>
+              </div>
+            </div>
+          </div>
+
+          <div className={modalStyles.sectionBody}>
+            <Form>
+              <FormGroup
+                label="vCenter server"
+                isRequired
+                fieldId="vcenter-url"
+              >
+                <TextInput
+                  id="vcenter-url"
+                  value={vcenterUrl}
+                  onChange={(_ev, val) => setVcenterUrl(val)}
+                  placeholder="vcenter.example.com"
+                />
+              </FormGroup>
+              <FormGroup label="Username" isRequired fieldId="vcenter-user">
+                <TextInput
+                  id="vcenter-user"
+                  value={username}
+                  onChange={(_ev, val) => setUsername(val)}
+                  placeholder="administrator@vsphere.local"
+                />
+              </FormGroup>
+              <FormGroup label="Password" isRequired fieldId="vcenter-pass">
+                <TextInput
+                  id="vcenter-pass"
+                  type="password"
+                  value={password}
+                  onChange={(_ev, val) => setPassword(val)}
+                />
+              </FormGroup>
+            </Form>
+          </div>
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button
+          variant="primary"
+          onClick={handleConfigure}
+          isLoading={configuring}
+          isDisabled={!canConfigure || configuring}
+        >
+          {hasVMsSelected ? "Configure" : "Save configuration"}
+        </Button>
+        <Button variant="link" onClick={handleClose} isDisabled={configuring}>
+          Cancel
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+DeepInspectionModal.displayName = "DeepInspectionModal";
