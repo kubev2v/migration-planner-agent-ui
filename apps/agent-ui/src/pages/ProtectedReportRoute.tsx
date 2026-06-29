@@ -4,7 +4,6 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { newAbortSignal } from "../common/AbortSignal";
-import { REQUEST_TIMEOUT_MS } from "../login-form/Constants";
 import { Symbols } from "../main/Symbols";
 import { ReportLayout } from "./ReportLayout";
 
@@ -18,10 +17,7 @@ export const ProtectedReportRoute: React.FC = () => {
   const [hasCollectedData, setHasCollectedData] = useState(false);
 
   useEffect(() => {
-    const signal = newAbortSignal(
-      REQUEST_TIMEOUT_MS,
-      "Collector status request timed out.",
-    );
+    const signal = newAbortSignal("Collector status request timed out.");
 
     const checkCollectorStatus = async () => {
       try {

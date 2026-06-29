@@ -15,11 +15,16 @@ import {
   PageSidebarBody,
   PageToggleButton,
   Title,
+  Toolbar,
+  ToolbarContent,
+  ToolbarGroup,
+  ToolbarItem,
 } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import RedHatOpenShiftLogo from "../assets/RedHatOpenShiftLogo.png";
+import VCenterCredentialsDropdownMenu from "../credentials/VCenterCredentialsDropdownMenu";
 
 const NAV_ITEMS = [
   { path: "/report/vms-overview", label: "Virtual machines overview" },
@@ -71,7 +76,17 @@ export const ReportLayout: React.FC = () => {
               </MastheadLogo>
             </MastheadBrand>
           </MastheadMain>
-          <MastheadContent />
+          <MastheadContent>
+            <Toolbar isFullHeight>
+              <ToolbarContent>
+                <ToolbarGroup align={{ default: "alignEnd" }}>
+                  <ToolbarItem>
+                    <VCenterCredentialsDropdownMenu />
+                  </ToolbarItem>
+                </ToolbarGroup>
+              </ToolbarContent>
+            </Toolbar>
+          </MastheadContent>
         </Masthead>
       }
       sidebar={

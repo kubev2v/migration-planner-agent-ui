@@ -16,8 +16,9 @@
   },
   "dependencies": {
     "@emotion/css": "^11.13.0",
+    "@hookform/resolvers": "^5.4.0",
     "@migration-planner-ui/ioc": "workspace:*",
-    "@openshift-migration-advisor/agent-sdk": "0.12.0-4e95135f8529",
+    "@openshift-migration-advisor/agent-sdk": "0.12.0-9c0f4b0f1f89",
     "@patternfly/react-charts": "^8.0.0",
     "@patternfly/react-core": "^6.4.3",
     "@patternfly/react-icons": "^6.4.0",
@@ -25,10 +26,12 @@
     "react": "^18.3.1",
     "react-content-loader": "^6.2.0",
     "react-dom": "^18.3.1",
+    "react-hook-form": "^7.79.0",
     "react-router-dom": "^6.26.0",
     "react-use": "^17.5.1",
     "victory": "^37.3.6",
-    "victory-core": "^37.3.6"
+    "victory-core": "^37.3.6",
+    "yup": "^1.7.1"
   },
   "files": [
     "dist"
