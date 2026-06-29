@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - stable
 
 jobs:
   notify:
@@ -11,7 +12,7 @@ jobs:
       - name: Wait for Quay.io image # Notify only after the image was builded
         run: |
           IMAGE="quay.io/redhat-user-workloads/assisted-migration-tenant/migration-planner-agent-ui"
-          TAG="${GITHUB_SHA}"          
+          TAG="${GITHUB_SHA}"
           TIMEOUT=3600                 # 1 hour
           INTERVAL=10                  # check every 10 seconds
           ELAPSED=0
@@ -31,6 +32,7 @@ jobs:
 
           echo "Timeout reached: image $IMAGE:$TAG is still not available."
           exit 1
+
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v1
@@ -51,6 +53,7 @@ jobs:
               "event_type": "agent_ui_updated",
               "client_payload": {
                 "sha": "${{ github.sha }}",
-                "repo": "${{ github.repository }}"
+                "repo": "${{ github.repository }}",
+                "target_branch": "${{ github.ref_name }}"
               }
             }'
