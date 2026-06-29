@@ -20,6 +20,7 @@ const createMockVM = (
   inspectionStatus: inspectionStatus?.state
     ? {
         state: inspectionStatus.state,
+        message: `Mock ${inspectionStatus.state} status`,
       }
     : undefined,
   inspectionConcernCount: inspectionStatus?.concernCount,

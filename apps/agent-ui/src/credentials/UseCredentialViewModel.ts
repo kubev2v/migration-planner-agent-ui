@@ -3,14 +3,14 @@ import type {
   CollectorStartRequest,
   CollectorStatus,
   DefaultApiInterface,
+  VcenterCredentials,
 } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { newAbortSignal } from "../../common/AbortSignal";
-import type { ApiError } from "../../common/components/index";
-import { Symbols } from "../../main/Symbols";
-import { REQUEST_TIMEOUT_MS } from "../Constants";
-import type { Credentials } from "../LoginFormComponent";
+import { newAbortSignal } from "../common/AbortSignal";
+import type { ApiError } from "../common/components/index";
+import { parseApiError } from "../common/parseApiError";
+import { Symbols } from "../main/Symbols";
 
 // Maximum consecutive polling failures before reporting error to user
 const MAX_POLL_FAILURES = 5;
@@ -20,7 +20,10 @@ export interface LoginViewModelInterface {
   isCollecting: boolean;
   status: CollectorStatus["status"] | null;
   error: ApiError | null;
-  onCollect: (credentials: Credentials, isDataShared: boolean) => Promise<void>;
+  onCollect: (
+    credentials: VcenterCredentials,
+    isDataShared: boolean,
+  ) => Promise<void>;
   onCancel: () => Promise<void>;
 }
 
@@ -62,7 +65,6 @@ export const useLoginViewModel = (
     const checkInitialStatus = async () => {
       try {
         const signal = newAbortSignal(
-          REQUEST_TIMEOUT_MS,
           "Initial collector status request timed out.",
         );
         const collectorStatus = await agentApi.getCollectorStatus({ signal });
@@ -92,10 +94,7 @@ export const useLoginViewModel = (
     const pollStatus = async () => {
       try {
         // Create a timed abort signal to prevent requests from piling up
-        const signal = newAbortSignal(
-          REQUEST_TIMEOUT_MS,
-          "Collector status request timed out.",
-        );
+        const signal = newAbortSignal("Collector status request timed out.");
 
         const collectorStatus = await agentApi.getCollectorStatus({ signal });
 
@@ -154,7 +153,7 @@ export const useLoginViewModel = (
   }, [isCollecting, agentApi, navigate]);
 
   const onCollect = useCallback(
-    async (credentials: Credentials, isDataShared: boolean) => {
+    async (credentials: VcenterCredentials, isDataShared: boolean) => {
       setError(null);
       setIsCollecting(true);
       setStatus("connecting");
@@ -167,7 +166,6 @@ export const useLoginViewModel = (
         // Step 1: If data sharing is enabled, change agent mode to "connected"
         if (isDataShared) {
           const signal = newAbortSignal(
-            REQUEST_TIMEOUT_MS,
             "The server didn't respond in a timely fashion.",
           );
 
@@ -188,15 +186,27 @@ export const useLoginViewModel = (
           }
         }
 
-        // Step 2: Start the collection process
+        // Step 2: Save vCenter credentials
+        const vcenterCredentials = {
+          url: credentials.url,
+          username: credentials.username,
+          password: credentials.password,
+        };
+
+        let signal = newAbortSignal(
+          "The server didn't respond in a timely fashion.",
+        );
+
+        await agentApi.putCredentials({ vcenterCredentials }, { signal });
+
+        // Step 3: Start the collection process
         const collectorRequest: CollectorStartRequest = {
           url: credentials.url,
           username: credentials.username,
           password: credentials.password,
         };
 
-        const signal = newAbortSignal(
-          REQUEST_TIMEOUT_MS,
+        signal = newAbortSignal(
           "The server didn't respond in a timely fashion.",
         );
 
@@ -210,25 +220,17 @@ export const useLoginViewModel = (
         setStatus(null);
 
         // Provide context-aware error messages
-        let errorMessage: string;
+        let fallbackMessage: string;
         if (modeChangeSucceeded) {
-          // Mode change succeeded but collection failed
-          errorMessage =
-            err instanceof Error
-              ? `Data sharing was enabled, but collection failed: ${err.message}`
-              : "Data sharing was enabled, but failed to start collection";
+          fallbackMessage =
+            "Data sharing was enabled, but failed to start collection";
         } else if (isDataShared && !modeChangeSucceeded) {
-          // Mode change failed
-          errorMessage =
-            err instanceof Error
-              ? `Failed to enable data sharing: ${err.message}`
-              : "Failed to enable data sharing";
+          fallbackMessage = "Failed to enable data sharing";
         } else {
-          // Collection failed without mode change
-          errorMessage =
-            err instanceof Error ? err.message : "Failed to start collection";
+          fallbackMessage = "Failed to start collection";
         }
 
+        const errorMessage = await parseApiError(err, fallbackMessage);
         setError({ message: errorMessage });
         console.error("Error during collection start:", err);
       }
@@ -245,8 +247,10 @@ export const useLoginViewModel = (
       // Reset failure counter when cancelling
       pollFailuresRef.current = 0;
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to cancel collection";
+      const errorMessage = await parseApiError(
+        err,
+        "Failed to cancel collection",
+      );
       setError({ message: errorMessage });
       console.error("Error canceling collection:", err);
     }
