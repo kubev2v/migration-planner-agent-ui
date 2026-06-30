@@ -24,11 +24,13 @@ import {
   Stack,
   StackItem,
   Title,
+  Tooltip,
 } from "@patternfly/react-core";
 import { ColumnsIcon, CopyIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
+import { useCapability } from "../../../credentials/CredentialsContext";
 import useLocalStorage from "../../../hooks/useLocalStorage";
 import type {
   ForecasterStatus,
@@ -86,6 +88,13 @@ export const StorageOffloadResultsView: React.FC<
   onStartOver,
   isBenchmarkRunning,
 }) => {
+  const {
+    shouldShowTooltip,
+    shouldRequestCredentials,
+    errorTooltipContent,
+    openEditModal,
+  } = useCapability("forecaster");
+
   const [filter, setFilter] = useState("");
   const [drawerPair, setDrawerPair] = useState<SelectedPair | null>(null);
   const [isColumnSelectOpen, setIsColumnSelectOpen] = useState(false);
@@ -287,18 +296,32 @@ export const StorageOffloadResultsView: React.FC<
                     wrap="wrap"
                   >
                     <FlexItem>
-                      <Button
-                        variant="primary"
-                        onClick={onAddPair}
-                        isDisabled={isBenchmarkRunning}
-                        title={
-                          isBenchmarkRunning
-                            ? "Wait for the current benchmark to finish before adding more pairs"
-                            : undefined
-                        }
-                      >
-                        Add datastore pair estimate
-                      </Button>
+                      {shouldShowTooltip ? (
+                        <Tooltip content={errorTooltipContent}>
+                          <Button variant="primary" isAriaDisabled>
+                            Add datastore pair estimate
+                          </Button>
+                        </Tooltip>
+                      ) : isBenchmarkRunning ? (
+                        <Tooltip content="Wait for the current benchmark to finish before adding more pairs">
+                          <Button variant="primary" isAriaDisabled>
+                            Add datastore pair estimate
+                          </Button>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          onClick={() => {
+                            if (shouldRequestCredentials) {
+                              openEditModal(() => onAddPair());
+                            } else {
+                              onAddPair();
+                            }
+                          }}
+                        >
+                          Add datastore pair estimate
+                        </Button>
+                      )}
                     </FlexItem>
                     <FlexItem>
                       <Button

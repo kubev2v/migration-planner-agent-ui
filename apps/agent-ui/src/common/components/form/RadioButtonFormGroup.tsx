@@ -38,10 +38,9 @@ export default function RadioButtonFormGroup({
         name={name}
         control={methods.control}
         render={({ field }) => (
-          <div style={{ display: "flex", gap: "16px" }}>
+          <div style={{ display: "flex", gap: "16px" }} role="radiogroup">
             {options.map((option) => (
               <Radio
-                role="radiogroup"
                 key={option.value}
                 id={option.id}
                 name={name}

@@ -19,12 +19,16 @@ import {
   CheckCircleIcon,
   ClusterIcon,
   DisconnectedIcon,
+  EditIcon,
   ExclamationCircleIcon,
   SpinnerIcon,
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useState } from "react";
-import { useCredentials } from "./CredentialsContext";
+import {
+  type CredentialStatusType,
+  useCredentials,
+} from "./CredentialsContext";
 import { RemoveVCenterConnectionModal } from "./RemoveVCenterConnectionModal";
 import { VCenterCredentialsModal } from "./VCenterCredentialsModal";
 
@@ -36,12 +40,77 @@ const vcenterCredentialsDropdownStyles = css`
   max-width: 320px;
 `;
 
+function renderStatusLabel(
+  status: CredentialStatusType,
+  error: string | null,
+): React.ReactElement {
+  switch (status) {
+    case "error":
+      return (
+        <Label
+          isCompact
+          color="red"
+          icon={<ExclamationCircleIcon />}
+          className={connectedLabelStyles}
+          title={error || undefined}
+        >
+          Error
+        </Label>
+      );
+    case "loading":
+      return (
+        <Label
+          isCompact
+          color="blue"
+          icon={<SpinnerIcon />}
+          className={connectedLabelStyles}
+        >
+          Loading
+        </Label>
+      );
+    case "connected":
+      return (
+        <Label
+          isCompact
+          color="green"
+          icon={<CheckCircleIcon />}
+          className={connectedLabelStyles}
+        >
+          Connected
+        </Label>
+      );
+    case "removed":
+      return (
+        <Label
+          isCompact
+          color="orange"
+          icon={<DisconnectedIcon />}
+          className={connectedLabelStyles}
+        >
+          Removed
+        </Label>
+      );
+    case "editing":
+      return (
+        <Label
+          isCompact
+          color="purple"
+          icon={<EditIcon />}
+          className={connectedLabelStyles}
+        >
+          Updating
+        </Label>
+      );
+  }
+}
+
 const VCenterCredentialsDropdownMenu: React.FC = () => {
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
 
   const {
     credentialStatus,
+    credentialStatusType,
     isLoading,
     error,
     isEditModalOpen,
@@ -79,43 +148,7 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
             icon={<ClusterIcon />}
             className={vcenterCredentialsDropdownStyles}
           >
-            {error ? (
-              <Label
-                isCompact
-                color="red"
-                icon={<ExclamationCircleIcon />}
-                className={connectedLabelStyles}
-              >
-                Error
-              </Label>
-            ) : isLoading ? (
-              <Label
-                isCompact
-                color="blue"
-                icon={<SpinnerIcon />}
-                className={connectedLabelStyles}
-              >
-                Loading
-              </Label>
-            ) : credentialStatus === null || !credentialStatus.valid ? (
-              <Label
-                isCompact
-                color="orange"
-                icon={<DisconnectedIcon />}
-                className={connectedLabelStyles}
-              >
-                Disconnected
-              </Label>
-            ) : (
-              <Label
-                isCompact
-                color="green"
-                icon={<CheckCircleIcon />}
-                className={connectedLabelStyles}
-              >
-                Connected
-              </Label>
-            )}
+            {renderStatusLabel(credentialStatusType, error)}
             {credentialStatus?.username || "vCenter"}
           </MenuToggle>
         )}
@@ -175,11 +208,15 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
         credentialStatus={credentialStatus}
         isUpdating={isLoading}
         error={error || ""}
-        onClose={closeEditModal}
+        onClose={() => {
+          const triggerSuccessCallback = false;
+          closeEditModal(triggerSuccessCallback);
+        }}
         onUpdate={(credentials) => {
           updateCredential(credentials)
             .then(() => {
-              closeEditModal();
+              const triggerSuccessCallback = true;
+              closeEditModal(triggerSuccessCallback);
             })
             .catch(() => {});
         }}

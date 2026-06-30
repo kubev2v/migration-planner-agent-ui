@@ -18,6 +18,7 @@ import {
 import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useId } from "react";
+import { useCapability } from "../../../../credentials/CredentialsContext";
 import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
 
@@ -66,6 +67,12 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   onRunDeepInspection,
   onResetInspection,
 }) => {
+  const {
+    shouldShowTooltip,
+    shouldRequestCredentials,
+    errorTooltipContent,
+    openEditModal,
+  } = useCapability("inspector");
   const showExcludedSwitchId = useId();
   const {
     page,
@@ -175,16 +182,30 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
           </ToolbarItem>
 
           <ToolbarItem>
-            <Tooltip content="Select VMs for deep inspection.">
-              <Button
-                variant="primary"
-                icon={<MagicIcon />}
-                isDisabled={selectedVMs.size === 0}
-                onClick={() => onRunDeepInspection?.()}
-              >
-                Run deep inspection
-              </Button>
-            </Tooltip>
+            {shouldShowTooltip ? (
+              <Tooltip content={errorTooltipContent}>
+                <Button variant="primary" icon={<MagicIcon />} isAriaDisabled>
+                  Run deep inspection
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip content="Select VMs for deep inspection.">
+                <Button
+                  variant="primary"
+                  icon={<MagicIcon />}
+                  isAriaDisabled={selectedVMs.size === 0}
+                  onClick={() => {
+                    if (shouldRequestCredentials) {
+                      openEditModal(() => onRunDeepInspection?.());
+                    } else {
+                      onRunDeepInspection?.();
+                    }
+                  }}
+                >
+                  Run deep inspection
+                </Button>
+              </Tooltip>
+            )}
           </ToolbarItem>
           {inspectionActive && (
             <ToolbarItem>

@@ -39,8 +39,6 @@ export const DataSharingCheckbox: React.FC<DataSharingCheckboxProps> = ({
                 <span>
                   Data is anonymized and strictly excludes personally
                   identifiable infrastructure info (VM/host/cluster/disk names).
-                  <br />
-                  Red Hat never sends your vCenter credentials.
                 </span>
               }
               isChecked={isChecked}

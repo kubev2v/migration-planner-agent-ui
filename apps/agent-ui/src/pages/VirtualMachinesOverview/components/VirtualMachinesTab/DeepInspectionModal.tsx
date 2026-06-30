@@ -22,7 +22,6 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
-  TextInput,
   Title,
 } from "@patternfly/react-core";
 import {
@@ -48,7 +47,6 @@ const modalStyles = {
   section: css`
     border: 1px solid var(--pf-t--global--border--color--default);
     border-radius: var(--pf-t--global--border--radius--small);
-    margin-bottom: 16px;
     overflow: hidden;
   `,
   sectionHeader: css`
@@ -118,11 +116,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   const [vddkError, setVddkError] = useState<string | null>(null);
   const [vddkProps, setVddkProps] = useState<VddkProperties | null>(null);
 
-  // Credentials state
-  const [vcenterUrl, setVcenterUrl] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-
   // Global state
   const [configuring, setConfiguring] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -176,9 +169,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setVddkStatus("notConfigured");
     setVddkError(null);
     setVddkProps(null);
-    setVcenterUrl("");
-    setUsername("");
-    setPassword("");
     setConfiguring(false);
     setGlobalError(null);
     setVddkExpanded(true);
@@ -232,15 +222,8 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
 
   const hasVMsSelected = selectedVMIds.length > 0;
 
-  const areCredentialsValid =
-    vcenterUrl.trim() !== "" &&
-    username.trim() !== "" &&
-    password.trim() !== "";
-
   const canConfigure =
-    vddkStatus === "configured" &&
-    areCredentialsValid &&
-    (!hasVMsSelected || !tooManyVMs);
+    vddkStatus === "configured" && (!hasVMsSelected || !tooManyVMs);
 
   const isInspectorRunning = async (): Promise<boolean> => {
     try {
@@ -288,11 +271,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
       await agentApi.startInspection({
         startInspectionRequest: {
           vmIds: selectedVMIds,
-          credentials: {
-            url: vcenterUrl.trim(),
-            username: username.trim(),
-            password: password,
-          },
         },
       });
       onInspectionStarted();
@@ -476,56 +454,6 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
               )}
             </div>
           )}
-        </div>
-
-        {/* Credentials Section */}
-        <div className={modalStyles.section}>
-          <div className={modalStyles.sectionHeader}>
-            <div className={modalStyles.sectionHeaderLeft}>
-              <Icon>
-                <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
-              </Icon>
-              <div className={modalStyles.sectionTitle}>
-                <strong>Credentials</strong>
-                <Content component="small">
-                  Provide vCenter credentials for deep inspection
-                </Content>
-              </div>
-            </div>
-          </div>
-
-          <div className={modalStyles.sectionBody}>
-            <Form>
-              <FormGroup
-                label="vCenter server"
-                isRequired
-                fieldId="vcenter-url"
-              >
-                <TextInput
-                  id="vcenter-url"
-                  value={vcenterUrl}
-                  onChange={(_ev, val) => setVcenterUrl(val)}
-                  placeholder="vcenter.example.com"
-                />
-              </FormGroup>
-              <FormGroup label="Username" isRequired fieldId="vcenter-user">
-                <TextInput
-                  id="vcenter-user"
-                  value={username}
-                  onChange={(_ev, val) => setUsername(val)}
-                  placeholder="administrator@vsphere.local"
-                />
-              </FormGroup>
-              <FormGroup label="Password" isRequired fieldId="vcenter-pass">
-                <TextInput
-                  id="vcenter-pass"
-                  type="password"
-                  value={password}
-                  onChange={(_ev, val) => setPassword(val)}
-                />
-              </FormGroup>
-            </Form>
-          </div>
         </div>
       </ModalBody>
       <ModalFooter>

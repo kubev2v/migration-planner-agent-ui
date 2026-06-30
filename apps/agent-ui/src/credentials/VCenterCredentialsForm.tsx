@@ -14,6 +14,7 @@ interface VCenterCredentialsFormProps
   onSubmit: (credentials: VcenterCredentials) => void;
   error?: string;
   initialCredentials?: CredentialStatus | null;
+  isEditing?: boolean;
 }
 
 function normalizeVcenterUrl(url: string) {
@@ -34,6 +35,7 @@ export const VCenterCredentialsForm: React.FC<VCenterCredentialsFormProps> = ({
   onSubmit,
   error,
   initialCredentials,
+  isEditing = false,
   ...props
 }) => {
   const methods = useForm<VcenterCredentials>({
@@ -72,6 +74,7 @@ export const VCenterCredentialsForm: React.FC<VCenterCredentialsFormProps> = ({
           name="url"
           type="url"
           isRequired
+          isDisabled={isEditing}
           placeholder="https://vcenter-prod-east.lab.example.com"
           helpText="Include /sdk if your environment requires it."
         />

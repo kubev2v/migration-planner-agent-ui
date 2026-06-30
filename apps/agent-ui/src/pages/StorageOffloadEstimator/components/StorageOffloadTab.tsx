@@ -9,24 +9,19 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TechnologyPreviewBadge } from "../../../common/components/TechnologyPreviewBadge";
 import {
-  CredentialsForbiddenError,
   ForecastConflictError,
   getForecasterStatus,
   getRuns,
   getStats,
-  postCredentials,
   postDatastores,
-  putCredentials,
   startForecast,
 } from "../utils/forecasterApi";
 import {
   clearWizardState,
   loadWizardState,
   type PageView,
-  saveWizardState,
 } from "../utils/forecasterSession";
 import type {
-  ForecasterCredentials,
   ForecasterDatastore,
   ForecasterStatus,
   ForecastRun,
@@ -62,18 +57,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   const [mergeDraftOnRun, setMergeDraftOnRun] = useState(false);
   const [setupDraft, setSetupDraft] = useState<SetupDraft | null>(null);
   const [runLoading, setRunLoading] = useState(false);
-
-  const [credentials, setCredentials] = useState<ForecasterCredentials>({
-    url: saved.url ?? "",
-    username: saved.username ?? "",
-    password: "",
-  });
-  const [credError, setCredError] = useState<string | null>(null);
-  const [credMissingPrivileges, setCredMissingPrivileges] = useState<string[]>(
-    [],
-  );
-  const [credLoading, setCredLoading] = useState(false);
-  const [credAcknowledged, setCredAcknowledged] = useState(false);
 
   const [datastores, setDatastores] = useState<ForecasterDatastore[]>(
     saved.datastores ?? [],
@@ -216,25 +199,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   }, [armWasRunning, basePath]);
 
   useEffect(() => {
-    if (!credentials.url && !pageView) return;
-    saveWizardState({
-      url: credentials.url,
-      username: credentials.username,
-      pageView,
-      credentialsSubmitted,
-      datastores,
-      pairs,
-    });
-  }, [
-    credentials.url,
-    credentials.username,
-    pageView,
-    credentialsSubmitted,
-    datastores,
-    pairs,
-  ]);
-
-  useEffect(() => {
     if (
       pageView !== "results" ||
       resultsLoading ||
@@ -260,9 +224,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setCredentialsSubmitted(false);
     setIsSetupModalOpen(false);
     setSetupDraft(null);
-    setCredentials({ url: "", username: "", password: "" });
-    setCredError(null);
-    setCredMissingPrivileges([]);
     setDatastores([]);
     setDsGroups([]);
     setPairs([createEmptyPair()]);
@@ -270,39 +231,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setBenchmarkDone(false);
     setStatsMap({});
     setAllRuns([]);
-    setCredAcknowledged(false);
   }, [stopPolling]);
-
-  const handleSaveCredentials = useCallback(async () => {
-    if (!credentials.url || !credentials.username || !credentials.password) {
-      setCredError("All fields are required.");
-      return;
-    }
-    setCredError(null);
-    setCredMissingPrivileges([]);
-    setCredLoading(true);
-    try {
-      await Promise.all([
-        postCredentials(basePath, credentials),
-        putCredentials(basePath, credentials),
-      ]);
-      setDsLoading(true);
-      const dsList = await postDatastores(basePath);
-      setDatastores(dsList);
-      setDsGroups(groupDatastoresByArray(dsList));
-      setCredentialsSubmitted(true);
-    } catch (e) {
-      if (e instanceof CredentialsForbiddenError) {
-        setCredError(e.message);
-        setCredMissingPrivileges(e.missingPrivileges);
-      } else {
-        setCredError(e instanceof Error ? e.message : String(e));
-      }
-    } finally {
-      setCredLoading(false);
-      setDsLoading(false);
-    }
-  }, [basePath, credentials]);
 
   const redirectToRunningBenchmark = useCallback(async (): Promise<boolean> => {
     try {
@@ -325,7 +254,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   }, [armWasRunning, basePath]);
 
   const openSetupModal = useCallback(
-    (mode: "initial" | "add-pairs") => {
+    async (mode: "initial" | "add-pairs") => {
       setMergeDraftOnRun(mode === "add-pairs");
       setSetupDraft({
         pairs:
@@ -337,8 +266,30 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         vmAcknowledged: false,
       });
       setIsSetupModalOpen(true);
+
+      // Try to load datastores using credentials from the agent context
+      if (datastores.length === 0) {
+        // Use credentials from context - the backend should have access to them
+        setDsLoading(true);
+        try {
+          // Try to load datastores without passing credentials (backend should use stored ones)
+          const dsList = await postDatastores(basePath);
+          setDatastores(dsList);
+          setDsGroups(groupDatastoresByArray(dsList));
+          setCredentialsSubmitted(true);
+          setDsError(null);
+        } catch (e) {
+          setDsError(
+            e instanceof Error
+              ? e.message
+              : "Failed to load datastores. Please verify your vCenter credentials are correctly configured.",
+          );
+        } finally {
+          setDsLoading(false);
+        }
+      }
     },
-    [pairs],
+    [pairs, datastores.length, basePath],
   );
 
   const closeSetupModal = useCallback(() => {
@@ -398,8 +349,9 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       }
 
       try {
+        // Note: credentials are not passed here - the forecaster backend should use
+        // the credentials already configured in the agent (shared backend state)
         await startForecast(basePath, {
-          credentials,
           pairs: validPairs.map((p) => ({
             name: p.name,
             sourceDatastore: p.sourceDatastore,
@@ -457,7 +409,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       basePath,
       closeSetupModal,
       completePairs,
-      credentials,
       finishBenchmarkStart,
       markBenchmarkStarting,
       redirectToRunningBenchmark,
@@ -529,15 +480,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         <RunEstimateModal
           isOpen={isSetupModalOpen}
           onClose={closeSetupModal}
-          credentials={credentials}
-          onCredentialsChange={setCredentials}
-          credentialsSubmitted={credentialsSubmitted}
-          credError={credError}
-          credMissingPrivileges={credMissingPrivileges}
-          credLoading={credLoading}
-          credAcknowledged={credAcknowledged}
-          onCredAcknowledgedChange={setCredAcknowledged}
-          onSubmitCredentials={handleSaveCredentials}
           draft={setupDraft}
           onDraftChange={setSetupDraft}
           datastores={datastores}

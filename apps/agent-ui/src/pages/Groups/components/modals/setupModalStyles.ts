@@ -4,7 +4,6 @@ export const setupModalStyles = {
   section: css`
     border: 1px solid var(--pf-t--global--border--color--default);
     border-radius: var(--pf-t--global--border--radius--small);
-    margin-bottom: 16px;
     overflow: hidden;
   `,
   sectionLocked: css`

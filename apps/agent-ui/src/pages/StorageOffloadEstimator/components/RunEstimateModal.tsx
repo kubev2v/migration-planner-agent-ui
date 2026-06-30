@@ -1,5 +1,7 @@
 import {
+  Alert,
   Button,
+  Checkbox,
   Content,
   Flex,
   FlexItem,
@@ -8,10 +10,13 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Stack,
+  StackItem,
 } from "@patternfly/react-core";
 import {
   AngleRightIcon,
   CheckCircleIcon,
+  ExternalLinkAltIcon,
   InfoCircleIcon,
 } from "@patternfly/react-icons";
 import type React from "react";
@@ -20,11 +25,9 @@ import { TechnologyPreviewBadge } from "../../../common/components/TechnologyPre
 import { setupModalStyles } from "../../Groups/components/modals/setupModalStyles";
 import type {
   DatastoreGroup,
-  ForecasterCredentials,
   ForecasterDatastore,
   SelectedPair,
 } from "../utils/forecasterTypes";
-import { CredentialsForm } from "./CredentialsForm";
 import { SelectPairsForm } from "./SelectPairsForm";
 import { isCompletePair } from "./storageOffloadUtils";
 
@@ -33,15 +36,6 @@ export type SetupDraft = { pairs: SelectedPair[]; vmAcknowledged: boolean };
 export interface RunEstimateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  credentials: ForecasterCredentials;
-  onCredentialsChange: (c: ForecasterCredentials) => void;
-  credentialsSubmitted: boolean;
-  credError: string | null;
-  credMissingPrivileges: string[];
-  credLoading: boolean;
-  credAcknowledged: boolean;
-  onCredAcknowledgedChange: (checked: boolean) => void;
-  onSubmitCredentials: () => void;
   draft: SetupDraft;
   onDraftChange: (draft: SetupDraft) => void;
   datastores: ForecasterDatastore[];
@@ -59,15 +53,6 @@ export interface RunEstimateModalProps {
 export const RunEstimateModal: React.FC<RunEstimateModalProps> = ({
   isOpen,
   onClose,
-  credentials,
-  onCredentialsChange,
-  credentialsSubmitted,
-  credError,
-  credMissingPrivileges,
-  credLoading,
-  credAcknowledged,
-  onCredAcknowledgedChange,
-  onSubmitCredentials,
   draft,
   onDraftChange,
   datastores,
@@ -81,27 +66,16 @@ export const RunEstimateModal: React.FC<RunEstimateModalProps> = ({
   canRun,
   runLoading,
 }) => {
-  const [credExpanded, setCredExpanded] = useState(!credentialsSubmitted);
-  const [pairsExpanded, setPairsExpanded] = useState(credentialsSubmitted);
+  const [pairsExpanded, setPairsExpanded] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
-      setCredExpanded(!credentialsSubmitted);
-      setPairsExpanded(credentialsSubmitted);
+      setPairsExpanded(true);
     }
-  }, [isOpen, credentialsSubmitted]);
-
-  const canSubmitCredentials =
-    !!credentials.url &&
-    !!credentials.username &&
-    !!credentials.password &&
-    credAcknowledged;
+  }, [isOpen]);
 
   const pairsReady =
-    credentialsSubmitted &&
-    draft.pairs.some(isCompletePair) &&
-    !hasNoCaps &&
-    draft.vmAcknowledged;
+    draft.pairs.some(isCompletePair) && !hasNoCaps && draft.vmAcknowledged;
 
   return (
     <Modal
@@ -125,143 +99,106 @@ export const RunEstimateModal: React.FC<RunEstimateModalProps> = ({
         labelId="run-estimate-modal-title"
       />
       <ModalBody>
-        <Content component="p" style={{ marginBottom: "20px" }}>
-          Connect to vCenter, choose datastore pairs, then run the estimate.
-          Results appear on the main page when the benchmark starts.
-        </Content>
-
-        <div className={setupModalStyles.section}>
-          <button
-            type="button"
-            className={setupModalStyles.sectionHeader}
-            onClick={() => setCredExpanded((v) => !v)}
-          >
-            <div className={setupModalStyles.sectionHeaderLeft}>
-              <Icon>
-                <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
-              </Icon>
-              <div className={setupModalStyles.sectionTitle}>
-                <strong>vCenter credentials</strong>
-                <Content component="small">
-                  Required to discover datastores and run the offload benchmark
-                </Content>
-              </div>
-            </div>
-            <div className={setupModalStyles.sectionHeaderRight}>
-              {credentialsSubmitted ? (
-                <span className={setupModalStyles.statusSuccess}>
-                  <CheckCircleIcon /> Submitted
-                </span>
-              ) : (
-                <span className={setupModalStyles.statusPending}>
-                  Not submitted
-                </span>
-              )}
-              <AngleRightIcon
-                style={{
-                  transition: "transform 0.2s",
-                  transform: credExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                }}
-              />
-            </div>
-          </button>
-          {credExpanded && (
-            <div className={setupModalStyles.sectionBody}>
-              <CredentialsForm
-                credentials={credentials}
-                onChange={onCredentialsChange}
-                error={credError}
-                missingPrivileges={credMissingPrivileges}
-                isLoading={credLoading}
-                acknowledged={credAcknowledged}
-                onAcknowledgedChange={onCredAcknowledgedChange}
-              />
-              {!credentialsSubmitted && (
-                <Button
-                  variant="secondary"
-                  onClick={onSubmitCredentials}
-                  isLoading={credLoading}
-                  isDisabled={!canSubmitCredentials || credLoading}
-                  style={{ marginTop: "8px" }}
-                >
-                  Submit credentials
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div
-          className={
-            credentialsSubmitted
-              ? setupModalStyles.section
-              : setupModalStyles.sectionLocked
-          }
-        >
-          <button
-            type="button"
-            className={setupModalStyles.sectionHeader}
-            onClick={() => credentialsSubmitted && setPairsExpanded((v) => !v)}
-            disabled={!credentialsSubmitted}
-          >
-            <div className={setupModalStyles.sectionHeaderLeft}>
-              <Icon>
-                <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
-              </Icon>
-              <div className={setupModalStyles.sectionTitle}>
-                <strong>Datastore pairs</strong>
-                <Content component="small">
-                  {credentialsSubmitted
-                    ? "Select source and target datastores for each migration path"
-                    : "Submit vCenter credentials above to unlock this step"}
-                </Content>
-              </div>
-            </div>
-            <div className={setupModalStyles.sectionHeaderRight}>
-              {!credentialsSubmitted ? (
-                <span className={setupModalStyles.statusPending}>Locked</span>
-              ) : pairsReady ? (
-                <span className={setupModalStyles.statusSuccess}>
-                  <CheckCircleIcon /> Ready
-                </span>
-              ) : (
-                <span className={setupModalStyles.statusPending}>
-                  Not ready
-                </span>
-              )}
-              <AngleRightIcon
-                style={{
-                  transition: "transform 0.2s",
-                  transform: pairsExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                }}
-              />
-            </div>
-          </button>
-          {credentialsSubmitted && pairsExpanded && (
-            <div className={setupModalStyles.sectionBody}>
-              <SelectPairsForm
-                datastores={datastores}
-                groups={groups}
-                pairs={draft.pairs}
-                onPairsChange={(pairs) => onDraftChange({ ...draft, pairs })}
-                isLoading={dsLoading}
-                error={dsError}
-                pairCapsMap={pairCapsMap}
-                capsLoading={capsLoading}
-                showVmWarning
-                vmAcknowledged={draft.vmAcknowledged}
-                onVmAcknowledgedChange={(vmAcknowledged) =>
-                  onDraftChange({ ...draft, vmAcknowledged })
+        <Stack hasGutter>
+          <StackItem>
+            <Content component="p">
+              Choose datastore pairs, then run the estimate. Results appear on
+              the main page when the benchmark starts.
+            </Content>
+          </StackItem>
+          <StackItem>
+            <Alert
+              variant="warning"
+              isInline
+              title="The forecaster creates temporary virtual machines and virtual disks in your vCenter environment"
+            >
+              <Content component="p" style={{ marginBottom: "12px" }}>
+                While all resources are cleaned up automatically after
+                benchmarking, vCenter administrators should be aware of this
+                activity.
+              </Content>
+              <Checkbox
+                id="pairs-acknowledge-temp-resources"
+                label={
+                  <span>
+                    I understand temporary resources will be created in my
+                    vCenter environment.{" "}
+                    <a
+                      href="https://docs.redhat.com/en/documentation/migration_toolkit_for_virtualization/2.10/html-single/planning_your_migration_to_red_hat_openshift_virtualization/index#about-storage-copy-offload_vmware"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Learn more <ExternalLinkAltIcon />
+                    </a>
+                  </span>
+                }
+                isChecked={draft.vmAcknowledged}
+                onChange={(_e, checked) =>
+                  onDraftChange({ ...draft, vmAcknowledged: checked })
                 }
               />
+            </Alert>
+          </StackItem>
+          <StackItem>
+            <div className={setupModalStyles.section}>
+              <button
+                type="button"
+                className={setupModalStyles.sectionHeader}
+                onClick={() => setPairsExpanded((v) => !v)}
+              >
+                <div className={setupModalStyles.sectionHeaderLeft}>
+                  <Icon>
+                    <InfoCircleIcon color="var(--pf-t--global--icon--color--status--info--default)" />
+                  </Icon>
+                  <div className={setupModalStyles.sectionTitle}>
+                    <strong>Datastore pairs</strong>
+                    <Content component="small">
+                      Select source and target datastores for each migration
+                      path
+                    </Content>
+                  </div>
+                </div>
+                <div className={setupModalStyles.sectionHeaderRight}>
+                  {pairsReady ? (
+                    <span className={setupModalStyles.statusSuccess}>
+                      <CheckCircleIcon /> Ready
+                    </span>
+                  ) : (
+                    <span className={setupModalStyles.statusPending}>
+                      Not ready
+                    </span>
+                  )}
+                  <AngleRightIcon
+                    style={{
+                      transition: "transform 0.2s",
+                      transform: pairsExpanded
+                        ? "rotate(90deg)"
+                        : "rotate(0deg)",
+                    }}
+                  />
+                </div>
+              </button>
+              {pairsExpanded && (
+                <div className={setupModalStyles.sectionBody}>
+                  <SelectPairsForm
+                    datastores={datastores}
+                    groups={groups}
+                    pairs={draft.pairs}
+                    onPairsChange={(pairs) =>
+                      onDraftChange({ ...draft, pairs })
+                    }
+                    isLoading={dsLoading}
+                    error={dsError}
+                    pairCapsMap={pairCapsMap}
+                    capsLoading={capsLoading}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </StackItem>
+        </Stack>
       </ModalBody>
       <ModalFooter>
-        <Button variant="link" onClick={onClose}>
-          Cancel
-        </Button>
         <Button
           variant="primary"
           onClick={onRun}
@@ -269,6 +206,9 @@ export const RunEstimateModal: React.FC<RunEstimateModalProps> = ({
           isDisabled={!canRun || runLoading}
         >
           Run estimation
+        </Button>
+        <Button variant="link" onClick={onClose}>
+          Cancel
         </Button>
       </ModalFooter>
     </Modal>

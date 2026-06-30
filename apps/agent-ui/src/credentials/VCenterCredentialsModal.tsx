@@ -26,7 +26,7 @@ interface VCenterCredentialsModalProps {
 export const VCenterCredentialsModal: React.FC<
   VCenterCredentialsModalProps
 > = ({ isOpen, credentialStatus, isUpdating, error, onClose, onUpdate }) => {
-  const noCredentials = credentialStatus === null;
+  const isCreating = credentialStatus === null;
 
   return (
     <Modal
@@ -36,16 +36,17 @@ export const VCenterCredentialsModal: React.FC<
       aria-labelledby="edit-vcenter-credentials-title"
     >
       <ModalHeader
-        title={noCredentials ? "Connect to vCenter" : "Edit vCenter credential"}
+        title={isCreating ? "Connect to vCenter" : "Edit vCenter credential"}
         labelId="edit-vcenter-credentials-title"
       />
       <ModalBody>
         <Content component={ContentVariants.p}>
-          {noCredentials
+          {isCreating
             ? "Provide credentials for the vCenter connection. This is used for the assessment report, deep inspection and storage offload estimation."
             : "Update credentials for the vCenter connection. This is used for the assessment report, deep inspection and storage offload estimation."}
         </Content>
         <VCenterCredentialsForm
+          isEditing={!isCreating}
           onSubmit={onUpdate}
           error={error}
           initialCredentials={credentialStatus}
@@ -58,7 +59,7 @@ export const VCenterCredentialsModal: React.FC<
           form="vcenter-credentials-form"
           isLoading={isUpdating}
         >
-          {noCredentials ? "Connect" : "Update credentials"}
+          {isCreating ? "Connect" : "Update credentials"}
         </Button>
         <Button variant="link" onClick={onClose} isDisabled={isUpdating}>
           Cancel

@@ -1,7 +1,6 @@
 import {
   Alert,
   Button,
-  Checkbox,
   Content,
   EmptyState,
   EmptyStateBody,
@@ -294,9 +293,6 @@ export interface SelectPairsFormProps {
   error: string | null;
   pairCapsMap: Record<string, string[] | null>;
   capsLoading: boolean;
-  showVmWarning?: boolean;
-  vmAcknowledged?: boolean;
-  onVmAcknowledgedChange?: (checked: boolean) => void;
 }
 
 export const SelectPairsForm: React.FC<SelectPairsFormProps> = ({
@@ -308,9 +304,6 @@ export const SelectPairsForm: React.FC<SelectPairsFormProps> = ({
   error,
   pairCapsMap,
   capsLoading,
-  showVmWarning = false,
-  vmAcknowledged = false,
-  onVmAcknowledgedChange,
 }) => {
   const showDuplicateWarning = hasDuplicateArrayRoutes(pairs, datastores);
 
@@ -475,37 +468,6 @@ export const SelectPairsForm: React.FC<SelectPairsFormProps> = ({
           Add another pair
         </Button>
       </StackItem>
-
-      {showVmWarning && (
-        <StackItem>
-          <Alert
-            variant="warning"
-            isInline
-            title="The forecaster creates temporary virtual machines and virtual disks in your vCenter environment"
-          >
-            <Content component="p" style={{ marginBottom: "12px" }}>
-              While all resources are cleaned up automatically after
-              benchmarking, vCenter administrators should be aware of this
-              activity.
-            </Content>
-            <Checkbox
-              id="pairs-acknowledge-temp-resources"
-              label="I understand temporary resources will be created in my vCenter environment."
-              isChecked={vmAcknowledged}
-              onChange={(_e, checked) => onVmAcknowledgedChange?.(checked)}
-            />
-            <div style={{ marginTop: "8px" }}>
-              <a
-                href="https://docs.redhat.com/en/documentation/migration_toolkit_for_virtualization/2.10/html-single/planning_your_migration_to_red_hat_openshift_virtualization/index#about-storage-copy-offload_vmware"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Learn more <ExternalLinkAltIcon />
-              </a>
-            </div>
-          </Alert>
-        </StackItem>
-      )}
     </Stack>
   );
 };
