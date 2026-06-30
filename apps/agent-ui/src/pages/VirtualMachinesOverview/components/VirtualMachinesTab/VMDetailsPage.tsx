@@ -679,6 +679,8 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                       <Tr>
                         <Th>Network</Th>
                         <Th>MAC</Th>
+                        <Th>IPv4 Address</Th>
+                        <Th>IPv6 Address</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
@@ -686,6 +688,8 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                         <Tr key={nic.mac || `nic-${nic.index}`}>
                           <Td>{nic.network || "—"}</Td>
                           <Td>{nic.mac || "—"}</Td>
+                          <Td>{nic.ipv4Address || "—"}</Td>
+                          <Td>{nic.ipv6Address || "—"}</Td>
                         </Tr>
                       ))}
                     </Tbody>
