@@ -1,71 +1,80 @@
-name: Pull Request
+name: PR Validations
 on:
   pull_request:
     types:
       - opened
       - reopened
       - synchronize
+      - edited
       - ready_for_review
     branches:
       - main
-      - "release/*"
+      - stable
+
+permissions:
+  pull-requests: read
+  contents: read
+
 jobs:
-  semantic-commit-check:
-    name: Validate PR title
+  # Configuration job - define all shared values once
+  config:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    env:
-      SKIP_SEMANTIC_ACTORS: '["red-hat-konflux[bot]", "dependabot[bot]", "renovate[bot]"]'
+    outputs:
+      allowed-types: ${{ steps.set-config.outputs.allowed-types }}
+      jira-pattern: ${{ steps.set-config.outputs.jira-pattern }}
+      jira-required-types: ${{ steps.set-config.outputs.jira-required-types }}
+      bot-authors: ${{ steps.set-config.outputs.bot-authors }}
     steps:
-      # Skip semantic PR title validation for bot-generated PRs
-      # Bots auto-generate titles like "Bump lodash from 4.0.0 to 4.1.0"
-      - if: ${{ !contains(fromJSON(env.SKIP_SEMANTIC_ACTORS), github.actor) }}
-        uses: amannn/action-semantic-pull-request@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          headerPattern: '^(ECOPROJECT-\d+|NO-JIRA) \| (\w+): (.+)$'
-          headerPatternCorrespondence: scope, type, subject
-          types: |
-            build
-            chore
-            ci
-            docs
-            feat
-            fix
-            perf
-            refactor
-            style
-            test
-          requireScope: true
+      - id: set-config
+        run: |
+          echo 'allowed-types=["feat","fix","ci","build","chore","docs","refactor","test","style","perf"]' >> $GITHUB_OUTPUT
+          echo 'jira-pattern=ECOPROJECT-[0-9]+' >> $GITHUB_OUTPUT
+          echo 'jira-required-types=["feat","fix"]' >> $GITHUB_OUTPUT
+          echo 'bot-authors=["red-hat-konflux[bot]","dependabot[bot]","renovate[bot]"]' >> $GITHUB_OUTPUT
+
+  # Validate commit messages
+  validate-commits:
+    needs: config
+    uses: kubev2v/migration-planner-workflows/.github/workflows/validate-commit-messages.yml@main
+    with:
+      types: ${{ needs.config.outputs.allowed-types }}
+      jira-pattern: ${{ needs.config.outputs.jira-pattern }}
+      jira-required-types: ${{ needs.config.outputs.jira-required-types }}
+      skip-authors: ${{ needs.config.outputs.bot-authors }}
+
+  # Validate PR title and description
+  validate-pr-title:
+    needs: config
+    uses: kubev2v/migration-planner-workflows/.github/workflows/validate-pr-title-description.yml@main
+    with:
+      allowed-types: ${{ needs.config.outputs.allowed-types }}
+      jira-pattern: ${{ needs.config.outputs.jira-pattern }}
+      jira-required-types: ${{ needs.config.outputs.jira-required-types }}
+      skip-authors: ${{ needs.config.outputs.bot-authors }}
+
   lint-and-format:
-    needs: semantic-commit-check
-    if: ${{ !github.event.pull_request.draft && (needs.semantic-commit-check.result == 'success' || needs.semantic-commit-check.result == 'skipped') }}
+    needs: [validate-commits, validate-pr-title]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/install-dependencies
       - run: yarn check:all
   type-check:
-    needs: semantic-commit-check
-    if: ${{ !github.event.pull_request.draft && (needs.semantic-commit-check.result == 'success' || needs.semantic-commit-check.result == 'skipped') }}
+    needs: [validate-commits, validate-pr-title]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/install-dependencies
       - run: yarn typecheck:all
   test:
-    needs: semantic-commit-check
-    if: ${{ !github.event.pull_request.draft && (needs.semantic-commit-check.result == 'success' || needs.semantic-commit-check.result == 'skipped') }}
+    needs: [validate-commits, validate-pr-title]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/install-dependencies
       - run: yarn test:all
   build:
-    needs: semantic-commit-check
-    if: ${{ !github.event.pull_request.draft && (needs.semantic-commit-check.result == 'success' || needs.semantic-commit-check.result == 'skipped') }}
+    needs: [validate-commits, validate-pr-title]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
