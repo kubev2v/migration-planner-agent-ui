@@ -38,23 +38,31 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [nextAgentStatus, nextCollectorStatus] = await Promise.all([
-        agentApi.getAgentStatus(),
-        agentApi.getCollectorStatus(),
-      ]);
-      setAgentStatus(nextAgentStatus);
-      setCollectorStatus(nextCollectorStatus);
-    } catch (err) {
+    setLoading(true);
+    setError(null);
+
+    const [agentResult, collectorResult] = await Promise.allSettled([
+      agentApi.getAgentStatus(),
+      agentApi.getCollectorStatus(),
+    ]);
+
+    if (agentResult.status === "fulfilled") {
+      setAgentStatus(agentResult.value);
+    } else {
+      const err = agentResult.reason;
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       console.error("Error fetching agent status:", err);
       setError(`Failed to fetch status: ${errorMessage}`);
-    } finally {
-      setLoading(false);
     }
+
+    if (collectorResult.status === "fulfilled") {
+      setCollectorStatus(collectorResult.value);
+    } else {
+      console.error("Error fetching collector status:", collectorResult.reason);
+    }
+
+    setLoading(false);
   }, [agentApi]);
 
   useEffect(() => {
