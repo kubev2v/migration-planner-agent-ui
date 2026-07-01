@@ -1,6 +1,7 @@
 import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   AgentStatus,
+  CollectorStatus,
   DefaultApiInterface,
 } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
@@ -15,8 +16,10 @@ import { Symbols } from "../main/Symbols";
 
 interface AgentStatusContextValue {
   agentStatus: AgentStatus | null;
+  collectorStatus: CollectorStatus | null;
   loading: boolean;
   error: string | null;
+  hasCollectionData: boolean;
   refetch: () => Promise<void>;
 }
 
@@ -29,6 +32,8 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
+  const [collectorStatus, setCollectorStatus] =
+    useState<CollectorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,8 +41,12 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       setLoading(true);
       setError(null);
-      const status = await agentApi.getAgentStatus();
-      setAgentStatus(status);
+      const [nextAgentStatus, nextCollectorStatus] = await Promise.all([
+        agentApi.getAgentStatus(),
+        agentApi.getCollectorStatus(),
+      ]);
+      setAgentStatus(nextAgentStatus);
+      setCollectorStatus(nextCollectorStatus);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
@@ -54,8 +63,10 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value: AgentStatusContextValue = {
     agentStatus,
+    collectorStatus,
     loading,
     error,
+    hasCollectionData: collectorStatus?.status === "collected",
     refetch: fetchStatus,
   };
 

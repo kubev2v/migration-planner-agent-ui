@@ -36,6 +36,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
+import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -439,10 +440,7 @@ export const GroupDetailPage: React.FC = () => {
   });
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
-  const discoveryStatus = agentStatus?.console_connection
-    ? agentStatus.console_connection.charAt(0).toUpperCase() +
-      agentStatus.console_connection.slice(1)
-    : "Unknown";
+  const discoveryStatus = formatDiscoveryStatus(agentStatus);
 
   return (
     <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>

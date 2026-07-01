@@ -33,6 +33,7 @@ import {
   DataSharingAlert,
   DataSharingModal,
 } from "../../common/components/index";
+import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -48,6 +49,8 @@ import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { ApplicationsView } from "./components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "./components/Dashboard/Dashboard";
+import { ExportCsvModal } from "./components/Export/ExportCsvModal";
+import { useExportInventory } from "./components/Export/useExportInventory";
 import { VirtualMachinesView } from "./components/VirtualMachinesTab/VirtualMachinesView";
 import { VMUtilizationMetrics } from "./components/VirtualMachinesTab/VMUtilizationMetrics";
 import { createRefreshVmTableFilterOptions } from "./components/VirtualMachinesTab/vmFilterOptions";
@@ -63,13 +66,18 @@ import {
   fetchInventoryFromApi,
   getInventoryAggregateView,
 } from "./inventoryParsing";
+import { ReportPageHeader } from "./ReportPageHeader";
 import { useApplicationsData } from "./useApplicationsData";
 import { useMigrationInventoryRefresh } from "./useMigrationInventoryRefresh";
 import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
+  const {
+    agentStatus,
+    hasCollectionData,
+    refetch: refetchAgentStatus,
+  } = useAgentStatus();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [vmsList, setVmsList] = useState<VirtualMachine[]>([]);
@@ -341,10 +349,26 @@ export const ReportContainer: React.FC = () => {
     vmsPageSize,
   ]);
 
+  const discoveryStatus = formatDiscoveryStatus(agentStatus);
+
+  const {
+    isExportModalOpen,
+    showExport,
+    openExportModal,
+    closeExportModal,
+    confirmExport,
+  } = useExportInventory(agentApi, {
+    hasCollectionData,
+    hasInventory: Boolean(inventory),
+  });
+
   if (loading) {
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
+          <StackItem>
+            <ReportPageHeader discoveryStatus={discoveryStatus} />
+          </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
           </StackItem>
@@ -360,6 +384,9 @@ export const ReportContainer: React.FC = () => {
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
+          <StackItem>
+            <ReportPageHeader discoveryStatus={discoveryStatus} />
+          </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
           </StackItem>
@@ -377,6 +404,9 @@ export const ReportContainer: React.FC = () => {
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
+          <StackItem>
+            <ReportPageHeader discoveryStatus={discoveryStatus} />
+          </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
           </StackItem>
@@ -544,6 +574,13 @@ export const ReportContainer: React.FC = () => {
     <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
       <Stack hasGutter>
         <StackItem>
+          <ReportPageHeader
+            discoveryStatus={discoveryStatus}
+            showExport={showExport}
+            onExportClick={openExportModal}
+          />
+        </StackItem>
+        <StackItem>
           <Header totalVMs={totalVMs} totalClusters={totalClusters} />
         </StackItem>
 
@@ -687,6 +724,12 @@ export const ReportContainer: React.FC = () => {
         onCancel={handleShareCancel}
         isLoading={isShareLoading}
         error={shareError}
+      />
+
+      <ExportCsvModal
+        isOpen={isExportModalOpen}
+        onClose={closeExportModal}
+        onExport={confirmExport}
       />
     </PageSection>
   );
