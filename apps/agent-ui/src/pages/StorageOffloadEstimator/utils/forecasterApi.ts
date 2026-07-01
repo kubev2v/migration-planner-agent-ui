@@ -218,6 +218,63 @@ export async function deleteForecastRun(
   return handleResponse<void>(res);
 }
 
+const CANCEL_SETTLE_POLL_INTERVAL_MS = 500;
+const CANCEL_SETTLE_TIMEOUT_MS = 30_000;
+
+async function waitForForecasterReady(basePath: string): Promise<void> {
+  const deadline = Date.now() + CANCEL_SETTLE_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const status = await getForecasterStatus(basePath);
+    if (status.state === "ready") {
+      return;
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, CANCEL_SETTLE_POLL_INTERVAL_MS),
+    );
+  }
+  throw new Error("Timed out waiting for forecaster to become ready.");
+}
+
+/**
+ * Cancel any in-progress benchmark and delete all persisted runs.
+ */
+export async function deleteAllForecastRuns(basePath: string): Promise<void> {
+  let status: ForecasterStatus;
+  try {
+    status = await getForecasterStatus(basePath);
+  } catch {
+    status = { state: "ready" };
+  }
+
+  if (status.state === "running") {
+    try {
+      await cancelForecast(basePath);
+    } catch {
+      // Benchmark may already be finished or the pipeline may already be stopped.
+    }
+    try {
+      await waitForForecasterReady(basePath);
+    } catch {
+      // Proceed with run deletion even if cancel did not settle in time.
+    }
+  }
+
+  const runs = await getRuns(basePath);
+  if (runs.length === 0) {
+    return;
+  }
+
+  const results = await Promise.allSettled(
+    runs.map((run) => deleteForecastRun(basePath, run.id)),
+  );
+  const failureCount = results.filter((r) => r.status === "rejected").length;
+  if (failureCount > 0) {
+    throw new Error(
+      `Failed to remove ${failureCount} of ${runs.length} estimation run(s).`,
+    );
+  }
+}
+
 /** GET /forecaster/stats — throughput statistics for a datastore pair. */
 export async function getStats(
   basePath: string,

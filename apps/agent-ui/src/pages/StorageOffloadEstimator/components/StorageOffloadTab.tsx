@@ -9,6 +9,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TechnologyPreviewBadge } from "../../../common/components/TechnologyPreviewBadge";
 import {
+  deleteAllForecastRuns,
   ForecastConflictError,
   getForecasterStatus,
   getRuns,
@@ -31,6 +32,7 @@ import type {
 import { useForecasterPolling } from "../utils/useForecasterPolling";
 import { usePairCapabilities } from "../utils/usePairCapabilities";
 import { RunEstimateModal, type SetupDraft } from "./RunEstimateModal";
+import { StartOverConfirmModal } from "./StartOverConfirmModal";
 import { StorageOffloadEmptyState } from "./StorageOffloadEmptyState";
 import { StorageOffloadResultsView } from "./StorageOffloadResultsView";
 import {
@@ -75,10 +77,15 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   );
   const [benchmarkDone, setBenchmarkDone] = useState(false);
   const hasAutoLoadedResultsRef = useRef(false);
+  const loadResultsGenerationRef = useRef(0);
+  const loadResultsInFlightRef = useRef<Promise<void>>(Promise.resolve());
 
   const [resultsLoading, setResultsLoading] = useState(false);
   const [statsMap, setStatsMap] = useState<Record<string, ForecastStats>>({});
   const [allRuns, setAllRuns] = useState<ForecastRun[]>([]);
+  const [isStartOverModalOpen, setIsStartOverModalOpen] = useState(false);
+  const [startOverLoading, setStartOverLoading] = useState(false);
+  const [startOverError, setStartOverError] = useState<string | null>(null);
 
   const completePairs = useMemo(() => pairs.filter(isCompletePair), [pairs]);
   const draftPairs = useMemo(
@@ -91,34 +98,59 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     capabilityPairs,
   );
 
+  const invalidateLoadResults = useCallback(() => {
+    loadResultsGenerationRef.current += 1;
+  }, []);
+
+  const waitForLoadResults = useCallback(async () => {
+    await loadResultsInFlightRef.current.catch(() => {});
+  }, []);
+
   const loadResults = useCallback(
     async (pairNames: string[]) => {
-      if (pairNames.length === 0) {
-        setPageView("results");
-        return;
-      }
-      setResultsLoading(true);
-      try {
-        const [runsResult, ...statsResults] = await Promise.allSettled([
-          getRuns(basePath),
-          ...pairNames.map((n) => getStats(basePath, n)),
-        ]);
+      const generation = ++loadResultsGenerationRef.current;
 
-        if (runsResult.status === "fulfilled") {
-          setAllRuns(runsResult.value);
-        }
-
-        const map: Record<string, ForecastStats> = {};
-        statsResults.forEach((r, i) => {
-          if (r.status === "fulfilled") {
-            map[pairNames[i]] = r.value;
+      const task = (async () => {
+        if (pairNames.length === 0) {
+          if (generation === loadResultsGenerationRef.current) {
+            setPageView("results");
           }
-        });
-        setStatsMap(map);
-      } finally {
-        setResultsLoading(false);
-        setPageView("results");
-      }
+          return;
+        }
+        if (generation === loadResultsGenerationRef.current) {
+          setResultsLoading(true);
+        }
+        try {
+          const [runsResult, ...statsResults] = await Promise.allSettled([
+            getRuns(basePath),
+            ...pairNames.map((n) => getStats(basePath, n)),
+          ]);
+
+          if (generation !== loadResultsGenerationRef.current) {
+            return;
+          }
+
+          if (runsResult.status === "fulfilled") {
+            setAllRuns(runsResult.value);
+          }
+
+          const map: Record<string, ForecastStats> = {};
+          statsResults.forEach((r, i) => {
+            if (r.status === "fulfilled") {
+              map[pairNames[i]] = r.value;
+            }
+          });
+          setStatsMap(map);
+        } finally {
+          if (generation === loadResultsGenerationRef.current) {
+            setResultsLoading(false);
+            setPageView("results");
+          }
+        }
+      })();
+
+      loadResultsInFlightRef.current = task;
+      await task;
     },
     [basePath],
   );
@@ -200,6 +232,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
   useEffect(() => {
     if (
+      startOverLoading ||
       pageView !== "results" ||
       resultsLoading ||
       hasAutoLoadedResultsRef.current ||
@@ -209,14 +242,21 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     }
     hasAutoLoadedResultsRef.current = true;
     void loadResults(completePairs.map((p) => p.name));
-  }, [pageView, resultsLoading, completePairs, loadResults, isPollingActive]);
+  }, [
+    startOverLoading,
+    pageView,
+    resultsLoading,
+    completePairs,
+    loadResults,
+    isPollingActive,
+  ]);
 
   useEffect(() => {
-    if (pageView !== "results") return;
+    if (startOverLoading || pageView !== "results") return;
     void resumePollingIfNeeded(completePairs.map((p) => p.name));
-  }, [pageView, completePairs, resumePollingIfNeeded]);
+  }, [startOverLoading, pageView, completePairs, resumePollingIfNeeded]);
 
-  const reset = useCallback(() => {
+  const clearLocalState = useCallback(() => {
     stopPolling();
     hasAutoLoadedResultsRef.current = false;
     clearWizardState();
@@ -229,9 +269,54 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setPairs([createEmptyPair()]);
     setForecastStatus(null);
     setBenchmarkDone(false);
+    setResultsLoading(false);
     setStatsMap({});
     setAllRuns([]);
   }, [stopPolling]);
+
+  const openStartOverModal = useCallback(() => {
+    setStartOverError(null);
+    setIsStartOverModalOpen(true);
+  }, []);
+
+  const closeStartOverModal = useCallback(() => {
+    if (startOverLoading) return;
+    setStartOverError(null);
+    setIsStartOverModalOpen(false);
+  }, [startOverLoading]);
+
+  const handleStartOverConfirm = useCallback(async () => {
+    setStartOverError(null);
+    setStartOverLoading(true);
+
+    stopPolling();
+    invalidateLoadResults();
+    await waitForLoadResults();
+
+    setForecastStatus(null);
+    setAllRuns([]);
+    setStatsMap({});
+    setResultsLoading(false);
+
+    try {
+      await deleteAllForecastRuns(basePath);
+      clearLocalState();
+      setIsStartOverModalOpen(false);
+    } catch (err) {
+      setStartOverError(err instanceof Error ? err.message : String(err));
+      void loadResults(completePairs.map((p) => p.name));
+    } finally {
+      setStartOverLoading(false);
+    }
+  }, [
+    basePath,
+    clearLocalState,
+    completePairs,
+    invalidateLoadResults,
+    loadResults,
+    stopPolling,
+    waitForLoadResults,
+  ]);
 
   const redirectToRunningBenchmark = useCallback(async (): Promise<boolean> => {
     try {
@@ -466,11 +551,11 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
             pairs={completePairs}
             statsMap={statsMap}
             runs={allRuns}
-            isLoading={resultsLoading}
+            isLoading={startOverLoading || resultsLoading}
             forecastStatus={forecastStatus}
             benchmarkDone={benchmarkDone}
             onAddPair={() => openSetupModal("add-pairs")}
-            onStartOver={reset}
+            onStartOver={openStartOverModal}
             isBenchmarkRunning={isBenchmarkRunning}
           />
         )}
@@ -494,6 +579,16 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
           runLoading={runLoading}
         />
       )}
+
+      <StartOverConfirmModal
+        isOpen={isStartOverModalOpen}
+        isLoading={startOverLoading}
+        error={startOverError}
+        onClose={closeStartOverModal}
+        onConfirm={() => {
+          void handleStartOverConfirm();
+        }}
+      />
     </Stack>
   );
 };
