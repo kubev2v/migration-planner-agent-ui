@@ -14,32 +14,35 @@ export function useExportInventory(
   { hasCollectionData, hasInventory }: UseExportInventoryOptions,
 ) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const showExport = hasCollectionData && hasInventory;
 
   const openExportModal = useCallback(() => {
+    setExportError(null);
     setIsExportModalOpen(true);
   }, []);
 
   const closeExportModal = useCallback(() => {
+    setExportError(null);
     setIsExportModalOpen(false);
   }, []);
 
   const confirmExport = useCallback(
-    (scopes: ExportScopeId[]) => {
-      void (async () => {
-        try {
-          const blob = await fetchExportInventory(agentApi, scopes);
-          downloadExportBlob(blob, getExportZipFilename());
-        } catch (err) {
-          console.error("Error exporting inventory:", err);
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : "Failed to export inventory. Please try again.";
-          alert(errorMessage);
-        }
-      })();
+    async (scopes: ExportScopeId[]) => {
+      try {
+        const blob = await fetchExportInventory(agentApi, scopes);
+        downloadExportBlob(blob, getExportZipFilename());
+        setExportError(null);
+        setIsExportModalOpen(false);
+      } catch (err) {
+        console.error("Error exporting inventory:", err);
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to export inventory. Please try again.";
+        setExportError(errorMessage);
+      }
     },
     [agentApi],
   );
@@ -47,6 +50,7 @@ export function useExportInventory(
   return {
     isExportModalOpen,
     showExport,
+    exportError,
     openExportModal,
     closeExportModal,
     confirmExport,

@@ -354,6 +354,7 @@ export const ReportContainer: React.FC = () => {
   const {
     isExportModalOpen,
     showExport,
+    exportError,
     openExportModal,
     closeExportModal,
     confirmExport,
@@ -728,6 +729,7 @@ export const ReportContainer: React.FC = () => {
 
       <ExportCsvModal
         isOpen={isExportModalOpen}
+        error={exportError}
         onClose={closeExportModal}
         onExport={confirmExport}
       />

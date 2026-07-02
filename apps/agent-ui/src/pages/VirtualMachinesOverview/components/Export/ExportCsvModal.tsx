@@ -1,5 +1,6 @@
 import { css } from "@emotion/css";
 import {
+  Alert,
   Button,
   Checkbox,
   Content,
@@ -37,12 +38,14 @@ const scopeListStyle = css`
 
 interface ExportCsvModalProps {
   isOpen: boolean;
+  error?: string | null;
   onClose: () => void;
-  onExport: (scopes: ExportScopeId[]) => void;
+  onExport: (scopes: ExportScopeId[]) => void | Promise<void>;
 }
 
 export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   isOpen,
+  error = null,
   onClose,
   onExport,
 }) => {
@@ -83,8 +86,7 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   };
 
   const handleExport = () => {
-    onExport(selectedScopes);
-    onClose();
+    void onExport(selectedScopes);
   };
 
   return (
@@ -98,6 +100,13 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
       <ModalHeader title="Export as CSV" labelId="export-csv-modal-title" />
       <ModalBody id="export-csv-modal-body">
         <Stack hasGutter>
+          {error ? (
+            <StackItem>
+              <Alert variant="danger" title="Export failed" isInline>
+                {error}
+              </Alert>
+            </StackItem>
+          ) : null}
           <StackItem>
             <Content component="p">
               Select the data you want to include in your CSV export.
