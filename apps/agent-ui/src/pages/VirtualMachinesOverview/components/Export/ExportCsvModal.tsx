@@ -39,6 +39,7 @@ const scopeListStyle = css`
 interface ExportCsvModalProps {
   isOpen: boolean;
   error?: string | null;
+  isExporting?: boolean;
   onClose: () => void;
   onExport: (scopes: ExportScopeId[]) => void | Promise<void>;
 }
@@ -46,6 +47,7 @@ interface ExportCsvModalProps {
 export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   isOpen,
   error = null,
+  isExporting = false,
   onClose,
   onExport,
 }) => {
@@ -86,6 +88,10 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   };
 
   const handleExport = () => {
+    if (isExporting) {
+      return;
+    }
+
     void onExport(selectedScopes);
   };
 
@@ -154,7 +160,7 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
         <Button
           variant="primary"
           onClick={handleExport}
-          isDisabled={selectedScopes.length === 0}
+          isDisabled={selectedScopes.length === 0 || isExporting}
         >
           Export ({selectedScopes.length})
         </Button>

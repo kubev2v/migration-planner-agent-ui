@@ -1,5 +1,5 @@
 import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { downloadExportBlob, getExportZipFilename } from "./downloadExportBlob";
 import { fetchExportInventory } from "./exportInventoryApi";
 import type { ExportScopeId } from "./exportScopes";
@@ -15,21 +15,35 @@ export function useExportInventory(
 ) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const isExportingRef = useRef(false);
 
   const showExport = hasCollectionData && hasInventory;
 
   const openExportModal = useCallback(() => {
     setExportError(null);
+    setIsExporting(false);
+    isExportingRef.current = false;
     setIsExportModalOpen(true);
   }, []);
 
   const closeExportModal = useCallback(() => {
     setExportError(null);
+    setIsExporting(false);
+    isExportingRef.current = false;
     setIsExportModalOpen(false);
   }, []);
 
   const confirmExport = useCallback(
     async (scopes: ExportScopeId[]) => {
+      if (isExportingRef.current) {
+        return;
+      }
+
+      isExportingRef.current = true;
+      setIsExporting(true);
+      setExportError(null);
+
       try {
         const blob = await fetchExportInventory(agentApi, scopes);
         downloadExportBlob(blob, getExportZipFilename());
@@ -42,6 +56,9 @@ export function useExportInventory(
             ? err.message
             : "Failed to export inventory. Please try again.";
         setExportError(errorMessage);
+      } finally {
+        isExportingRef.current = false;
+        setIsExporting(false);
       }
     },
     [agentApi],
@@ -51,6 +68,7 @@ export function useExportInventory(
     isExportModalOpen,
     showExport,
     exportError,
+    isExporting,
     openExportModal,
     closeExportModal,
     confirmExport,
