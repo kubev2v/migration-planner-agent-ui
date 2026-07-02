@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { deleteAllForecastRuns } from "./forecasterApi";
+import {
+  cancelForecast,
+  cancelForecastPair,
+  deleteAllForecastRuns,
+  ForecasterNotFoundError,
+} from "./forecasterApi";
 import type { ForecastRun } from "./forecasterTypes";
 
 const BASE_PATH = "/api/v1";
@@ -27,6 +32,70 @@ function jsonResponse(body: unknown, status = 200): Response {
 function emptyResponse(status = 204): Response {
   return new Response(null, { status });
 }
+
+describe("cancelForecast", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("throws ForecasterNotFoundError when no benchmark is running", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(jsonResponse({ error: "No active benchmark" }, 404)),
+    );
+
+    await expect(cancelForecast(BASE_PATH)).rejects.toMatchObject({
+      name: "ForecasterNotFoundError",
+      message: "No active benchmark",
+    });
+  });
+
+  it("returns status on success", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ state: "ready" }, 202));
+
+    await expect(cancelForecast(BASE_PATH)).resolves.toEqual({
+      state: "ready",
+    });
+  });
+});
+
+describe("cancelForecastPair", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("throws ForecasterNotFoundError when the pair is not active", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ error: "Pair not found" }, 404));
+
+    await expect(
+      cancelForecastPair(BASE_PATH, "missing-pair"),
+    ).rejects.toBeInstanceOf(ForecasterNotFoundError);
+  });
+
+  it("returns canceled state on success", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ pairName: "pair-a", state: "canceled" }, 202),
+    );
+
+    await expect(cancelForecastPair(BASE_PATH, "pair-a")).resolves.toEqual({
+      pairName: "pair-a",
+      state: "canceled",
+    });
+  });
+});
 
 describe("deleteAllForecastRuns", () => {
   const fetchMock = vi.fn();

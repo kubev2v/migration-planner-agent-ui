@@ -13,19 +13,23 @@ function getForecasterBasePath(basePath: string): string {
   return `${basePath}/forecaster`;
 }
 
+async function readErrorMessage(res: Response): Promise<string> {
+  let msg = `HTTP ${res.status}`;
+  try {
+    const text = await res.text();
+    if (text) {
+      const body = JSON.parse(text);
+      if (body?.error) msg = body.error;
+    }
+  } catch (_) {
+    // ignore parse errors
+  }
+  return msg;
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try {
-      const text = await res.text();
-      if (text) {
-        const body = JSON.parse(text);
-        if (body?.error) msg = body.error;
-      }
-    } catch (_) {
-      // ignore parse errors
-    }
-    throw new Error(msg);
+    throw new Error(await readErrorMessage(res));
   }
   // Read as text first; some endpoints return 200/202 with no body
   const text = await res.text();
@@ -49,6 +53,14 @@ export class ForecastConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ForecastConflictError";
+  }
+}
+
+/** Thrown when a forecaster DELETE returns 404 (no active benchmark or pair). */
+export class ForecasterNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ForecasterNotFoundError";
   }
 }
 
@@ -171,6 +183,9 @@ export async function cancelForecast(
   const res = await fetch(getForecasterBasePath(basePath), {
     method: "DELETE",
   });
+  if (res.status === 404) {
+    throw new ForecasterNotFoundError(await readErrorMessage(res));
+  }
   return handleResponse<ForecasterStatus>(res);
 }
 
@@ -187,6 +202,9 @@ export async function cancelForecastPair(
     `${getForecasterBasePath(basePath)}/pairs/${encodeURIComponent(pairName)}`,
     { method: "DELETE" },
   );
+  if (res.status === 404) {
+    throw new ForecasterNotFoundError(await readErrorMessage(res));
+  }
   return handleResponse<{ pairName: string; state: "canceled" }>(res);
 }
 

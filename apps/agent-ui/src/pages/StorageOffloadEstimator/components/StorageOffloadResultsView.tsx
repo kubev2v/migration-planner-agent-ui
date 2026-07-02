@@ -1,4 +1,5 @@
 import {
+  Alert,
   Bullseye,
   Button,
   Content,
@@ -73,7 +74,15 @@ export interface StorageOffloadResultsViewProps {
   onAddPair: () => void;
   onStartOver: () => void;
   isBenchmarkRunning: boolean;
+  onCancelBenchmark: () => void;
+  onCancelPair: (pairName: string) => void;
+  cancelAllLoading?: boolean;
+  cancelingPairNames?: ReadonlySet<string>;
+  cancelError?: string | null;
+  isCancelInFlight?: boolean;
 }
+
+const EMPTY_CANCELING_PAIR_NAMES = new Set<string>();
 
 export const StorageOffloadResultsView: React.FC<
   StorageOffloadResultsViewProps
@@ -87,6 +96,12 @@ export const StorageOffloadResultsView: React.FC<
   onAddPair,
   onStartOver,
   isBenchmarkRunning,
+  onCancelBenchmark,
+  onCancelPair,
+  cancelAllLoading = false,
+  cancelingPairNames = EMPTY_CANCELING_PAIR_NAMES,
+  cancelError = null,
+  isCancelInFlight = false,
 }) => {
   const {
     shouldShowTooltip,
@@ -239,6 +254,18 @@ export const StorageOffloadResultsView: React.FC<
               </Content>
             </StackItem>
 
+            {cancelError && (
+              <StackItem>
+                <Alert
+                  variant="danger"
+                  title="Unable to cancel benchmark"
+                  isInline
+                >
+                  {cancelError}
+                </Alert>
+              </StackItem>
+            )}
+
             <StackItem>
               <Flex
                 alignItems={{ default: "alignItemsCenter" }}
@@ -296,6 +323,19 @@ export const StorageOffloadResultsView: React.FC<
                     wrap="wrap"
                   >
                     <FlexItem>
+                      {isBenchmarkRunning && (
+                        <Button
+                          variant="secondary"
+                          isDanger
+                          onClick={onCancelBenchmark}
+                          isLoading={cancelAllLoading}
+                          isDisabled={isCancelInFlight}
+                        >
+                          Cancel benchmark
+                        </Button>
+                      )}
+                    </FlexItem>
+                    <FlexItem>
                       {shouldShowTooltip ? (
                         <Tooltip content={errorTooltipContent}>
                           <Button variant="primary" isAriaDisabled>
@@ -337,7 +377,11 @@ export const StorageOffloadResultsView: React.FC<
                       </Button>
                     </FlexItem>
                     <FlexItem>
-                      <Button variant="link" onClick={onStartOver}>
+                      <Button
+                        variant="link"
+                        onClick={onStartOver}
+                        isDisabled={isCancelInFlight}
+                      >
                         Start over
                       </Button>
                     </FlexItem>
@@ -398,6 +442,11 @@ export const StorageOffloadResultsView: React.FC<
                               );
                             }
                           }}
+                          onCancelPair={onCancelPair}
+                          isCanceling={cancelingPairNames.has(
+                            liveStatus?.pairName ?? pair.name,
+                          )}
+                          isCancelInFlight={isCancelInFlight}
                         />
                       );
                     })

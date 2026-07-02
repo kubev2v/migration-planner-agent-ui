@@ -6,7 +6,7 @@ import {
   Label,
   Spinner,
 } from "@patternfly/react-core";
-import { CopyIcon } from "@patternfly/react-icons";
+import { CopyIcon, TimesIcon } from "@patternfly/react-icons";
 import { Td, Tr } from "@patternfly/react-table";
 import type React from "react";
 import type {
@@ -17,7 +17,7 @@ import type {
 } from "../utils/forecasterTypes";
 import type { ToggleableColumnKey } from "./storageOffloadColumns";
 import { formatGoDuration, formatLastRun } from "./storageOffloadFormatters";
-import { getPairStateDisplay } from "./storageOffloadUtils";
+import { getPairStateDisplay, isPairCancelable } from "./storageOffloadUtils";
 
 export interface EstimateComparisonRowProps {
   pair: SelectedPair;
@@ -28,6 +28,9 @@ export interface EstimateComparisonRowProps {
   isColumnVisible: (key: ToggleableColumnKey) => boolean;
   onOpenRunsDrawer: (pair: SelectedPair) => void;
   onCopy: () => void;
+  onCancelPair?: (pairName: string) => void;
+  isCanceling?: boolean;
+  isCancelInFlight?: boolean;
 }
 
 export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
@@ -39,12 +42,16 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
   isColumnVisible,
   onOpenRunsDrawer,
   onCopy,
+  onCancelPair,
+  isCanceling = false,
+  isCancelInFlight = false,
 }) => {
   const { isRunning, stateLabel, stateColor } = getPairStateDisplay(
     stats,
     liveStatus,
     benchmarkDone,
   );
+  const canCancel = isPairCancelable(liveStatus, benchmarkDone);
 
   return (
     <>
@@ -137,6 +144,24 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
                   onClick={onCopy}
                 >
                   <CopyIcon />
+                </Button>
+              </FlexItem>
+            )}
+            {canCancel && onCancelPair && (
+              <FlexItem>
+                <Button
+                  variant="plain"
+                  aria-label={`Cancel benchmark for ${pair.sourceDatastore} to ${pair.targetDatastore}`}
+                  onClick={() =>
+                    onCancelPair(liveStatus?.pairName ?? pair.name)
+                  }
+                  isDisabled={isCancelInFlight || isCanceling}
+                >
+                  {isCanceling ? (
+                    <Spinner size="sm" aria-label="Canceling" />
+                  ) : (
+                    <TimesIcon />
+                  )}
                 </Button>
               </FlexItem>
             )}

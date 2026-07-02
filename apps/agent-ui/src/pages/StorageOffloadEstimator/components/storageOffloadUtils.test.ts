@@ -10,6 +10,7 @@ import {
   getExtraRunningPairs,
   groupRunsBySession,
   indexRunsByPairName,
+  isPairCancelable,
 } from "./storageOffloadUtils";
 
 const pairs: SelectedPair[] = [
@@ -78,6 +79,22 @@ describe("storageOffloadUtils", () => {
     const filtered = filterPairsByDatastoreName(pairs, "mock-ds-a");
     expect(filtered).toHaveLength(1);
     expect(filterPairsByDatastoreName(pairs, "missing")).toHaveLength(0);
+  });
+
+  it("identifies cancelable pair states while a benchmark is active", () => {
+    const live: ForecastPairStatus = {
+      pairName: "pair-a",
+      sourceDatastore: "MOCK-DS-A",
+      targetDatastore: "MOCK-DS-B",
+      state: "preparing",
+      completedRuns: 0,
+      totalRuns: 2,
+    };
+    expect(isPairCancelable(live, false)).toBe(true);
+    expect(isPairCancelable({ ...live, state: "completed" }, false)).toBe(
+      false,
+    );
+    expect(isPairCancelable(live, true)).toBe(false);
   });
 
   it("groups runs by session for the drawer table", () => {

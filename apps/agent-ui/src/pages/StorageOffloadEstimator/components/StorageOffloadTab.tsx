@@ -9,8 +9,11 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TechnologyPreviewBadge } from "../../../common/components/TechnologyPreviewBadge";
 import {
+  cancelForecast,
+  cancelForecastPair,
   deleteAllForecastRuns,
   ForecastConflictError,
+  ForecasterNotFoundError,
   getForecasterStatus,
   getRuns,
   getStats,
@@ -86,6 +89,11 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   const [isStartOverModalOpen, setIsStartOverModalOpen] = useState(false);
   const [startOverLoading, setStartOverLoading] = useState(false);
   const [startOverError, setStartOverError] = useState<string | null>(null);
+  const [cancelAllLoading, setCancelAllLoading] = useState(false);
+  const [cancelingPairNames, setCancelingPairNames] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const completePairs = useMemo(() => pairs.filter(isCompletePair), [pairs]);
   const draftPairs = useMemo(
@@ -170,6 +178,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     finishBenchmarkStart,
     resumePollingIfNeeded,
     armWasRunning,
+    refreshStatus,
   } = useForecasterPolling({
     basePath,
     onStatusUpdate: setForecastStatus,
@@ -277,10 +286,71 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setAllRuns([]);
   }, [stopPolling]);
 
+  const isBenchmarkRunning = forecastStatus?.state === "running";
+  const isCancelInFlight = cancelAllLoading || cancelingPairNames.size > 0;
+
+  const refreshStatusAfterCancel = useCallback(async () => {
+    try {
+      await refreshStatus();
+    } catch {
+      // Cancel succeeded; status refresh is best-effort and polling may recover.
+    }
+  }, [refreshStatus]);
+
+  const handleCancelBenchmark = useCallback(async () => {
+    if (isCancelInFlight) {
+      return;
+    }
+    setCancelError(null);
+    setCancelAllLoading(true);
+    try {
+      await cancelForecast(basePath);
+      await refreshStatusAfterCancel();
+    } catch (err) {
+      if (err instanceof ForecasterNotFoundError) {
+        await refreshStatusAfterCancel();
+      } else {
+        setCancelError(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      setCancelAllLoading(false);
+    }
+  }, [basePath, isCancelInFlight, refreshStatusAfterCancel]);
+
+  const handleCancelPair = useCallback(
+    async (pairName: string) => {
+      if (isCancelInFlight) {
+        return;
+      }
+      setCancelError(null);
+      setCancelingPairNames((prev) => new Set(prev).add(pairName));
+      try {
+        await cancelForecastPair(basePath, pairName);
+        await refreshStatusAfterCancel();
+      } catch (err) {
+        if (err instanceof ForecasterNotFoundError) {
+          await refreshStatusAfterCancel();
+        } else {
+          setCancelError(err instanceof Error ? err.message : String(err));
+        }
+      } finally {
+        setCancelingPairNames((prev) => {
+          const next = new Set(prev);
+          next.delete(pairName);
+          return next;
+        });
+      }
+    },
+    [basePath, isCancelInFlight, refreshStatusAfterCancel],
+  );
+
   const openStartOverModal = useCallback(() => {
+    if (isCancelInFlight) {
+      return;
+    }
     setStartOverError(null);
     setIsStartOverModalOpen(true);
-  }, []);
+  }, [isCancelInFlight]);
 
   const closeStartOverModal = useCallback(() => {
     if (startOverLoading) return;
@@ -289,6 +359,9 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   }, [startOverLoading]);
 
   const handleStartOverConfirm = useCallback(async () => {
+    if (isCancelInFlight) {
+      return;
+    }
     setStartOverError(null);
     setStartOverLoading(true);
 
@@ -319,6 +392,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     loadResults,
     stopPolling,
     waitForLoadResults,
+    isCancelInFlight,
   ]);
 
   const redirectToRunningBenchmark = useCallback(async (): Promise<boolean> => {
@@ -516,8 +590,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     !hasNoCaps &&
     setupDraft.vmAcknowledged;
 
-  const isBenchmarkRunning = forecastStatus?.state === "running";
-
   return (
     <Stack hasGutter style={{ padding: "24px 0" }}>
       <StackItem>
@@ -560,6 +632,16 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
             onAddPair={() => openSetupModal("add-pairs")}
             onStartOver={openStartOverModal}
             isBenchmarkRunning={isBenchmarkRunning}
+            onCancelBenchmark={() => {
+              void handleCancelBenchmark();
+            }}
+            onCancelPair={(pairName) => {
+              void handleCancelPair(pairName);
+            }}
+            cancelAllLoading={cancelAllLoading}
+            cancelingPairNames={cancelingPairNames}
+            cancelError={cancelError}
+            isCancelInFlight={isCancelInFlight}
           />
         )}
       </StackItem>
@@ -587,6 +669,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         isOpen={isStartOverModalOpen}
         isLoading={startOverLoading}
         error={startOverError}
+        isConfirmDisabled={isCancelInFlight}
         onClose={closeStartOverModal}
         onConfirm={() => {
           void handleStartOverConfirm();

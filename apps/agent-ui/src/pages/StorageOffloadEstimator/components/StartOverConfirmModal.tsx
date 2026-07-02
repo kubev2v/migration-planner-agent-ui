@@ -13,6 +13,7 @@ export interface StartOverConfirmModalProps {
   isOpen: boolean;
   isLoading: boolean;
   error: string | null;
+  isConfirmDisabled?: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -21,6 +22,7 @@ export const StartOverConfirmModal: React.FC<StartOverConfirmModalProps> = ({
   isOpen,
   isLoading,
   error,
+  isConfirmDisabled = false,
   onClose,
   onConfirm,
 }) => (
@@ -51,12 +53,16 @@ export const StartOverConfirmModal: React.FC<StartOverConfirmModalProps> = ({
       <Button
         variant="danger"
         isLoading={isLoading}
-        isDisabled={isLoading}
+        isDisabled={isLoading || isConfirmDisabled}
         onClick={onConfirm}
       >
         Start over
       </Button>
-      <Button variant="link" isDisabled={isLoading} onClick={onClose}>
+      <Button
+        variant="link"
+        isDisabled={isLoading || isConfirmDisabled}
+        onClick={onClose}
+      >
         Cancel
       </Button>
     </ModalFooter>

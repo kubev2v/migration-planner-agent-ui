@@ -119,6 +119,8 @@ export function useForecasterPolling({
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
+  const refreshStatus = useCallback(() => pollOnce(), [pollOnce]);
+
   return {
     stopPolling,
     isPollingActive,
@@ -127,5 +129,6 @@ export function useForecasterPolling({
     finishBenchmarkStart,
     resumePollingIfNeeded,
     armWasRunning,
+    refreshStatus,
   };
 }

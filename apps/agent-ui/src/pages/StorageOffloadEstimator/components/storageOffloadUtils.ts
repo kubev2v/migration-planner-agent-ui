@@ -154,6 +154,20 @@ export function groupRunsBySession(runs: ForecastRun[]): RunsTableRow[] {
   return rows;
 }
 
+export function isPairCancelable(
+  liveStatus: ForecastPairStatus | undefined,
+  benchmarkDone: boolean,
+): boolean {
+  if (benchmarkDone || !liveStatus) {
+    return false;
+  }
+  return (
+    liveStatus.state === "pending" ||
+    liveStatus.state === "preparing" ||
+    liveStatus.state === "running"
+  );
+}
+
 export function getPairStateDisplay(
   stats: ForecastStats | undefined,
   liveStatus: ForecastPairStatus | undefined,
