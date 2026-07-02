@@ -238,7 +238,7 @@ describe("deleteAllForecastRuns", () => {
     );
 
     await expect(deleteAllForecastRuns(BASE_PATH)).rejects.toThrow(
-      "Failed to remove 1 of 2 estimation run(s).",
+      "Failed to remove 1 of 2 estimation run(s): run 6 (pair-6): failed",
     );
   });
 });

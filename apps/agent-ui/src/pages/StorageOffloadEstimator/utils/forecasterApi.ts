@@ -267,10 +267,20 @@ export async function deleteAllForecastRuns(basePath: string): Promise<void> {
   const results = await Promise.allSettled(
     runs.map((run) => deleteForecastRun(basePath, run.id)),
   );
-  const failureCount = results.filter((r) => r.status === "rejected").length;
-  if (failureCount > 0) {
+  const failures = results.flatMap((result, index) => {
+    if (result.status !== "rejected") {
+      return [];
+    }
+    const run = runs[index];
+    const reason =
+      result.reason instanceof Error
+        ? result.reason.message
+        : String(result.reason);
+    return [`run ${run.id} (${run.pairName}): ${reason}`];
+  });
+  if (failures.length > 0) {
     throw new Error(
-      `Failed to remove ${failureCount} of ${runs.length} estimation run(s).`,
+      `Failed to remove ${failures.length} of ${runs.length} estimation run(s): ${failures.join("; ")}`,
     );
   }
 }

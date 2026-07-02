@@ -21,8 +21,10 @@ export function useForecasterPolling({
   const pairNamesRef = useRef<string[]>([]);
   const pollEpochRef = useRef(0);
 
-  const stopPolling = useCallback(() => {
-    pollEpochRef.current += 1;
+  const stopPolling = useCallback((options?: { bumpEpoch?: boolean }) => {
+    if (options?.bumpEpoch !== false) {
+      pollEpochRef.current += 1;
+    }
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -46,10 +48,11 @@ export function useForecasterPolling({
       wasRunningRef.current = true;
     }
     if (wasRunningRef.current && status.state === "ready") {
-      stopPolling();
+      stopPolling({ bumpEpoch: false });
       if (epoch === pollEpochRef.current) {
         await onBenchmarkComplete(pairNamesRef.current);
       }
+      pollEpochRef.current += 1;
     }
     return status;
   }, [basePath, onBenchmarkComplete, onStatusUpdate, stopPolling]);

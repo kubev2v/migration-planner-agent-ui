@@ -181,10 +181,13 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     if (hadSavedSession.current) return;
 
     let cancelled = false;
+    const generation = loadResultsGenerationRef.current;
+    const isStale = () =>
+      cancelled || generation !== loadResultsGenerationRef.current;
     const probe = async () => {
       try {
         const status = await getForecasterStatus(basePath);
-        if (cancelled) return;
+        if (isStale()) return;
 
         if (status.state === "running") {
           const backendPairs = (status.pairs ?? []).map(
@@ -200,7 +203,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         }
 
         const runs = await getRuns(basePath);
-        if (cancelled || runs.length === 0) return;
+        if (isStale() || runs.length === 0) return;
 
         const runsByPair = new Map<string, ForecastRun>();
         for (const r of runs) {

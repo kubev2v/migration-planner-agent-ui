@@ -43,7 +43,8 @@ export const StartOverConfirmModal: React.FC<StartOverConfirmModalProps> = ({
         </Alert>
       )}
       <Content component="p">
-        All estimations you currently see will be completely removed.
+        Starting over deletes all estimation and forecast runs stored on the
+        backend, not only the results shown here. This cannot be undone.
       </Content>
     </ModalBody>
     <ModalFooter>
