@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { migrateLegacyWizardState } from "./forecasterSession";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  CANCELED_PAIRS_SESSION_KEY,
+  clearWizardState,
+  loadCanceledPairKeys,
+  migrateLegacyWizardState,
+  saveCanceledPairKeys,
+} from "./forecasterSession";
 
 describe("migrateLegacyWizardState", () => {
   it("maps running and results to results pageView", () => {
@@ -67,5 +73,27 @@ describe("migrateLegacyWizardState", () => {
       pairs: [],
     };
     expect(migrateLegacyWizardState(modern)).toEqual(modern);
+  });
+});
+
+describe("canceled pair session storage", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+
+  it("persists and reloads canceled pair keys", () => {
+    saveCanceledPairKeys(new Set(["MOCK-DS-A||MOCK-DS-B"]));
+    expect(loadCanceledPairKeys()).toEqual(new Set(["MOCK-DS-A||MOCK-DS-B"]));
+  });
+
+  it("clears canceled pair keys when wizard state is cleared", () => {
+    saveCanceledPairKeys(new Set(["MOCK-DS-A||MOCK-DS-B"]));
+    clearWizardState();
+    expect(sessionStorage.getItem(CANCELED_PAIRS_SESSION_KEY)).toBeNull();
+    expect(loadCanceledPairKeys()).toEqual(new Set());
   });
 });

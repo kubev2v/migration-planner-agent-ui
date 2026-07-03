@@ -8,9 +8,12 @@ import {
   filterPairsByDatastoreName,
   findLivePairStatus,
   getExtraRunningPairs,
+  getPairStateDisplay,
   groupRunsBySession,
   indexRunsByPairName,
   isPairCancelable,
+  isPairCancelled,
+  isPairRerunnable,
 } from "./storageOffloadUtils";
 
 const pairs: SelectedPair[] = [
@@ -75,6 +78,32 @@ describe("storageOffloadUtils", () => {
     expect(extra[0].sourceDatastore).toBe("MOCK-DS-C");
   });
 
+  it("does not add canceled or errored pairs as extra rows", () => {
+    const status = {
+      state: "running" as const,
+      pairs: [
+        {
+          pairName: "canceled-pair",
+          sourceDatastore: "MOCK-DS-C",
+          targetDatastore: "MOCK-DS-D",
+          state: "canceled" as const,
+          completedRuns: 0,
+          totalRuns: 2,
+        },
+        {
+          pairName: "error-pair",
+          sourceDatastore: "MOCK-DS-E",
+          targetDatastore: "MOCK-DS-F",
+          state: "error" as const,
+          error: "failed",
+          completedRuns: 0,
+          totalRuns: 2,
+        },
+      ],
+    };
+    expect(getExtraRunningPairs(pairs, status)).toHaveLength(0);
+  });
+
   it("filters pairs by datastore name", () => {
     const filtered = filterPairsByDatastoreName(pairs, "mock-ds-a");
     expect(filtered).toHaveLength(1);
@@ -95,6 +124,48 @@ describe("storageOffloadUtils", () => {
       false,
     );
     expect(isPairCancelable(live, true)).toBe(false);
+  });
+
+  it("formats canceled state as Cancelled and tracks canceled pairs", () => {
+    const live: ForecastPairStatus = {
+      pairName: "pair-a",
+      sourceDatastore: "MOCK-DS-A",
+      targetDatastore: "MOCK-DS-B",
+      state: "canceled",
+      completedRuns: 0,
+      totalRuns: 2,
+    };
+    expect(
+      getPairStateDisplay(
+        undefined,
+        live,
+        true,
+        isPairCancelled(pairs[0], live, new Set()),
+      ).stateLabel,
+    ).toBe("Cancelled");
+    expect(
+      getPairStateDisplay(undefined, undefined, true, true).stateLabel,
+    ).toBe("Cancelled");
+    expect(
+      isPairRerunnable(
+        pairs[0],
+        live,
+        new Set(["MOCK-DS-A||MOCK-DS-B"]),
+        false,
+        false,
+        false,
+      ),
+    ).toBe(true);
+    expect(
+      isPairRerunnable(
+        pairs[0],
+        live,
+        new Set(["MOCK-DS-A||MOCK-DS-B"]),
+        true,
+        false,
+        false,
+      ),
+    ).toBe(false);
   });
 
   it("groups runs by session for the drawer table", () => {

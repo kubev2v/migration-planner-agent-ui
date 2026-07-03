@@ -9,7 +9,6 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TechnologyPreviewBadge } from "../../../common/components/TechnologyPreviewBadge";
 import {
-  cancelForecast,
   cancelForecastPair,
   deleteAllForecastRuns,
   ForecastConflictError,
@@ -22,8 +21,10 @@ import {
 } from "../utils/forecasterApi";
 import {
   clearWizardState,
+  loadCanceledPairKeys,
   loadWizardState,
   type PageView,
+  saveCanceledPairKeys,
 } from "../utils/forecasterSession";
 import type {
   ForecasterDatastore,
@@ -43,6 +44,7 @@ import {
   forecastPairToSelectedPair,
   groupDatastoresByArray,
   isCompletePair,
+  pairSourceTargetKey,
 } from "./storageOffloadUtils";
 
 export interface StorageOffloadTabProps {
@@ -89,10 +91,11 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   const [isStartOverModalOpen, setIsStartOverModalOpen] = useState(false);
   const [startOverLoading, setStartOverLoading] = useState(false);
   const [startOverError, setStartOverError] = useState<string | null>(null);
-  const [cancelAllLoading, setCancelAllLoading] = useState(false);
   const [cancelingPairNames, setCancelingPairNames] = useState<Set<string>>(
     () => new Set(),
   );
+  const [canceledPairNames, setCanceledPairNames] =
+    useState<Set<string>>(loadCanceledPairKeys);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   const completePairs = useMemo(() => pairs.filter(isCompletePair), [pairs]);
@@ -264,6 +267,10 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   ]);
 
   useEffect(() => {
+    saveCanceledPairKeys(canceledPairNames);
+  }, [canceledPairNames]);
+
+  useEffect(() => {
     if (startOverLoading || pageView !== "results") return;
     void resumePollingIfNeeded(completePairs.map((p) => p.name));
   }, [startOverLoading, pageView, completePairs, resumePollingIfNeeded]);
@@ -284,10 +291,11 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setResultsLoading(false);
     setStatsMap({});
     setAllRuns([]);
+    setCanceledPairNames(new Set());
   }, [stopPolling]);
 
   const isBenchmarkRunning = forecastStatus?.state === "running";
-  const isCancelInFlight = cancelAllLoading || cancelingPairNames.size > 0;
+  const isCancelInFlight = cancelingPairNames.size > 0;
 
   const refreshStatusAfterCancel = useCallback(async () => {
     try {
@@ -297,38 +305,26 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     }
   }, [refreshStatus]);
 
-  const handleCancelBenchmark = useCallback(async () => {
-    if (isCancelInFlight) {
-      return;
-    }
-    setCancelError(null);
-    setCancelAllLoading(true);
-    try {
-      await cancelForecast(basePath);
-      await refreshStatusAfterCancel();
-    } catch (err) {
-      if (err instanceof ForecasterNotFoundError) {
-        await refreshStatusAfterCancel();
-      } else {
-        setCancelError(err instanceof Error ? err.message : String(err));
-      }
-    } finally {
-      setCancelAllLoading(false);
-    }
-  }, [basePath, isCancelInFlight, refreshStatusAfterCancel]);
+  const markPairCanceled = useCallback((pair: SelectedPair) => {
+    setCanceledPairNames((prev) =>
+      new Set(prev).add(pairSourceTargetKey(pair)),
+    );
+  }, []);
 
   const handleCancelPair = useCallback(
-    async (pairName: string) => {
+    async (pair: SelectedPair, pairKey: string) => {
       if (isCancelInFlight) {
         return;
       }
       setCancelError(null);
-      setCancelingPairNames((prev) => new Set(prev).add(pairName));
+      setCancelingPairNames((prev) => new Set(prev).add(pairKey));
       try {
-        await cancelForecastPair(basePath, pairName);
+        await cancelForecastPair(basePath, pairKey);
+        markPairCanceled(pair);
         await refreshStatusAfterCancel();
       } catch (err) {
         if (err instanceof ForecasterNotFoundError) {
+          markPairCanceled(pair);
           await refreshStatusAfterCancel();
         } else {
           setCancelError(err instanceof Error ? err.message : String(err));
@@ -336,12 +332,12 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       } finally {
         setCancelingPairNames((prev) => {
           const next = new Set(prev);
-          next.delete(pairName);
+          next.delete(pairKey);
           return next;
         });
       }
     },
-    [basePath, isCancelInFlight, refreshStatusAfterCancel],
+    [basePath, isCancelInFlight, markPairCanceled, refreshStatusAfterCancel],
   );
 
   const openStartOverModal = useCallback(() => {
@@ -520,6 +516,13 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
             targetDatastore: p.targetDatastore,
           })),
         });
+        setCanceledPairNames((prev) => {
+          const next = new Set(prev);
+          for (const pair of validPairs) {
+            next.delete(pairSourceTargetKey(pair));
+          }
+          return next;
+        });
         finishBenchmarkStart();
       } catch (err) {
         stopPolling();
@@ -578,6 +581,16 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     ],
   );
 
+  const handleRerunPair = useCallback(
+    (pair: SelectedPair) => {
+      if (isCancelInFlight || isBenchmarkRunning || runLoading) {
+        return;
+      }
+      void runBenchmark([pair], true);
+    },
+    [isBenchmarkRunning, isCancelInFlight, runBenchmark, runLoading],
+  );
+
   const handleRunFromSetupModal = useCallback(() => {
     if (!setupDraft) return;
     void runBenchmark(setupDraft.pairs, mergeDraftOnRun);
@@ -632,16 +645,16 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
             onAddPair={() => openSetupModal("add-pairs")}
             onStartOver={openStartOverModal}
             isBenchmarkRunning={isBenchmarkRunning}
-            onCancelBenchmark={() => {
-              void handleCancelBenchmark();
+            onCancelPair={(pair, pairKey) => {
+              void handleCancelPair(pair, pairKey);
             }}
-            onCancelPair={(pairName) => {
-              void handleCancelPair(pairName);
-            }}
-            cancelAllLoading={cancelAllLoading}
+            onRerunPair={handleRerunPair}
             cancelingPairNames={cancelingPairNames}
+            canceledPairNames={canceledPairNames}
             cancelError={cancelError}
             isCancelInFlight={isCancelInFlight}
+            runLoading={runLoading}
+            onDismissCancelError={() => setCancelError(null)}
           />
         )}
       </StackItem>

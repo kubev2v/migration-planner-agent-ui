@@ -105,6 +105,8 @@ export function getExtraRunningPairs(
     .filter(
       (fp) =>
         fp.state !== "completed" &&
+        fp.state !== "canceled" &&
+        fp.state !== "error" &&
         !knownKeys.has(`${fp.sourceDatastore}||${fp.targetDatastore}`),
     )
     .map(forecastPairToSelectedPair);
@@ -154,6 +156,18 @@ export function groupRunsBySession(runs: ForecastRun[]): RunsTableRow[] {
   return rows;
 }
 
+export function formatPairStateLabel(
+  state: string | undefined,
+): string | undefined {
+  if (!state) {
+    return undefined;
+  }
+  if (state === "canceled") {
+    return "Cancelled";
+  }
+  return state;
+}
+
 export function isPairCancelable(
   liveStatus: ForecastPairStatus | undefined,
   benchmarkDone: boolean,
@@ -168,10 +182,38 @@ export function isPairCancelable(
   );
 }
 
+export function isPairCancelled(
+  pair: SelectedPair,
+  liveStatus: ForecastPairStatus | undefined,
+  canceledPairKeys: ReadonlySet<string>,
+): boolean {
+  if (liveStatus?.state === "canceled") {
+    return true;
+  }
+  return canceledPairKeys.has(pairSourceTargetKey(pair));
+}
+
+export function isPairRerunnable(
+  pair: SelectedPair,
+  liveStatus: ForecastPairStatus | undefined,
+  canceledPairKeys: ReadonlySet<string>,
+  isBenchmarkRunning: boolean,
+  isCancelInFlight: boolean,
+  runLoading: boolean,
+): boolean {
+  return (
+    isPairCancelled(pair, liveStatus, canceledPairKeys) &&
+    !isBenchmarkRunning &&
+    !isCancelInFlight &&
+    !runLoading
+  );
+}
+
 export function getPairStateDisplay(
   stats: ForecastStats | undefined,
   liveStatus: ForecastPairStatus | undefined,
   benchmarkDone: boolean,
+  isCancelled = false,
 ): {
   isRunning: boolean;
   stateLabel: string | undefined;
@@ -183,10 +225,19 @@ export function getPairStateDisplay(
     liveStatus.state !== "completed" &&
     liveStatus.state !== "error" &&
     liveStatus.state !== "canceled";
+
+  if (isCancelled) {
+    return {
+      isRunning,
+      stateLabel: "Cancelled",
+      stateColor: "red",
+    };
+  }
+
   const stateLabel: string | undefined = isRunning
     ? liveStatus?.state
     : liveStatus
-      ? liveStatus.state
+      ? formatPairStateLabel(liveStatus.state)
       : stats && stats.sampleCount > 0
         ? "complete"
         : undefined;

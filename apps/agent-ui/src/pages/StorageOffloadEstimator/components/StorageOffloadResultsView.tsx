@@ -1,5 +1,6 @@
 import {
   Alert,
+  AlertActionCloseButton,
   Bullseye,
   Button,
   Content,
@@ -74,15 +75,17 @@ export interface StorageOffloadResultsViewProps {
   onAddPair: () => void;
   onStartOver: () => void;
   isBenchmarkRunning: boolean;
-  onCancelBenchmark: () => void;
-  onCancelPair: (pairName: string) => void;
-  cancelAllLoading?: boolean;
+  onCancelPair: (pair: SelectedPair, pairKey: string) => void;
+  onRerunPair: (pair: SelectedPair) => void;
   cancelingPairNames?: ReadonlySet<string>;
+  canceledPairNames?: ReadonlySet<string>;
   cancelError?: string | null;
   isCancelInFlight?: boolean;
+  runLoading?: boolean;
+  onDismissCancelError?: () => void;
 }
 
-const EMPTY_CANCELING_PAIR_NAMES = new Set<string>();
+const EMPTY_PAIR_NAME_SET = new Set<string>();
 
 export const StorageOffloadResultsView: React.FC<
   StorageOffloadResultsViewProps
@@ -96,12 +99,14 @@ export const StorageOffloadResultsView: React.FC<
   onAddPair,
   onStartOver,
   isBenchmarkRunning,
-  onCancelBenchmark,
   onCancelPair,
-  cancelAllLoading = false,
-  cancelingPairNames = EMPTY_CANCELING_PAIR_NAMES,
+  onRerunPair,
+  cancelingPairNames = EMPTY_PAIR_NAME_SET,
+  canceledPairNames = EMPTY_PAIR_NAME_SET,
   cancelError = null,
   isCancelInFlight = false,
+  runLoading = false,
+  onDismissCancelError,
 }) => {
   const {
     shouldShowTooltip,
@@ -260,6 +265,15 @@ export const StorageOffloadResultsView: React.FC<
                   variant="danger"
                   title="Unable to cancel benchmark"
                   isInline
+                  {...(onDismissCancelError
+                    ? {
+                        actionClose: (
+                          <AlertActionCloseButton
+                            onClose={onDismissCancelError}
+                          />
+                        ),
+                      }
+                    : {})}
                 >
                   {cancelError}
                 </Alert>
@@ -322,19 +336,6 @@ export const StorageOffloadResultsView: React.FC<
                     gap={{ default: "gapSm" }}
                     wrap="wrap"
                   >
-                    <FlexItem>
-                      {isBenchmarkRunning && (
-                        <Button
-                          variant="secondary"
-                          isDanger
-                          onClick={onCancelBenchmark}
-                          isLoading={cancelAllLoading}
-                          isDisabled={isCancelInFlight}
-                        >
-                          Cancel benchmark
-                        </Button>
-                      )}
-                    </FlexItem>
                     <FlexItem>
                       {shouldShowTooltip ? (
                         <Tooltip content={errorTooltipContent}>
@@ -443,10 +444,14 @@ export const StorageOffloadResultsView: React.FC<
                             }
                           }}
                           onCancelPair={onCancelPair}
+                          onRerunPair={onRerunPair}
                           isCanceling={cancelingPairNames.has(
                             liveStatus?.pairName ?? pair.name,
                           )}
                           isCancelInFlight={isCancelInFlight}
+                          canceledPairNames={canceledPairNames}
+                          isBenchmarkRunning={isBenchmarkRunning}
+                          runLoading={runLoading}
                         />
                       );
                     })

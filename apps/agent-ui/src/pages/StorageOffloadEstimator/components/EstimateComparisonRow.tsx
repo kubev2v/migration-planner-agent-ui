@@ -3,10 +3,12 @@ import {
   Button,
   Flex,
   FlexItem,
+  Icon,
   Label,
   Spinner,
+  Tooltip,
 } from "@patternfly/react-core";
-import { CopyIcon, TimesIcon } from "@patternfly/react-icons";
+import { BanIcon, CopyIcon, RedoIcon } from "@patternfly/react-icons";
 import { Td, Tr } from "@patternfly/react-table";
 import type React from "react";
 import type {
@@ -17,7 +19,12 @@ import type {
 } from "../utils/forecasterTypes";
 import type { ToggleableColumnKey } from "./storageOffloadColumns";
 import { formatGoDuration, formatLastRun } from "./storageOffloadFormatters";
-import { getPairStateDisplay, isPairCancelable } from "./storageOffloadUtils";
+import {
+  getPairStateDisplay,
+  isPairCancelable,
+  isPairCancelled,
+  isPairRerunnable,
+} from "./storageOffloadUtils";
 
 export interface EstimateComparisonRowProps {
   pair: SelectedPair;
@@ -28,10 +35,16 @@ export interface EstimateComparisonRowProps {
   isColumnVisible: (key: ToggleableColumnKey) => boolean;
   onOpenRunsDrawer: (pair: SelectedPair) => void;
   onCopy: () => void;
-  onCancelPair?: (pairName: string) => void;
+  onCancelPair?: (pair: SelectedPair, pairKey: string) => void;
+  onRerunPair?: (pair: SelectedPair) => void;
   isCanceling?: boolean;
   isCancelInFlight?: boolean;
+  canceledPairNames?: ReadonlySet<string>;
+  isBenchmarkRunning?: boolean;
+  runLoading?: boolean;
 }
+
+const EMPTY_CANCELED_PAIR_NAMES = new Set<string>();
 
 export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
   pair,
@@ -43,15 +56,30 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
   onOpenRunsDrawer,
   onCopy,
   onCancelPair,
+  onRerunPair,
   isCanceling = false,
   isCancelInFlight = false,
+  canceledPairNames = EMPTY_CANCELED_PAIR_NAMES,
+  isBenchmarkRunning = false,
+  runLoading = false,
 }) => {
+  const pairKey = liveStatus?.pairName ?? pair.name;
+  const isCancelled = isPairCancelled(pair, liveStatus, canceledPairNames);
   const { isRunning, stateLabel, stateColor } = getPairStateDisplay(
     stats,
     liveStatus,
     benchmarkDone,
+    isCancelled,
   );
   const canCancel = isPairCancelable(liveStatus, benchmarkDone);
+  const canRerun = isPairRerunnable(
+    pair,
+    liveStatus,
+    canceledPairNames,
+    isBenchmarkRunning,
+    isCancelInFlight,
+    runLoading,
+  );
 
   return (
     <>
@@ -149,20 +177,37 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
             )}
             {canCancel && onCancelPair && (
               <FlexItem>
-                <Button
-                  variant="plain"
-                  aria-label={`Cancel benchmark for ${pair.sourceDatastore} to ${pair.targetDatastore}`}
-                  onClick={() =>
-                    onCancelPair(liveStatus?.pairName ?? pair.name)
-                  }
-                  isDisabled={isCancelInFlight || isCanceling}
-                >
-                  {isCanceling ? (
-                    <Spinner size="sm" aria-label="Canceling" />
-                  ) : (
-                    <TimesIcon />
-                  )}
-                </Button>
+                <Tooltip content="Cancel benchmark">
+                  <span style={{ display: "inline-flex" }}>
+                    <Button
+                      variant="plain"
+                      aria-label={`Cancel benchmark for ${pair.sourceDatastore} to ${pair.targetDatastore}`}
+                      onClick={() => onCancelPair(pair, pairKey)}
+                      isDisabled={isCancelInFlight || isCanceling}
+                    >
+                      {isCanceling ? (
+                        <Spinner size="sm" aria-label="Canceling" />
+                      ) : (
+                        <Icon status="danger">
+                          <BanIcon />
+                        </Icon>
+                      )}
+                    </Button>
+                  </span>
+                </Tooltip>
+              </FlexItem>
+            )}
+            {canRerun && onRerunPair && (
+              <FlexItem>
+                <Tooltip content="Run benchmark again">
+                  <Button
+                    variant="plain"
+                    aria-label={`Run benchmark again for ${pair.sourceDatastore} to ${pair.targetDatastore}`}
+                    onClick={() => onRerunPair(pair)}
+                  >
+                    <RedoIcon />
+                  </Button>
+                </Tooltip>
               </FlexItem>
             )}
           </Flex>

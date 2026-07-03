@@ -6,6 +6,7 @@ import type {
 export type PageView = "empty" | "results";
 
 export const SESSION_KEY = "forecaster-wizard-state";
+export const CANCELED_PAIRS_SESSION_KEY = "forecaster-canceled-pairs";
 
 export interface PersistedWizardState {
   url: string;
@@ -65,7 +66,34 @@ export function saveWizardState(state: PersistedWizardState): void {
 export function clearWizardState(): void {
   try {
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(CANCELED_PAIRS_SESSION_KEY);
   } catch {
     // ignore
+  }
+}
+
+export function loadCanceledPairKeys(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(CANCELED_PAIRS_SESSION_KEY);
+    if (!raw) {
+      return new Set();
+    }
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? new Set(parsed.filter((k): k is string => typeof k === "string"))
+      : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveCanceledPairKeys(keys: ReadonlySet<string>): void {
+  try {
+    sessionStorage.setItem(
+      CANCELED_PAIRS_SESSION_KEY,
+      JSON.stringify([...keys]),
+    );
+  } catch {
+    // ignore if sessionStorage is unavailable
   }
 }
