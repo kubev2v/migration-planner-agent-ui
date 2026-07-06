@@ -314,7 +314,7 @@ export const GroupDetailPage: React.FC = () => {
     setInventoryRevision((revision) => revision + 1);
   }, []);
 
-  const { refreshInventory: refreshGroupInventory, reloadAssessmentInventory } =
+  const { refreshInventory: refreshGroupInventory } =
     useMigrationInventoryRefresh({
       agentApi,
       groupId,
@@ -356,7 +356,6 @@ export const GroupDetailPage: React.FC = () => {
       newParams = buildApplicationsTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
-      void reloadAssessmentInventory();
     }
     setSearchParams(newParams, { replace: true });
   };
