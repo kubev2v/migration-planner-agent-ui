@@ -3,7 +3,7 @@ import { useVMTableLogic } from "./useVMTableLogic";
 import { VMTableGrid } from "./VMTableGrid";
 import { VMTableModals } from "./VMTableModals";
 import { VMTableToolbar } from "./VMTableToolbar";
-import { VM_TABLE_VARIANT_UI, vmTableStyles } from "./vmTableShared";
+import { resolveVariantUI, vmTableStyles } from "./vmTableShared";
 import type { VMTableProps } from "./vmTableTypes";
 
 export type { VMTableProps } from "./vmTableTypes";
@@ -41,7 +41,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   onResetInspection,
   variant = "overview",
 }) => {
-  const variantUI = VM_TABLE_VARIANT_UI[variant];
+  const variantUI = resolveVariantUI({ variant, totalVMs });
   const isGroupRowActions = variant === "groups";
 
   const logic = useVMTableLogic({

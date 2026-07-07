@@ -395,6 +395,20 @@ export const VM_TABLE_VARIANT_UI: Record<VMTableVariant, VMTableVariantUI> = {
   },
 };
 
+export function resolveVariantUI({
+  variant,
+  totalVMs,
+}: {
+  variant: VMTableVariant;
+  totalVMs?: number;
+}): VMTableVariantUI {
+  const base = VM_TABLE_VARIANT_UI[variant];
+  if (variant === "groups" && (totalVMs ?? 0) === 0) {
+    return { ...base, hideToolbarActions: true };
+  }
+  return base;
+}
+
 export function resolveVisibleColumns({
   variant,
   userSelectedColumns,
