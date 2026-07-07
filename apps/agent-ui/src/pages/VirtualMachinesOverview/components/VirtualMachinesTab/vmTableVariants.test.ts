@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type ALL_COLUMN_KEYS,
   COMPACT_VISIBLE_COLUMNS,
+  resolveVariantUI,
   resolveVisibleColumns,
   VM_TABLE_VARIANT_UI,
 } from "./vmTableShared";
@@ -31,6 +32,21 @@ describe("vmTableVariants", () => {
 
   it("groups variant hides groups filter", () => {
     expect(VM_TABLE_VARIANT_UI.groups.showGroupsFilter).toBe(false);
+  });
+
+  it("groups variant hides toolbar actions when the group has no VMs", () => {
+    expect(
+      resolveVariantUI({ variant: "groups", totalVMs: 0 }).hideToolbarActions,
+    ).toBe(true);
+    expect(
+      resolveVariantUI({ variant: "groups", totalVMs: 3 }).hideToolbarActions,
+    ).toBe(false);
+  });
+
+  it("overview variant keeps toolbar actions regardless of totalVMs", () => {
+    expect(
+      resolveVariantUI({ variant: "overview", totalVMs: 0 }).hideToolbarActions,
+    ).toBe(false);
   });
 
   it("compact variant ignore user selected columns", () => {
