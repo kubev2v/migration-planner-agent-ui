@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getForecasterStatus } from "./forecasterApi";
 import type { ForecasterStatus } from "./forecasterTypes";
 
@@ -20,21 +20,25 @@ export function useForecasterPolling({
   const wasRunningRef = useRef(false);
   const pairNamesRef = useRef<string[]>([]);
   const pollEpochRef = useRef(0);
+  const [isPollingActive, setIsPollingActive] = useState(false);
 
-  const stopPolling = useCallback((options?: { bumpEpoch?: boolean }) => {
-    if (options?.bumpEpoch !== false) {
-      pollEpochRef.current += 1;
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    isStartingRef.current = false;
+  const syncPollingActive = useCallback(() => {
+    setIsPollingActive(intervalRef.current !== null || isStartingRef.current);
   }, []);
 
-  const isPollingActive = useCallback(
-    () => intervalRef.current !== null || isStartingRef.current,
-    [],
+  const stopPolling = useCallback(
+    (options?: { bumpEpoch?: boolean }) => {
+      if (options?.bumpEpoch !== false) {
+        pollEpochRef.current += 1;
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      isStartingRef.current = false;
+      syncPollingActive();
+    },
+    [syncPollingActive],
   );
 
   const pollOnce = useCallback(async () => {
@@ -66,8 +70,9 @@ export function useForecasterPolling({
       intervalRef.current = setInterval(() => {
         void pollOnce();
       }, POLL_INTERVAL_MS);
+      syncPollingActive();
     },
-    [pollOnce, stopPolling],
+    [pollOnce, stopPolling, syncPollingActive],
   );
 
   const markBenchmarkStarting = useCallback(
@@ -76,8 +81,9 @@ export function useForecasterPolling({
       pairNamesRef.current = pairNames;
       wasRunningRef.current = false;
       isStartingRef.current = true;
+      syncPollingActive();
     },
-    [stopPolling],
+    [stopPolling, syncPollingActive],
   );
 
   const finishBenchmarkStart = useCallback(() => {
@@ -87,11 +93,14 @@ export function useForecasterPolling({
     intervalRef.current = setInterval(() => {
       void pollOnce();
     }, POLL_INTERVAL_MS);
-  }, [pollOnce]);
+    syncPollingActive();
+  }, [pollOnce, syncPollingActive]);
 
   const resumePollingIfNeeded = useCallback(
     async (pairNames: string[]) => {
-      if (isPollingActive()) return null;
+      if (intervalRef.current !== null || isStartingRef.current) {
+        return null;
+      }
       const epoch = pollEpochRef.current;
       pairNamesRef.current = pairNames;
       try {
@@ -110,7 +119,7 @@ export function useForecasterPolling({
         return null;
       }
     },
-    [basePath, isPollingActive, onStatusUpdate, startPolling],
+    [basePath, onStatusUpdate, startPolling],
   );
 
   const armWasRunning = useCallback(() => {
