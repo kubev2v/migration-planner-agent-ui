@@ -1,5 +1,6 @@
 import { Toolbar, ToolbarContent } from "@patternfly/react-core";
 import type React from "react";
+import { attributeValueFilterToolbarStyle } from "../../../../common/components/attribute-value-filter";
 import { VMTableActionBar } from "./VMTableActionBar";
 import { VMTableFilterBar } from "./VMTableFilterBar";
 import type { VMTableToolbarProps } from "./vmTableToolbarTypes";
@@ -64,12 +65,14 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
   };
 
   return (
-    <Toolbar>
+    <Toolbar
+      className={attributeValueFilterToolbarStyle}
+      clearAllFilters={logic.clearAllFilters}
+    >
       <ToolbarContent>
-        <VMTableFilterBar {...filterBarProps} part="main" />
+        <VMTableFilterBar {...filterBarProps} />
         <VMTableActionBar {...actionBarProps} />
       </ToolbarContent>
-      <VMTableFilterBar {...filterBarProps} part="applied" />
     </Toolbar>
   );
 };
