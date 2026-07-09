@@ -19,6 +19,10 @@ import {
 } from "../../../Groups/utils/vmGroupMembership";
 import { getAgentApiBasePath } from "../../agentApiConfig";
 import type { MigrationExcludedInventoryChange } from "../../inventoryParsing";
+import {
+  buildVmApplicationsMap,
+  mergeVmApplicationNames,
+} from "../ApplicationsTab/applicationsApi";
 import { DeepInspectionModal } from "./DeepInspectionModal";
 import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
@@ -232,6 +236,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       vmIdToGroups: {},
       groupsByName: {},
     });
+  const [vmApplicationsMap, setVmApplicationsMap] = useState<
+    Map<string, string[]>
+  >(new Map());
 
   const basePath = useMemo(
     () => (agentApi ? getAgentApiBasePath(agentApi) : ""),
@@ -254,9 +261,30 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     void loadVmGroupMembership();
   }, [loadVmGroupMembership]);
 
+  const loadVmApplications = useCallback(async () => {
+    if (!agentApi) {
+      return;
+    }
+    try {
+      const response = await agentApi.getApplications();
+      setVmApplicationsMap(buildVmApplicationsMap(response.applications ?? []));
+    } catch (err) {
+      console.warn("Error fetching applications for VM table:", err);
+      setVmApplicationsMap(new Map());
+    }
+  }, [agentApi]);
+
+  useEffect(() => {
+    void loadVmApplications();
+  }, [loadVmApplications]);
+
   const vmsForTable = useMemo(
-    () => mergeVmGroupItems(vms, vmGroupMembership),
-    [vms, vmGroupMembership],
+    () =>
+      mergeVmApplicationNames(
+        mergeVmGroupItems(vms, vmGroupMembership),
+        vmApplicationsMap,
+      ),
+    [vms, vmGroupMembership, vmApplicationsMap],
   );
 
   const mergedFilterOptions = useMemo(

@@ -27,7 +27,7 @@ import {
 import { SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AttributeValueFilter,
   type AttributeValueFilterAttribute,
@@ -63,6 +63,8 @@ interface ApplicationsViewProps {
   applications: ApplicationOverview[];
   loading?: boolean;
   error?: string | null;
+  selectedApplicationName?: string | null;
+  onClearSelectedApplication?: () => void;
   onNavigateToVm?: (vmId: string) => void;
 }
 
@@ -70,6 +72,8 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   applications,
   loading = false,
   error = null,
+  selectedApplicationName = null,
+  onClearSelectedApplication,
   onNavigateToVm,
 }) => {
   const [nameSearch, setNameSearch] = useState("");
@@ -108,7 +112,8 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   const closeDrawer = useCallback(() => {
     setDrawerApplication(null);
     setDrawerVmSearch("");
-  }, []);
+    onClearSelectedApplication?.();
+  }, [onClearSelectedApplication]);
 
   const filterAttributes = useMemo(
     (): AttributeValueFilterAttribute[] => [
@@ -145,6 +150,20 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
     ],
     [allVms, closeDrawer, nameSearch, resetPage, selectedVmIds],
   );
+
+  useEffect(() => {
+    if (!selectedApplicationName || loading) {
+      return;
+    }
+
+    const application = applications.find(
+      (entry) => entry.name === selectedApplicationName,
+    );
+    if (application) {
+      setDrawerApplication(application);
+      setDrawerVmSearch("");
+    }
+  }, [applications, loading, selectedApplicationName]);
 
   const openDrawer = (application: ApplicationOverview) => {
     setDrawerApplication(application);

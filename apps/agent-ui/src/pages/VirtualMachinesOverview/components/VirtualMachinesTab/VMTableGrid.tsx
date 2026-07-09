@@ -17,6 +17,7 @@ import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
+import { ApplicationsList } from "../ApplicationsTab/ApplicationsList";
 import { formatMetric } from "./VMUtilizationMetrics";
 import {
   renderVmInspectionStatus,
@@ -129,6 +130,13 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
               Array.isArray((vm as { groupItems?: unknown }).groupItems)
                 ? (vm as { groupItems: GroupListItem[] }).groupItems
                 : [];
+            const applicationNames: string[] =
+              "applicationNames" in vm &&
+              Array.isArray(
+                (vm as { applicationNames?: unknown }).applicationNames,
+              )
+                ? (vm as { applicationNames: string[] }).applicationNames
+                : [];
             return (
               <Tr key={vm.id}>
                 <Td
@@ -196,6 +204,15 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                   <Td dataLabel="Groups">
                     {groupItems.length > 0 ? (
                       <GroupsList groups={groupItems} />
+                    ) : (
+                      "–"
+                    )}
+                  </Td>
+                )}
+                {isColumnVisible("applications") && (
+                  <Td dataLabel="Applications">
+                    {applicationNames.length > 0 ? (
+                      <ApplicationsList applications={applicationNames} />
                     ) : (
                       "–"
                     )}

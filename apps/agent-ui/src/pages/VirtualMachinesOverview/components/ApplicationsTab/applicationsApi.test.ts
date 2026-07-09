@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ApplicationOverview } from "./applicationsApi";
 import {
+  buildVmApplicationsMap,
   getApplicationsForVm,
   scopeApplicationsToVms,
 } from "./applicationsApi";
@@ -31,6 +32,23 @@ const sampleApplications: ApplicationOverview[] = [
     vms: [{ id: "vm-4", name: "edge-01" }],
   },
 ];
+
+describe("buildVmApplicationsMap", () => {
+  it("maps VM ids to sorted application names", () => {
+    expect(buildVmApplicationsMap(sampleApplications)).toEqual(
+      new Map([
+        ["vm-1", ["Apache HTTP Server"]],
+        ["vm-2", ["Apache HTTP Server", "PostgreSQL"]],
+        ["vm-3", ["PostgreSQL"]],
+        ["vm-4", ["Nginx"]],
+      ]),
+    );
+  });
+
+  it("returns an empty map when no applications are provided", () => {
+    expect(buildVmApplicationsMap([])).toEqual(new Map());
+  });
+});
 
 describe("getApplicationsForVm", () => {
   it("returns empty list when VM has no detected applications", () => {

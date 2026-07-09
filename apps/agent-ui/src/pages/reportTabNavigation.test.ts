@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildApplicationDetailUrl,
   buildVmDetailUrl,
   REPORT_TAB,
   resolveReportTab,
@@ -22,6 +23,19 @@ describe("resolveReportTab", () => {
     expect(resolveReportTab(new URLSearchParams(), false)).toBe(
       REPORT_TAB.overview,
     );
+  });
+});
+
+describe("buildApplicationDetailUrl", () => {
+  it("opens the applications tab with the selected application", () => {
+    const params = buildApplicationDetailUrl(
+      new URLSearchParams("tab=vms&vmId=vm-1&search=web"),
+      "Nginx",
+    );
+    expect(params.get("tab")).toBe("applications");
+    expect(params.get("application")).toBe("Nginx");
+    expect(params.get("vmId")).toBeNull();
+    expect(params.get("search")).toBeNull();
   });
 });
 

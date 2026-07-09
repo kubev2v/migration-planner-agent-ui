@@ -6,6 +6,7 @@ export type ColumnKey =
   | "name"
   | "labels"
   | "groups"
+  | "applications"
   | "vCenterState"
   | "id"
   | "cpuUsage"
@@ -41,6 +42,7 @@ export const Columns: Record<ColumnKey, string> = {
   name: "Name",
   labels: "Labels",
   groups: "Groups",
+  applications: "Applications",
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
@@ -68,7 +70,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 7;
+export const VISIBLE_COLUMNS_VERSION = 8;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -97,7 +99,7 @@ export const getColumnModifier = (key: ColumnKey) => {
   ) {
     return "fitContent";
   }
-  if (key === "labels") {
+  if (key === "labels" || key === "applications") {
     return "wrap";
   }
   return "nowrap";

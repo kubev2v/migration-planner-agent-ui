@@ -366,6 +366,12 @@ export const GroupDetailPage: React.FC = () => {
     setVmsPage(1);
   };
 
+  const handleClearSelectedApplication = useCallback(() => {
+    setSearchParams(buildApplicationsTabUrl(searchParams), { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const selectedApplicationName = searchParams.get("application");
+
   const handleConcernClick = useCallback(
     (concernLabel: string) => {
       handleNavigateToVMFilters({ concernLabels: [concernLabel] });
@@ -629,6 +635,8 @@ export const GroupDetailPage: React.FC = () => {
                   applications={applicationsList}
                   loading={applicationsLoading}
                   error={applicationsError}
+                  selectedApplicationName={selectedApplicationName}
+                  onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
                 />
               </div>

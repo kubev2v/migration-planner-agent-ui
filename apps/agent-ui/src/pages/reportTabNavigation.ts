@@ -74,6 +74,7 @@ export function clearVmFilterParams(params: URLSearchParams): void {
   params.delete("vmLabels");
   params.delete("concernLabels");
   params.delete("concernCategories");
+  params.delete("application");
 }
 
 export function buildVmDetailUrl(
@@ -93,7 +94,17 @@ export function buildApplicationsTabUrl(
   const params = new URLSearchParams(searchParams);
   clearVmFilterParams(params);
   params.delete("vmId");
+  params.delete("application");
   params.set("tab", "applications");
+  return params;
+}
+
+export function buildApplicationDetailUrl(
+  searchParams: URLSearchParams,
+  applicationName: string,
+): URLSearchParams {
+  const params = buildApplicationsTabUrl(searchParams);
+  params.set("application", applicationName);
   return params;
 }
 

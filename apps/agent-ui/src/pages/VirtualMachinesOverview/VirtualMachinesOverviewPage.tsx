@@ -146,6 +146,12 @@ export const ReportContainer: React.FC = () => {
     [setSearchParams],
   );
 
+  const handleClearSelectedApplication = useCallback(() => {
+    setSearchParams(buildApplicationsTabUrl(searchParams), { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const selectedApplicationName = searchParams.get("application");
+
   // Determine initial tab based on URL params (only on mount)
   const [activeTab, setActiveTab] = useState<string | number>(() =>
     resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
@@ -712,6 +718,8 @@ export const ReportContainer: React.FC = () => {
                   applications={applicationsList}
                   loading={applicationsLoading}
                   error={applicationsError}
+                  selectedApplicationName={selectedApplicationName}
+                  onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
                 />
               </div>
