@@ -6,6 +6,16 @@ export type {
   ApplicationVM,
 } from "@openshift-migration-advisor/agent-sdk";
 
+/** Return applications detected on a single VM. */
+export function getApplicationsForVm(
+  applications: ApplicationOverview[],
+  vmId: string,
+): ApplicationOverview[] {
+  return applications.filter((application) =>
+    application.vms.some((vm) => vm.id === vmId),
+  );
+}
+
 /** Restrict applications to VMs in the given scope (e.g. group membership). */
 export function scopeApplicationsToVms(
   applications: ApplicationOverview[],

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ApplicationOverview } from "./applicationsApi";
-import { scopeApplicationsToVms } from "./applicationsApi";
+import {
+  getApplicationsForVm,
+  scopeApplicationsToVms,
+} from "./applicationsApi";
 
 const sampleApplications: ApplicationOverview[] = [
   {
@@ -28,6 +31,25 @@ const sampleApplications: ApplicationOverview[] = [
     vms: [{ id: "vm-4", name: "edge-01" }],
   },
 ];
+
+describe("getApplicationsForVm", () => {
+  it("returns empty list when VM has no detected applications", () => {
+    expect(getApplicationsForVm(sampleApplications, "vm-missing")).toEqual([]);
+  });
+
+  it("returns all applications running on the VM", () => {
+    expect(getApplicationsForVm(sampleApplications, "vm-2")).toEqual([
+      sampleApplications[0],
+      sampleApplications[1],
+    ]);
+  });
+
+  it("returns a single application when only one matches", () => {
+    expect(getApplicationsForVm(sampleApplications, "vm-4")).toEqual([
+      sampleApplications[2],
+    ]);
+  });
+});
 
 describe("scopeApplicationsToVms", () => {
   it("returns empty list when scope is empty", () => {

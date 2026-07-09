@@ -1,5 +1,6 @@
 import { useInjection } from "@migration-planner-ui/ioc";
 import type {
+  ApplicationOverview,
   DefaultApiInterface,
   VirtualMachineDetail,
   VMIssue,
@@ -48,6 +49,8 @@ import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Symbols } from "../../../../main/Symbols";
+import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
+import { VMApplicationsCard } from "./VMApplicationsCard";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { isLikelyCanceledInspectionError } from "./vmInspectionUtils";
 
@@ -89,6 +92,13 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     Information: false,
     Other: false,
   });
+  const [vmApplications, setVmApplications] = useState<ApplicationOverview[]>(
+    [],
+  );
+  const [applicationsLoading, setApplicationsLoading] = useState(true);
+  const [applicationsError, setApplicationsError] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const fetchVMDetails = async () => {
@@ -114,6 +124,41 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     };
 
     fetchVMDetails();
+  }, [vmId, agentApi]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchApplications = async () => {
+      try {
+        setApplicationsLoading(true);
+        setApplicationsError(null);
+        const response = await agentApi.getApplications();
+        if (!cancelled) {
+          setVmApplications(
+            getApplicationsForVm(response.applications ?? [], vmId),
+          );
+        }
+      } catch (err) {
+        console.warn("Error fetching VM applications:", err);
+        if (!cancelled) {
+          setVmApplications([]);
+          setApplicationsError(
+            err instanceof Error ? err.message : "Failed to load applications.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setApplicationsLoading(false);
+        }
+      }
+    };
+
+    fetchApplications();
+
+    return () => {
+      cancelled = true;
+    };
   }, [vmId, agentApi]);
 
   if (loading) {
@@ -897,6 +942,15 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
             })()}
           </CardBody>
         </Card>
+      </StackItem>
+
+      <StackItem>
+        <VMApplicationsCard
+          key={vmId}
+          applications={vmApplications}
+          loading={applicationsLoading}
+          error={applicationsError}
+        />
       </StackItem>
     </Stack>
   );
