@@ -14,25 +14,22 @@ import {
   MenuToggle,
   type MenuToggleElement,
   Pagination,
-  SearchInput,
-  Select,
-  SelectList,
-  SelectOption,
   Title,
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
   ToolbarItem,
 } from "@patternfly/react-core";
-import {
-  DesktopIcon,
-  EllipsisVIcon,
-  FilterIcon,
-} from "@patternfly/react-icons";
+import { DesktopIcon, EllipsisVIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  AttributeValueFilter,
+  type AttributeValueFilterAttribute,
+  attributeValueFilterToolbarStyle,
+} from "../../../common/components/attribute-value-filter";
 import { GroupLabelsCell } from "./GroupLabelsCell";
 
 export interface GroupRow extends Group {
@@ -96,18 +93,44 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
   onEditGroupName,
   onDeleteGroup,
 }) => {
-  const [isLabelsFilterOpen, setIsLabelsFilterOpen] = useState(false);
   const [openMenuGroupId, setOpenMenuGroupId] = useState<string | null>(null);
 
-  const labelsFilterLabel = useMemo(() => {
-    if (selectedLabels.length === 0) {
-      return "Labels";
-    }
-    if (selectedLabels.length === 1) {
-      return selectedLabels[0];
-    }
-    return `${selectedLabels.length} labels`;
-  }, [selectedLabels]);
+  const clearAllFilters = () => {
+    onNameFilterChange("");
+    onLabelsFilterChange([]);
+  };
+
+  const filterAttributes = useMemo(
+    (): AttributeValueFilterAttribute[] => [
+      {
+        id: "name",
+        label: "Name",
+        type: "text",
+        value: nameFilter,
+        onChange: onNameFilterChange,
+        placeholder: "Filter by name",
+        ariaLabel: "Filter by name",
+      },
+      {
+        id: "labels",
+        label: "Labels",
+        type: "checkbox",
+        options: availableLabels.map((label) => ({
+          value: label,
+          label,
+        })),
+        selections: selectedLabels,
+        onSelectionsChange: onLabelsFilterChange,
+      },
+    ],
+    [
+      availableLabels,
+      nameFilter,
+      onLabelsFilterChange,
+      onNameFilterChange,
+      selectedLabels,
+    ],
+  );
 
   const hasActiveFilters =
     nameFilter.trim().length > 0 || selectedLabels.length > 0;
@@ -120,61 +143,14 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
         Groups
       </Title>
 
-      <Toolbar className={styles.toolbar}>
+      <Toolbar
+        className={`${styles.toolbar} ${attributeValueFilterToolbarStyle}`}
+        clearAllFilters={clearAllFilters}
+      >
         <ToolbarContent>
           <ToolbarGroup variant="filter-group">
             <ToolbarItem>
-              <SearchInput
-                placeholder="Filter by name"
-                value={nameFilter}
-                onChange={(_event, value) => onNameFilterChange(value)}
-                onClear={() => onNameFilterChange("")}
-              />
-            </ToolbarItem>
-            <ToolbarItem>
-              <Select
-                role="menu"
-                isOpen={isLabelsFilterOpen}
-                selected={selectedLabels}
-                onSelect={(_event, selection) => {
-                  const label = String(selection);
-                  onLabelsFilterChange(
-                    selectedLabels.includes(label)
-                      ? selectedLabels.filter((l) => l !== label)
-                      : [...selectedLabels, label],
-                  );
-                }}
-                onOpenChange={setIsLabelsFilterOpen}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    onClick={() => setIsLabelsFilterOpen((open) => !open)}
-                    isExpanded={isLabelsFilterOpen}
-                    icon={<FilterIcon />}
-                  >
-                    {labelsFilterLabel}
-                  </MenuToggle>
-                )}
-              >
-                <SelectList>
-                  {availableLabels.length === 0 ? (
-                    <SelectOption value="" isDisabled>
-                      No labels available
-                    </SelectOption>
-                  ) : (
-                    availableLabels.map((label) => (
-                      <SelectOption
-                        key={label}
-                        value={label}
-                        hasCheckbox
-                        isSelected={selectedLabels.includes(label)}
-                      >
-                        {label}
-                      </SelectOption>
-                    ))
-                  )}
-                </SelectList>
-              </Select>
+              <AttributeValueFilter attributes={filterAttributes} />
             </ToolbarItem>
           </ToolbarGroup>
           <ToolbarItem>

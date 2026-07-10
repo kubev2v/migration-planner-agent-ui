@@ -1,3 +1,10 @@
+export {
+  AttributeValueFilter,
+  type AttributeValueFilterAttribute,
+  type AttributeValueFilterProps,
+  attributeValueFilterToolbarStyle,
+  type SearchableCheckboxFilterAttribute,
+} from "./attribute-value-filter";
 export { CollectionProgress } from "./CollectionProgress";
 export { DataSharingAlert } from "./DataSharingAlert";
 export { DataSharingCheckbox } from "./DataSharingCheckbox";
