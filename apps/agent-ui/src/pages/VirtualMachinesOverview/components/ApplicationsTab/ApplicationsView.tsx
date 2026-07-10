@@ -3,7 +3,6 @@ import {
   Alert,
   Bullseye,
   Button,
-  Checkbox,
   Drawer,
   DrawerActions,
   DrawerCloseButton,
@@ -12,16 +11,11 @@ import {
   DrawerHead,
   DrawerPanelBody,
   DrawerPanelContent,
-  Dropdown,
   EmptyState,
   EmptyStateBody,
   EmptyStateVariant,
   Flex,
   FlexItem,
-  Label,
-  LabelGroup,
-  MenuToggle,
-  type MenuToggleElement,
   Pagination,
   SearchInput,
   Title,
@@ -30,17 +24,20 @@ import {
   ToolbarGroup,
   ToolbarItem,
 } from "@patternfly/react-core";
-import { FilterIcon, SearchIcon } from "@patternfly/react-icons";
+import { SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import {
+  AttributeValueFilter,
+  type AttributeValueFilterAttribute,
+  attributeValueFilterToolbarStyle,
+} from "../../../../common/components/attribute-value-filter";
 import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
 import {
-  buildVmLookup,
   filterApplications,
   filterVmsBySearch,
   getUniqueVms,
-  getVmFilterLabel,
   paginateItems,
 } from "./applicationFilters";
 import type { ApplicationOverview } from "./applicationsApi";
@@ -57,30 +54,8 @@ const styles = {
   toolbar: css`
     margin-bottom: 16px;
   `,
-  nameSearchToolbarItem: css`
-    flex: 1;
-    min-width: 212px;
-  `,
-  appliedFilters: css`
-    margin-bottom: 16px;
-  `,
   header: css`
     margin-bottom: 16px;
-  `,
-  vmFilterMenu: css`
-    padding: 8px 16px 0;
-  `,
-  vmFilterList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 16px 16px;
-    max-height: 300px;
-    overflow-y: auto;
-  `,
-  vmFilterEmpty: css`
-    padding: 8px 16px 16px;
-    color: var(--pf-t--global--text--color--subtle);
   `,
 };
 
@@ -99,21 +74,13 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
 }) => {
   const [nameSearch, setNameSearch] = useState("");
   const [selectedVmIds, setSelectedVmIds] = useState<string[]>([]);
-  const [isVmFilterOpen, setIsVmFilterOpen] = useState(false);
-  const [vmFilterSearch, setVmFilterSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [drawerApplication, setDrawerApplication] =
     useState<ApplicationOverview | null>(null);
   const [drawerVmSearch, setDrawerVmSearch] = useState("");
 
-  const vmById = useMemo(() => buildVmLookup(applications), [applications]);
   const allVms = useMemo(() => getUniqueVms(applications), [applications]);
-
-  const filteredVmOptions = useMemo(
-    () => filterVmsBySearch(allVms, vmFilterSearch),
-    [allVms, vmFilterSearch],
-  );
 
   const filteredApplications = useMemo(
     () =>
@@ -136,47 +103,58 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
     return filterVmsBySearch(drawerApplication.vms, drawerVmSearch);
   }, [drawerApplication, drawerVmSearch]);
 
-  const trimmedNameSearch = nameSearch.trim();
-  const hasActiveFilters =
-    trimmedNameSearch.length > 0 || selectedVmIds.length > 0;
-  const vmFilterLabel = getVmFilterLabel(selectedVmIds, vmById);
+  const resetPage = useCallback(() => setPage(1), []);
 
-  const resetPage = () => setPage(1);
-
-  const closeDrawer = () => {
+  const closeDrawer = useCallback(() => {
     setDrawerApplication(null);
     setDrawerVmSearch("");
-  };
+  }, []);
+
+  const filterAttributes = useMemo(
+    (): AttributeValueFilterAttribute[] => [
+      {
+        id: "name",
+        label: "Name",
+        type: "text",
+        value: nameSearch,
+        onChange: (value) => {
+          closeDrawer();
+          setNameSearch(value);
+          resetPage();
+        },
+        placeholder: "Find by application name",
+        ariaLabel: "Find by application name",
+      },
+      {
+        id: "virtual-machine",
+        label: "Virtual machine",
+        type: "searchable-checkbox",
+        options: allVms.map((vm) => ({
+          value: vm.id,
+          label: vm.name,
+        })),
+        selections: selectedVmIds,
+        onSelectionsChange: (vmIds) => {
+          closeDrawer();
+          setSelectedVmIds(vmIds);
+          resetPage();
+        },
+        searchPlaceholder: "Type to filter VMs",
+        emptyMessage: "No virtual machines available",
+      },
+    ],
+    [allVms, closeDrawer, nameSearch, resetPage, selectedVmIds],
+  );
 
   const openDrawer = (application: ApplicationOverview) => {
     setDrawerApplication(application);
     setDrawerVmSearch("");
   };
 
-  const applyNameSearch = (value: string) => {
-    closeDrawer();
-    setNameSearch(value);
-    resetPage();
-  };
-
-  const toggleVmFilter = (vmId: string) => {
-    closeDrawer();
-    setSelectedVmIds((prev) =>
-      prev.includes(vmId) ? prev.filter((id) => id !== vmId) : [...prev, vmId],
-    );
-    resetPage();
-  };
-
   const clearAllFilters = () => {
     closeDrawer();
     setNameSearch("");
     setSelectedVmIds([]);
-    resetPage();
-  };
-
-  const removeVmFilter = (vmId: string) => {
-    closeDrawer();
-    setSelectedVmIds((prev) => prev.filter((id) => id !== vmId));
     resetPage();
   };
 
@@ -258,65 +236,14 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
             </Alert>
           )}
 
-          <Toolbar className={styles.toolbar}>
+          <Toolbar
+            className={`${styles.toolbar} ${attributeValueFilterToolbarStyle}`}
+            clearAllFilters={clearAllFilters}
+          >
             <ToolbarContent>
               <ToolbarGroup variant="filter-group">
-                <ToolbarItem className={styles.nameSearchToolbarItem}>
-                  <SearchInput
-                    placeholder="Find by application name"
-                    value={nameSearch}
-                    onChange={(_event, value) => applyNameSearch(value)}
-                    onClear={() => applyNameSearch("")}
-                  />
-                </ToolbarItem>
                 <ToolbarItem>
-                  <Dropdown
-                    isOpen={isVmFilterOpen}
-                    onOpenChange={(open) => {
-                      setIsVmFilterOpen(open);
-                      if (!open) {
-                        setVmFilterSearch("");
-                      }
-                    }}
-                    isScrollable
-                    maxMenuHeight="360px"
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        onClick={() => setIsVmFilterOpen((open) => !open)}
-                        isExpanded={isVmFilterOpen}
-                        icon={<FilterIcon />}
-                      >
-                        {vmFilterLabel}
-                      </MenuToggle>
-                    )}
-                  >
-                    <div className={styles.vmFilterMenu}>
-                      <SearchInput
-                        placeholder="Type to filter VMs"
-                        value={vmFilterSearch}
-                        onChange={(_event, value) => setVmFilterSearch(value)}
-                        onClear={() => setVmFilterSearch("")}
-                      />
-                    </div>
-                    {filteredVmOptions.length === 0 ? (
-                      <div className={styles.vmFilterEmpty}>
-                        No virtual machines available
-                      </div>
-                    ) : (
-                      <div className={styles.vmFilterList}>
-                        {filteredVmOptions.map((vm) => (
-                          <Checkbox
-                            key={vm.id}
-                            id={`applications-vm-filter-${vm.id}`}
-                            label={vm.name}
-                            isChecked={selectedVmIds.includes(vm.id)}
-                            onChange={() => toggleVmFilter(vm.id)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </Dropdown>
+                  <AttributeValueFilter attributes={filterAttributes} />
                 </ToolbarItem>
               </ToolbarGroup>
               <ToolbarItem align={{ default: "alignEnd" }}>
@@ -335,36 +262,6 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
               </ToolbarItem>
             </ToolbarContent>
           </Toolbar>
-
-          {hasActiveFilters && (
-            <Toolbar className={styles.appliedFilters}>
-              <ToolbarContent alignItems="center">
-                <ToolbarItem>
-                  <LabelGroup>
-                    {trimmedNameSearch && (
-                      <Label color="blue" onClose={() => applyNameSearch("")}>
-                        {trimmedNameSearch}
-                      </Label>
-                    )}
-                    {selectedVmIds.map((vmId) => (
-                      <Label
-                        key={vmId}
-                        color="blue"
-                        onClose={() => removeVmFilter(vmId)}
-                      >
-                        {vmById.get(vmId)?.name ?? vmId}
-                      </Label>
-                    ))}
-                  </LabelGroup>
-                </ToolbarItem>
-                <ToolbarItem>
-                  <Button variant="link" onClick={clearAllFilters}>
-                    Clear all filters
-                  </Button>
-                </ToolbarItem>
-              </ToolbarContent>
-            </Toolbar>
-          )}
 
           <Table aria-label="Applications" variant="compact">
             <Thead>

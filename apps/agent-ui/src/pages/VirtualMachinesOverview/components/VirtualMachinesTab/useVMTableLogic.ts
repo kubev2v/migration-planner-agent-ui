@@ -1,15 +1,21 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type { ThProps } from "@patternfly/react-table";
-import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import useLocalStorage from "../../../../hooks/useLocalStorage";
 import type { VirtualMachineWithGroupItems } from "../../../Groups/utils/vmGroupMembership";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
+import { buildVmTableFilterAttributes } from "./vmTableFilterAttributes";
 import {
-  buildAppliedFilters,
   EMPTY_VM_TABLE_FILTER_SELECTION,
-  removeFilterFromSelection,
   type VMTableFilterSelection,
 } from "./vmTableFilterLogic";
 import {
@@ -17,19 +23,56 @@ import {
   type ColumnKey,
   Columns,
   DEFAULT_VISIBLE_COLUMNS,
-  diskSizeRanges,
   FRONTEND_SORT_METHODS,
   type FrontendSortableColumn,
   isBackendSortableColumn,
   isSortableColumn,
   MANDATORY_COLUMNS,
-  memorySizeRanges,
   resolveVisibleColumns,
-  utilizationPercentRanges,
   VISIBLE_COLUMNS_KEY,
   VISIBLE_COLUMNS_VERSION,
+  VM_TABLE_VARIANT_UI,
 } from "./vmTableShared";
 import type { UseVMTableLogicParams } from "./vmTableTypes";
+
+const EMPTY_STRING_ARRAY: string[] = [];
+
+type RangeFilterValue = { min: number; max?: number };
+
+function stringArraysEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function syncStringArrayState(
+  setter: Dispatch<SetStateAction<string[]>>,
+  next: string[] | undefined,
+): void {
+  const resolved = next ?? EMPTY_STRING_ARRAY;
+  setter((previous) =>
+    stringArraysEqual(previous, resolved) ? previous : resolved,
+  );
+}
+
+function rangesEqual(
+  a: RangeFilterValue | null,
+  b: RangeFilterValue | null,
+): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return a.min === b.min && a.max === b.max;
+}
+
+function syncRangeState(
+  setter: Dispatch<SetStateAction<RangeFilterValue | null>>,
+  next: RangeFilterValue | null | undefined,
+): void {
+  const resolved = next ?? null;
+  setter((previous) => (rangesEqual(previous, resolved) ? previous : resolved));
+}
 
 export function useVMTableLogic({
   vms,
@@ -57,6 +100,10 @@ export function useVMTableLogic({
 }: UseVMTableLogicParams) {
   const isGroupRowActions = variant === "groups";
   const [searchParams, setSearchParams] = useSearchParams();
+  const initialFiltersSnapshot = JSON.stringify(initialFilters ?? {});
+
+  // Track if filter changes come from user interaction (not from URL sync)
+  const isUserInteraction = useRef(false);
 
   // Use props for pagination state (controlled by parent)
   const page = currentPage;
@@ -95,12 +142,6 @@ export function useVMTableLogic({
 
   // Search state
   const [searchValue, setSearchValue] = useState(initialFilters?.search || "");
-
-  // Filter modal state
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [isConcernSelectOpen, setIsConcernSelectOpen] = useState(false);
-  const [isVmLabelSelectOpen, setIsVmLabelSelectOpen] = useState(false);
-  const [isGroupSelectOpen, setIsGroupSelectOpen] = useState(false);
 
   // Cancel deep inspection confirmation (vm id when open, null when closed)
   const [cancelInspectionVmId, setCancelInspectionVmId] = useState<
@@ -164,29 +205,29 @@ export function useVMTableLogic({
 
   // Client-side filter state (applied filters)
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(
-    initialFilters?.statuses || [],
+    initialFilters?.statuses ?? EMPTY_STRING_ARRAY,
   );
   const [selectedClusters, setSelectedClusters] = useState<string[]>(
-    initialFilters?.clusters || [],
+    initialFilters?.clusters ?? EMPTY_STRING_ARRAY,
   );
   const [selectedDatacenters, setSelectedDatacenters] = useState<string[]>(
-    initialFilters?.datacenters || [],
+    initialFilters?.datacenters ?? EMPTY_STRING_ARRAY,
   );
   const [selectedMigrationReadiness, setSelectedMigrationReadiness] = useState<
     string[]
-  >(initialFilters?.migrationReadiness || []);
+  >(initialFilters?.migrationReadiness ?? EMPTY_STRING_ARRAY);
   const [selectedVmLabels, setSelectedVmLabels] = useState<string[]>(
-    initialFilters?.vmLabels || [],
+    initialFilters?.vmLabels ?? EMPTY_STRING_ARRAY,
   );
   const [selectedGroups, setSelectedGroups] = useState<string[]>(
-    initialFilters?.groups || [],
+    initialFilters?.groups ?? EMPTY_STRING_ARRAY,
   );
   const [selectedConcernLabels, setSelectedConcernLabels] = useState<string[]>(
-    initialFilters?.concernLabels || [],
+    initialFilters?.concernLabels ?? EMPTY_STRING_ARRAY,
   );
   const [selectedConcernCategories, setSelectedConcernCategories] = useState<
     string[]
-  >(initialFilters?.concernCategories || []);
+  >(initialFilters?.concernCategories ?? EMPTY_STRING_ARRAY);
   const [hasIssuesFilter, setHasIssuesFilter] = useState(
     initialFilters?.hasIssues || false,
   );
@@ -214,51 +255,8 @@ export function useVMTableLogic({
     max?: number;
   } | null>(initialFilters?.diskUsageRange || null);
 
-  // Temporary filter state (for modal, not yet applied)
-  const [tempSelectedStatuses, setTempSelectedStatuses] = useState<string[]>(
-    [],
-  );
-  const [tempSelectedClusters, setTempSelectedClusters] = useState<string[]>(
-    [],
-  );
-  const [tempSelectedDatacenters, setTempSelectedDatacenters] = useState<
-    string[]
-  >([]);
-  const [tempSelectedMigrationReadiness, setTempSelectedMigrationReadiness] =
-    useState<string[]>([]);
-  const [tempSelectedVmLabels, setTempSelectedVmLabels] = useState<string[]>(
-    [],
-  );
-  const [tempSelectedGroups, setTempSelectedGroups] = useState<string[]>([]);
-  const [tempSelectedConcernLabels, setTempSelectedConcernLabels] = useState<
-    string[]
-  >([]);
-  const [tempSelectedConcernCategories, setTempSelectedConcernCategories] =
-    useState<string[]>([]);
-  const [tempHasIssuesFilter, setTempHasIssuesFilter] = useState(false);
-  const [tempNoIssuesFilter, setTempNoIssuesFilter] = useState(false);
-  const [tempDiskRangeFilter, setTempDiskRangeFilter] = useState<{
-    min: number;
-    max?: number;
-  } | null>(null);
-  const [tempMemoryRangeFilter, setTempMemoryRangeFilter] = useState<{
-    min: number;
-    max?: number;
-  } | null>(null);
-  const [tempCpuUsageRangeFilter, setTempCpuUsageRangeFilter] = useState<{
-    min: number;
-    max?: number;
-  } | null>(null);
-  const [tempRamUsageRangeFilter, setTempRamUsageRangeFilter] = useState<{
-    min: number;
-    max?: number;
-  } | null>(null);
-  const [tempDiskUsageRangeFilter, setTempDiskUsageRangeFilter] = useState<{
-    min: number;
-    max?: number;
-  } | null>(null);
-
   // Sync local state with initialFilters when they change (e.g., from chart navigation)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: snapshot avoids reference-only changes and URL-driven resync loops
   useEffect(() => {
     // Skip if changes come from user interaction
     if (isUserInteraction.current) return;
@@ -267,23 +265,41 @@ export function useVMTableLogic({
     const currentTab = searchParams.get("tab");
     if (currentTab !== "vms") return;
 
-    setDiskRangeFilter(initialFilters?.diskRange || null);
-    setMemoryRangeFilter(initialFilters?.memoryRange || null);
-    setCpuUsageRangeFilter(initialFilters?.cpuUsageRange || null);
-    setRamUsageRangeFilter(initialFilters?.ramUsageRange || null);
-    setDiskUsageRangeFilter(initialFilters?.diskUsageRange || null);
-    setSelectedStatuses(initialFilters?.statuses || []);
-    setSelectedClusters(initialFilters?.clusters || []);
-    setSelectedDatacenters(initialFilters?.datacenters || []);
-    setSelectedMigrationReadiness(initialFilters?.migrationReadiness || []);
-    setSelectedVmLabels(initialFilters?.vmLabels || []);
-    setSelectedGroups(initialFilters?.groups || []);
-    setSelectedConcernLabels(initialFilters?.concernLabels || []);
-    setSelectedConcernCategories(initialFilters?.concernCategories || []);
-    setHasIssuesFilter(initialFilters?.hasIssues || false);
-    setNoIssuesFilter(initialFilters?.noIssues || false);
-    setSearchValue(initialFilters?.search || "");
-  }, [initialFilters, searchParams]);
+    syncRangeState(setDiskRangeFilter, initialFilters?.diskRange);
+    syncRangeState(setMemoryRangeFilter, initialFilters?.memoryRange);
+    syncRangeState(setCpuUsageRangeFilter, initialFilters?.cpuUsageRange);
+    syncRangeState(setRamUsageRangeFilter, initialFilters?.ramUsageRange);
+    syncRangeState(setDiskUsageRangeFilter, initialFilters?.diskUsageRange);
+    syncStringArrayState(setSelectedStatuses, initialFilters?.statuses);
+    syncStringArrayState(setSelectedClusters, initialFilters?.clusters);
+    syncStringArrayState(setSelectedDatacenters, initialFilters?.datacenters);
+    syncStringArrayState(
+      setSelectedMigrationReadiness,
+      initialFilters?.migrationReadiness,
+    );
+    syncStringArrayState(setSelectedVmLabels, initialFilters?.vmLabels);
+    syncStringArrayState(setSelectedGroups, initialFilters?.groups);
+    syncStringArrayState(
+      setSelectedConcernLabels,
+      initialFilters?.concernLabels,
+    );
+    syncStringArrayState(
+      setSelectedConcernCategories,
+      initialFilters?.concernCategories,
+    );
+    setHasIssuesFilter((previous) => {
+      const next = initialFilters?.hasIssues || false;
+      return previous === next ? previous : next;
+    });
+    setNoIssuesFilter((previous) => {
+      const next = initialFilters?.noIssues || false;
+      return previous === next ? previous : next;
+    });
+    setSearchValue((previous) => {
+      const next = initialFilters?.search || "";
+      return previous === next ? previous : next;
+    });
+  }, [initialFiltersSnapshot]);
   // Selection state
   // const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
 
@@ -329,8 +345,14 @@ export function useVMTableLogic({
   const availableVmLabels = availableFilterOptions.vmLabels;
   const availableGroups = availableFilterOptions.groups;
 
-  // Track if filter changes come from user interaction (not from URL sync)
-  const isUserInteraction = useRef(false);
+  const applyFilterChange = useCallback(
+    (updater: () => void) => {
+      isUserInteraction.current = true;
+      updater();
+      onPageChange?.(1, pageSize);
+    },
+    [onPageChange, pageSize],
+  );
 
   // Update URL and trigger backend refetch when filters change due to user interaction
   useEffect(() => {
@@ -424,54 +446,12 @@ export function useVMTableLogic({
     cpuUsageRangeFilter,
     ramUsageRangeFilter,
     diskUsageRangeFilter,
-    searchParams,
     setSearchParams,
     onFiltersChange,
+    searchParams.get,
   ]);
 
   // Build list of applied filters for chip display
-  const filterSelection = useMemo(
-    (): VMTableFilterSelection => ({
-      selectedStatuses,
-      selectedClusters,
-      selectedDatacenters,
-      selectedMigrationReadiness,
-      selectedVmLabels,
-      selectedGroups,
-      selectedConcernLabels,
-      selectedConcernCategories,
-      hasIssuesFilter,
-      noIssuesFilter,
-      diskRangeFilter,
-      memoryRangeFilter,
-      cpuUsageRangeFilter,
-      ramUsageRangeFilter,
-      diskUsageRangeFilter,
-    }),
-    [
-      selectedStatuses,
-      selectedClusters,
-      selectedDatacenters,
-      selectedMigrationReadiness,
-      selectedVmLabels,
-      selectedGroups,
-      selectedConcernLabels,
-      selectedConcernCategories,
-      hasIssuesFilter,
-      noIssuesFilter,
-      diskRangeFilter,
-      memoryRangeFilter,
-      cpuUsageRangeFilter,
-      ramUsageRangeFilter,
-      diskUsageRangeFilter,
-    ],
-  );
-
-  const appliedFilters = useMemo(
-    () => buildAppliedFilters(filterSelection),
-    [filterSelection],
-  );
-
   const applyFilterSelection = useCallback(
     (selection: VMTableFilterSelection) => {
       setSelectedStatuses(selection.selectedStatuses);
@@ -491,6 +471,130 @@ export function useVMTableLogic({
       setDiskUsageRangeFilter(selection.diskUsageRangeFilter);
     },
     [],
+  );
+
+  const showGroupsFilter = VM_TABLE_VARIANT_UI[variant].showGroupsFilter;
+
+  const refreshFilterOptions = useCallback(() => {
+    void onRefreshFilterOptions?.();
+  }, [onRefreshFilterOptions]);
+
+  const filterAttributes = useMemo(
+    () =>
+      buildVmTableFilterAttributes({
+        searchValue,
+        onSearchChange: (value) => {
+          isUserInteraction.current = true;
+          setSearchValue(value);
+        },
+        selectedConcernCategories,
+        onConcernCategoriesChange: (values) => {
+          applyFilterChange(() => {
+            setSelectedConcernCategories(values);
+            setHasIssuesFilter(false);
+            setNoIssuesFilter(false);
+          });
+        },
+        selectedConcernLabels,
+        onConcernLabelsChange: (values) => {
+          applyFilterChange(() => {
+            setSelectedConcernLabels(values);
+            setHasIssuesFilter(false);
+            setNoIssuesFilter(false);
+          });
+        },
+        selectedDatacenters,
+        onDatacentersChange: (values) => {
+          applyFilterChange(() => setSelectedDatacenters(values));
+        },
+        selectedClusters,
+        onClustersChange: (values) => {
+          applyFilterChange(() => setSelectedClusters(values));
+        },
+        diskRangeFilter,
+        onDiskRangeChange: (value) => {
+          applyFilterChange(() => setDiskRangeFilter(value));
+        },
+        memoryRangeFilter,
+        onMemoryRangeChange: (value) => {
+          applyFilterChange(() => setMemoryRangeFilter(value));
+        },
+        cpuUsageRangeFilter,
+        onCpuUsageRangeChange: (value) => {
+          applyFilterChange(() => setCpuUsageRangeFilter(value));
+        },
+        ramUsageRangeFilter,
+        onRamUsageRangeChange: (value) => {
+          applyFilterChange(() => setRamUsageRangeFilter(value));
+        },
+        diskUsageRangeFilter,
+        onDiskUsageRangeChange: (value) => {
+          applyFilterChange(() => setDiskUsageRangeFilter(value));
+        },
+        selectedStatuses,
+        onStatusesChange: (values) => {
+          applyFilterChange(() => setSelectedStatuses(values));
+        },
+        selectedMigrationReadiness,
+        onMigrationReadinessChange: (values) => {
+          applyFilterChange(() => setSelectedMigrationReadiness(values));
+        },
+        selectedVmLabels,
+        onVmLabelsChange: (values) => {
+          applyFilterChange(() => setSelectedVmLabels(values));
+        },
+        selectedGroups,
+        onGroupsChange: (values) => {
+          applyFilterChange(() => setSelectedGroups(values));
+        },
+        hasIssuesFilter,
+        noIssuesFilter,
+        onIssuesFilterChange: (hasIssues, noIssues) => {
+          applyFilterChange(() => {
+            setHasIssuesFilter(hasIssues);
+            setNoIssuesFilter(noIssues);
+            if (hasIssues || noIssues) {
+              setSelectedConcernCategories([]);
+              setSelectedConcernLabels([]);
+            }
+          });
+        },
+        availableConcernCategories,
+        availableConcernLabels,
+        availableDatacenters,
+        availableClusters,
+        availableVmLabels,
+        availableGroups,
+        showGroupsFilter,
+        onCheckboxValueOpen: refreshFilterOptions,
+      }),
+    [
+      applyFilterChange,
+      availableClusters,
+      availableConcernCategories,
+      availableConcernLabels,
+      availableDatacenters,
+      availableGroups,
+      availableVmLabels,
+      cpuUsageRangeFilter,
+      diskRangeFilter,
+      diskUsageRangeFilter,
+      hasIssuesFilter,
+      memoryRangeFilter,
+      noIssuesFilter,
+      ramUsageRangeFilter,
+      refreshFilterOptions,
+      searchValue,
+      selectedClusters,
+      selectedConcernCategories,
+      selectedConcernLabels,
+      selectedDatacenters,
+      selectedGroups,
+      selectedMigrationReadiness,
+      selectedStatuses,
+      selectedVmLabels,
+      showGroupsFilter,
+    ],
   );
 
   // No client-side filtering - handled by backend
@@ -621,249 +725,12 @@ export function useVMTableLogic({
     columnIndex,
   });
 
-  // Apply filters from modal
-  const applyFilters = () => {
-    isUserInteraction.current = true;
-    setSelectedStatuses(tempSelectedStatuses);
-    setSelectedClusters(tempSelectedClusters);
-    setSelectedDatacenters(tempSelectedDatacenters);
-    setSelectedMigrationReadiness(tempSelectedMigrationReadiness);
-    setSelectedVmLabels(tempSelectedVmLabels);
-    setSelectedGroups(tempSelectedGroups);
-    setSelectedConcernLabels(tempSelectedConcernLabels);
-    setSelectedConcernCategories(tempSelectedConcernCategories);
-    setHasIssuesFilter(tempHasIssuesFilter);
-    setNoIssuesFilter(tempNoIssuesFilter);
-    setDiskRangeFilter(tempDiskRangeFilter);
-    setMemoryRangeFilter(tempMemoryRangeFilter);
-    setCpuUsageRangeFilter(tempCpuUsageRangeFilter);
-    setRamUsageRangeFilter(tempRamUsageRangeFilter);
-    setDiskUsageRangeFilter(tempDiskUsageRangeFilter);
-    onPageChange?.(1, pageSize); // Reset to page 1
-    setIsFilterModalOpen(false);
-    setIsConcernSelectOpen(false);
-    setIsVmLabelSelectOpen(false);
-    setIsGroupSelectOpen(false);
-    // Reset temporary filters after applying
-    resetTempFilters();
-  };
-
-  // Cancel filter modal
-  const cancelFilterModal = () => {
-    setIsFilterModalOpen(false);
-    setIsConcernSelectOpen(false);
-    setIsVmLabelSelectOpen(false);
-    setIsGroupSelectOpen(false);
-    // Reset temporary filters when canceling
-    resetTempFilters();
-  };
-
-  // Reset temporary filters to empty state
-  const resetTempFilters = () => {
-    setTempSelectedStatuses([]);
-    setTempSelectedClusters([]);
-    setTempSelectedDatacenters([]);
-    setTempSelectedMigrationReadiness([]);
-    setTempSelectedVmLabels([]);
-    setTempSelectedGroups([]);
-    setTempSelectedConcernLabels([]);
-    setTempSelectedConcernCategories([]);
-    setTempHasIssuesFilter(false);
-    setTempNoIssuesFilter(false);
-    setTempDiskRangeFilter(null);
-    setTempMemoryRangeFilter(null);
-    setTempCpuUsageRangeFilter(null);
-    setTempRamUsageRangeFilter(null);
-    setTempDiskUsageRangeFilter(null);
-  };
-
-  // Refresh filter options when the modal opens so groups/labels stay current.
-  useEffect(() => {
-    if (isFilterModalOpen) {
-      void onRefreshFilterOptions?.();
-    }
-  }, [isFilterModalOpen, onRefreshFilterOptions]);
-
-  // Initialize temporary filters when opening modal
-  // Always sync temp filters with current applied filters when modal opens
-  useEffect(() => {
-    if (isFilterModalOpen) {
-      // Sync temp filters with currently applied filters
-      setTempSelectedStatuses(selectedStatuses);
-      setTempSelectedClusters(selectedClusters);
-      setTempSelectedDatacenters(selectedDatacenters);
-      setTempSelectedMigrationReadiness(selectedMigrationReadiness);
-      setTempSelectedVmLabels(selectedVmLabels);
-      setTempSelectedGroups(selectedGroups);
-      setTempSelectedConcernLabels(selectedConcernLabels);
-      setTempSelectedConcernCategories(selectedConcernCategories);
-      setTempHasIssuesFilter(hasIssuesFilter);
-      setTempNoIssuesFilter(noIssuesFilter);
-      setTempDiskRangeFilter(diskRangeFilter);
-      setTempMemoryRangeFilter(memoryRangeFilter);
-      setTempCpuUsageRangeFilter(cpuUsageRangeFilter);
-      setTempRamUsageRangeFilter(ramUsageRangeFilter);
-      setTempDiskUsageRangeFilter(diskUsageRangeFilter);
-    }
-  }, [
-    isFilterModalOpen,
-    selectedStatuses,
-    selectedClusters,
-    selectedDatacenters,
-    selectedMigrationReadiness,
-    selectedVmLabels,
-    selectedGroups,
-    selectedConcernLabels,
-    selectedConcernCategories,
-    hasIssuesFilter,
-    noIssuesFilter,
-    diskRangeFilter,
-    memoryRangeFilter,
-    cpuUsageRangeFilter,
-    ramUsageRangeFilter,
-    diskUsageRangeFilter,
-  ]);
-
-  // Toggle temporary filter selections in modal
-  const toggleTempStatus = (status: string) => {
-    setTempSelectedStatuses((prev) =>
-      prev.includes(status)
-        ? prev.filter((s) => s !== status)
-        : [...prev, status],
-    );
-  };
-
-  const toggleTempCluster = (cluster: string) => {
-    setTempSelectedClusters((prev) =>
-      prev.includes(cluster)
-        ? prev.filter((c) => c !== cluster)
-        : [...prev, cluster],
-    );
-  };
-
-  const toggleTempDatacenter = (datacenter: string) => {
-    setTempSelectedDatacenters((prev) =>
-      prev.includes(datacenter)
-        ? prev.filter((d) => d !== datacenter)
-        : [...prev, datacenter],
-    );
-  };
-
-  const toggleTempMigrationReadiness = (status: string) => {
-    setTempSelectedMigrationReadiness(
-      tempSelectedMigrationReadiness.includes(status)
-        ? tempSelectedMigrationReadiness.filter((s) => s !== status)
-        : [...tempSelectedMigrationReadiness, status],
-    );
-  };
-
-  const toggleTempConcernLabel = (concernLabel: string) => {
-    setTempSelectedConcernLabels((prev) =>
-      prev.includes(concernLabel)
-        ? prev.filter((c) => c !== concernLabel)
-        : [...prev, concernLabel],
-    );
-  };
-
-  const toggleTempVmLabel = (label: string) => {
-    setTempSelectedVmLabels((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
-    );
-  };
-
-  const toggleTempGroup = (group: string) => {
-    setTempSelectedGroups((prev) =>
-      prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group],
-    );
-  };
-
-  const toggleTempConcernCategory = (category: string) => {
-    setTempSelectedConcernCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category],
-    );
-  };
-
-  const toggleTempDiskRange = (index: number) => {
-    const range = diskSizeRanges[index];
-    const isSameRange =
-      tempDiskRangeFilter?.min === range.min &&
-      tempDiskRangeFilter?.max === range.max;
-    setTempDiskRangeFilter(
-      isSameRange ? null : { min: range.min, max: range.max },
-    );
-  };
-
-  const toggleTempMemoryRange = (index: number) => {
-    const range = memorySizeRanges[index];
-    const isSameRange =
-      tempMemoryRangeFilter?.min === range.min &&
-      tempMemoryRangeFilter?.max === range.max;
-    setTempMemoryRangeFilter(
-      isSameRange ? null : { min: range.min, max: range.max },
-    );
-  };
-
-  const toggleTempUtilizationRange = (
-    index: number,
-    currentFilter: { min: number; max?: number } | null,
-    setFilter: (value: { min: number; max?: number } | null) => void,
-  ) => {
-    const range = utilizationPercentRanges[index];
-    const isSameRange =
-      currentFilter?.min === range.min && currentFilter?.max === range.max;
-    setFilter(isSameRange ? null : { min: range.min, max: range.max });
-  };
-
-  const toggleTempCpuUsageRange = (index: number) => {
-    toggleTempUtilizationRange(
-      index,
-      tempCpuUsageRangeFilter,
-      setTempCpuUsageRangeFilter,
-    );
-  };
-
-  const toggleTempRamUsageRange = (index: number) => {
-    toggleTempUtilizationRange(
-      index,
-      tempRamUsageRangeFilter,
-      setTempRamUsageRangeFilter,
-    );
-  };
-
-  const toggleTempDiskUsageRange = (index: number) => {
-    toggleTempUtilizationRange(
-      index,
-      tempDiskUsageRangeFilter,
-      setTempDiskUsageRangeFilter,
-    );
-  };
-
-  // Remove individual filter
-  const removeFilter = (filterKey: string) => {
-    isUserInteraction.current = true;
-    applyFilterSelection(removeFilterFromSelection(filterSelection, filterKey));
-    onPageChange?.(1, pageSize);
-  };
-
   // Clear all filters
   const clearAllFilters = () => {
-    isUserInteraction.current = true;
-    applyFilterSelection(EMPTY_VM_TABLE_FILTER_SELECTION);
-    setSearchValue("");
-    onPageChange?.(1, pageSize);
-  };
-
-  // Search handlers
-  const handleSearchChange = (_event: React.FormEvent, value: string) => {
-    isUserInteraction.current = true;
-    setSearchValue(value);
-  };
-
-  const handleSearchClear = () => {
-    isUserInteraction.current = true;
-    setSearchValue("");
+    applyFilterChange(() => {
+      applyFilterSelection(EMPTY_VM_TABLE_FILTER_SELECTION);
+      setSearchValue("");
+    });
   };
 
   const onSelectVM = (vm: VirtualMachine, isSelected: boolean) => {
@@ -883,15 +750,8 @@ export function useVMTableLogic({
     visibleColumns,
     isColumnVisible,
     toggleColumn,
-    searchValue,
-    isFilterModalOpen,
-    setIsFilterModalOpen,
-    isConcernSelectOpen,
-    setIsConcernSelectOpen,
-    isVmLabelSelectOpen,
-    setIsVmLabelSelectOpen,
-    isGroupSelectOpen,
-    setIsGroupSelectOpen,
+    filterAttributes,
+    clearAllFilters,
     cancelInspectionVmId,
     openCancelInspectionConfirm,
     closeCancelInspectionConfirm,
@@ -910,57 +770,14 @@ export function useVMTableLogic({
     canRemoveSelectedFromGroup,
     selectedExcludedIds,
     selectedIncludedIds,
-    appliedFilters,
     displayVMs,
     pageVmIds,
     allPageSelected,
     totalMatchingCount,
     handleSelectAllMatching,
     getSortParams,
-    applyFilters,
-    cancelFilterModal,
-    tempSelectedStatuses,
-    tempSelectedClusters,
-    tempSelectedDatacenters,
-    tempSelectedMigrationReadiness,
-    tempSelectedVmLabels,
-    tempSelectedGroups,
-    tempSelectedConcernLabels,
-    tempSelectedConcernCategories,
-    tempHasIssuesFilter,
-    setTempHasIssuesFilter,
-    tempNoIssuesFilter,
-    setTempNoIssuesFilter,
-    tempDiskRangeFilter,
-    tempMemoryRangeFilter,
-    tempCpuUsageRangeFilter,
-    tempRamUsageRangeFilter,
-    tempDiskUsageRangeFilter,
-    toggleTempStatus,
-    toggleTempCluster,
-    toggleTempDatacenter,
-    toggleTempMigrationReadiness,
-    toggleTempConcernLabel,
-    toggleTempVmLabel,
-    toggleTempGroup,
-    toggleTempConcernCategory,
-    toggleTempDiskRange,
-    toggleTempMemoryRange,
-    toggleTempCpuUsageRange,
-    toggleTempRamUsageRange,
-    toggleTempDiskUsageRange,
-    removeFilter,
-    clearAllFilters,
-    handleSearchChange,
-    handleSearchClear,
     onSelectVM,
     columns,
-    availableClusters,
-    availableDatacenters,
-    availableConcernLabels,
-    availableConcernCategories,
-    availableVmLabels,
-    availableGroups,
     isBulkSelectOpen,
     setIsBulkSelectOpen,
     isSelectingAll,

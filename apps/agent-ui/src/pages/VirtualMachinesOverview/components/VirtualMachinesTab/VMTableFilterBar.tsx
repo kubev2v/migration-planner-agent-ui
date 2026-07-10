@@ -1,36 +1,23 @@
 import {
-  Button,
   Checkbox,
-  Content,
   Dropdown,
   DropdownItem,
   DropdownList,
-  Label,
-  LabelGroup,
   MenuToggle,
   type MenuToggleElement,
-  SearchInput,
   Select,
   SelectList,
   SelectOption,
-  ToolbarContent,
   ToolbarGroup,
   ToolbarItem,
 } from "@patternfly/react-core";
-import { FilterIcon } from "@patternfly/react-icons";
 import { ColumnsIcon } from "@patternfly/react-icons/dist/esm/icons/columns-icon";
 import type React from "react";
-import { useRef } from "react";
+import { AttributeValueFilter } from "../../../../common/components/attribute-value-filter";
 import {
   type ColumnKey,
   Columns,
-  diskSizeRanges,
-  FILTER_DROPDOWN_MAX_HEIGHT,
-  filterStyles,
   MANDATORY_COLUMNS,
-  memorySizeRanges,
-  statusLabels,
-  utilizationPercentRanges,
   type VMTableVariantUI,
 } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
@@ -43,8 +30,6 @@ export interface VMTableFilterBarProps {
   onFetchAllVmIds?: (
     filters: import("./vmFilters").VMFilters,
   ) => Promise<string[]>;
-  /** "main" = filter controls for the primary toolbar row; "applied" = active filter chips row */
-  part?: "main" | "applied";
 }
 
 export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
@@ -53,7 +38,6 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
   selectedVMs,
   onSelectionChange,
   onFetchAllVmIds,
-  part = "main",
 }) => {
   const {
     pageVmIds,
@@ -63,110 +47,14 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
     isBulkSelectOpen,
     setIsBulkSelectOpen,
     isSelectingAll,
-    searchValue,
-    handleSearchChange,
-    handleSearchClear,
-    isFilterModalOpen,
-    setIsFilterModalOpen,
-    isConcernSelectOpen,
-    setIsConcernSelectOpen,
-    isVmLabelSelectOpen,
-    setIsVmLabelSelectOpen,
-    isGroupSelectOpen,
-    setIsGroupSelectOpen,
-    applyFilters,
-    cancelFilterModal,
-    tempSelectedConcernCategories,
-    tempSelectedConcernLabels,
-    tempSelectedDatacenters,
-    tempSelectedClusters,
-    tempDiskRangeFilter,
-    tempMemoryRangeFilter,
-    tempCpuUsageRangeFilter,
-    tempRamUsageRangeFilter,
-    tempDiskUsageRangeFilter,
-    tempSelectedStatuses,
-    tempSelectedMigrationReadiness,
-    tempSelectedVmLabels,
-    tempSelectedGroups,
-    setTempHasIssuesFilter,
-    setTempNoIssuesFilter,
-    toggleTempConcernCategory,
-    toggleTempConcernLabel,
-    toggleTempDatacenter,
-    toggleTempCluster,
-    toggleTempDiskRange,
-    toggleTempMemoryRange,
-    toggleTempCpuUsageRange,
-    toggleTempRamUsageRange,
-    toggleTempDiskUsageRange,
-    toggleTempStatus,
-    toggleTempMigrationReadiness,
-    toggleTempVmLabel,
-    toggleTempGroup,
-    appliedFilters,
-    removeFilter,
-    clearAllFilters,
+    filterAttributes,
     isColumnSelectOpen,
     setIsColumnSelectOpen,
     isColumnVisible,
     toggleColumn,
-    availableConcernCategories,
-    availableConcernLabels,
-    availableDatacenters,
-    availableClusters,
-    availableVmLabels,
-    availableGroups,
   } = logic;
 
-  const { showManageColumns, showGroupsFilter, defaultColumnsKeys } = variantUI;
-  const isCompactTable = !showManageColumns;
-
-  const handleFilterDropdownOpenChange = (open: boolean) => {
-    if (
-      !open &&
-      (isConcernSelectOpen || isVmLabelSelectOpen || isGroupSelectOpen)
-    ) {
-      return;
-    }
-    setIsFilterModalOpen(open);
-  };
-
-  const filterDropdownContentRef = useRef<HTMLDivElement>(null);
-  const nestedSelectPopperProps = {
-    appendTo: () => filterDropdownContentRef.current ?? document.body,
-  };
-
-  if (part === "applied") {
-    if (appliedFilters.length === 0) {
-      return null;
-    }
-
-    return (
-      <ToolbarContent alignItems="center">
-        <ToolbarItem>
-          <LabelGroup categoryName="Filters">
-            {appliedFilters.map((filter) => (
-              <Label key={filter.key} onClose={() => removeFilter(filter.key)}>
-                {filter.label}
-              </Label>
-            ))}
-          </LabelGroup>
-        </ToolbarItem>
-        <ToolbarItem>
-          <span>
-            {appliedFilters.length} filter
-            {appliedFilters.length !== 1 ? "s" : ""} applied
-          </span>
-        </ToolbarItem>
-        <ToolbarItem>
-          <Button variant="link" onClick={clearAllFilters}>
-            Clear all filters
-          </Button>
-        </ToolbarItem>
-      </ToolbarContent>
-    );
-  }
+  const { showManageColumns, defaultColumnsKeys } = variantUI;
 
   return (
     <>
@@ -241,411 +129,12 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
 
       <ToolbarGroup variant="filter-group">
         <ToolbarItem>
-          <SearchInput
-            placeholder="Find by VM name"
-            value={searchValue}
-            onChange={handleSearchChange}
-            onClear={handleSearchClear}
+          <AttributeValueFilter
+            attributes={filterAttributes}
+            defaultActiveAttributeId="name"
           />
         </ToolbarItem>
 
-        {/* Filters Dropdown */}
-        <ToolbarItem>
-          <Dropdown
-            isOpen={isFilterModalOpen}
-            onOpenChange={handleFilterDropdownOpenChange}
-            isScrollable
-            maxMenuHeight={FILTER_DROPDOWN_MAX_HEIGHT}
-            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-              <MenuToggle
-                ref={toggleRef}
-                onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                isExpanded={isFilterModalOpen}
-                variant="default"
-              >
-                <FilterIcon /> Filters
-              </MenuToggle>
-            )}
-            popperProps={{
-              maxWidth: "95vw",
-              appendTo: () => document.body,
-            }}
-          >
-            <div
-              className={
-                isCompactTable
-                  ? filterStyles.dropdownContentCompact
-                  : filterStyles.dropdownContent
-              }
-            >
-              <div
-                className={
-                  isCompactTable
-                    ? filterStyles.filtersContentCompact
-                    : filterStyles.filtersContent
-                }
-              >
-                {/* Issue categories column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>
-                    Issue categories:
-                  </h3>
-                  <div className={filterStyles.checkboxList}>
-                    {availableConcernCategories.length > 0 &&
-                      availableConcernCategories.map((category) => (
-                        <Checkbox
-                          key={category}
-                          id={`concern-category-${category}`}
-                          label={category}
-                          isChecked={tempSelectedConcernCategories.includes(
-                            category,
-                          )}
-                          onChange={() => {
-                            toggleTempConcernCategory(category);
-                            // Clear has/no issues filters when selecting specific categories
-                            setTempHasIssuesFilter(false);
-                            setTempNoIssuesFilter(false);
-                          }}
-                        />
-                      ))}
-                  </div>
-                </div>
-
-                {/* Specific issues column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Specific issues</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {availableConcernLabels.length > 0 && (
-                      <Select
-                        isOpen={isConcernSelectOpen}
-                        selected={tempSelectedConcernLabels}
-                        popperProps={nestedSelectPopperProps}
-                        onSelect={(_event, selection) => {
-                          const concernLabel = selection as string;
-                          toggleTempConcernLabel(concernLabel);
-                          // Clear has/no issues filters when selecting specific concerns
-                          setTempHasIssuesFilter(false);
-                          setTempNoIssuesFilter(false);
-                        }}
-                        onOpenChange={(isOpen) => {
-                          setIsConcernSelectOpen(isOpen);
-                        }}
-                        toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                          <MenuToggle
-                            ref={toggleRef}
-                            onClick={() =>
-                              setIsConcernSelectOpen(!isConcernSelectOpen)
-                            }
-                            isExpanded={isConcernSelectOpen}
-                            className={filterStyles.concernSelect}
-                          >
-                            {tempSelectedConcernLabels.length === 0
-                              ? "Select specific issues..."
-                              : `${tempSelectedConcernLabels.length} selected`}
-                          </MenuToggle>
-                        )}
-                        isScrollable
-                      >
-                        <SelectList>
-                          {availableConcernLabels.map((concernLabel) => (
-                            <SelectOption
-                              key={concernLabel}
-                              value={concernLabel}
-                              hasCheckbox
-                              isSelected={tempSelectedConcernLabels.includes(
-                                concernLabel,
-                              )}
-                            >
-                              {concernLabel}
-                            </SelectOption>
-                          ))}
-                        </SelectList>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-
-                {/* Data center column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Data center</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {availableDatacenters.map((datacenter) => (
-                      <Checkbox
-                        key={datacenter}
-                        id={`datacenter-${datacenter}`}
-                        label={datacenter}
-                        isChecked={tempSelectedDatacenters.includes(datacenter)}
-                        onChange={() => toggleTempDatacenter(datacenter)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Cluster column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Cluster</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {availableClusters.map((cluster) => (
-                      <Checkbox
-                        key={cluster}
-                        id={`cluster-${cluster}`}
-                        label={cluster}
-                        isChecked={tempSelectedClusters.includes(cluster)}
-                        onChange={() => toggleTempCluster(cluster)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Disk size column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Disk size</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {diskSizeRanges.map((range, index) => (
-                      <Checkbox
-                        key={range.label}
-                        id={`disk-${index}`}
-                        label={range.label}
-                        isChecked={
-                          tempDiskRangeFilter?.min === range.min &&
-                          tempDiskRangeFilter?.max === range.max
-                        }
-                        onChange={() => toggleTempDiskRange(index)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Memory size column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Memory size</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {memorySizeRanges.map((range, index) => (
-                      <Checkbox
-                        key={range.label}
-                        id={`memory-${index}`}
-                        label={range.label}
-                        isChecked={
-                          tempMemoryRangeFilter?.min === range.min &&
-                          tempMemoryRangeFilter?.max === range.max
-                        }
-                        onChange={() => toggleTempMemoryRange(index)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* CPU usage column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>CPU usage</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {utilizationPercentRanges.map((range, index) => (
-                      <Checkbox
-                        key={range.label}
-                        id={`cpu-usage-${index}`}
-                        label={range.label}
-                        isChecked={
-                          tempCpuUsageRangeFilter?.min === range.min &&
-                          tempCpuUsageRangeFilter?.max === range.max
-                        }
-                        onChange={() => toggleTempCpuUsageRange(index)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* RAM usage column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>RAM usage</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {utilizationPercentRanges.map((range, index) => (
-                      <Checkbox
-                        key={range.label}
-                        id={`ram-usage-${index}`}
-                        label={range.label}
-                        isChecked={
-                          tempRamUsageRangeFilter?.min === range.min &&
-                          tempRamUsageRangeFilter?.max === range.max
-                        }
-                        onChange={() => toggleTempRamUsageRange(index)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Disk usage column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Disk usage</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {utilizationPercentRanges.map((range, index) => (
-                      <Checkbox
-                        key={range.label}
-                        id={`disk-usage-${index}`}
-                        label={range.label}
-                        isChecked={
-                          tempDiskUsageRangeFilter?.min === range.min &&
-                          tempDiskUsageRangeFilter?.max === range.max
-                        }
-                        onChange={() => toggleTempDiskUsageRange(index)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Status column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Status</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {Object.entries(statusLabels).map(([status, label]) => (
-                      <Checkbox
-                        key={status}
-                        id={`status-${status}`}
-                        label={label}
-                        isChecked={tempSelectedStatuses.includes(status)}
-                        onChange={() => toggleTempStatus(status)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Migration Readiness column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>
-                    Migration Readiness
-                  </h3>
-                  <div className={filterStyles.checkboxList}>
-                    <Checkbox
-                      id="migration-ready"
-                      label="Ready"
-                      isChecked={tempSelectedMigrationReadiness.includes(
-                        "ready",
-                      )}
-                      onChange={() => toggleTempMigrationReadiness("ready")}
-                    />
-                    <Checkbox
-                      id="migration-not-ready"
-                      label="Not ready"
-                      isChecked={tempSelectedMigrationReadiness.includes(
-                        "not-ready",
-                      )}
-                      onChange={() => toggleTempMigrationReadiness("not-ready")}
-                    />
-                  </div>
-                </div>
-
-                {/* VM labels column */}
-                <div>
-                  <h3 className={filterStyles.columnTitle}>Labels</h3>
-                  <div className={filterStyles.checkboxList}>
-                    {availableVmLabels.length > 0 ? (
-                      <Select
-                        isOpen={isVmLabelSelectOpen}
-                        selected={tempSelectedVmLabels}
-                        popperProps={nestedSelectPopperProps}
-                        onSelect={(_event, selection) => {
-                          toggleTempVmLabel(selection as string);
-                        }}
-                        onOpenChange={setIsVmLabelSelectOpen}
-                        toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                          <MenuToggle
-                            ref={toggleRef}
-                            onClick={() =>
-                              setIsVmLabelSelectOpen(!isVmLabelSelectOpen)
-                            }
-                            isExpanded={isVmLabelSelectOpen}
-                            className={filterStyles.concernSelect}
-                          >
-                            {tempSelectedVmLabels.length === 0
-                              ? "Select labels..."
-                              : `${tempSelectedVmLabels.length} selected`}
-                          </MenuToggle>
-                        )}
-                        isScrollable
-                      >
-                        <SelectList>
-                          {availableVmLabels.map((label) => (
-                            <SelectOption
-                              key={label}
-                              value={label}
-                              hasCheckbox
-                              isSelected={tempSelectedVmLabels.includes(label)}
-                            >
-                              {label}
-                            </SelectOption>
-                          ))}
-                        </SelectList>
-                      </Select>
-                    ) : (
-                      <Content component="small">No labels available</Content>
-                    )}
-                  </div>
-                </div>
-
-                {/* Groups column */}
-                {showGroupsFilter && (
-                  <div>
-                    <h3 className={filterStyles.columnTitle}>Groups</h3>
-                    <div className={filterStyles.checkboxList}>
-                      {availableGroups.length > 0 ? (
-                        <Select
-                          isOpen={isGroupSelectOpen}
-                          selected={tempSelectedGroups}
-                          popperProps={nestedSelectPopperProps}
-                          onSelect={(_event, selection) => {
-                            toggleTempGroup(selection as string);
-                          }}
-                          onOpenChange={setIsGroupSelectOpen}
-                          toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                            <MenuToggle
-                              ref={toggleRef}
-                              onClick={() =>
-                                setIsGroupSelectOpen(!isGroupSelectOpen)
-                              }
-                              isExpanded={isGroupSelectOpen}
-                              className={filterStyles.concernSelect}
-                            >
-                              {tempSelectedGroups.length === 0
-                                ? "Select groups..."
-                                : `${tempSelectedGroups.length} selected`}
-                            </MenuToggle>
-                          )}
-                          isScrollable
-                        >
-                          <SelectList>
-                            {availableGroups.map((group) => (
-                              <SelectOption
-                                key={group}
-                                value={group}
-                                hasCheckbox
-                                isSelected={tempSelectedGroups.includes(group)}
-                              >
-                                {group}
-                              </SelectOption>
-                            ))}
-                          </SelectList>
-                        </Select>
-                      ) : (
-                        <Content component="small">No groups available</Content>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer with buttons */}
-              <div className={filterStyles.footer}>
-                <Button variant="primary" onClick={applyFilters}>
-                  Apply filters
-                </Button>
-                <Button variant="link" onClick={cancelFilterModal}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </Dropdown>
-        </ToolbarItem>
-
-        {/* Manage Columns */}
         {showManageColumns && (
           <ToolbarItem>
             <Select
