@@ -6,15 +6,15 @@ on:
       - stable
 
 jobs:
-  notify:
+  wait-for-image:
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for Quay.io image # Notify only after the image was builded
+      - name: Wait for Quay.io image
         run: |
           IMAGE="quay.io/redhat-user-workloads/assisted-migration-tenant/migration-planner-agent-ui"
           TAG="${GITHUB_SHA}"
-          TIMEOUT=3600                 # 1 hour
-          INTERVAL=10                  # check every 10 seconds
+          TIMEOUT=3600
+          INTERVAL=10
           ELAPSED=0
 
           echo "Waiting for $IMAGE:$TAG to be available..."
@@ -33,27 +33,11 @@ jobs:
           echo "Timeout reached: image $IMAGE:$TAG is still not available."
           exit 1
 
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_ID }}
-          private-key: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_PRIVATE_KEY }}
-          owner: kubev2v
-          repositories: migration-planner
-
-      - name: Send repository_dispatch
-        run: |
-          curl --fail-with-body -sS -X POST \
-            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Content-Type: application/json" \
-            https://api.github.com/repos/kubev2v/migration-planner/dispatches \
-            -d '{
-              "event_type": "agent_ui_updated",
-              "client_payload": {
-                "sha": "${{ github.sha }}",
-                "repo": "${{ github.repository }}",
-                "target_branch": "${{ github.ref_name }}"
-              }
-            }'
+  notify:
+    needs: wait-for-image
+    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@main
+    with:
+      event-type: agent_ui_updated
+    secrets:
+      APP_ID: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_PRIVATE_KEY }}
