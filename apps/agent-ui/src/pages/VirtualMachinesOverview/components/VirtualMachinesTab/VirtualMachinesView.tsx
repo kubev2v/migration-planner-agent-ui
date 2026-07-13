@@ -40,25 +40,45 @@ async function updateVmMigrationExcluded(
     change: MigrationExcludedInventoryChange,
   ) => void | Promise<void>,
 ): Promise<void> {
-  const results = await Promise.allSettled(
-    vmIds.map((id) =>
-      agentApi.updateVM({
-        id,
-        virtualMachineUpdateRequest: { migrationExcluded },
-      }),
-    ),
-  );
-
-  const failedIds: string[] = [];
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.status === "rejected") {
-      failedIds.push(vmIds[i]);
-      console.error(`Error updating VM ${vmIds[i]}:`, result.reason);
-    }
+  if (vmIds.length === 0) {
+    return;
   }
 
-  const successfulIds = vmIds.filter((id) => !failedIds.includes(id));
+  let successfulIds: string[];
+  const failedIds: string[] = [];
+
+  if (vmIds.length > 1) {
+    try {
+      await agentApi.batchUpdateVMExclusion({
+        batchUpdateExclusionRequest: { vmIds, migrationExcluded },
+      });
+      successfulIds = vmIds;
+    } catch (err) {
+      console.error("Error batch updating VM exclusion:", err);
+      await onRefreshVMs?.();
+      throw err;
+    }
+  } else {
+    const results = await Promise.allSettled(
+      vmIds.map((id) =>
+        agentApi.updateVM({
+          id,
+          virtualMachineUpdateRequest: { migrationExcluded },
+        }),
+      ),
+    );
+
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "rejected") {
+        failedIds.push(vmIds[i]);
+        console.error(`Error updating VM ${vmIds[i]}:`, result.reason);
+      }
+    }
+
+    successfulIds = vmIds.filter((id) => !failedIds.includes(id));
+  }
+
   // Use pre-change exclusion state so bulk exclude/include stays accurate even if
   // the table list has not refreshed yet from a prior operation.
   const affectedVms = successfulIds.map((id) => {
