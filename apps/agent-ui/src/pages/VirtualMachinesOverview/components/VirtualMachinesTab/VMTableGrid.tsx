@@ -46,6 +46,7 @@ export interface VMTableGridProps {
   onRemoveFromGroup?: (vmIds: string[]) => void;
   openCancelInspectionConfirm: (vmId: string) => void;
   cancelingInspectionVmIds?: Set<string>;
+  userCanceledInspectionVmIds?: ReadonlySet<string>;
 }
 
 export const VMTableGrid: React.FC<VMTableGridProps> = ({
@@ -64,6 +65,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   onRemoveFromGroup,
   openCancelInspectionConfirm,
   cancelingInspectionVmIds,
+  userCanceledInspectionVmIds,
 }) => {
   const {
     columns,
@@ -257,6 +259,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                       vm,
                       onVMClick,
                       cancelingInspectionVmIds,
+                      userCanceledInspectionVmIds,
                     )}
                   </Td>
                 )}

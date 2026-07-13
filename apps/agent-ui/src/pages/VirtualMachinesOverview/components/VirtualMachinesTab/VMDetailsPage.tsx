@@ -49,7 +49,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Symbols } from "../../../../main/Symbols";
 import { formatMetric } from "./VMUtilizationMetrics";
-import { isLikelyCanceledInspectionError } from "./vmInspectionUtils";
+import { isCanceledInspectionStatus } from "./vmInspectionUtils";
 
 const MB_IN_GB = 1024;
 
@@ -66,12 +66,14 @@ interface VMDetailsPageProps {
   vmId: string;
   onBack: () => void;
   inspectionStatus?: VmInspectionStatus;
+  userCanceledInspectionVmIds?: ReadonlySet<string>;
 }
 
 export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   vmId,
   onBack,
   inspectionStatus,
+  userCanceledInspectionVmIds,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const [vm, setVm] = useState<VirtualMachineDetailWithUtilization | null>(
@@ -217,7 +219,11 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
           );
           const hasError =
             !!inspectionStatus.error &&
-            !isLikelyCanceledInspectionError(inspectionStatus.error);
+            !isCanceledInspectionStatus(
+              vmId,
+              inspectionStatus,
+              userCanceledInspectionVmIds,
+            );
           const hasContent = hasError || concerns.length > 0;
 
           return (
@@ -271,9 +277,10 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                         ? "Inspection pending…"
                         : inspectionStatus.state === "running"
                           ? "Inspection in progress…"
-                          : inspectionStatus.state === "canceled" ||
-                              isLikelyCanceledInspectionError(
-                                inspectionStatus.error,
+                          : isCanceledInspectionStatus(
+                                vmId,
+                                inspectionStatus,
+                                userCanceledInspectionVmIds,
                               )
                             ? "Inspection was canceled"
                             : inspectionStatus.state === "error"

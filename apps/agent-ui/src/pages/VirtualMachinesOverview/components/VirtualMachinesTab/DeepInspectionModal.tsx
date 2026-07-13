@@ -38,7 +38,7 @@ interface DeepInspectionModalProps {
   onClose: () => void;
   selectedVMIds: string[];
   agentApi: DefaultApiInterface;
-  onInspectionStarted: () => void;
+  onInspectionStarted: (vmIds: string[]) => void;
 }
 
 type SectionStatus = "notConfigured" | "configured" | "error";
@@ -273,7 +273,7 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
           vmIds: selectedVMIds,
         },
       });
-      onInspectionStarted();
+      onInspectionStarted(selectedVMIds);
       handleClose();
     } catch (err) {
       const message = await extractErrorMessage(

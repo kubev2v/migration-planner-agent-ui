@@ -27,6 +27,10 @@ import {
   type RefreshFilterOptionsFn,
 } from "./vmFilterOptions";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
+import {
+  loadUserCanceledInspectionVmIds,
+  saveUserCanceledInspectionVmIds,
+} from "./vmInspectionSession";
 import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds } from "./vmSelection";
 
@@ -183,6 +187,33 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [cancelingInspectionVmIds, setCancelingInspectionVmIds] = useState(
     () => new Set<string>(),
   );
+  const [userCanceledInspectionVmIds, setUserCanceledInspectionVmIds] =
+    useState(loadUserCanceledInspectionVmIds);
+
+  useEffect(() => {
+    saveUserCanceledInspectionVmIds(userCanceledInspectionVmIds);
+  }, [userCanceledInspectionVmIds]);
+
+  useEffect(() => {
+    setUserCanceledInspectionVmIds((prev) => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Set(prev);
+      for (const vmId of prev) {
+        const vm = vms.find((candidate) => candidate.id === vmId);
+        const state = vm?.inspectionStatus?.state;
+        if (
+          state === "completed" ||
+          state === "running" ||
+          state === "pending"
+        ) {
+          next.delete(vmId);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [vms]);
 
   useEffect(() => {
     onRefreshVMsRef.current = onRefreshVMs;
@@ -504,6 +535,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       setCancelingInspectionVmIds((prev) => new Set(prev).add(vmId));
       try {
         await cancelVmInspectionWithRetry(basePath, vmId);
+        setUserCanceledInspectionVmIds((prev) => new Set(prev).add(vmId));
         await onRefreshVMs?.();
       } catch (err) {
         setCancelingInspectionVmIds((prev) => {
@@ -559,7 +591,15 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     setIsInspectionModalOpen(true);
   }, [agentApi, onRefreshVMs]);
 
-  const handleInspectionStarted = useCallback(() => {
+  const handleInspectionStarted = useCallback((vmIds: string[]) => {
+    setUserCanceledInspectionVmIds((prev) => {
+      if (prev.size === 0 || vmIds.length === 0) return prev;
+      const next = new Set(prev);
+      for (const vmId of vmIds) {
+        next.delete(vmId);
+      }
+      return next.size === prev.size ? prev : next;
+    });
     seenRunningRef.current = false;
     pollTicksRef.current = 0;
     setInspectionActive(true);
@@ -632,6 +672,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         vmId={selectedVMId}
         onBack={handleBack}
         inspectionStatus={selectedVM?.inspectionStatus}
+        userCanceledInspectionVmIds={userCanceledInspectionVmIds}
       />
     );
   }
@@ -672,6 +713,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onShowExcludedVMsChange={onShowExcludedVMsChange}
         inspectionActive={inspectionActive}
         cancelingInspectionVmIds={cancelingInspectionVmIds}
+        userCanceledInspectionVmIds={userCanceledInspectionVmIds}
         onCancelInspection={handleCancelInspection}
         onResetInspection={handleResetInspection}
       />
