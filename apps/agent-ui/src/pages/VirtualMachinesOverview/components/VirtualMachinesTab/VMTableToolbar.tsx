@@ -31,11 +31,14 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     onRemoveFromGroup,
     onRunDeepInspection,
     onResetInspection,
+    onStopInspection,
   } = props;
 
   const filterBarProps = {
     logic,
     variantUI,
+    vms,
+    inspectionActive,
     selectedVMs,
     onSelectionChange,
     onFetchAllVmIds,
@@ -62,6 +65,7 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     onRemoveFromGroup,
     onRunDeepInspection,
     onResetInspection,
+    onStopInspection,
   };
 
   return (

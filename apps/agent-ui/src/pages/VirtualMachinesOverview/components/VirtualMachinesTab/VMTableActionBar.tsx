@@ -19,6 +19,10 @@ import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useId } from "react";
 import { useCapability } from "../../../../credentials/CredentialsContext";
+import {
+  DEEP_INSPECTION_BUSY_TOOLTIP,
+  isDeepInspectionInProgress,
+} from "./vmInspectionUtils";
 import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
 
@@ -43,6 +47,7 @@ export interface VMTableActionBarProps {
   onRemoveFromGroup?: (vmIds: string[]) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onResetInspection?: () => void;
+  onStopInspection?: () => void;
 }
 
 export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
@@ -66,6 +71,7 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   onRemoveFromGroup,
   onRunDeepInspection,
   onResetInspection,
+  onStopInspection,
 }) => {
   const {
     shouldShowTooltip,
@@ -88,97 +94,128 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   } = logic;
 
   const { hideToolbarActions } = variantUI;
+  const inspectionInProgress = isDeepInspectionInProgress(
+    inspectionActive,
+    vms,
+  );
+
+  const actionsDropdown = (
+    <Dropdown
+      isOpen={isActionsMenuOpen}
+      onSelect={() => setIsActionsMenuOpen(false)}
+      onOpenChange={(isOpen) => {
+        if (!inspectionInProgress) {
+          setIsActionsMenuOpen(isOpen);
+        }
+      }}
+      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+        <MenuToggle
+          ref={toggleRef}
+          onClick={() => {
+            if (!inspectionInProgress) {
+              setIsActionsMenuOpen(!isActionsMenuOpen);
+            }
+          }}
+          isExpanded={isActionsMenuOpen}
+          variant="secondary"
+          isDisabled={inspectionInProgress}
+        >
+          Actions
+        </MenuToggle>
+      )}
+      popperProps={{ position: "right" }}
+    >
+      <DropdownList>
+        {onExcludeFromReports && selectedIncludedIds.length > 0 && (
+          <DropdownItem
+            key="exclude-from-reports"
+            isDisabled={inspectionInProgress}
+            onClick={() => setIsExcludeModalOpen(true)}
+          >
+            Exclude from reports
+          </DropdownItem>
+        )}
+        {onIncludeInReports && selectedExcludedIds.length > 0 && (
+          <DropdownItem
+            key="include-in-reports"
+            isDisabled={inspectionInProgress}
+            onClick={() => setIsIncludeModalOpen(true)}
+          >
+            Include in reports
+          </DropdownItem>
+        )}
+        <DropdownItem
+          key="add-label"
+          isDisabled={inspectionInProgress || selectedVMs.size === 0}
+          onClick={() => onAddLabels?.(Array.from(selectedVMs))}
+        >
+          Add labels
+        </DropdownItem>
+        <DropdownItem
+          key="manage-labels"
+          isDisabled={inspectionInProgress}
+          onClick={() => onManageLabels?.()}
+        >
+          Manage all labels
+        </DropdownItem>
+        {!isGroupRowActions && (
+          <>
+            <DropdownItem
+              key="create-group"
+              isDisabled={
+                inspectionInProgress || selectedVMs.size === 0 || !onCreateGroup
+              }
+              onClick={() => onCreateGroup?.(selectedVmIds)}
+            >
+              Create group
+            </DropdownItem>
+            <DropdownItem
+              key="add-to-group"
+              isDisabled={
+                inspectionInProgress || selectedVMs.size === 0 || !onAddToGroup
+              }
+              onClick={() => onAddToGroup?.(selectedVmIds)}
+            >
+              Add to group
+            </DropdownItem>
+          </>
+        )}
+        <Divider key="separator" component="li" />
+        <DropdownItem
+          key="remove-from-group"
+          isDisabled={
+            inspectionInProgress ||
+            selectedVMs.size === 0 ||
+            !canRemoveSelectedFromGroup ||
+            !onRemoveFromGroup
+          }
+          onClick={() => onRemoveFromGroup?.(selectedVmIds)}
+        >
+          Remove from group
+        </DropdownItem>
+        <DropdownItem
+          key="reset-deep-inspection"
+          isDisabled={inspectionInProgress || selectedVMs.size === 0}
+          onClick={() => onResetInspection?.()}
+        >
+          Reset deep inspection
+        </DropdownItem>
+      </DropdownList>
+    </Dropdown>
+  );
 
   return (
     <>
       {!hideToolbarActions && (
         <>
           <ToolbarItem>
-            <Dropdown
-              isOpen={isActionsMenuOpen}
-              onSelect={() => setIsActionsMenuOpen(false)}
-              onOpenChange={setIsActionsMenuOpen}
-              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                <MenuToggle
-                  ref={toggleRef}
-                  onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                  isExpanded={isActionsMenuOpen}
-                  variant="secondary"
-                >
-                  Actions
-                </MenuToggle>
-              )}
-              popperProps={{ position: "right" }}
-            >
-              <DropdownList>
-                {onExcludeFromReports && selectedIncludedIds.length > 0 && (
-                  <DropdownItem
-                    key="exclude-from-reports"
-                    onClick={() => setIsExcludeModalOpen(true)}
-                  >
-                    Exclude from reports
-                  </DropdownItem>
-                )}
-                {onIncludeInReports && selectedExcludedIds.length > 0 && (
-                  <DropdownItem
-                    key="include-in-reports"
-                    onClick={() => setIsIncludeModalOpen(true)}
-                  >
-                    Include in reports
-                  </DropdownItem>
-                )}
-                <DropdownItem
-                  key="add-label"
-                  isDisabled={selectedVMs.size === 0}
-                  onClick={() => onAddLabels?.(Array.from(selectedVMs))}
-                >
-                  Add labels
-                </DropdownItem>
-                <DropdownItem
-                  key="manage-labels"
-                  onClick={() => onManageLabels?.()}
-                >
-                  Manage all labels
-                </DropdownItem>
-                {!isGroupRowActions && (
-                  <>
-                    <DropdownItem
-                      key="create-group"
-                      isDisabled={selectedVMs.size === 0 || !onCreateGroup}
-                      onClick={() => onCreateGroup?.(selectedVmIds)}
-                    >
-                      Create group
-                    </DropdownItem>
-                    <DropdownItem
-                      key="add-to-group"
-                      isDisabled={selectedVMs.size === 0 || !onAddToGroup}
-                      onClick={() => onAddToGroup?.(selectedVmIds)}
-                    >
-                      Add to group
-                    </DropdownItem>
-                  </>
-                )}
-                <Divider key="separator" component="li" />
-                <DropdownItem
-                  key="remove-from-group"
-                  isDisabled={
-                    selectedVMs.size === 0 ||
-                    !canRemoveSelectedFromGroup ||
-                    !onRemoveFromGroup
-                  }
-                  onClick={() => onRemoveFromGroup?.(selectedVmIds)}
-                >
-                  Remove from group
-                </DropdownItem>
-                <DropdownItem
-                  key="reset-deep-inspection"
-                  isDisabled={selectedVMs.size === 0}
-                  onClick={() => onResetInspection?.()}
-                >
-                  Reset deep inspection
-                </DropdownItem>
-              </DropdownList>
-            </Dropdown>
+            {inspectionInProgress ? (
+              <Tooltip content={DEEP_INSPECTION_BUSY_TOOLTIP}>
+                <span>{actionsDropdown}</span>
+              </Tooltip>
+            ) : (
+              actionsDropdown
+            )}
           </ToolbarItem>
 
           <ToolbarItem>
@@ -189,11 +226,19 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                 </Button>
               </Tooltip>
             ) : (
-              <Tooltip content="Select VMs for deep inspection.">
+              <Tooltip
+                content={
+                  inspectionInProgress
+                    ? "Deep inspection is already in progress."
+                    : "Select VMs for deep inspection."
+                }
+              >
                 <Button
                   variant="primary"
                   icon={<MagicIcon />}
-                  isAriaDisabled={selectedVMs.size === 0}
+                  isAriaDisabled={
+                    selectedVMs.size === 0 || inspectionInProgress
+                  }
                   onClick={() => {
                     if (shouldRequestCredentials) {
                       openEditModal(() => onRunDeepInspection?.());
@@ -207,10 +252,19 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
               </Tooltip>
             )}
           </ToolbarItem>
-          {inspectionActive && (
-            <ToolbarItem>
-              <Spinner size="md" />
-            </ToolbarItem>
+          {inspectionInProgress && (
+            <>
+              <ToolbarItem>
+                <Spinner size="md" />
+              </ToolbarItem>
+              {onStopInspection && (
+                <ToolbarItem>
+                  <Button variant="secondary" onClick={onStopInspection}>
+                    Stop inspection
+                  </Button>
+                </ToolbarItem>
+              )}
+            </>
           )}
         </>
       )}

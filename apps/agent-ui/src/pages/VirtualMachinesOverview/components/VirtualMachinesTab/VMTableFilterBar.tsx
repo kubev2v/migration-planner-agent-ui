@@ -1,3 +1,4 @@
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import {
   Checkbox,
   Dropdown,
@@ -10,10 +11,15 @@ import {
   SelectOption,
   ToolbarGroup,
   ToolbarItem,
+  Tooltip,
 } from "@patternfly/react-core";
 import { ColumnsIcon } from "@patternfly/react-icons/dist/esm/icons/columns-icon";
 import type React from "react";
 import { AttributeValueFilter } from "../../../../common/components/attribute-value-filter";
+import {
+  DEEP_INSPECTION_BUSY_TOOLTIP,
+  isDeepInspectionInProgress,
+} from "./vmInspectionUtils";
 import {
   type ColumnKey,
   Columns,
@@ -25,6 +31,8 @@ import type { VMTableLogic } from "./vmTableTypes";
 export interface VMTableFilterBarProps {
   logic: VMTableLogic;
   variantUI: VMTableVariantUI;
+  vms: VirtualMachine[];
+  inspectionActive: boolean;
   selectedVMs: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
   onFetchAllVmIds?: (
@@ -35,6 +43,8 @@ export interface VMTableFilterBarProps {
 export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
   logic,
   variantUI,
+  vms,
+  inspectionActive,
   selectedVMs,
   onSelectionChange,
   onFetchAllVmIds,
@@ -55,75 +65,103 @@ export const VMTableFilterBar: React.FC<VMTableFilterBarProps> = ({
   } = logic;
 
   const { showManageColumns, defaultColumnsKeys } = variantUI;
+  const inspectionInProgress = isDeepInspectionInProgress(
+    inspectionActive,
+    vms,
+  );
+
+  const bulkSelectDropdown = (
+    <Dropdown
+      isOpen={isBulkSelectOpen}
+      onOpenChange={(isOpen) => {
+        if (!inspectionInProgress) {
+          setIsBulkSelectOpen(isOpen);
+        }
+      }}
+      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+        <MenuToggle
+          ref={toggleRef}
+          onClick={() => {
+            if (!inspectionInProgress) {
+              setIsBulkSelectOpen(!isBulkSelectOpen);
+            }
+          }}
+          variant="default"
+          isDisabled={inspectionInProgress}
+          splitButtonItems={[
+            <Checkbox
+              key="select-page"
+              id="select-page-vms"
+              isChecked={
+                allPageSelected ? true : selectedVMs.size > 0 ? null : false
+              }
+              isDisabled={inspectionInProgress}
+              onChange={(_event, checked) => {
+                if (inspectionInProgress) return;
+                if (checked) {
+                  onSelectionChange?.(new Set(pageVmIds));
+                } else {
+                  onSelectionChange?.(new Set());
+                }
+              }}
+              aria-label="Select VMs on this page"
+            />,
+          ]}
+        />
+      )}
+    >
+      <DropdownList>
+        <DropdownItem
+          key="select-none"
+          isDisabled={inspectionInProgress}
+          onClick={() => {
+            if (inspectionInProgress) return;
+            onSelectionChange?.(new Set());
+            setIsBulkSelectOpen(false);
+          }}
+        >
+          Select none (0 items)
+        </DropdownItem>
+        <DropdownItem
+          key="select-page"
+          isDisabled={inspectionInProgress}
+          onClick={() => {
+            if (inspectionInProgress) return;
+            onSelectionChange?.(new Set(pageVmIds));
+            setIsBulkSelectOpen(false);
+          }}
+        >
+          Select page ({pageVmIds.length} items)
+        </DropdownItem>
+        <DropdownItem
+          key="select-all"
+          isDisabled={
+            inspectionInProgress || !onFetchAllVmIds || isSelectingAll
+          }
+          onClick={() => {
+            if (inspectionInProgress) return;
+            void handleSelectAllMatching();
+          }}
+        >
+          {isSelectingAll
+            ? "Selecting all..."
+            : `Select all (${totalMatchingCount} items)`}
+        </DropdownItem>
+      </DropdownList>
+    </Dropdown>
+  );
 
   return (
     <>
       {onSelectionChange && (
         <ToolbarItem>
-          <Dropdown
-            isOpen={isBulkSelectOpen}
-            onOpenChange={setIsBulkSelectOpen}
-            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-              <MenuToggle
-                ref={toggleRef}
-                onClick={() => setIsBulkSelectOpen(!isBulkSelectOpen)}
-                variant="default"
-                splitButtonItems={[
-                  <Checkbox
-                    key="select-page"
-                    id="select-page-vms"
-                    isChecked={
-                      allPageSelected
-                        ? true
-                        : selectedVMs.size > 0
-                          ? null
-                          : false
-                    }
-                    onChange={(_event, checked) => {
-                      if (checked) {
-                        onSelectionChange(new Set(pageVmIds));
-                      } else {
-                        onSelectionChange(new Set());
-                      }
-                    }}
-                    aria-label="Select VMs on this page"
-                  />,
-                ]}
-              />
-            )}
-          >
-            <DropdownList>
-              <DropdownItem
-                key="select-none"
-                onClick={() => {
-                  onSelectionChange(new Set());
-                  setIsBulkSelectOpen(false);
-                }}
-              >
-                Select none (0 items)
-              </DropdownItem>
-              <DropdownItem
-                key="select-page"
-                onClick={() => {
-                  onSelectionChange(new Set(pageVmIds));
-                  setIsBulkSelectOpen(false);
-                }}
-              >
-                Select page ({pageVmIds.length} items)
-              </DropdownItem>
-              <DropdownItem
-                key="select-all"
-                isDisabled={!onFetchAllVmIds || isSelectingAll}
-                onClick={() => {
-                  void handleSelectAllMatching();
-                }}
-              >
-                {isSelectingAll
-                  ? "Selecting all..."
-                  : `Select all (${totalMatchingCount} items)`}
-              </DropdownItem>
-            </DropdownList>
-          </Dropdown>
+          {inspectionInProgress ? (
+            <Tooltip content={DEEP_INSPECTION_BUSY_TOOLTIP}>
+              <span>{bulkSelectDropdown}</span>
+            </Tooltip>
+          ) : (
+            bulkSelectDropdown
+          )}
         </ToolbarItem>
       )}
 

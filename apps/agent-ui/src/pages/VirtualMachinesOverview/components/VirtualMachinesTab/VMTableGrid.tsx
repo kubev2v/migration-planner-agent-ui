@@ -1,6 +1,7 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
+  Checkbox,
   Dropdown,
   DropdownItem,
   DropdownList,
@@ -19,6 +20,11 @@ import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
 import { formatMetric } from "./VMUtilizationMetrics";
 import {
+  DEEP_INSPECTION_BUSY_TOOLTIP,
+  isDeepInspectionInProgress,
+  isVmInspectionActive,
+} from "./vmInspectionUtils";
+import {
   renderVmInspectionStatus,
   renderVmStatus,
 } from "./vmTableCellRenderers";
@@ -36,6 +42,7 @@ export interface VMTableGridProps {
   loading: boolean;
   vms: VirtualMachine[];
   selectedVMs: Set<string>;
+  inspectionActive: boolean;
   isGroupRowActions: boolean;
   onVMClick?: (vmId: string) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
@@ -54,6 +61,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   loading,
   vms,
   selectedVMs,
+  inspectionActive,
   isGroupRowActions,
   onVMClick,
   onRunDeepInspection,
@@ -76,6 +84,10 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   } = logic;
 
   const { hideToolbarActions, disableVmNavigation } = variantUI;
+  const inspectionInProgress = isDeepInspectionInProgress(
+    inspectionActive,
+    vms,
+  );
 
   return (
     <Table
@@ -129,22 +141,34 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
               Array.isArray((vm as { groupItems?: unknown }).groupItems)
                 ? (vm as { groupItems: GroupListItem[] }).groupItems
                 : [];
+            const vmInspectionRunning = isVmInspectionActive(vm);
+            const disableRowActions =
+              inspectionInProgress && !vmInspectionRunning;
             return (
               <Tr key={vm.id}>
-                <Td
-                  select={{
-                    rowIndex,
-                    onSelect: (_event, isSelected) =>
-                      onSelectVM(vm, isSelected),
-                    isSelected:
-                      selectedVMs.has(vm.id) ||
-                      vm.inspectionStatus?.state === "running" ||
-                      vm.inspectionStatus?.state === "pending",
-                    isDisabled:
-                      vm.inspectionStatus?.state === "running" ||
-                      vm.inspectionStatus?.state === "pending",
-                  }}
-                />
+                {inspectionInProgress ? (
+                  <Td>
+                    <Tooltip content={DEEP_INSPECTION_BUSY_TOOLTIP}>
+                      <span>
+                        <Checkbox
+                          id={`select-row-${rowIndex}`}
+                          isChecked={selectedVMs.has(vm.id)}
+                          isDisabled
+                          aria-label={`Select ${vm.name}`}
+                        />
+                      </span>
+                    </Tooltip>
+                  </Td>
+                ) : (
+                  <Td
+                    select={{
+                      rowIndex,
+                      onSelect: (_event, isSelected) =>
+                        onSelectVM(vm, isSelected),
+                      isSelected: selectedVMs.has(vm.id),
+                    }}
+                  />
+                )}
                 {isColumnVisible("name") && (
                   <Td dataLabel="Name" modifier="truncate">
                     {onVMClick && !disableVmNavigation ? (
@@ -262,125 +286,148 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                 )}
                 {!hideToolbarActions && (
                   <Td isActionCell modifier="fitContent">
-                    <Dropdown
-                      isOpen={openActionMenuId === vm.id}
-                      onSelect={(_event, value) => {
-                        setOpenActionMenuId(null);
-                        if (value === "remove-from-group") {
-                          onRemoveFromGroup?.([vm.id]);
-                        }
-                      }}
-                      onOpenChange={(isOpen) =>
-                        setOpenActionMenuId(isOpen ? vm.id : null)
-                      }
-                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                        <MenuToggle
-                          ref={toggleRef}
-                          variant="plain"
-                          onClick={() =>
-                            setOpenActionMenuId(
-                              openActionMenuId === vm.id ? null : vm.id,
-                            )
-                          }
-                          isExpanded={openActionMenuId === vm.id}
-                        >
-                          <EllipsisVIcon />
-                        </MenuToggle>
-                      )}
-                      popperProps={{ position: "right" }}
-                    >
-                      <DropdownList>
-                        {isGroupRowActions && (
-                          <DropdownItem
-                            key="remove-from-group"
-                            value="remove-from-group"
-                            isDisabled={!onRemoveFromGroup}
+                    {disableRowActions ? (
+                      <Tooltip content={DEEP_INSPECTION_BUSY_TOOLTIP}>
+                        <span>
+                          <MenuToggle
+                            variant="plain"
+                            isDisabled
+                            aria-label="VM actions"
                           >
-                            Remove from group
-                          </DropdownItem>
-                        )}
-                        {(() => {
-                          const vmState = vm.inspectionStatus?.state;
-                          if (vmState === "running" || vmState === "pending") {
-                            const isCanceling = cancelingInspectionVmIds?.has(
-                              vm.id,
-                            );
-                            return (
-                              <DropdownItem
-                                key="cancel-vm-inspection"
-                                isDisabled={isCanceling}
-                                onClick={() =>
-                                  openCancelInspectionConfirm(vm.id)
-                                }
-                              >
-                                Cancel deep inspection
-                              </DropdownItem>
-                            );
+                            <EllipsisVIcon />
+                          </MenuToggle>
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <Dropdown
+                        isOpen={openActionMenuId === vm.id}
+                        onSelect={(_event, value) => {
+                          setOpenActionMenuId(null);
+                          if (value === "remove-from-group") {
+                            onRemoveFromGroup?.([vm.id]);
                           }
-                          if (
-                            vmState === "completed" ||
-                            vmState === "error" ||
-                            vmState === "canceled"
-                          ) {
+                        }}
+                        onOpenChange={(isOpen) =>
+                          setOpenActionMenuId(isOpen ? vm.id : null)
+                        }
+                        toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                          <MenuToggle
+                            ref={toggleRef}
+                            variant="plain"
+                            onClick={() =>
+                              setOpenActionMenuId(
+                                openActionMenuId === vm.id ? null : vm.id,
+                              )
+                            }
+                            isExpanded={openActionMenuId === vm.id}
+                          >
+                            <EllipsisVIcon />
+                          </MenuToggle>
+                        )}
+                        popperProps={{ position: "right" }}
+                      >
+                        <DropdownList>
+                          {isGroupRowActions && (
+                            <DropdownItem
+                              key="remove-from-group"
+                              value="remove-from-group"
+                              isDisabled={!onRemoveFromGroup}
+                            >
+                              Remove from group
+                            </DropdownItem>
+                          )}
+                          {(() => {
+                            const vmState = vm.inspectionStatus?.state;
+                            if (
+                              vmState === "running" ||
+                              vmState === "pending"
+                            ) {
+                              const isCanceling = cancelingInspectionVmIds?.has(
+                                vm.id,
+                              );
+                              return (
+                                <DropdownItem
+                                  key="cancel-vm-inspection"
+                                  isDisabled={isCanceling}
+                                  onClick={() =>
+                                    openCancelInspectionConfirm(vm.id)
+                                  }
+                                >
+                                  Cancel deep inspection
+                                </DropdownItem>
+                              );
+                            }
+                            if (
+                              vmState === "completed" ||
+                              vmState === "error" ||
+                              vmState === "canceled"
+                            ) {
+                              return (
+                                <DropdownItem
+                                  key="rerun-inspection"
+                                  isDisabled={inspectionInProgress}
+                                  onClick={() => onRunDeepInspection?.(vm.id)}
+                                >
+                                  Re-run deep inspection
+                                </DropdownItem>
+                              );
+                            }
                             return (
                               <DropdownItem
-                                key="rerun-inspection"
+                                key="inspect"
+                                isDisabled={inspectionInProgress}
                                 onClick={() => onRunDeepInspection?.(vm.id)}
                               >
-                                Re-run deep inspection
+                                Run deep inspection
                               </DropdownItem>
                             );
-                          }
-                          return (
+                          })()}
+                          {vm.migrationExcluded ? (
                             <DropdownItem
-                              key="inspect"
-                              onClick={() => onRunDeepInspection?.(vm.id)}
+                              key="include-in-reports"
+                              isDisabled={inspectionInProgress}
+                              onClick={() => onIncludeInReports?.([vm.id])}
                             >
-                              Run deep inspection
+                              Include in reports
                             </DropdownItem>
-                          );
-                        })()}
-                        {vm.migrationExcluded ? (
+                          ) : (
+                            <DropdownItem
+                              key="exclude-from-reports"
+                              isDisabled={inspectionInProgress}
+                              onClick={() => onExcludeFromReports?.([vm.id])}
+                            >
+                              Exclude from reports
+                            </DropdownItem>
+                          )}
                           <DropdownItem
-                            key="include-in-reports"
-                            onClick={() => onIncludeInReports?.([vm.id])}
+                            key="edit-labels"
+                            isDisabled={inspectionInProgress}
+                            onClick={() => onEditLabels?.([vm.id])}
                           >
-                            Include in reports
+                            Edit labels
                           </DropdownItem>
-                        ) : (
+                          {!isGroupRowActions && onAddToGroup && (
+                            <DropdownItem
+                              key="add-to-group"
+                              value="add-to-group"
+                              isDisabled={inspectionInProgress}
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onAddToGroup([vm.id]);
+                              }}
+                            >
+                              Add to group
+                            </DropdownItem>
+                          )}
                           <DropdownItem
-                            key="exclude-from-reports"
-                            onClick={() => onExcludeFromReports?.([vm.id])}
+                            key="details"
+                            onClick={() => onVMClick?.(vm.id)}
                           >
-                            Exclude from reports
+                            View details
                           </DropdownItem>
-                        )}
-                        <DropdownItem
-                          key="edit-labels"
-                          onClick={() => onEditLabels?.([vm.id])}
-                        >
-                          Edit labels
-                        </DropdownItem>
-                        {!isGroupRowActions && onAddToGroup && (
-                          <DropdownItem
-                            key="add-to-group"
-                            value="add-to-group"
-                            onClick={() => {
-                              setOpenActionMenuId(null);
-                              onAddToGroup([vm.id]);
-                            }}
-                          >
-                            Add to group
-                          </DropdownItem>
-                        )}
-                        <DropdownItem
-                          key="details"
-                          onClick={() => onVMClick?.(vm.id)}
-                        >
-                          View details
-                        </DropdownItem>
-                      </DropdownList>
-                    </Dropdown>
+                        </DropdownList>
+                      </Dropdown>
+                    )}
                   </Td>
                 )}
               </Tr>

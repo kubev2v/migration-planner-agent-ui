@@ -27,7 +27,11 @@ import {
   type RefreshFilterOptionsFn,
 } from "./vmFilterOptions";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
-import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
+import {
+  cancelVmInspectionWithRetry,
+  hasActiveVmInspection,
+  isVmInspectionActive,
+} from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds } from "./vmSelection";
 
 async function updateVmMigrationExcluded(
@@ -456,10 +460,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     // currently running or pending must be included in every new call or the
     // server will cancel them by omission.
     for (const vm of vms) {
-      if (
-        vm.inspectionStatus?.state === "running" ||
-        vm.inspectionStatus?.state === "pending"
-      ) {
+      if (isVmInspectionActive(vm)) {
         merged.add(vm.id);
       }
     }
@@ -559,6 +560,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     setIsInspectionModalOpen(true);
   }, [agentApi, onRefreshVMs]);
 
+  const handleStopInspection = useCallback(async () => {
+    if (!agentApi) return;
+    try {
+      await agentApi.stopInspection();
+      setInspectionActive(false);
+      await onRefreshVMs?.();
+    } catch (err) {
+      console.error("Error stopping inspection:", err);
+    }
+  }, [agentApi, onRefreshVMs]);
+
   const handleInspectionStarted = useCallback(() => {
     seenRunningRef.current = false;
     pollTicksRef.current = 0;
@@ -568,13 +580,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, []);
 
   useEffect(() => {
+    if (inspectionActive) return;
+    if (!hasActiveVmInspection(vms)) return;
+
+    seenRunningRef.current = true;
+    setInspectionActive(true);
+  }, [vms, inspectionActive]);
+
+  useEffect(() => {
     if (!inspectionActive) return;
 
-    const hasRunningOrPending = vms.some(
-      (vm) =>
-        vm.inspectionStatus?.state === "running" ||
-        vm.inspectionStatus?.state === "pending",
-    );
+    const hasRunningOrPending = hasActiveVmInspection(vms);
 
     if (hasRunningOrPending) {
       seenRunningRef.current = true;
@@ -674,6 +690,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         cancelingInspectionVmIds={cancelingInspectionVmIds}
         onCancelInspection={handleCancelInspection}
         onResetInspection={handleResetInspection}
+        onStopInspection={handleStopInspection}
       />
       {agentApi && (
         <DeepInspectionModal

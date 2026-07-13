@@ -12,7 +12,12 @@ import {
   TextInput,
 } from "@patternfly/react-core";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CancellableRequest,
+  isAbortError,
+  newCancellableRequest,
+} from "../../../../common/AbortSignal";
 import { parseApiError } from "../../../../common/parseApiError";
 import { Symbols } from "../../../../main/Symbols";
 import { vmIdsToFilterExpression } from "../../utils/groupFilters";
@@ -32,13 +37,32 @@ export const CreateGroupFromSelectionModal: React.FC<
   const [name, setName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const createRequestRef = useRef<CancellableRequest | null>(null);
+
+  const cancelCreateRequest = useCallback(() => {
+    createRequestRef.current?.cancel();
+    createRequestRef.current = null;
+  }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      setName("");
-      setError(null);
+    if (!isOpen) {
+      cancelCreateRequest();
+      setIsCreating(false);
+      return;
     }
-  }, [isOpen]);
+
+    setName("");
+    setError(null);
+    setIsCreating(false);
+  }, [isOpen, cancelCreateRequest]);
+
+  useEffect(() => () => cancelCreateRequest(), [cancelCreateRequest]);
+
+  const handleClose = () => {
+    cancelCreateRequest();
+    setIsCreating(false);
+    onClose();
+  };
 
   const handleCreate = async () => {
     const trimmed = name.trim();
@@ -53,17 +77,41 @@ export const CreateGroupFromSelectionModal: React.FC<
 
     setIsCreating(true);
     setError(null);
+
+    const request = newCancellableRequest(
+      "Creating the group timed out. The server may be busy running deep inspection. Try again in a moment.",
+    );
+    createRequestRef.current = request;
+
     try {
-      await agentApi.createGroup({
-        createGroupRequest: {
-          name: trimmed,
-          filter: vmIdsToFilterExpression(vmIds),
+      await agentApi.createGroup(
+        {
+          createGroupRequest: {
+            name: trimmed,
+            filter: vmIdsToFilterExpression(vmIds),
+          },
         },
-      });
+        { signal: request.signal },
+      );
+      request.cleanup();
+      createRequestRef.current = null;
       invalidateAllGroupsCache(agentApi);
       onCreated();
-      onClose();
+      handleClose();
     } catch (err) {
+      request.cleanup();
+      createRequestRef.current = null;
+      if (request.wasCanceledByUser()) {
+        return;
+      }
+      if (isAbortError(err)) {
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : "Creating the group timed out. Try again in a moment.",
+        );
+        return;
+      }
       setError(await parseApiError(err, "Failed to create group."));
     } finally {
       setIsCreating(false);
@@ -73,7 +121,7 @@ export const CreateGroupFromSelectionModal: React.FC<
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       variant="small"
       aria-labelledby="create-group-selection-title"
     >
@@ -133,7 +181,7 @@ export const CreateGroupFromSelectionModal: React.FC<
         >
           Create
         </Button>
-        <Button variant="link" onClick={onClose} isDisabled={isCreating}>
+        <Button variant="link" onClick={handleClose}>
           Cancel
         </Button>
       </ModalFooter>

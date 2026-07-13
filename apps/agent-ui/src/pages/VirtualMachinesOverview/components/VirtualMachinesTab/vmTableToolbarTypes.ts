@@ -27,4 +27,5 @@ export interface VMTableToolbarProps {
   onRemoveFromGroup?: (vmIds: string[]) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onResetInspection?: () => void;
+  onStopInspection?: () => void;
 }

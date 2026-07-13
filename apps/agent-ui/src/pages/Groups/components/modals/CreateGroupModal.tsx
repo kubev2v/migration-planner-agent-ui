@@ -20,6 +20,11 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CancellableRequest,
+  isAbortError,
+  newCancellableRequest,
+} from "../../../../common/AbortSignal";
 import { parseApiError } from "../../../../common/parseApiError";
 import { Symbols } from "../../../../main/Symbols";
 import { VMTable } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/VMTable";
@@ -65,6 +70,12 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     groups: [] as string[],
   });
   const requestIdRef = useRef(0);
+  const createRequestRef = useRef<CancellableRequest | null>(null);
+
+  const cancelCreateRequest = useCallback(() => {
+    createRequestRef.current?.cancel();
+    createRequestRef.current = null;
+  }, []);
 
   const resetState = useCallback(() => {
     setName("");
@@ -75,10 +86,19 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     setSortFields([]);
     setShowExcludedVMs(true);
     setError(null);
+    setIsCreating(false);
   }, []);
+
+  const handleClose = useCallback(() => {
+    cancelCreateRequest();
+    setIsCreating(false);
+    onClose();
+  }, [cancelCreateRequest, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
+      cancelCreateRequest();
+      setIsCreating(false);
       return;
     }
     resetState();
@@ -92,7 +112,9 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     };
 
     fetchFilterOptions();
-  }, [isOpen, agentApi, resetState]);
+  }, [isOpen, agentApi, resetState, cancelCreateRequest]);
+
+  useEffect(() => () => cancelCreateRequest(), [cancelCreateRequest]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -155,17 +177,41 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     }
     setIsCreating(true);
     setError(null);
+
+    const request = newCancellableRequest(
+      "Creating the group timed out. The server may be busy running deep inspection. Try again in a moment.",
+    );
+    createRequestRef.current = request;
+
     try {
-      await agentApi.createGroup({
-        createGroupRequest: {
-          name: trimmed,
-          filter: vmIdsToFilterExpression(Array.from(selectedVMs)),
+      await agentApi.createGroup(
+        {
+          createGroupRequest: {
+            name: trimmed,
+            filter: vmIdsToFilterExpression(Array.from(selectedVMs)),
+          },
         },
-      });
+        { signal: request.signal },
+      );
+      request.cleanup();
+      createRequestRef.current = null;
       invalidateAllGroupsCache(agentApi);
       onCreated();
-      onClose();
+      handleClose();
     } catch (err) {
+      request.cleanup();
+      createRequestRef.current = null;
+      if (request.wasCanceledByUser()) {
+        return;
+      }
+      if (isAbortError(err)) {
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : "Creating the group timed out. Try again in a moment.",
+        );
+        return;
+      }
       setError(await parseApiError(err, "Failed to create group."));
     } finally {
       setIsCreating(false);
@@ -175,7 +221,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       variant="large"
       width="min(1200px, 95vw)"
       aria-labelledby="create-group-title"
@@ -265,7 +311,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         >
           Create
         </Button>
-        <Button variant="link" onClick={onClose} isDisabled={isCreating}>
+        <Button variant="link" onClick={handleClose}>
           Cancel
         </Button>
       </ModalFooter>

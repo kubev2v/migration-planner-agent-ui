@@ -39,6 +39,7 @@ export const VMTable: React.FC<VMTableProps> = ({
   cancelingInspectionVmIds,
   onCancelInspection,
   onResetInspection,
+  onStopInspection,
   variant = "overview",
 }) => {
   const variantUI = resolveVariantUI({ variant, totalVMs });
@@ -87,6 +88,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         onRemoveFromGroup={onRemoveFromGroup}
         onRunDeepInspection={onRunDeepInspection}
         onResetInspection={onResetInspection}
+        onStopInspection={onStopInspection}
       />
 
       <VMTableGrid
@@ -95,6 +97,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         loading={loading}
         vms={vms}
         selectedVMs={selectedVMs}
+        inspectionActive={inspectionActive}
         isGroupRowActions={isGroupRowActions}
         onVMClick={onVMClick}
         onRunDeepInspection={onRunDeepInspection}

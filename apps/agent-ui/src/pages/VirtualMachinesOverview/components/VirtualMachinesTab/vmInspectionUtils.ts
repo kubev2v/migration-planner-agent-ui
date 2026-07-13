@@ -1,4 +1,26 @@
-import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
+import {
+  ResponseError,
+  type VirtualMachine,
+} from "@openshift-migration-advisor/agent-sdk";
+
+export function isVmInspectionActive(vm: VirtualMachine): boolean {
+  const state = vm.inspectionStatus?.state;
+  return state === "running" || state === "pending";
+}
+
+export function hasActiveVmInspection(vms: VirtualMachine[]): boolean {
+  return vms.some(isVmInspectionActive);
+}
+
+export const DEEP_INSPECTION_BUSY_TOOLTIP =
+  "VM selection and actions are temporarily disabled while deep inspection is running.";
+
+export function isDeepInspectionInProgress(
+  inspectionActive: boolean,
+  vms: VirtualMachine[],
+): boolean {
+  return inspectionActive || hasActiveVmInspection(vms);
+}
 
 const CANCEL_RETRY_DELAY_MS = 2000;
 const CANCEL_MAX_ATTEMPTS = 5;

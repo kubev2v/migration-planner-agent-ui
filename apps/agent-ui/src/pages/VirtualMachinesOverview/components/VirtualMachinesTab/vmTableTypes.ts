@@ -44,6 +44,7 @@ export interface VMTableProps {
   cancelingInspectionVmIds?: Set<string>;
   onCancelInspection?: (vmId: string) => Promise<void>;
   onResetInspection?: () => void;
+  onStopInspection?: () => void;
   variant?: VMTableVariant;
 }
 
