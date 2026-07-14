@@ -16,6 +16,8 @@ import {
 type UseMigrationInventoryRefreshOptions = {
   agentApi: DefaultApiInterface;
   groupId?: string;
+  /** When set (e.g. group detail), reload assessment inventory from this source instead of GET /inventory. */
+  fetchAssessmentInventory?: () => Promise<Inventory | null>;
   setInventory: React.Dispatch<React.SetStateAction<Inventory | null>>;
   setVmsList: React.Dispatch<React.SetStateAction<VirtualMachine[]>>;
   onInventoryRevisionBump?: () => void;
@@ -37,6 +39,7 @@ function createSerialQueue() {
 export function useMigrationInventoryRefresh({
   agentApi,
   groupId,
+  fetchAssessmentInventory,
   setInventory,
   setVmsList,
   onInventoryRevisionBump,
@@ -81,12 +84,18 @@ export function useMigrationInventoryRefresh({
             }
 
             const basePath = getAgentApiBasePath(agentApi);
+            const fetchInventory =
+              fetchAssessmentInventory ??
+              (() =>
+                fetchInventoryFromApi(
+                  basePath,
+                  groupId ? { groupId } : undefined,
+                ));
             const resolved = await fetchInventoryAfterMigrationChange(
-              basePath,
+              fetchInventory,
               change,
               previousTotal,
               optimisticInventory,
-              groupId ? { groupId } : undefined,
             );
 
             if (resolved) {
@@ -104,7 +113,14 @@ export function useMigrationInventoryRefresh({
         pendingMigrationUpdatesRef.current -= 1;
       }
     },
-    [agentApi, groupId, onInventoryRevisionBump, setInventory, setVmsList],
+    [
+      agentApi,
+      fetchAssessmentInventory,
+      groupId,
+      onInventoryRevisionBump,
+      setInventory,
+      setVmsList,
+    ],
   );
 
   const reloadAssessmentInventory = useCallback(async () => {
@@ -114,10 +130,11 @@ export function useMigrationInventoryRefresh({
 
     try {
       const basePath = getAgentApiBasePath(agentApi);
-      const fetchedInventory = await fetchInventoryFromApi(
-        basePath,
-        groupId ? { groupId } : undefined,
-      );
+      const fetchInventory =
+        fetchAssessmentInventory ??
+        (() =>
+          fetchInventoryFromApi(basePath, groupId ? { groupId } : undefined));
+      const fetchedInventory = await fetchInventory();
       if (fetchedInventory) {
         setInventory(fetchedInventory);
         onInventoryRevisionBump?.();
@@ -125,7 +142,13 @@ export function useMigrationInventoryRefresh({
     } catch (err) {
       console.error("Error reloading assessment inventory:", err);
     }
-  }, [agentApi, groupId, onInventoryRevisionBump, setInventory]);
+  }, [
+    agentApi,
+    fetchAssessmentInventory,
+    groupId,
+    onInventoryRevisionBump,
+    setInventory,
+  ]);
 
   return { refreshInventory, reloadAssessmentInventory };
 }

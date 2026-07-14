@@ -299,11 +299,11 @@ export function resolveInventoryAfterMigrationChange(
 }
 
 export async function fetchInventoryAfterMigrationChange(
-  basePath: string,
+  fetchInventory: () => Promise<Inventory | null>,
   change: MigrationExcludedInventoryChange,
   previousTotal: number | undefined,
   optimisticInventory: Inventory | null,
-  options?: { groupId?: string; maxAttempts?: number },
+  options?: { maxAttempts?: number },
 ): Promise<Inventory | null> {
   const expectedTotal = getExpectedInventoryTotal(previousTotal, change);
   const maxAttempts = options?.maxAttempts ?? 8;
@@ -313,7 +313,7 @@ export async function fetchInventoryAfterMigrationChange(
       await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
     }
 
-    const fetchedInventory = await fetchInventoryFromApi(basePath, options);
+    const fetchedInventory = await fetchInventory();
     const resolved = resolveInventoryAfterMigrationChange(
       optimisticInventory,
       fetchedInventory,

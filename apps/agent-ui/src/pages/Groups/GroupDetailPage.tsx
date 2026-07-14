@@ -314,10 +314,24 @@ export const GroupDetailPage: React.FC = () => {
     setInventoryRevision((revision) => revision + 1);
   }, []);
 
-  const { refreshInventory: refreshGroupInventory } =
+  const fetchGroupAssessmentInventory = useCallback(async () => {
+    if (!groupId) {
+      return null;
+    }
+
+    const response = await agentApi.getGroup({
+      id: groupId,
+      page: 1,
+      pageSize: 1,
+    });
+    return response.inventory ?? null;
+  }, [agentApi, groupId]);
+
+  const { refreshInventory: refreshGroupInventory, reloadAssessmentInventory } =
     useMigrationInventoryRefresh({
       agentApi,
       groupId,
+      fetchAssessmentInventory: fetchGroupAssessmentInventory,
       setInventory,
       setVmsList,
       onInventoryRevisionBump: bumpInventoryRevision,
@@ -356,6 +370,7 @@ export const GroupDetailPage: React.FC = () => {
       newParams = buildApplicationsTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
+      void reloadAssessmentInventory();
     }
     setSearchParams(newParams, { replace: true });
   };
