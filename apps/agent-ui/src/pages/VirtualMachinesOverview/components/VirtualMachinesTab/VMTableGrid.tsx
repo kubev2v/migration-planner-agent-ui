@@ -17,7 +17,6 @@ import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
-import { ApplicationsList } from "../ApplicationsTab/ApplicationsList";
 import { formatMetric } from "./VMUtilizationMetrics";
 import {
   renderVmInspectionStatus,
@@ -39,6 +38,7 @@ export interface VMTableGridProps {
   selectedVMs: Set<string>;
   isGroupRowActions: boolean;
   onVMClick?: (vmId: string) => void;
+  onVMApplicationsClick?: (vmId: string) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
@@ -57,6 +57,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   selectedVMs,
   isGroupRowActions,
   onVMClick,
+  onVMApplicationsClick,
   onRunDeepInspection,
   onExcludeFromReports,
   onIncludeInReports,
@@ -210,9 +211,19 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                   </Td>
                 )}
                 {isColumnVisible("applications") && (
-                  <Td dataLabel="Applications">
-                    {applicationNames.length > 0 ? (
-                      <ApplicationsList applications={applicationNames} />
+                  <Td dataLabel="Applications" modifier="fitContent">
+                    {applicationNames.length > 0 &&
+                    onVMApplicationsClick &&
+                    !disableVmNavigation ? (
+                      <Button
+                        variant="link"
+                        isInline
+                        onClick={() => onVMApplicationsClick(vm.id)}
+                      >
+                        {applicationNames.length}
+                      </Button>
+                    ) : applicationNames.length > 0 ? (
+                      applicationNames.length
                     ) : (
                       "–"
                     )}

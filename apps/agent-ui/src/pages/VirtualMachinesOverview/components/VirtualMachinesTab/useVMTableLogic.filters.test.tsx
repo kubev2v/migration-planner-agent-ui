@@ -21,6 +21,7 @@ const EMPTY_FILTER_OPTIONS: NonNullable<
   concernCategories: [],
   vmLabels: [],
   groups: [],
+  applications: [],
 };
 const PERFORMANCE_CATEGORY = ["Performance"];
 const HIGH_CPU_LABEL = ["High CPU"];

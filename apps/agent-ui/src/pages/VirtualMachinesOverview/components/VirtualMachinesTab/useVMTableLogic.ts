@@ -83,6 +83,7 @@ export function useVMTableLogic({
   onFiltersChange,
   onPageChange,
   onSortChange,
+  onFrontendSortChange,
   availableFilterOptions = {
     clusters: [],
     datacenters: [],
@@ -90,6 +91,7 @@ export function useVMTableLogic({
     concernCategories: [],
     vmLabels: [],
     groups: [],
+    applications: [],
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
@@ -222,6 +224,9 @@ export function useVMTableLogic({
   const [selectedGroups, setSelectedGroups] = useState<string[]>(
     initialFilters?.groups ?? EMPTY_STRING_ARRAY,
   );
+  const [selectedApplications, setSelectedApplications] = useState<string[]>(
+    initialFilters?.applications ?? EMPTY_STRING_ARRAY,
+  );
   const [selectedConcernLabels, setSelectedConcernLabels] = useState<string[]>(
     initialFilters?.concernLabels ?? EMPTY_STRING_ARRAY,
   );
@@ -279,6 +284,7 @@ export function useVMTableLogic({
     );
     syncStringArrayState(setSelectedVmLabels, initialFilters?.vmLabels);
     syncStringArrayState(setSelectedGroups, initialFilters?.groups);
+    syncStringArrayState(setSelectedApplications, initialFilters?.applications);
     syncStringArrayState(
       setSelectedConcernLabels,
       initialFilters?.concernLabels,
@@ -323,8 +329,17 @@ export function useVMTableLogic({
     if (sortByColumnKey && !isColumnVisible(sortByColumnKey)) {
       setSortByColumnKey(null);
       onSortChange?.([]);
+      onFrontendSortChange?.(null);
     }
-  }, [sortByColumnKey, isColumnVisible, onSortChange]);
+  }, [sortByColumnKey, isColumnVisible, onFrontendSortChange, onSortChange]);
+
+  useEffect(() => {
+    onFrontendSortChange?.(
+      sortByColumnKey && !isBackendSortableColumn(sortByColumnKey)
+        ? sortByColumnKey
+        : null,
+    );
+  }, [onFrontendSortChange, sortByColumnKey]);
 
   // Column definitions - filtered by visibility
   const columns = useMemo(
@@ -344,6 +359,7 @@ export function useVMTableLogic({
   const availableConcernCategories = availableFilterOptions.concernCategories;
   const availableVmLabels = availableFilterOptions.vmLabels;
   const availableGroups = availableFilterOptions.groups;
+  const availableApplications = availableFilterOptions.applications;
 
   const applyFilterChange = useCallback(
     (updater: () => void) => {
@@ -377,6 +393,7 @@ export function useVMTableLogic({
         selectedMigrationReadiness.length > 0 ||
         selectedVmLabels.length > 0 ||
         selectedGroups.length > 0 ||
+        selectedApplications.length > 0 ||
         selectedConcernLabels.length > 0 ||
         selectedConcernCategories.length > 0 ||
         hasIssuesFilter ||
@@ -412,6 +429,8 @@ export function useVMTableLogic({
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
       groups: selectedGroups.length > 0 ? selectedGroups : undefined,
+      applications:
+        selectedApplications.length > 0 ? selectedApplications : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -436,6 +455,7 @@ export function useVMTableLogic({
     selectedMigrationReadiness,
     selectedVmLabels,
     selectedGroups,
+    selectedApplications,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
@@ -460,6 +480,7 @@ export function useVMTableLogic({
       setSelectedMigrationReadiness(selection.selectedMigrationReadiness);
       setSelectedVmLabels(selection.selectedVmLabels);
       setSelectedGroups(selection.selectedGroups);
+      setSelectedApplications(selection.selectedApplications);
       setSelectedConcernLabels(selection.selectedConcernLabels);
       setSelectedConcernCategories(selection.selectedConcernCategories);
       setHasIssuesFilter(selection.hasIssuesFilter);
@@ -547,6 +568,10 @@ export function useVMTableLogic({
         onGroupsChange: (values) => {
           applyFilterChange(() => setSelectedGroups(values));
         },
+        selectedApplications,
+        onApplicationsChange: (values) => {
+          applyFilterChange(() => setSelectedApplications(values));
+        },
         hasIssuesFilter,
         noIssuesFilter,
         onIssuesFilterChange: (hasIssues, noIssues) => {
@@ -565,6 +590,7 @@ export function useVMTableLogic({
         availableClusters,
         availableVmLabels,
         availableGroups,
+        availableApplications,
         showGroupsFilter,
         onCheckboxValueOpen: refreshFilterOptions,
       }),
@@ -575,6 +601,7 @@ export function useVMTableLogic({
       availableConcernLabels,
       availableDatacenters,
       availableGroups,
+      availableApplications,
       availableVmLabels,
       cpuUsageRangeFilter,
       diskRangeFilter,
@@ -590,6 +617,7 @@ export function useVMTableLogic({
       selectedConcernLabels,
       selectedDatacenters,
       selectedGroups,
+      selectedApplications,
       selectedMigrationReadiness,
       selectedStatuses,
       selectedVmLabels,
@@ -616,16 +644,28 @@ export function useVMTableLogic({
   // Apply client-side sort for frontend-sortable columns; all other columns use backend sort.
   // Skip reordering while inspection is active so rows don't jump as statuses change.
   const displayVMs = useMemo(() => {
-    if (sortByColumnKey === null || isBackendSortableColumn(sortByColumnKey))
+    if (sortByColumnKey === null || isBackendSortableColumn(sortByColumnKey)) {
       return vms;
+    }
     const sortFn =
       FRONTEND_SORT_METHODS[sortByColumnKey as FrontendSortableColumn];
-    if (!sortFn) return vms;
-    return [...vms].sort((a, b) => {
+    if (!sortFn) {
+      return vms;
+    }
+    const sorted = [...vms].sort((a, b) => {
       const diff = sortFn(a) - sortFn(b);
       return activeSortDirection === "asc" ? diff : -diff;
     });
-  }, [vms, sortByColumnKey, activeSortDirection]);
+    const start = (page - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [vms, sortByColumnKey, activeSortDirection, page, pageSize]);
+
+  const totalMatchingCount = useMemo(() => {
+    if (sortByColumnKey && !isBackendSortableColumn(sortByColumnKey)) {
+      return vms.length;
+    }
+    return totalVMs ?? vms.length;
+  }, [sortByColumnKey, totalVMs, vms.length]);
 
   const currentFilters = useMemo((): VMFilters => {
     return {
@@ -647,6 +687,8 @@ export function useVMTableLogic({
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
       groups: selectedGroups.length > 0 ? selectedGroups : undefined,
+      applications:
+        selectedApplications.length > 0 ? selectedApplications : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -670,6 +712,7 @@ export function useVMTableLogic({
     selectedMigrationReadiness,
     selectedVmLabels,
     selectedGroups,
+    selectedApplications,
     selectedConcernLabels,
     selectedConcernCategories,
     showExcludedVMs,
@@ -679,8 +722,6 @@ export function useVMTableLogic({
 
   const allPageSelected =
     pageVmIds.length > 0 && pageVmIds.every((id) => selectedVMs.has(id));
-
-  const totalMatchingCount = totalVMs ?? vms.length;
 
   const handleSelectAllMatching = useCallback(async () => {
     if (!onFetchAllVmIds || !onSelectionChange) {

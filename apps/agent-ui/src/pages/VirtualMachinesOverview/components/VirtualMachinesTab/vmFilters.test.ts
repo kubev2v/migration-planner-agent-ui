@@ -88,6 +88,57 @@ describe("groups URL params", () => {
   });
 });
 
+describe("filtersToByExpression applications", () => {
+  it("uses a single equals check for one application", () => {
+    expect(filtersToByExpression({ applications: ["SAP ERP"] })).toBe(
+      "application = 'SAP ERP'",
+    );
+  });
+
+  it("uses in when multiple applications are selected", () => {
+    expect(
+      filtersToByExpression({ applications: ["PostgreSQL", "MySQL"] }),
+    ).toBe("application in ['PostgreSQL','MySQL']");
+  });
+
+  it("escapes single quotes in application names", () => {
+    expect(filtersToByExpression({ applications: ["it's ok"] })).toBe(
+      "application = 'it\\'s ok'",
+    );
+  });
+
+  it("supports legacy vmApplication param", () => {
+    expect(filtersToByExpression({ vmApplication: "Nginx" })).toBe(
+      "application = 'Nginx'",
+    );
+  });
+});
+
+describe("applications URL params", () => {
+  it("round-trips multiple applications via repeated params", () => {
+    const params = filtersToSearchParams({
+      applications: ["SAP ERP", "Nginx"],
+    });
+    expect(params.getAll("applications")).toEqual(["SAP ERP", "Nginx"]);
+    expect(searchParamsToFilters(params).applications).toEqual([
+      "SAP ERP",
+      "Nginx",
+    ]);
+  });
+
+  it("preserves application names containing commas", () => {
+    const filters = { applications: ["team,a", "SAP ERP"] };
+    const roundTripped = searchParamsToFilters(filtersToSearchParams(filters));
+    expect(roundTripped.applications).toEqual(["team,a", "SAP ERP"]);
+  });
+
+  it("maps legacy vmApplication param to applications", () => {
+    const params = new URLSearchParams();
+    params.set("vmApplication", "SAP ERP");
+    expect(searchParamsToFilters(params).applications).toEqual(["SAP ERP"]);
+  });
+});
+
 describe("filtersToByExpression showExcludedVMs", () => {
   it("hides excluded VMs when the toggle is off", () => {
     expect(filtersToByExpression({ showExcludedVMs: false })).toBe(

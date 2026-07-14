@@ -17,6 +17,7 @@ import {
   mergeVmGroupItems,
   type VmGroupMembershipData,
 } from "../../../Groups/utils/vmGroupMembership";
+import { buildVmDetailUrl } from "../../../reportTabNavigation";
 import { getAgentApiBasePath } from "../../agentApiConfig";
 import type { MigrationExcludedInventoryChange } from "../../inventoryParsing";
 import {
@@ -32,7 +33,8 @@ import {
 } from "./vmFilterOptions";
 import { filtersToByExpression, type VMFilters } from "./vmFilters";
 import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
-import { fetchAllMatchingVmIds } from "./vmSelection";
+import { fetchAllMatchingVmIds, fetchAllMatchingVms } from "./vmSelection";
+import type { ColumnKey } from "./vmTableShared";
 
 async function updateVmMigrationExcluded(
   agentApi: DefaultApiInterface,
@@ -136,6 +138,7 @@ interface VirtualMachinesViewProps {
     concernCategories: string[];
     vmLabels: string[];
     groups: string[];
+    applications: string[];
   };
   agentApi?: DefaultApiInterface;
   onRefreshVMs?: () => void;
@@ -213,6 +216,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [onRefreshVMs]);
 
   const vmIdParam = searchParams.get("vmId");
+  const vmSectionParam = searchParams.get("vmSection");
 
   useEffect(() => {
     if (vmIdParam) {
@@ -239,6 +243,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [vmApplicationsMap, setVmApplicationsMap] = useState<
     Map<string, string[]>
   >(new Map());
+  const [clientSortColumn, setClientSortColumn] = useState<ColumnKey | null>(
+    null,
+  );
+  const [allVmsForClientSort, setAllVmsForClientSort] = useState<
+    VirtualMachine[] | null
+  >(null);
+  const [clientSortLoading, setClientSortLoading] = useState(false);
 
   const basePath = useMemo(
     () => (agentApi ? getAgentApiBasePath(agentApi) : ""),
@@ -278,13 +289,73 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     void loadVmApplications();
   }, [loadVmApplications]);
 
+  const clientSortFilterExpression = useMemo(() => {
+    const effectiveFilters: VMFilters = {
+      ...(initialFilters ?? {}),
+      ...(showExcludedVMs !== undefined ? { showExcludedVMs } : {}),
+    };
+    const userExpression = filtersToByExpression(effectiveFilters);
+    return combineFilterExpressions(scopedFilterExpression, userExpression);
+  }, [initialFilters, scopedFilterExpression, showExcludedVMs]);
+
+  useEffect(() => {
+    if (clientSortColumn !== "applications" || !agentApi) {
+      setAllVmsForClientSort(null);
+      setClientSortLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setClientSortLoading(true);
+        const fetched = await fetchAllMatchingVms(agentApi, {
+          byExpression: clientSortFilterExpression,
+        });
+        if (!cancelled) {
+          setAllVmsForClientSort(fetched);
+        }
+      } catch (err) {
+        console.error("Error fetching VMs for applications sort:", err);
+        if (!cancelled) {
+          setAllVmsForClientSort(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setClientSortLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agentApi, clientSortColumn, clientSortFilterExpression]);
+
+  const sourceVms = useMemo(() => {
+    if (clientSortColumn === "applications" && allVmsForClientSort) {
+      return allVmsForClientSort;
+    }
+    return vms;
+  }, [allVmsForClientSort, clientSortColumn, vms]);
+
+  const tableTotalVMs = useMemo(() => {
+    if (clientSortColumn === "applications" && allVmsForClientSort) {
+      return allVmsForClientSort.length;
+    }
+    return totalVMs;
+  }, [allVmsForClientSort, clientSortColumn, totalVMs]);
+
   const vmsForTable = useMemo(
     () =>
       mergeVmApplicationNames(
-        mergeVmGroupItems(vms, vmGroupMembership),
+        mergeVmGroupItems(sourceVms, vmGroupMembership),
         vmApplicationsMap,
       ),
-    [vms, vmGroupMembership, vmApplicationsMap],
+    [sourceVms, vmGroupMembership, vmApplicationsMap],
   );
 
   const mergedFilterOptions = useMemo(
@@ -484,13 +555,32 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   const handleVMClick = (vmId: string) => {
     setSelectedVMId(vmId);
+    setSearchParams(buildVmDetailUrl(searchParams, vmId), { replace: true });
   };
+
+  const handleVMApplicationsClick = (vmId: string) => {
+    setSelectedVMId(vmId);
+    setSearchParams(
+      buildVmDetailUrl(searchParams, vmId, { section: "applications" }),
+      { replace: true },
+    );
+  };
+
+  const handleScrollToSectionComplete = useCallback(() => {
+    if (!searchParams.has("vmSection")) {
+      return;
+    }
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("vmSection");
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleBack = () => {
     setSelectedVMId(null);
-    if (searchParams.has("vmId")) {
+    if (searchParams.has("vmId") || searchParams.has("vmSection")) {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("vmId");
+      newParams.delete("vmSection");
       setSearchParams(newParams, { replace: true });
     }
   };
@@ -680,6 +770,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         vmId={selectedVMId}
         onBack={handleBack}
         inspectionStatus={selectedVM?.inspectionStatus}
+        scrollToSection={vmSectionParam}
+        onScrollToSectionComplete={handleScrollToSectionComplete}
       />
     );
   }
@@ -688,15 +780,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     <>
       <VMTable
         vms={visibleVms}
-        loading={loading}
+        loading={loading || clientSortLoading}
         onVMClick={handleVMClick}
+        onVMApplicationsClick={handleVMApplicationsClick}
         initialFilters={initialFilters}
-        totalVMs={totalVMs}
+        totalVMs={tableTotalVMs}
         currentPage={currentPage}
         pageSize={pageSize}
         onFiltersChange={onFiltersChange}
         onPageChange={onPageChange}
         onSortChange={onSortChange}
+        onFrontendSortChange={setClientSortColumn}
         availableFilterOptions={mergedFilterOptions}
         selectedVMs={selectedVMs}
         onSelectionChange={setSelectedVMs}

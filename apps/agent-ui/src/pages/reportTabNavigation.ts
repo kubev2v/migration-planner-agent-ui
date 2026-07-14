@@ -74,17 +74,26 @@ export function clearVmFilterParams(params: URLSearchParams): void {
   params.delete("vmLabels");
   params.delete("concernLabels");
   params.delete("concernCategories");
+  params.delete("vmApplication");
+  params.delete("applications");
   params.delete("application");
+  params.delete("vmSection");
 }
 
 export function buildVmDetailUrl(
   searchParams: URLSearchParams,
   vmId: string,
+  options?: { section?: string },
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams);
-  clearVmFilterParams(params);
+  params.delete("application");
   params.set("tab", "vms");
   params.set("vmId", vmId);
+  if (options?.section) {
+    params.set("vmSection", options.section);
+  } else {
+    params.delete("vmSection");
+  }
   return params;
 }
 

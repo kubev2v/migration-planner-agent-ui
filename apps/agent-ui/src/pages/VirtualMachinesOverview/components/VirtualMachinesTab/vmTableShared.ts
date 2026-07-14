@@ -1,6 +1,6 @@
 import { css } from "@emotion/css";
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
-import { deepInspectionSort } from "./vmSort";
+import { applicationsSort, deepInspectionSort } from "./vmSort";
 
 export type ColumnKey =
   | "name"
@@ -32,7 +32,10 @@ export const BACKEND_SORTABLE_COLUMNS = [
   "issues",
 ] as const;
 
-export const FRONTEND_SORTABLE_COLUMNS = ["deepInspection"] as const;
+export const FRONTEND_SORTABLE_COLUMNS = [
+  "applications",
+  "deepInspection",
+] as const;
 
 export type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
 export type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
@@ -276,6 +279,7 @@ export const FRONTEND_SORT_METHODS: Record<
   FrontendSortableColumn,
   FrontendSortFunction
 > = {
+  applications: applicationsSort,
   deepInspection: deepInspectionSort,
 };
 

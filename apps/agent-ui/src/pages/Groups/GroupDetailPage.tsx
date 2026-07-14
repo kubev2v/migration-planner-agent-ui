@@ -104,6 +104,7 @@ export const GroupDetailPage: React.FC = () => {
     concernCategories: [] as string[],
     vmLabels: [] as string[],
     groups: [] as string[],
+    applications: [] as string[],
   });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
 
@@ -372,6 +373,13 @@ export const GroupDetailPage: React.FC = () => {
 
   const selectedApplicationName = searchParams.get("application");
 
+  const handleViewApplicationInVmList = useCallback(
+    (applicationName: string) => {
+      handleNavigateToVMFilters({ applications: [applicationName] });
+    },
+    [handleNavigateToVMFilters],
+  );
+
   const handleConcernClick = useCallback(
     (concernLabel: string) => {
       handleNavigateToVMFilters({ concernLabels: [concernLabel] });
@@ -635,9 +643,13 @@ export const GroupDetailPage: React.FC = () => {
                   applications={applicationsList}
                   loading={applicationsLoading}
                   error={applicationsError}
+                  agentApi={agentApi}
                   selectedApplicationName={selectedApplicationName}
                   onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
+                  onViewInVmList={handleViewApplicationInVmList}
+                  onRefreshApplications={refreshVMs}
+                  onRefreshFilterOptions={refreshFilterOptions}
                 />
               </div>
             </Tab>

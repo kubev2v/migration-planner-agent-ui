@@ -34,6 +34,8 @@ function createParams(
     onVmLabelsChange: vi.fn(),
     selectedGroups: [],
     onGroupsChange: vi.fn(),
+    selectedApplications: [],
+    onApplicationsChange: vi.fn(),
     hasIssuesFilter: false,
     noIssuesFilter: false,
     onIssuesFilterChange: vi.fn(),
@@ -43,6 +45,7 @@ function createParams(
     availableClusters: ["cluster-a"],
     availableVmLabels: ["tier-1"],
     availableGroups: ["production"],
+    availableApplications: ["SAP ERP"],
     showGroupsFilter: true,
     ...overrides,
   };
@@ -58,6 +61,7 @@ describe("buildVmTableFilterAttributes", () => {
         availableClusters: [],
         availableVmLabels: [],
         availableGroups: [],
+        availableApplications: [],
       }),
     );
 
@@ -147,5 +151,27 @@ describe("buildVmTableFilterAttributes", () => {
     expect(attributes.some((attribute) => attribute.id === "groups")).toBe(
       false,
     );
+  });
+
+  it("includes applications when options are available", () => {
+    const attributes = buildVmTableFilterAttributes(createParams());
+
+    const applications = attributes.find(
+      (attribute) => attribute.id === "applications",
+    );
+    expect(applications).toMatchObject({
+      label: "Applications",
+      type: "searchable-checkbox",
+    });
+  });
+
+  it("omits applications when no options are available", () => {
+    const attributes = buildVmTableFilterAttributes(
+      createParams({ availableApplications: [] }),
+    );
+
+    expect(
+      attributes.some((attribute) => attribute.id === "applications"),
+    ).toBe(false);
   });
 });

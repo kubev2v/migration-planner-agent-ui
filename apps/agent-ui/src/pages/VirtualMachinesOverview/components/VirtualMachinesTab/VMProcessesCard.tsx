@@ -1,39 +1,33 @@
-import type { ApplicationOverview } from "@openshift-migration-advisor/agent-sdk";
+import type { Process } from "@openshift-migration-advisor/agent-sdk";
 import {
-  Alert,
   Card,
   CardBody,
   Pagination,
   SearchInput,
-  Spinner,
 } from "@patternfly/react-core";
-import { CubesIcon } from "@patternfly/react-icons";
+import { ProcessAutomationIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
-import { useCallback } from "react";
-import { getApplicationVendor } from "../ApplicationsTab/applicationVendor";
+import { useCallback, useMemo } from "react";
 import {
+  assignStableRowKeys,
   useVmDetailListCardState,
-  VM_DETAIL_TABLE_WRAPPER_STYLE,
+  VM_DETAIL_SCROLLABLE_TABLE_STYLE,
 } from "./vmDetailListCard";
 
-export const VM_APPLICATIONS_SECTION_ID = "vm-applications-section";
-
-interface VMApplicationsCardProps {
-  applications: ApplicationOverview[];
-  loading: boolean;
-  error: string | null;
+interface VMProcessesCardProps {
+  processes: Process[];
 }
 
-export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
-  applications,
-  loading,
-  error,
+const getProcessName = (process: Process) => process.name;
+
+const getProcessRowKey = (process: Process) =>
+  `${process.name}\0${process.version ?? ""}`;
+
+export const VMProcessesCard: React.FC<VMProcessesCardProps> = ({
+  processes,
 }) => {
-  const getSearchValue = useCallback(
-    (application: ApplicationOverview) => application.name,
-    [],
-  );
+  const getSearchValue = useCallback(getProcessName, []);
   const {
     nameSearch,
     page,
@@ -43,10 +37,15 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
     handleNameSearch,
     setPage,
     handlePerPageSelect,
-  } = useVmDetailListCardState(applications, getSearchValue, 10);
+  } = useVmDetailListCardState(processes, getSearchValue, 10);
+
+  const paginatedRows = useMemo(
+    () => assignStableRowKeys(paginatedItems, getProcessRowKey),
+    [paginatedItems],
+  );
 
   return (
-    <Card id={VM_APPLICATIONS_SECTION_ID}>
+    <Card>
       <CardBody>
         <div
           style={{
@@ -57,42 +56,22 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
             fontWeight: 600,
           }}
         >
-          <CubesIcon />
-          Applications ({applications.length})
+          <ProcessAutomationIcon />
+          Processes ({processes.length})
         </div>
 
-        {error ? (
-          <Alert
-            variant="warning"
-            isInline
-            isPlain
-            title="Applications unavailable"
-          >
-            {error}
-          </Alert>
-        ) : loading ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <Spinner size="md" />
-            <span>Loading applications...</span>
-          </div>
-        ) : applications.length === 0 ? (
+        {processes.length === 0 ? (
           <span
             style={{
               color: "var(--pf-t--global--text--color--subtle)",
             }}
           >
-            No applications were detected on this virtual machine.
+            No processes were detected on this virtual machine.
           </span>
         ) : (
           <>
             <SearchInput
-              placeholder="Filter by application name"
+              placeholder="Filter by process name"
               value={nameSearch}
               onChange={(_event, value) => handleNameSearch(value)}
               onClear={() => handleNameSearch("")}
@@ -104,7 +83,7 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
                   color: "var(--pf-t--global--text--color--subtle)",
                 }}
               >
-                No applications match your search.
+                No processes match your search.
               </span>
             ) : (
               <>
@@ -120,23 +99,21 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
                   isCompact
                   style={{ marginBottom: "16px" }}
                 />
-                <div style={VM_DETAIL_TABLE_WRAPPER_STYLE}>
+                <div style={VM_DETAIL_SCROLLABLE_TABLE_STYLE}>
                   <Table
-                    aria-label="Detected applications"
+                    aria-label="Detected processes"
                     variant="compact"
                     borders={false}
                   >
                     <Thead>
                       <Tr>
-                        <Th>Application</Th>
-                        <Th>Vendor</Th>
+                        <Th>Process</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {paginatedItems.map((application) => (
-                        <Tr key={application.name}>
-                          <Td>{application.name}</Td>
-                          <Td>{getApplicationVendor(application.name)}</Td>
+                      {paginatedRows.map(({ item: process, rowKey }) => (
+                        <Tr key={rowKey}>
+                          <Td>{process.name}</Td>
                         </Tr>
                       ))}
                     </Tbody>
@@ -151,4 +128,4 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
   );
 };
 
-VMApplicationsCard.displayName = "VMApplicationsCard";
+VMProcessesCard.displayName = "VMProcessesCard";
