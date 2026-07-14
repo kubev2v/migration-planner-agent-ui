@@ -23,8 +23,9 @@ import {
   ToolbarContent,
   ToolbarGroup,
   ToolbarItem,
+  Tooltip,
 } from "@patternfly/react-core";
-import { SearchIcon } from "@patternfly/react-icons";
+import { InfoCircleIcon, SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,6 +35,13 @@ import {
   attributeValueFilterToolbarStyle,
 } from "../../../../common/components/attribute-value-filter";
 import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
+import {
+  type ApplicationCertificationStatus,
+  CERTIFICATION_STATUS_FILTER_OPTIONS,
+  CERTIFICATION_STATUS_TOOLTIP,
+  getApplicationCertificationStatus,
+  getCertificationStatusLabel,
+} from "./applicationCertification";
 import {
   filterApplications,
   filterVmsBySearch,
@@ -78,6 +86,8 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
 }) => {
   const [nameSearch, setNameSearch] = useState("");
   const [selectedVmIds, setSelectedVmIds] = useState<string[]>([]);
+  const [selectedCertificationStatuses, setSelectedCertificationStatuses] =
+    useState<ApplicationCertificationStatus[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [drawerApplication, setDrawerApplication] =
@@ -91,8 +101,9 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
       filterApplications(applications, {
         nameSearch,
         vmIds: selectedVmIds,
+        certificationStatuses: selectedCertificationStatuses,
       }),
-    [applications, nameSearch, selectedVmIds],
+    [applications, nameSearch, selectedVmIds, selectedCertificationStatuses],
   );
 
   const paginatedApplications = useMemo(
@@ -147,8 +158,32 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
         searchPlaceholder: "Type to filter VMs",
         emptyMessage: "No virtual machines available",
       },
+      {
+        id: "certification-status",
+        label: "Certification status",
+        type: "checkbox",
+        options: CERTIFICATION_STATUS_FILTER_OPTIONS.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        selections: selectedCertificationStatuses,
+        onSelectionsChange: (statuses) => {
+          closeDrawer();
+          setSelectedCertificationStatuses(
+            statuses as ApplicationCertificationStatus[],
+          );
+          resetPage();
+        },
+      },
     ],
-    [allVms, closeDrawer, nameSearch, resetPage, selectedVmIds],
+    [
+      allVms,
+      closeDrawer,
+      nameSearch,
+      resetPage,
+      selectedCertificationStatuses,
+      selectedVmIds,
+    ],
   );
 
   useEffect(() => {
@@ -174,6 +209,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
     closeDrawer();
     setNameSearch("");
     setSelectedVmIds([]);
+    setSelectedCertificationStatuses([]);
     resetPage();
   };
 
@@ -286,17 +322,37 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
             <Thead>
               <Tr>
                 <Th>Application name</Th>
+                <Th>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    Certification status
+                    <Tooltip content={CERTIFICATION_STATUS_TOOLTIP}>
+                      <Button
+                        variant="plain"
+                        aria-label="Certification status information"
+                        style={{ padding: 0, minHeight: "auto" }}
+                      >
+                        <InfoCircleIcon />
+                      </Button>
+                    </Tooltip>
+                  </span>
+                </Th>
                 <Th>VMs</Th>
               </Tr>
             </Thead>
             <Tbody>
               {loading ? (
                 <Tr>
-                  <Td colSpan={2}>Loading applications...</Td>
+                  <Td colSpan={3}>Loading applications...</Td>
                 </Tr>
               ) : filteredApplications.length === 0 ? (
                 <Tr>
-                  <Td colSpan={2}>
+                  <Td colSpan={3}>
                     {applications.length === 0
                       ? "No applications were detected on your virtual machines."
                       : "No applications match the current filters."}
@@ -306,6 +362,11 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
                 paginatedApplications.map((application) => (
                   <Tr key={application.name}>
                     <Td dataLabel="Application name">{application.name}</Td>
+                    <Td dataLabel="Certification status">
+                      {getCertificationStatusLabel(
+                        getApplicationCertificationStatus(application.name),
+                      )}
+                    </Td>
                     <Td dataLabel="VMs">
                       <Button
                         variant="link"

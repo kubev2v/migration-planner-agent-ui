@@ -1,8 +1,13 @@
+import {
+  type ApplicationCertificationStatus,
+  getApplicationCertificationStatus,
+} from "./applicationCertification";
 import type { ApplicationOverview, ApplicationVM } from "./applicationsApi";
 
 export interface ApplicationFilterState {
   nameSearch: string;
   vmIds: string[];
+  certificationStatuses: ApplicationCertificationStatus[];
 }
 
 export function matchesSearch(value: string, query: string): boolean {
@@ -35,10 +40,17 @@ export function filterApplications(
 ): ApplicationOverview[] {
   const selectedVmIds = new Set(filters.vmIds);
   const nameSearch = filters.nameSearch.trim();
+  const selectedCertificationStatuses = new Set(filters.certificationStatuses);
 
   return applications.filter((application) => {
     if (nameSearch && !matchesSearch(application.name, nameSearch)) {
       return false;
+    }
+    if (selectedCertificationStatuses.size > 0) {
+      const status = getApplicationCertificationStatus(application.name);
+      if (!selectedCertificationStatuses.has(status)) {
+        return false;
+      }
     }
     if (selectedVmIds.size > 0) {
       return application.vms.some((vm) => selectedVmIds.has(vm.id));

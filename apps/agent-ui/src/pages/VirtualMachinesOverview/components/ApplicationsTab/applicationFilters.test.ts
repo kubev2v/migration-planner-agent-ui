@@ -32,13 +32,21 @@ describe("matchesSearch", () => {
 describe("filterApplications", () => {
   it("filters by application name", () => {
     expect(
-      filterApplications(applications, { nameSearch: "apache", vmIds: [] }),
+      filterApplications(applications, {
+        nameSearch: "apache",
+        vmIds: [],
+        certificationStatuses: [],
+      }),
     ).toEqual([applications[0]]);
   });
 
   it("filters by selected VM ids", () => {
     expect(
-      filterApplications(applications, { nameSearch: "", vmIds: ["vm-2"] }),
+      filterApplications(applications, {
+        nameSearch: "",
+        vmIds: ["vm-2"],
+        certificationStatuses: [],
+      }),
     ).toEqual([applications[1]]);
   });
 
@@ -47,8 +55,19 @@ describe("filterApplications", () => {
       filterApplications(applications, {
         nameSearch: "post",
         vmIds: ["vm-2"],
+        certificationStatuses: [],
       }),
     ).toEqual([applications[1]]);
+  });
+
+  it("filters by certification status", () => {
+    expect(
+      filterApplications(applications, {
+        nameSearch: "",
+        vmIds: [],
+        certificationStatuses: ["certified"],
+      }),
+    ).toEqual([applications[0], applications[1]]);
   });
 });
 
