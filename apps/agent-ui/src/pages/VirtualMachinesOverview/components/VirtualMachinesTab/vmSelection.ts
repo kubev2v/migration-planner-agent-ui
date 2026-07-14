@@ -44,25 +44,6 @@ export async function fetchAllMatchingVmIds(
     sort?: string[];
   },
 ): Promise<string[]> {
-  const firstPage = await agentApi.getVMs({
-    byExpression: options.byExpression,
-    sort: options.sort,
-    page: 1,
-    pageSize: VM_FETCH_PAGE_SIZE,
-  });
-
-  const ids = firstPage.vms.map((vm) => vm.id);
-  const pageCount = firstPage.pageCount ?? 1;
-
-  for (let page = 2; page <= pageCount; page++) {
-    const response = await agentApi.getVMs({
-      byExpression: options.byExpression,
-      sort: options.sort,
-      page,
-      pageSize: VM_FETCH_PAGE_SIZE,
-    });
-    ids.push(...response.vms.map((vm) => vm.id));
-  }
-
-  return ids;
+  const vms = await fetchAllMatchingVms(agentApi, options);
+  return vms.map((vm) => vm.id);
 }

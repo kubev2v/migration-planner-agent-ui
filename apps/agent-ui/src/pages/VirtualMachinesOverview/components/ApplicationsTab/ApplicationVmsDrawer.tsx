@@ -34,7 +34,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { VirtualMachineWithGroupItems } from "../../../Groups/utils/vmGroupMembership";
 import { fetchApplicationDrawerVms } from "./applicationDrawerVms";
-import { matchesSearch } from "./applicationFilters";
+import { filterVmsBySearch } from "./applicationFilters";
 import type { ApplicationOverview } from "./applicationsApi";
 
 const styles = {
@@ -129,12 +129,10 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
     };
   }, [agentApi, application.name, application.vms]);
 
-  const filteredVms = useMemo(() => {
-    if (!vmSearch.trim()) {
-      return drawerVms;
-    }
-    return drawerVms.filter((vm) => matchesSearch(vm.name, vmSearch));
-  }, [drawerVms, vmSearch]);
+  const filteredVms = useMemo(
+    () => filterVmsBySearch(drawerVms, vmSearch),
+    [drawerVms, vmSearch],
+  );
 
   const selectedVmIdList = useMemo(
     () => Array.from(selectedVmIds),

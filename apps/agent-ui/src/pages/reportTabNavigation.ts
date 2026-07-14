@@ -103,7 +103,6 @@ export function buildApplicationsTabUrl(
   const params = new URLSearchParams(searchParams);
   clearVmFilterParams(params);
   params.delete("vmId");
-  params.delete("application");
   params.set("tab", "applications");
   return params;
 }

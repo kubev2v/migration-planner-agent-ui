@@ -59,10 +59,10 @@ export function filterApplications(
   });
 }
 
-export function filterVmsBySearch(
-  vms: ApplicationVM[],
+export function filterVmsBySearch<T extends { name: string }>(
+  vms: T[],
   search: string,
-): ApplicationVM[] {
+): T[] {
   if (!search.trim()) {
     return vms;
   }

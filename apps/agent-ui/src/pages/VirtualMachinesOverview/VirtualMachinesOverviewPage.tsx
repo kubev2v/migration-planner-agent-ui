@@ -170,6 +170,7 @@ export const ReportContainer: React.FC = () => {
     applications: applicationsList,
     loading: applicationsLoading,
     error: applicationsError,
+    refreshApplications,
   } = useApplicationsData(agentApi, activeTab === REPORT_TAB.applications);
 
   useEffect(() => {
@@ -732,7 +733,7 @@ export const ReportContainer: React.FC = () => {
                   onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
                   onViewInVmList={handleViewApplicationInVmList}
-                  onRefreshApplications={refreshVMs}
+                  onRefreshApplications={refreshApplications}
                   onRefreshFilterOptions={refreshFilterOptions}
                 />
               </div>

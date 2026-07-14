@@ -93,6 +93,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
   const [actionVmIds, setActionVmIds] = useState<string[]>([]);
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const allVms = useMemo(() => getUniqueVms(applications), [applications]);
 
@@ -142,6 +143,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
 
   const handleAddLabels = useCallback(
     (vmIds: string[]) => {
+      setActionError(null);
       setActionVmIds(vmIds);
       void fetchAvailableLabels();
       setIsAddLabelsModalOpen(true);
@@ -165,7 +167,8 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
         return;
       }
 
-      await Promise.all(
+      setActionError(null);
+      const results = await Promise.allSettled(
         labelsToAdd.map((label) =>
           agentApi.updateLabelVMs({
             label,
@@ -173,6 +176,16 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
           }),
         ),
       );
+
+      const failedCount = results.filter(
+        (result) => result.status === "rejected",
+      ).length;
+      if (failedCount > 0) {
+        setActionError(
+          `Failed to apply ${failedCount} of ${labelsToAdd.length} label(s).`,
+        );
+      }
+
       await fetchAvailableLabels();
       await refreshDrawerData();
     },
@@ -312,6 +325,15 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
                 style={{ marginBottom: "16px" }}
               >
                 {error}
+              </Alert>
+            )}
+            {actionError && (
+              <Alert
+                variant="danger"
+                title="Label update failed"
+                style={{ marginBottom: "16px" }}
+              >
+                {actionError}
               </Alert>
             )}
 

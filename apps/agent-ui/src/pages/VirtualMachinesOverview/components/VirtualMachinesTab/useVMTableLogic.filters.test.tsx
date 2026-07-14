@@ -42,10 +42,7 @@ describe("useVMTableLogic filters", () => {
     mockSearchParams = new URLSearchParams("tab=vms");
     mockSetSearchParams.mockReset();
     mockSetSearchParams.mockImplementation((params: URLSearchParams) => {
-      mockSearchParams =
-        params instanceof URLSearchParams
-          ? new URLSearchParams(params)
-          : new URLSearchParams(params);
+      mockSearchParams = new URLSearchParams(params);
     });
   });
 

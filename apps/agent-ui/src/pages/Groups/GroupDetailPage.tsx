@@ -143,6 +143,7 @@ export const GroupDetailPage: React.FC = () => {
     applications: applicationsList,
     loading: applicationsLoading,
     error: applicationsError,
+    refreshApplications,
   } = useApplicationsData(
     agentApi,
     activeTab === REPORT_TAB.applications,
@@ -648,7 +649,7 @@ export const GroupDetailPage: React.FC = () => {
                   onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
                   onViewInVmList={handleViewApplicationInVmList}
-                  onRefreshApplications={refreshVMs}
+                  onRefreshApplications={refreshApplications}
                   onRefreshFilterOptions={refreshFilterOptions}
                 />
               </div>
