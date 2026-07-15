@@ -2,6 +2,8 @@ import type { Process } from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
   CardBody,
+  Flex,
+  FlexItem,
   Pagination,
   SearchInput,
 } from "@patternfly/react-core";
@@ -12,7 +14,6 @@ import { useCallback, useMemo } from "react";
 import {
   assignStableRowKeys,
   useVmDetailListCardState,
-  VM_DETAIL_SCROLLABLE_TABLE_STYLE,
 } from "./vmDetailListCard";
 
 interface VMProcessesCardProps {
@@ -70,13 +71,36 @@ export const VMProcessesCard: React.FC<VMProcessesCardProps> = ({
           </span>
         ) : (
           <>
-            <SearchInput
-              placeholder="Filter by process name"
-              value={nameSearch}
-              onChange={(_event, value) => handleNameSearch(value)}
-              onClear={() => handleNameSearch("")}
-              style={{ marginBottom: "16px", width: "100%" }}
-            />
+            <Flex
+              alignItems={{ default: "alignItemsCenter" }}
+              gap={{ default: "gapMd" }}
+              style={{ marginBottom: "16px" }}
+            >
+              <FlexItem flex={{ default: "flex_1" }}>
+                <SearchInput
+                  placeholder="Filter by process name"
+                  value={nameSearch}
+                  onChange={(_event, value) => handleNameSearch(value)}
+                  onClear={() => handleNameSearch("")}
+                  style={{ width: "100%" }}
+                />
+              </FlexItem>
+              {filteredItems.length > 0 && (
+                <FlexItem>
+                  <Pagination
+                    itemCount={filteredItems.length}
+                    perPage={pageSize}
+                    page={page}
+                    onSetPage={(_event, newPage) => setPage(newPage)}
+                    onPerPageSelect={(_event, newPerPage) => {
+                      handlePerPageSelect(newPerPage);
+                    }}
+                    variant="top"
+                    isCompact
+                  />
+                </FlexItem>
+              )}
+            </Flex>
             {filteredItems.length === 0 ? (
               <span
                 style={{
@@ -86,40 +110,20 @@ export const VMProcessesCard: React.FC<VMProcessesCardProps> = ({
                 No processes match your search.
               </span>
             ) : (
-              <>
-                <Pagination
-                  itemCount={filteredItems.length}
-                  perPage={pageSize}
-                  page={page}
-                  onSetPage={(_event, newPage) => setPage(newPage)}
-                  onPerPageSelect={(_event, newPerPage) => {
-                    handlePerPageSelect(newPerPage);
-                  }}
-                  variant="top"
-                  isCompact
-                  style={{ marginBottom: "16px" }}
-                />
-                <div style={VM_DETAIL_SCROLLABLE_TABLE_STYLE}>
-                  <Table
-                    aria-label="Detected processes"
-                    variant="compact"
-                    borders={false}
-                  >
-                    <Thead>
-                      <Tr>
-                        <Th>Process</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {paginatedRows.map(({ item: process, rowKey }) => (
-                        <Tr key={rowKey}>
-                          <Td>{process.name}</Td>
-                        </Tr>
-                      ))}
-                    </Tbody>
-                  </Table>
-                </div>
-              </>
+              <Table aria-label="Detected processes" variant="compact">
+                <Thead>
+                  <Tr>
+                    <Th>Process</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {paginatedRows.map(({ item: process, rowKey }) => (
+                    <Tr key={rowKey}>
+                      <Td>{process.name}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
             )}
           </>
         )}

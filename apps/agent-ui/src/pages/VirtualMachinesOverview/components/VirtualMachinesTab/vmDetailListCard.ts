@@ -1,21 +1,8 @@
-import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import {
   matchesSearch,
   paginateItems,
 } from "../ApplicationsTab/applicationFilters";
-
-export const VM_DETAIL_TABLE_WRAPPER_STYLE: CSSProperties = {
-  border: "1px solid var(--pf-t--global--border--color--default)",
-  borderRadius: "var(--pf-t--global--border--radius--small)",
-  overflow: "hidden",
-};
-
-export const VM_DETAIL_SCROLLABLE_TABLE_STYLE: CSSProperties = {
-  ...VM_DETAIL_TABLE_WRAPPER_STYLE,
-  maxHeight: "320px",
-  overflowY: "auto",
-};
 
 export function assignStableRowKeys<T>(
   items: T[],

@@ -14,7 +14,7 @@ import {
   ToolbarItem,
   ToolbarToggleGroup,
 } from "@patternfly/react-core";
-import { RhUiFilterIcon } from "@patternfly/react-icons";
+import { RhUiFilterFillIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo, useState } from "react";
 
@@ -354,7 +354,7 @@ export const AttributeValueFilter: React.FC<AttributeValueFilterProps> = ({
   };
 
   return (
-    <ToolbarToggleGroup toggleIcon={<RhUiFilterIcon />} breakpoint="xl">
+    <ToolbarToggleGroup toggleIcon={<RhUiFilterFillIcon />} breakpoint="xl">
       <ToolbarGroup variant="filter-group">
         <ToolbarItem>
           <Select
@@ -374,7 +374,7 @@ export const AttributeValueFilter: React.FC<AttributeValueFilterProps> = ({
                 ref={toggleRef}
                 onClick={() => setIsAttributeSelectOpen((open) => !open)}
                 isExpanded={isAttributeSelectOpen}
-                icon={<RhUiFilterIcon />}
+                icon={<RhUiFilterFillIcon />}
               >
                 {activeAttribute?.label ?? "Filter"}
               </MenuToggle>

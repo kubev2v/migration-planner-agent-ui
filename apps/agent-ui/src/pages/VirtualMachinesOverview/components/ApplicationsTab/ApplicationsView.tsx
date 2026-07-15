@@ -16,7 +16,7 @@ import {
   ToolbarItem,
   Tooltip,
 } from "@patternfly/react-core";
-import { InfoCircleIcon } from "@patternfly/react-icons";
+import { QuestionCircleIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -383,7 +383,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
                           aria-label="Certification status information"
                           style={{ padding: 0, minHeight: "auto" }}
                         >
-                          <InfoCircleIcon />
+                          <QuestionCircleIcon />
                         </Button>
                       </Tooltip>
                     </span>
