@@ -42,6 +42,7 @@ export interface VMTableProps {
   onShowExcludedVMsChange?: (show: boolean) => void;
   inspectionActive?: boolean;
   cancelingInspectionVmIds?: Set<string>;
+  userCanceledInspectionVmIds?: ReadonlySet<string>;
   onCancelInspection?: (vmId: string) => Promise<void>;
   onResetInspection?: () => void;
   variant?: VMTableVariant;

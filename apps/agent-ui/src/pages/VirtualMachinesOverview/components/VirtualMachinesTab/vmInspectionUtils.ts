@@ -3,15 +3,25 @@ import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
 const CANCEL_RETRY_DELAY_MS = 2000;
 const CANCEL_MAX_ATTEMPTS = 5;
 
+export interface InspectionStatusLike {
+  state: string;
+  error?: string;
+}
+
 /**
- * Heuristic: the backend may report user-initiated mid-run cancels as `error`
- * (virt-inspector killed with exit code 1) rather than state `canceled`.
- * Natural virt-inspector crashes can match the same pattern — a distinct
- * backend flag would be needed to tell them apart reliably.
+ * True when the UI should show "Canceled" for a VM's deep inspection status.
+ * Relies on backend `canceled` state when available, and on client-tracked
+ * user-initiated cancels when the backend reports `error` instead.
  */
-export function isLikelyCanceledInspectionError(error?: string): boolean {
-  if (!error) return false;
-  return /virt-inspector failed \(exit code/i.test(error);
+export function isCanceledInspectionStatus(
+  vmId: string,
+  status: InspectionStatusLike,
+  userCanceledVmIds?: ReadonlySet<string>,
+): boolean {
+  if (status.state === "canceled") {
+    return true;
+  }
+  return status.state === "error" && (userCanceledVmIds?.has(vmId) ?? false);
 }
 
 function isRetryableCancelError(err: unknown): boolean {
