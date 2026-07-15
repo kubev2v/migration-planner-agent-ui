@@ -104,7 +104,6 @@ export const ReportContainer: React.FC = () => {
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
   const [showExcludedVMs, setShowExcludedVMs] = useState(true);
-  const [inventoryRevision, setInventoryRevision] = useState(0);
 
   // Store all available filter options (fetched once for filter UI)
   const [availableFilterOptions, setAvailableFilterOptions] = useState<{
@@ -172,17 +171,15 @@ export const ReportContainer: React.FC = () => {
     return fetchInventoryFromApi(basePath);
   }, [agentApi]);
 
-  const bumpInventoryRevision = useCallback(() => {
-    setInventoryRevision((revision) => revision + 1);
-  }, []);
-
-  const { refreshInventory, reloadAssessmentInventory } =
-    useMigrationInventoryRefresh({
-      agentApi,
-      setInventory,
-      setVmsList,
-      onInventoryRevisionBump: bumpInventoryRevision,
-    });
+  const {
+    revision: inventoryRevision,
+    refreshInventory,
+    reloadInventory,
+  } = useMigrationInventoryRefresh({
+    agentApi,
+    setInventory,
+    setVmsList,
+  });
 
   // Fetch inventory only (agent status comes from context)
   useEffect(() => {
@@ -538,7 +535,7 @@ export const ReportContainer: React.FC = () => {
       newParams = buildApplicationsTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
-      void reloadAssessmentInventory();
+      void reloadInventory();
     }
     setSearchParams(newParams, { replace: true });
   };

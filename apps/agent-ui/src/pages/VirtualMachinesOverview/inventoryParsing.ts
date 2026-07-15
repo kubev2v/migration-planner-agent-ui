@@ -1,4 +1,5 @@
 import type {
+  DefaultApiInterface,
   GetInventory200Response,
   Infra,
   Inventory,
@@ -62,15 +63,24 @@ export function parseInventoryFromJson(json: unknown): Inventory | null {
   return parseInventoryResponse(json);
 }
 
+/** Fetch group-scoped assessment inventory from GET /groups/{id}. */
+export async function fetchGroupAssessmentInventory(
+  agentApi: DefaultApiInterface,
+  groupId: string,
+): Promise<Inventory | null> {
+  const response = await agentApi.getGroup({
+    id: groupId,
+    page: 1,
+    pageSize: 1,
+  });
+  return response.inventory ?? null;
+}
+
 /** Fetch inventory from GET /inventory (bypasses SDK response parsing bug). */
 export async function fetchInventoryFromApi(
   basePath: string,
-  options?: { groupId?: string },
 ): Promise<Inventory | null> {
   const url = new URL(`${basePath}/inventory`);
-  if (options?.groupId) {
-    url.searchParams.set("group_id", options.groupId);
-  }
 
   const httpResponse = await fetch(url.toString(), { cache: "no-store" });
   if (!httpResponse.ok) {

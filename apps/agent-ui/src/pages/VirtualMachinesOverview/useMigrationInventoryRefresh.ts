@@ -3,10 +3,11 @@ import type {
   Inventory,
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { getAgentApiBasePath } from "./agentApiConfig";
 import {
   adjustInventoryForMigrationExcludedChange,
+  fetchGroupAssessmentInventory,
   fetchInventoryAfterMigrationChange,
   fetchInventoryFromApi,
   getInventoryAggregateView,
@@ -16,11 +17,8 @@ import {
 type UseMigrationInventoryRefreshOptions = {
   agentApi: DefaultApiInterface;
   groupId?: string;
-  /** When set (e.g. group detail), reload assessment inventory from this source instead of GET /inventory. */
-  fetchAssessmentInventory?: () => Promise<Inventory | null>;
   setInventory: React.Dispatch<React.SetStateAction<Inventory | null>>;
   setVmsList: React.Dispatch<React.SetStateAction<VirtualMachine[]>>;
-  onInventoryRevisionBump?: () => void;
 };
 
 function createSerialQueue() {
@@ -39,13 +37,24 @@ function createSerialQueue() {
 export function useMigrationInventoryRefresh({
   agentApi,
   groupId,
-  fetchAssessmentInventory,
   setInventory,
   setVmsList,
-  onInventoryRevisionBump,
 }: UseMigrationInventoryRefreshOptions) {
+  const [revision, setRevision] = useState(0);
   const enqueueRef = useRef(createSerialQueue());
   const pendingMigrationUpdatesRef = useRef(0);
+
+  const bumpRevision = useCallback(() => {
+    setRevision((current) => current + 1);
+  }, []);
+
+  const fetchInventory = useCallback(async (): Promise<Inventory | null> => {
+    if (groupId) {
+      return fetchGroupAssessmentInventory(agentApi, groupId);
+    }
+    const basePath = getAgentApiBasePath(agentApi);
+    return fetchInventoryFromApi(basePath);
+  }, [agentApi, groupId]);
 
   const refreshInventory = useCallback(
     async (change: MigrationExcludedInventoryChange): Promise<void> => {
@@ -80,17 +89,9 @@ export function useMigrationInventoryRefresh({
             });
 
             if (optimisticInventory) {
-              onInventoryRevisionBump?.();
+              bumpRevision();
             }
 
-            const basePath = getAgentApiBasePath(agentApi);
-            const fetchInventory =
-              fetchAssessmentInventory ??
-              (() =>
-                fetchInventoryFromApi(
-                  basePath,
-                  groupId ? { groupId } : undefined,
-                ));
             const resolved = await fetchInventoryAfterMigrationChange(
               fetchInventory,
               change,
@@ -100,7 +101,7 @@ export function useMigrationInventoryRefresh({
 
             if (resolved) {
               setInventory((current) => resolved ?? current);
-              onInventoryRevisionBump?.();
+              bumpRevision();
             }
           } catch (err) {
             console.error(
@@ -113,42 +114,24 @@ export function useMigrationInventoryRefresh({
         pendingMigrationUpdatesRef.current -= 1;
       }
     },
-    [
-      agentApi,
-      fetchAssessmentInventory,
-      groupId,
-      onInventoryRevisionBump,
-      setInventory,
-      setVmsList,
-    ],
+    [bumpRevision, fetchInventory, setInventory, setVmsList],
   );
 
-  const reloadAssessmentInventory = useCallback(async () => {
+  const reloadInventory = useCallback(async () => {
     if (pendingMigrationUpdatesRef.current > 0) {
       return;
     }
 
     try {
-      const basePath = getAgentApiBasePath(agentApi);
-      const fetchInventory =
-        fetchAssessmentInventory ??
-        (() =>
-          fetchInventoryFromApi(basePath, groupId ? { groupId } : undefined));
       const fetchedInventory = await fetchInventory();
       if (fetchedInventory) {
         setInventory(fetchedInventory);
-        onInventoryRevisionBump?.();
+        bumpRevision();
       }
     } catch (err) {
-      console.error("Error reloading assessment inventory:", err);
+      console.error("Error reloading inventory:", err);
     }
-  }, [
-    agentApi,
-    fetchAssessmentInventory,
-    groupId,
-    onInventoryRevisionBump,
-    setInventory,
-  ]);
+  }, [bumpRevision, fetchInventory, setInventory]);
 
-  return { refreshInventory, reloadAssessmentInventory };
+  return { revision, refreshInventory, reloadInventory };
 }

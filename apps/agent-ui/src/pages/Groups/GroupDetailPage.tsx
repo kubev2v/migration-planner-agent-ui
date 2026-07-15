@@ -96,7 +96,6 @@ export const GroupDetailPage: React.FC = () => {
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
   const [showExcludedVMs, setShowExcludedVMs] = useState(true);
-  const [inventoryRevision, setInventoryRevision] = useState(0);
   const [availableFilterOptions, setAvailableFilterOptions] = useState({
     clusters: [] as string[],
     datacenters: [] as string[],
@@ -310,32 +309,15 @@ export const GroupDetailPage: React.FC = () => {
     vmsPageSize,
   ]);
 
-  const bumpInventoryRevision = useCallback(() => {
-    setInventoryRevision((revision) => revision + 1);
-  }, []);
-
-  const fetchGroupAssessmentInventory = useCallback(async () => {
-    if (!groupId) {
-      return null;
-    }
-
-    const response = await agentApi.getGroup({
-      id: groupId,
-      page: 1,
-      pageSize: 1,
-    });
-    return response.inventory ?? null;
-  }, [agentApi, groupId]);
-
-  const { refreshInventory: refreshGroupInventory, reloadAssessmentInventory } =
-    useMigrationInventoryRefresh({
-      agentApi,
-      groupId,
-      fetchAssessmentInventory: fetchGroupAssessmentInventory,
-      setInventory,
-      setVmsList,
-      onInventoryRevisionBump: bumpInventoryRevision,
-    });
+  const {
+    revision: inventoryRevision,
+    refreshInventory: refreshGroupInventory,
+  } = useMigrationInventoryRefresh({
+    agentApi,
+    groupId,
+    setInventory,
+    setVmsList,
+  });
 
   const reloadGroupMembership = useCallback(async () => {
     if (!groupId) {
@@ -370,7 +352,6 @@ export const GroupDetailPage: React.FC = () => {
       newParams = buildApplicationsTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
-      void reloadAssessmentInventory();
     }
     setSearchParams(newParams, { replace: true });
   };
