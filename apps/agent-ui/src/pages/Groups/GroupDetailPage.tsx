@@ -96,7 +96,6 @@ export const GroupDetailPage: React.FC = () => {
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
   const [showExcludedVMs, setShowExcludedVMs] = useState(true);
-  const [inventoryRevision, setInventoryRevision] = useState(0);
   const [availableFilterOptions, setAvailableFilterOptions] = useState({
     clusters: [] as string[],
     datacenters: [] as string[],
@@ -310,18 +309,15 @@ export const GroupDetailPage: React.FC = () => {
     vmsPageSize,
   ]);
 
-  const bumpInventoryRevision = useCallback(() => {
-    setInventoryRevision((revision) => revision + 1);
-  }, []);
-
-  const { refreshInventory: refreshGroupInventory } =
-    useMigrationInventoryRefresh({
-      agentApi,
-      groupId,
-      setInventory,
-      setVmsList,
-      onInventoryRevisionBump: bumpInventoryRevision,
-    });
+  const {
+    revision: inventoryRevision,
+    refreshInventory: refreshGroupInventory,
+  } = useMigrationInventoryRefresh({
+    agentApi,
+    groupId,
+    setInventory,
+    setVmsList,
+  });
 
   const reloadGroupMembership = useCallback(async () => {
     if (!groupId) {
