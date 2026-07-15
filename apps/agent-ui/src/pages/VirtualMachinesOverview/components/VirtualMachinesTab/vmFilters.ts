@@ -19,7 +19,7 @@ export interface VMFilters {
   applications?: string[];
   /** @deprecated Use `applications` instead. Kept for legacy URL params. */
   vmApplication?: string;
-  showExcludedVMs?: boolean;
+  reportInclusion?: string[];
 }
 
 /**
@@ -243,14 +243,20 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     // If both are selected, don't add a filter (show all)
   }
 
-  if (filters.showExcludedVMs === false) {
-    conditions.push("migration_excluded = false");
-  } else if (filters.showExcludedVMs === true) {
-    // Explicitly include excluded VMs. When byExpression is omitted, some agent
-    // versions still apply a default that hides migration_excluded VMs.
-    conditions.push(
-      "(migration_excluded = true or migration_excluded = false)",
-    );
+  if (filters.reportInclusion?.length) {
+    const hasIncluded = filters.reportInclusion.includes("included");
+    const hasExcluded = filters.reportInclusion.includes("excluded");
+
+    if (hasIncluded && !hasExcluded) {
+      conditions.push("migration_excluded = false");
+    } else if (hasExcluded && !hasIncluded) {
+      conditions.push("migration_excluded = true");
+    } else {
+      // Both selected: show all (agent workaround below applies the same way).
+      conditions.push(
+        "(migration_excluded = true or migration_excluded = false)",
+      );
+    }
   }
 
   if (conditions.length === 0) {
@@ -258,6 +264,22 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
   }
 
   return conditions.join(" and ");
+}
+
+/**
+ * Applies the default VM list behavior: show both included and excluded VMs.
+ * Some agent versions hide migration_excluded VMs unless the expression
+ * explicitly includes them.
+ */
+export function withDefaultReportInclusion(filters: VMFilters): VMFilters {
+  if (filters.reportInclusion?.length) {
+    return filters;
+  }
+
+  return {
+    ...filters,
+    reportInclusion: ["included", "excluded"],
+  };
 }
 
 /**
@@ -363,6 +385,10 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
     for (const application of filters.applications) {
       params.append("applications", application);
     }
+  }
+
+  if (filters.reportInclusion && filters.reportInclusion.length > 0) {
+    params.set("reportInclusion", filters.reportInclusion.join(","));
   }
 
   return params;
@@ -521,6 +547,11 @@ export function searchParamsToFilters(
     filters.applications = [vmApplication];
   }
 
+  const reportInclusion = searchParams.get("reportInclusion");
+  if (reportInclusion) {
+    filters.reportInclusion = reportInclusion.split(",").filter(Boolean);
+  }
+
   return filters;
 }
 
@@ -546,6 +577,7 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.concernLabels && filters.concernLabels.length > 0) ||
     (filters.concernCategories && filters.concernCategories.length > 0) ||
     (filters.applications && filters.applications.length > 0) ||
+    (filters.reportInclusion && filters.reportInclusion.length > 0) ||
     filters.search
   );
 }

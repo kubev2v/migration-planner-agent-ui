@@ -41,8 +41,6 @@ export interface VMTableProps {
   onCreateGroup?: (vmIds: string[]) => void;
   onAddToGroup?: (vmIds: string[]) => void;
   onRemoveFromGroup?: (vmIds: string[]) => void;
-  showExcludedVMs?: boolean;
-  onShowExcludedVMsChange?: (show: boolean) => void;
   inspectionActive?: boolean;
   cancelingInspectionVmIds?: Set<string>;
   onCancelInspection?: (vmId: string) => Promise<void>;
@@ -72,7 +70,6 @@ export type UseVMTableLogicParams = Pick<
   | "onSelectionChange"
   | "onFetchAllVmIds"
   | "onRefreshFilterOptions"
-  | "showExcludedVMs"
   | "variant"
 >;
 

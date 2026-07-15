@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildApplicationDetailUrl,
+  buildApplicationsTabUrl,
+  buildOverviewTabUrl,
   buildVmDetailUrl,
+  buildVmsTabUrl,
   REPORT_TAB,
   resolveReportTab,
 } from "./reportTabNavigation";
@@ -35,7 +38,7 @@ describe("buildApplicationDetailUrl", () => {
     expect(params.get("tab")).toBe("applications");
     expect(params.get("application")).toBe("Nginx");
     expect(params.get("vmId")).toBeNull();
-    expect(params.get("search")).toBeNull();
+    expect(params.get("search")).toBe("web");
   });
 });
 
@@ -66,5 +69,33 @@ describe("buildVmDetailUrl", () => {
       section: "applications",
     });
     expect(params.get("vmSection")).toBe("applications");
+  });
+});
+
+describe("tab navigation URLs", () => {
+  it("preserves VM filters when switching to the overview tab", () => {
+    const params = buildOverviewTabUrl(
+      new URLSearchParams("tab=vms&reportInclusion=included&search=web"),
+    );
+    expect(params.get("tab")).toBe("overview");
+    expect(params.get("reportInclusion")).toBe("included");
+    expect(params.get("search")).toBe("web");
+    expect(params.get("vmId")).toBeNull();
+  });
+
+  it("preserves VM filters when switching back to the VMs tab", () => {
+    const params = buildVmsTabUrl(
+      new URLSearchParams("tab=overview&reportInclusion=included"),
+    );
+    expect(params.get("tab")).toBe("vms");
+    expect(params.get("reportInclusion")).toBe("included");
+  });
+
+  it("preserves VM filters when switching to the applications tab", () => {
+    const params = buildApplicationsTabUrl(
+      new URLSearchParams("tab=vms&reportInclusion=excluded"),
+    );
+    expect(params.get("tab")).toBe("applications");
+    expect(params.get("reportInclusion")).toBe("excluded");
   });
 });

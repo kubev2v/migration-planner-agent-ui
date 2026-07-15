@@ -13,8 +13,6 @@ export interface VMTableToolbarProps {
   onFetchAllVmIds?: (
     filters: import("./vmFilters").VMFilters,
   ) => Promise<string[]>;
-  showExcludedVMs: boolean;
-  onShowExcludedVMsChange?: (show: boolean) => void;
   onPageChange?: (page: number, pageSize: number) => void;
   inspectionActive: boolean;
   isGroupRowActions: boolean;

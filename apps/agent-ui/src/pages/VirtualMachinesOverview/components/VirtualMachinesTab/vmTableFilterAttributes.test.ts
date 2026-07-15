@@ -30,6 +30,8 @@ function createParams(
     onStatusesChange: vi.fn(),
     selectedMigrationReadiness: [],
     onMigrationReadinessChange: vi.fn(),
+    selectedReportInclusion: [],
+    onReportInclusionChange: vi.fn(),
     selectedVmLabels: [],
     onVmLabelsChange: vi.fn(),
     selectedGroups: [],
@@ -75,6 +77,7 @@ describe("buildVmTableFilterAttributes", () => {
       "disk-usage",
       "status",
       "migration-readiness",
+      "report-inclusion",
     ]);
   });
 

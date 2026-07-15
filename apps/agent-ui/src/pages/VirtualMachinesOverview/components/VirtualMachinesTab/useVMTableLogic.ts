@@ -97,7 +97,6 @@ export function useVMTableLogic({
   onSelectionChange,
   onFetchAllVmIds,
   onRefreshFilterOptions,
-  showExcludedVMs = true,
   variant = "overview",
 }: UseVMTableLogicParams) {
   const isGroupRowActions = variant === "groups";
@@ -218,6 +217,9 @@ export function useVMTableLogic({
   const [selectedMigrationReadiness, setSelectedMigrationReadiness] = useState<
     string[]
   >(initialFilters?.migrationReadiness ?? EMPTY_STRING_ARRAY);
+  const [selectedReportInclusion, setSelectedReportInclusion] = useState<
+    string[]
+  >(initialFilters?.reportInclusion ?? EMPTY_STRING_ARRAY);
   const [selectedVmLabels, setSelectedVmLabels] = useState<string[]>(
     initialFilters?.vmLabels ?? EMPTY_STRING_ARRAY,
   );
@@ -281,6 +283,10 @@ export function useVMTableLogic({
     syncStringArrayState(
       setSelectedMigrationReadiness,
       initialFilters?.migrationReadiness,
+    );
+    syncStringArrayState(
+      setSelectedReportInclusion,
+      initialFilters?.reportInclusion,
     );
     syncStringArrayState(setSelectedVmLabels, initialFilters?.vmLabels);
     syncStringArrayState(setSelectedGroups, initialFilters?.groups);
@@ -391,6 +397,7 @@ export function useVMTableLogic({
         selectedClusters.length > 0 ||
         selectedDatacenters.length > 0 ||
         selectedMigrationReadiness.length > 0 ||
+        selectedReportInclusion.length > 0 ||
         selectedVmLabels.length > 0 ||
         selectedGroups.length > 0 ||
         selectedApplications.length > 0 ||
@@ -427,6 +434,10 @@ export function useVMTableLogic({
         selectedMigrationReadiness.length > 0
           ? selectedMigrationReadiness
           : undefined,
+      reportInclusion:
+        selectedReportInclusion.length > 0
+          ? selectedReportInclusion
+          : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
       groups: selectedGroups.length > 0 ? selectedGroups : undefined,
       applications:
@@ -453,6 +464,7 @@ export function useVMTableLogic({
     selectedClusters,
     selectedDatacenters,
     selectedMigrationReadiness,
+    selectedReportInclusion,
     selectedVmLabels,
     selectedGroups,
     selectedApplications,
@@ -478,6 +490,7 @@ export function useVMTableLogic({
       setSelectedClusters(selection.selectedClusters);
       setSelectedDatacenters(selection.selectedDatacenters);
       setSelectedMigrationReadiness(selection.selectedMigrationReadiness);
+      setSelectedReportInclusion(selection.selectedReportInclusion);
       setSelectedVmLabels(selection.selectedVmLabels);
       setSelectedGroups(selection.selectedGroups);
       setSelectedApplications(selection.selectedApplications);
@@ -560,6 +573,10 @@ export function useVMTableLogic({
         onMigrationReadinessChange: (values) => {
           applyFilterChange(() => setSelectedMigrationReadiness(values));
         },
+        selectedReportInclusion,
+        onReportInclusionChange: (values) => {
+          applyFilterChange(() => setSelectedReportInclusion(values));
+        },
         selectedVmLabels,
         onVmLabelsChange: (values) => {
           applyFilterChange(() => setSelectedVmLabels(values));
@@ -619,6 +636,7 @@ export function useVMTableLogic({
       selectedGroups,
       selectedApplications,
       selectedMigrationReadiness,
+      selectedReportInclusion,
       selectedStatuses,
       selectedVmLabels,
       showGroupsFilter,
@@ -685,6 +703,10 @@ export function useVMTableLogic({
         selectedMigrationReadiness.length > 0
           ? selectedMigrationReadiness
           : undefined,
+      reportInclusion:
+        selectedReportInclusion.length > 0
+          ? selectedReportInclusion
+          : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
       groups: selectedGroups.length > 0 ? selectedGroups : undefined,
       applications:
@@ -695,7 +717,6 @@ export function useVMTableLogic({
         selectedConcernCategories.length > 0
           ? selectedConcernCategories
           : undefined,
-      showExcludedVMs,
     };
   }, [
     selectedStatuses,
@@ -710,12 +731,12 @@ export function useVMTableLogic({
     ramUsageRangeFilter,
     diskUsageRangeFilter,
     selectedMigrationReadiness,
+    selectedReportInclusion,
     selectedVmLabels,
     selectedGroups,
     selectedApplications,
     selectedConcernLabels,
     selectedConcernCategories,
-    showExcludedVMs,
   ]);
 
   const pageVmIds = useMemo(() => displayVMs.map((vm) => vm.id), [displayVMs]);

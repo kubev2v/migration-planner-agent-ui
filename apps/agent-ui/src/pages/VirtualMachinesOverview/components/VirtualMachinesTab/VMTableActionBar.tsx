@@ -11,13 +11,11 @@ import {
   type MenuToggleElement,
   Pagination,
   Spinner,
-  Switch,
   ToolbarItem,
   Tooltip,
 } from "@patternfly/react-core";
 import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useId } from "react";
 import { useCapability } from "../../../../credentials/CredentialsContext";
 import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
@@ -29,8 +27,6 @@ export interface VMTableActionBarProps {
   vms: VirtualMachine[];
   totalVMs?: number;
   selectedVMs: Set<string>;
-  showExcludedVMs: boolean;
-  onShowExcludedVMsChange?: (show: boolean) => void;
   onPageChange?: (page: number, pageSize: number) => void;
   inspectionActive: boolean;
   isGroupRowActions: boolean;
@@ -52,8 +48,6 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   vms,
   totalVMs,
   selectedVMs,
-  showExcludedVMs,
-  onShowExcludedVMsChange,
   onPageChange,
   inspectionActive,
   isGroupRowActions,
@@ -73,7 +67,6 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
     errorTooltipContent,
     openEditModal,
   } = useCapability("inspector");
-  const showExcludedSwitchId = useId();
   const {
     page,
     pageSize,
@@ -221,18 +214,6 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
         >
           <FlexItem>
             {loading && vms.length > 0 && <Spinner size="sm" />}
-          </FlexItem>
-          <FlexItem>
-            {onShowExcludedVMsChange && (
-              <Switch
-                id={showExcludedSwitchId}
-                label="Show excluded VMs"
-                isChecked={showExcludedVMs}
-                onChange={(_event, checked) => {
-                  onShowExcludedVMsChange(checked);
-                }}
-              />
-            )}
           </FlexItem>
           <FlexItem>
             <Pagination

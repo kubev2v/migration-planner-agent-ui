@@ -79,6 +79,8 @@ export type BuildVmTableFilterAttributesParams = {
   onStatusesChange: (values: string[]) => void;
   selectedMigrationReadiness: string[];
   onMigrationReadinessChange: (values: string[]) => void;
+  selectedReportInclusion: string[];
+  onReportInclusionChange: (values: string[]) => void;
   selectedVmLabels: string[];
   onVmLabelsChange: (values: string[]) => void;
   selectedGroups: string[];
@@ -142,6 +144,8 @@ export function buildVmTableFilterAttributes({
   onStatusesChange,
   selectedMigrationReadiness,
   onMigrationReadinessChange,
+  selectedReportInclusion,
+  onReportInclusionChange,
   selectedVmLabels,
   onVmLabelsChange,
   selectedGroups,
@@ -308,6 +312,17 @@ export function buildVmTableFilterAttributes({
       ],
       selections: selectedMigrationReadiness,
       onSelectionsChange: onMigrationReadinessChange,
+    },
+    {
+      id: "report-inclusion",
+      label: "Report inclusion",
+      type: "checkbox",
+      options: [
+        { value: "included", label: "Included" },
+        { value: "excluded", label: "Excluded" },
+      ],
+      selections: selectedReportInclusion,
+      onSelectionsChange: onReportInclusionChange,
     },
   );
 

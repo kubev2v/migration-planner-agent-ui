@@ -62,9 +62,14 @@ import {
   hasActiveFilters,
   searchParamsToFilters,
   type VMFilters,
+  withDefaultReportInclusion,
 } from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilters";
+import type { VMTableFilterOptions } from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmTableTypes";
 import { Header } from "../VirtualMachinesOverview/Header";
-import { getInventoryAggregateView } from "../VirtualMachinesOverview/inventoryParsing";
+import {
+  getInventoryAggregateView,
+  type MigrationExcludedInventoryChange,
+} from "../VirtualMachinesOverview/inventoryParsing";
 import { useApplicationsData } from "../VirtualMachinesOverview/useApplicationsData";
 import { useMigrationInventoryRefresh } from "../VirtualMachinesOverview/useMigrationInventoryRefresh";
 import { normalizeVirtualMachines } from "../VirtualMachinesOverview/virtualMachineParsing";
@@ -95,16 +100,17 @@ export const GroupDetailPage: React.FC = () => {
   const [vmsPage, setVmsPage] = useState(1);
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
-  const [showExcludedVMs, setShowExcludedVMs] = useState(true);
-  const [availableFilterOptions, setAvailableFilterOptions] = useState({
-    clusters: [] as string[],
-    datacenters: [] as string[],
-    concernLabels: [] as string[],
-    concernCategories: [] as string[],
-    vmLabels: [] as string[],
-    groups: [] as string[],
-    applications: [] as string[],
-  });
+  const [inventoryRevision, setInventoryRevision] = useState(0);
+  const [availableFilterOptions, setAvailableFilterOptions] =
+    useState<VMTableFilterOptions>({
+      clusters: [],
+      datacenters: [],
+      concernLabels: [],
+      concernCategories: [],
+      vmLabels: [],
+      groups: [],
+      applications: [],
+    });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
 
   const refreshFilterOptions = useMemo(
@@ -226,8 +232,9 @@ export const GroupDetailPage: React.FC = () => {
 
       try {
         setVmsLoading(true);
-        const effectiveFilters = { ...initialVMFilters, showExcludedVMs };
-        const userExpression = filtersToByExpression(effectiveFilters);
+        const userExpression = filtersToByExpression(
+          withDefaultReportInclusion(initialVMFilters),
+        );
         const byExpression = combineFilterExpressions(
           groupFilter,
           userExpression,
@@ -263,7 +270,6 @@ export const GroupDetailPage: React.FC = () => {
     agentApi,
     groupFilter,
     initialVMFilters,
-    showExcludedVMs,
     vmsPage,
     vmsPageSize,
     vmsSortFields,
@@ -275,8 +281,9 @@ export const GroupDetailPage: React.FC = () => {
     }
     const reqId = ++vmsRefreshIdRef.current;
     try {
-      const effectiveFilters = { ...initialVMFilters, showExcludedVMs };
-      const userExpression = filtersToByExpression(effectiveFilters);
+      const userExpression = filtersToByExpression(
+        withDefaultReportInclusion(initialVMFilters),
+      );
       const byExpression = combineFilterExpressions(
         groupFilter,
         userExpression,
@@ -305,21 +312,30 @@ export const GroupDetailPage: React.FC = () => {
     agentApi,
     groupFilter,
     initialVMFilters,
-    showExcludedVMs,
     vmsSortFields,
     vmsPage,
     vmsPageSize,
   ]);
 
-  const {
-    revision: inventoryRevision,
-    refreshInventory: refreshGroupInventory,
-  } = useMigrationInventoryRefresh({
-    agentApi,
-    groupId,
-    setInventory,
-    setVmsList,
-  });
+  const bumpInventoryRevision = useCallback(() => {
+    setInventoryRevision((revision) => revision + 1);
+  }, []);
+
+  const { refreshInventory: refreshGroupInventoryBase } =
+    useMigrationInventoryRefresh({
+      agentApi,
+      groupId,
+      setInventory,
+      setVmsList,
+    });
+
+  const refreshGroupInventory = useCallback(
+    async (change: MigrationExcludedInventoryChange) => {
+      await refreshGroupInventoryBase(change);
+      bumpInventoryRevision();
+    },
+    [refreshGroupInventoryBase, bumpInventoryRevision],
+  );
 
   const reloadGroupMembership = useCallback(async () => {
     if (!groupId) {
@@ -336,10 +352,11 @@ export const GroupDetailPage: React.FC = () => {
       setInventory(response.inventory ?? null);
       setVmsTotalCount(response.total ?? 0);
       setVmsPage(1);
+      bumpInventoryRevision();
     } catch (err) {
       console.error("Error reloading group after membership change:", err);
     }
-  }, [agentApi, groupId]);
+  }, [agentApi, groupId, bumpInventoryRevision]);
 
   const handleTabSelect = (
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
@@ -620,11 +637,6 @@ export const GroupDetailPage: React.FC = () => {
                   onRefreshInventory={refreshGroupInventory}
                   onGroupMembershipChanged={reloadGroupMembership}
                   onRefreshFilterOptions={refreshFilterOptions}
-                  showExcludedVMs={showExcludedVMs}
-                  onShowExcludedVMsChange={(show) => {
-                    setShowExcludedVMs(show);
-                    setVmsPage(1);
-                  }}
                   groupContext={{ id: group.id, name: group.name }}
                   scopedFilterExpression={group.filter}
                   sortFields={vmsSortFields}

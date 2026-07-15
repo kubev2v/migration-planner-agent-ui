@@ -27,6 +27,7 @@ import { fetchVmTableFilterOptions } from "../../../VirtualMachinesOverview/comp
 import {
   filtersToByExpression,
   type VMFilters,
+  withDefaultReportInclusion,
 } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilters";
 import { fetchAllMatchingVmIds } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/vmSelection";
 import { vmIdsToFilterExpression } from "../../utils/groupFilters";
@@ -55,7 +56,6 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortFields, setSortFields] = useState<string[]>([]);
-  const [showExcludedVMs, setShowExcludedVMs] = useState(true);
   const [availableFilterOptions, setAvailableFilterOptions] = useState({
     clusters: [] as string[],
     datacenters: [] as string[],
@@ -74,7 +74,6 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     setPage(1);
     setPageSize(20);
     setSortFields([]);
-    setShowExcludedVMs(true);
     setError(null);
   }, []);
 
@@ -106,8 +105,9 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
       try {
         setLoading(true);
-        const effectiveFilters = { ...filters, showExcludedVMs };
-        const byExpression = filtersToByExpression(effectiveFilters);
+        const byExpression = filtersToByExpression(
+          withDefaultReportInclusion(filters),
+        );
 
         const response = await agentApi.getVMs({
           byExpression,
@@ -134,18 +134,19 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     };
 
     fetchVMs();
-  }, [isOpen, agentApi, filters, showExcludedVMs, page, pageSize, sortFields]);
+  }, [isOpen, agentApi, filters, page, pageSize, sortFields]);
 
   const handleFetchAllVmIds = useCallback(
     async (tableFilters: VMFilters) => {
-      const effectiveFilters = { ...tableFilters, showExcludedVMs };
-      const byExpression = filtersToByExpression(effectiveFilters);
+      const byExpression = filtersToByExpression(
+        withDefaultReportInclusion(tableFilters),
+      );
       return fetchAllMatchingVmIds(agentApi, {
         byExpression,
         sort: sortFields.length > 0 ? sortFields : undefined,
       });
     },
-    [agentApi, showExcludedVMs, sortFields],
+    [agentApi, sortFields],
   );
 
   const handleCreate = async () => {
@@ -247,11 +248,6 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               selectedVMs={selectedVMs}
               onSelectionChange={setSelectedVMs}
               onFetchAllVmIds={handleFetchAllVmIds}
-              showExcludedVMs={showExcludedVMs}
-              onShowExcludedVMsChange={(show) => {
-                setShowExcludedVMs(show);
-                setPage(1);
-              }}
             />
           </StackItem>
         </Stack>

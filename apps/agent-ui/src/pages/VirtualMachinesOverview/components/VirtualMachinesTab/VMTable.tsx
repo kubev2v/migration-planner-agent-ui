@@ -35,8 +35,6 @@ export const VMTable: React.FC<VMTableProps> = ({
   onCreateGroup,
   onAddToGroup,
   onRemoveFromGroup,
-  showExcludedVMs = true,
-  onShowExcludedVMsChange,
   inspectionActive = false,
   cancelingInspectionVmIds,
   onCancelInspection,
@@ -60,7 +58,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     onSelectionChange,
     onFetchAllVmIds,
     onRefreshFilterOptions,
-    showExcludedVMs,
     variant,
     onFrontendSortChange,
   });
@@ -76,8 +73,6 @@ export const VMTable: React.FC<VMTableProps> = ({
         selectedVMs={selectedVMs}
         onSelectionChange={onSelectionChange}
         onFetchAllVmIds={onFetchAllVmIds}
-        showExcludedVMs={showExcludedVMs}
-        onShowExcludedVMsChange={onShowExcludedVMsChange}
         onPageChange={onPageChange}
         inspectionActive={inspectionActive}
         isGroupRowActions={isGroupRowActions}
