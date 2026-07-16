@@ -2,6 +2,7 @@ import type { Process } from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
   CardBody,
+  CardTitle,
   Flex,
   FlexItem,
   Pagination,
@@ -11,6 +12,7 @@ import { ProcessAutomationIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useMemo } from "react";
+import { VmDetailListSearchEmptyState } from "./VmDetailListSearchEmptyState";
 import {
   assignStableRowKeys,
   useVmDetailListCardState,
@@ -47,20 +49,10 @@ export const VMProcessesCard: React.FC<VMProcessesCardProps> = ({
 
   return (
     <Card>
+      <CardTitle>
+        <ProcessAutomationIcon /> Processes ({processes.length})
+      </CardTitle>
       <CardBody>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            marginBottom: "16px",
-            fontWeight: 600,
-          }}
-        >
-          <ProcessAutomationIcon />
-          Processes ({processes.length})
-        </div>
-
         {processes.length === 0 ? (
           <span
             style={{
@@ -85,46 +77,42 @@ export const VMProcessesCard: React.FC<VMProcessesCardProps> = ({
                   style={{ width: "100%" }}
                 />
               </FlexItem>
-              {filteredItems.length > 0 && (
-                <FlexItem>
-                  <Pagination
-                    itemCount={filteredItems.length}
-                    perPage={pageSize}
-                    page={page}
-                    onSetPage={(_event, newPage) => setPage(newPage)}
-                    onPerPageSelect={(_event, newPerPage) => {
-                      handlePerPageSelect(newPerPage);
-                    }}
-                    variant="top"
-                    isCompact
-                  />
-                </FlexItem>
-              )}
+              <FlexItem>
+                <Pagination
+                  itemCount={filteredItems.length}
+                  perPage={pageSize}
+                  page={page}
+                  onSetPage={(_event, newPage) => setPage(newPage)}
+                  onPerPageSelect={(_event, newPerPage) => {
+                    handlePerPageSelect(newPerPage);
+                  }}
+                  variant="top"
+                  isCompact
+                />
+              </FlexItem>
             </Flex>
-            {filteredItems.length === 0 ? (
-              <span
-                style={{
-                  color: "var(--pf-t--global--text--color--subtle)",
-                }}
-              >
-                No processes match your search.
-              </span>
-            ) : (
-              <Table aria-label="Detected processes" variant="compact">
-                <Thead>
+            <Table aria-label="Detected processes" variant="compact">
+              <Thead>
+                <Tr>
+                  <Th>Process</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {filteredItems.length === 0 ? (
                   <Tr>
-                    <Th>Process</Th>
+                    <Td colSpan={1}>
+                      <VmDetailListSearchEmptyState titleText="No processes match your search input" />
+                    </Td>
                   </Tr>
-                </Thead>
-                <Tbody>
-                  {paginatedRows.map(({ item: process, rowKey }) => (
+                ) : (
+                  paginatedRows.map(({ item: process, rowKey }) => (
                     <Tr key={rowKey}>
                       <Td>{process.name}</Td>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            )}
+                  ))
+                )}
+              </Tbody>
+            </Table>
           </>
         )}
       </CardBody>

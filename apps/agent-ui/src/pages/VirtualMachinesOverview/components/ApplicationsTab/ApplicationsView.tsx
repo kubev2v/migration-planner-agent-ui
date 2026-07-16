@@ -2,6 +2,7 @@ import { css } from "@emotion/css";
 import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
+  AlertActionCloseButton,
   Button,
   Drawer,
   DrawerContent,
@@ -180,14 +181,15 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
       const failedCount = results.filter(
         (result) => result.status === "rejected",
       ).length;
-      if (failedCount > 0) {
-        setActionError(
-          `Failed to apply ${failedCount} of ${labelsToAdd.length} label(s).`,
-        );
-      }
 
       await fetchAvailableLabels();
       await refreshDrawerData();
+
+      if (failedCount > 0) {
+        const message = `Failed to apply ${failedCount} of ${labelsToAdd.length} label(s).`;
+        setActionError(message);
+        throw new Error(message);
+      }
     },
     [actionVmIds, agentApi, fetchAvailableLabels, refreshDrawerData],
   );
@@ -331,7 +333,13 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
               <Alert
                 variant="danger"
                 title="Label update failed"
+                isInline
                 style={{ marginBottom: "16px" }}
+                actionClose={
+                  <AlertActionCloseButton
+                    onClose={() => setActionError(null)}
+                  />
+                }
               >
                 {actionError}
               </Alert>
@@ -433,7 +441,10 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
 
       <AddLabelsModal
         isOpen={isAddLabelsModalOpen}
-        onClose={() => setIsAddLabelsModalOpen(false)}
+        onClose={() => {
+          setIsAddLabelsModalOpen(false);
+          setActionError(null);
+        }}
         onSubmit={handleSubmitLabels}
         selectedVMCount={actionVmIds.length}
         existingLabels={availableLabels}

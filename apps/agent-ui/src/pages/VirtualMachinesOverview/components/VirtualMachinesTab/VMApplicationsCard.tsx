@@ -1,22 +1,43 @@
+import { css } from "@emotion/css";
 import type { ApplicationOverview } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   Card,
   CardBody,
-  Flex,
-  FlexItem,
+  CardTitle,
   Pagination,
   SearchInput,
   Spinner,
+  Stack,
+  StackItem,
 } from "@patternfly/react-core";
 import { CubesIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback } from "react";
 import { getApplicationVendor } from "../ApplicationsTab/applicationVendor";
+import { VmDetailListSearchEmptyState } from "./VmDetailListSearchEmptyState";
 import { useVmDetailListCardState } from "./vmDetailListCard";
 
 export const VM_APPLICATIONS_SECTION_ID = "vm-applications-section";
+
+const styles = {
+  loading: css`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  `,
+  subtleText: css`
+    color: var(--pf-t--global--text--color--subtle);
+  `,
+  toolbar: css`
+    flex-direction: row;
+    align-items: center;
+  `,
+  searchInput: css`
+    width: 100%;
+  `,
+};
 
 interface VMApplicationsCardProps {
   applications: ApplicationOverview[];
@@ -46,20 +67,10 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
 
   return (
     <Card id={VM_APPLICATIONS_SECTION_ID}>
+      <CardTitle>
+        <CubesIcon /> Applications ({applications.length})
+      </CardTitle>
       <CardBody>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            marginBottom: "16px",
-            fontWeight: 600,
-          }}
-        >
-          <CubesIcon />
-          Applications ({applications.length})
-        </div>
-
         {error ? (
           <Alert
             variant="warning"
@@ -70,42 +81,28 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
             {error}
           </Alert>
         ) : loading ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
+          <div className={styles.loading}>
             <Spinner size="md" />
             <span>Loading applications...</span>
           </div>
         ) : applications.length === 0 ? (
-          <span
-            style={{
-              color: "var(--pf-t--global--text--color--subtle)",
-            }}
-          >
+          <span className={styles.subtleText}>
             No applications were detected on this virtual machine.
           </span>
         ) : (
-          <>
-            <Flex
-              alignItems={{ default: "alignItemsCenter" }}
-              gap={{ default: "gapMd" }}
-              style={{ marginBottom: "16px" }}
-            >
-              <FlexItem flex={{ default: "flex_1" }}>
-                <SearchInput
-                  placeholder="Filter by application name"
-                  value={nameSearch}
-                  onChange={(_event, value) => handleNameSearch(value)}
-                  onClear={() => handleNameSearch("")}
-                  style={{ width: "100%" }}
-                />
-              </FlexItem>
-              {filteredItems.length > 0 && (
-                <FlexItem>
+          <Stack hasGutter>
+            <StackItem>
+              <Stack hasGutter className={styles.toolbar}>
+                <StackItem isFilled>
+                  <SearchInput
+                    placeholder="Filter by application name"
+                    value={nameSearch}
+                    onChange={(_event, value) => handleNameSearch(value)}
+                    onClear={() => handleNameSearch("")}
+                    className={styles.searchInput}
+                  />
+                </StackItem>
+                <StackItem>
                   <Pagination
                     itemCount={filteredItems.length}
                     perPage={pageSize}
@@ -117,18 +114,10 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
                     variant="top"
                     isCompact
                   />
-                </FlexItem>
-              )}
-            </Flex>
-            {filteredItems.length === 0 ? (
-              <span
-                style={{
-                  color: "var(--pf-t--global--text--color--subtle)",
-                }}
-              >
-                No applications match your search.
-              </span>
-            ) : (
+                </StackItem>
+              </Stack>
+            </StackItem>
+            <StackItem isFilled>
               <Table aria-label="Detected applications" variant="compact">
                 <Thead>
                   <Tr>
@@ -137,16 +126,24 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {paginatedItems.map((application) => (
-                    <Tr key={application.name}>
-                      <Td>{application.name}</Td>
-                      <Td>{getApplicationVendor(application.name)}</Td>
+                  {filteredItems.length === 0 ? (
+                    <Tr>
+                      <Td colSpan={2}>
+                        <VmDetailListSearchEmptyState titleText="No applications match your search input" />
+                      </Td>
                     </Tr>
-                  ))}
+                  ) : (
+                    paginatedItems.map((application) => (
+                      <Tr key={application.name}>
+                        <Td>{application.name}</Td>
+                        <Td>{getApplicationVendor(application.name)}</Td>
+                      </Tr>
+                    ))
+                  )}
                 </Tbody>
               </Table>
-            )}
-          </>
+            </StackItem>
+          </Stack>
         )}
       </CardBody>
     </Card>
