@@ -83,6 +83,8 @@ export type BuildVmTableFilterAttributesParams = {
   onVmLabelsChange: (values: string[]) => void;
   selectedGroups: string[];
   onGroupsChange: (values: string[]) => void;
+  selectedApplications: string[];
+  onApplicationsChange: (values: string[]) => void;
   hasIssuesFilter: boolean;
   noIssuesFilter: boolean;
   onIssuesFilterChange: (hasIssues: boolean, noIssues: boolean) => void;
@@ -92,6 +94,7 @@ export type BuildVmTableFilterAttributesParams = {
   availableClusters: string[];
   availableVmLabels: string[];
   availableGroups: string[];
+  availableApplications: string[];
   showGroupsFilter: boolean;
   onCheckboxValueOpen?: () => void;
 };
@@ -143,6 +146,8 @@ export function buildVmTableFilterAttributes({
   onVmLabelsChange,
   selectedGroups,
   onGroupsChange,
+  selectedApplications,
+  onApplicationsChange,
   hasIssuesFilter,
   noIssuesFilter,
   onIssuesFilterChange,
@@ -152,6 +157,7 @@ export function buildVmTableFilterAttributes({
   availableClusters,
   availableVmLabels,
   availableGroups,
+  availableApplications,
   showGroupsFilter,
   onCheckboxValueOpen,
 }: BuildVmTableFilterAttributesParams): AttributeValueFilterAttribute[] {
@@ -330,6 +336,20 @@ export function buildVmTableFilterAttributes({
       })),
       selections: selectedGroups,
       onSelectionsChange: onGroupsChange,
+    });
+  }
+
+  if (availableApplications.length > 0) {
+    attributes.push({
+      id: "applications",
+      label: "Applications",
+      type: "searchable-checkbox",
+      options: availableApplications.map((application) => ({
+        value: application,
+        label: application,
+      })),
+      selections: selectedApplications,
+      onSelectionsChange: onApplicationsChange,
     });
   }
 

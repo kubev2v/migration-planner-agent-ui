@@ -2,7 +2,7 @@ import type {
   ApplicationOverview,
   DefaultApiInterface,
 } from "@openshift-migration-advisor/agent-sdk";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { scopeApplicationsToVms } from "./components/ApplicationsTab/applicationsApi";
 import { fetchAllMatchingVmIds } from "./components/VirtualMachinesTab/vmSelection";
 
@@ -10,6 +10,7 @@ interface UseApplicationsDataResult {
   applications: ApplicationOverview[];
   loading: boolean;
   error: string | null;
+  refreshApplications: () => Promise<void>;
 }
 
 /** Loads applications when the tab is active; optionally scopes to a VM filter expression. */
@@ -22,52 +23,47 @@ export function useApplicationsData(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadApplications = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await agentApi.getApplications();
+      const data = response.applications ?? [];
+
+      let scoped = data;
+      if (scopeExpression) {
+        const vmIds = await fetchAllMatchingVmIds(agentApi, {
+          byExpression: scopeExpression,
+        });
+        scoped = scopeApplicationsToVms(data, new Set(vmIds));
+      }
+
+      setApplications(scoped);
+    } catch (err) {
+      console.error("Error fetching applications:", err);
+      setApplications([]);
+      setError(
+        err instanceof Error ? err.message : "Failed to load applications.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [agentApi, scopeExpression]);
+
   useEffect(() => {
     if (!active) {
       return;
     }
 
-    let cancelled = false;
+    void loadApplications();
+  }, [active, loadApplications]);
 
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await agentApi.getApplications();
-        const data = response.applications ?? [];
+  const refreshApplications = useCallback(async () => {
+    if (!active) {
+      return;
+    }
+    await loadApplications();
+  }, [active, loadApplications]);
 
-        let scoped = data;
-        if (scopeExpression) {
-          const vmIds = await fetchAllMatchingVmIds(agentApi, {
-            byExpression: scopeExpression,
-          });
-          scoped = scopeApplicationsToVms(data, new Set(vmIds));
-        }
-
-        if (!cancelled) {
-          setApplications(scoped);
-        }
-      } catch (err) {
-        console.error("Error fetching applications:", err);
-        if (!cancelled) {
-          setApplications([]);
-          setError(
-            err instanceof Error ? err.message : "Failed to load applications.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [active, agentApi, scopeExpression]);
-
-  return { applications, loading, error };
+  return { applications, loading, error, refreshApplications };
 }

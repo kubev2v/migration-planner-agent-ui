@@ -38,6 +38,7 @@ export interface VMTableGridProps {
   selectedVMs: Set<string>;
   isGroupRowActions: boolean;
   onVMClick?: (vmId: string) => void;
+  onVMApplicationsClick?: (vmId: string) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
@@ -56,6 +57,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   selectedVMs,
   isGroupRowActions,
   onVMClick,
+  onVMApplicationsClick,
   onRunDeepInspection,
   onExcludeFromReports,
   onIncludeInReports,
@@ -129,6 +131,13 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
               Array.isArray((vm as { groupItems?: unknown }).groupItems)
                 ? (vm as { groupItems: GroupListItem[] }).groupItems
                 : [];
+            const applicationNames: string[] =
+              "applicationNames" in vm &&
+              Array.isArray(
+                (vm as { applicationNames?: unknown }).applicationNames,
+              )
+                ? (vm as { applicationNames: string[] }).applicationNames
+                : [];
             return (
               <Tr key={vm.id}>
                 <Td
@@ -196,6 +205,25 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                   <Td dataLabel="Groups">
                     {groupItems.length > 0 ? (
                       <GroupsList groups={groupItems} />
+                    ) : (
+                      "–"
+                    )}
+                  </Td>
+                )}
+                {isColumnVisible("applications") && (
+                  <Td dataLabel="Applications" modifier="fitContent">
+                    {applicationNames.length > 0 &&
+                    onVMApplicationsClick &&
+                    !disableVmNavigation ? (
+                      <Button
+                        variant="link"
+                        isInline
+                        onClick={() => onVMApplicationsClick(vm.id)}
+                      >
+                        {applicationNames.length}
+                      </Button>
+                    ) : applicationNames.length > 0 ? (
+                      applicationNames.length
                     ) : (
                       "–"
                     )}

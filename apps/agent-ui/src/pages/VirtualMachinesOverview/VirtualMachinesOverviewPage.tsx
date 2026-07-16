@@ -113,6 +113,7 @@ export const ReportContainer: React.FC = () => {
     concernCategories: string[];
     vmLabels: string[];
     groups: string[];
+    applications: string[];
   }>({
     clusters: [],
     datacenters: [],
@@ -120,6 +121,7 @@ export const ReportContainer: React.FC = () => {
     concernCategories: [],
     vmLabels: [],
     groups: [],
+    applications: [],
   });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
 
@@ -145,6 +147,19 @@ export const ReportContainer: React.FC = () => {
     [setSearchParams],
   );
 
+  const handleClearSelectedApplication = useCallback(() => {
+    setSearchParams(buildApplicationsTabUrl(searchParams), { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const handleViewApplicationInVmList = useCallback(
+    (applicationName: string) => {
+      handleNavigateToVMFilters({ applications: [applicationName] });
+    },
+    [handleNavigateToVMFilters],
+  );
+
+  const selectedApplicationName = searchParams.get("application");
+
   // Determine initial tab based on URL params (only on mount)
   const [activeTab, setActiveTab] = useState<string | number>(() =>
     resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
@@ -154,6 +169,7 @@ export const ReportContainer: React.FC = () => {
     applications: applicationsList,
     loading: applicationsLoading,
     error: applicationsError,
+    refreshApplications,
   } = useApplicationsData(agentApi, activeTab === REPORT_TAB.applications);
 
   useEffect(() => {
@@ -709,7 +725,13 @@ export const ReportContainer: React.FC = () => {
                   applications={applicationsList}
                   loading={applicationsLoading}
                   error={applicationsError}
+                  agentApi={agentApi}
+                  selectedApplicationName={selectedApplicationName}
+                  onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
+                  onViewInVmList={handleViewApplicationInVmList}
+                  onRefreshApplications={refreshApplications}
+                  onRefreshFilterOptions={refreshFilterOptions}
                 />
               </div>
             </Tab>

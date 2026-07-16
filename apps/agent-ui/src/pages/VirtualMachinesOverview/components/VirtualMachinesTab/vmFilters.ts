@@ -16,6 +16,9 @@ export interface VMFilters {
   groups?: string[];
   concernLabels?: string[];
   concernCategories?: string[];
+  applications?: string[];
+  /** @deprecated Use `applications` instead. Kept for legacy URL params. */
+  vmApplication?: string;
   showExcludedVMs?: boolean;
 }
 
@@ -210,6 +213,23 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     conditions.push(`(${condition})`);
   }
 
+  if (filters.applications && filters.applications.length > 0) {
+    if (filters.applications.length === 1) {
+      conditions.push(
+        `application = '${escapeFilterValue(filters.applications[0])}'`,
+      );
+    } else {
+      const applicationList = filters.applications
+        .map((application) => `'${escapeFilterValue(application)}'`)
+        .join(",");
+      conditions.push(`application in [${applicationList}]`);
+    }
+  } else if (filters.vmApplication) {
+    conditions.push(
+      `application = '${escapeFilterValue(filters.vmApplication)}'`,
+    );
+  }
+
   // Migration readiness filter
   if (filters.migrationReadiness && filters.migrationReadiness.length > 0) {
     const hasReady = filters.migrationReadiness.includes("ready");
@@ -337,6 +357,12 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
     filters.concernCategories.forEach((category) => {
       params.append("concernCategories", category);
     });
+  }
+
+  if (filters.applications && filters.applications.length > 0) {
+    for (const application of filters.applications) {
+      params.append("applications", application);
+    }
   }
 
   return params;
@@ -485,6 +511,16 @@ export function searchParamsToFilters(
     filters.concernCategories = concernCategories.filter(Boolean);
   }
 
+  const applications = searchParams.getAll("applications");
+  if (applications.length > 0) {
+    filters.applications = applications.filter(Boolean);
+  }
+
+  const vmApplication = searchParams.get("vmApplication");
+  if (vmApplication && !filters.applications?.length) {
+    filters.applications = [vmApplication];
+  }
+
   return filters;
 }
 
@@ -509,6 +545,7 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.groups && filters.groups.length > 0) ||
     (filters.concernLabels && filters.concernLabels.length > 0) ||
     (filters.concernCategories && filters.concernCategories.length > 0) ||
+    (filters.applications && filters.applications.length > 0) ||
     filters.search
   );
 }

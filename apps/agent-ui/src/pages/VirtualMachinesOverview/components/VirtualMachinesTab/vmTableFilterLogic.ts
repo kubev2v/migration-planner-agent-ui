@@ -15,6 +15,7 @@ export type VMTableFilterSelection = {
   selectedMigrationReadiness: string[];
   selectedVmLabels: string[];
   selectedGroups: string[];
+  selectedApplications: string[];
   selectedConcernLabels: string[];
   selectedConcernCategories: string[];
   hasIssuesFilter: boolean;
@@ -33,6 +34,7 @@ export const EMPTY_VM_TABLE_FILTER_SELECTION: VMTableFilterSelection = {
   selectedMigrationReadiness: [],
   selectedVmLabels: [],
   selectedGroups: [],
+  selectedApplications: [],
   selectedConcernLabels: [],
   selectedConcernCategories: [],
   hasIssuesFilter: false,
@@ -236,6 +238,14 @@ export function buildAppliedFilters(
     });
   }
 
+  for (const application of selection.selectedApplications) {
+    filters.push({
+      category: "Applications",
+      label: application,
+      key: `application-${application}`,
+    });
+  }
+
   for (const category of selection.selectedConcernCategories) {
     filters.push({
       category: "Issue category",
@@ -343,6 +353,15 @@ export function removeFilterFromSelection(
     return {
       ...selection,
       selectedGroups: selection.selectedGroups.filter((g) => g !== group),
+    };
+  }
+  if (filterKey.startsWith("application-")) {
+    const application = filterKey.replace("application-", "");
+    return {
+      ...selection,
+      selectedApplications: selection.selectedApplications.filter(
+        (value) => value !== application,
+      ),
     };
   }
   if (filterKey.startsWith("concern-category-")) {

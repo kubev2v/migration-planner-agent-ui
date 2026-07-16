@@ -1,11 +1,12 @@
 import { css } from "@emotion/css";
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
-import { deepInspectionSort } from "./vmSort";
+import { applicationsSort, deepInspectionSort } from "./vmSort";
 
 export type ColumnKey =
   | "name"
   | "labels"
   | "groups"
+  | "applications"
   | "vCenterState"
   | "id"
   | "cpuUsage"
@@ -31,7 +32,10 @@ export const BACKEND_SORTABLE_COLUMNS = [
   "issues",
 ] as const;
 
-export const FRONTEND_SORTABLE_COLUMNS = ["deepInspection"] as const;
+export const FRONTEND_SORTABLE_COLUMNS = [
+  "applications",
+  "deepInspection",
+] as const;
 
 export type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
 export type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
@@ -41,6 +45,7 @@ export const Columns: Record<ColumnKey, string> = {
   name: "Name",
   labels: "Labels",
   groups: "Groups",
+  applications: "Applications",
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
@@ -68,7 +73,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 7;
+export const VISIBLE_COLUMNS_VERSION = 8;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -97,7 +102,7 @@ export const getColumnModifier = (key: ColumnKey) => {
   ) {
     return "fitContent";
   }
-  if (key === "labels") {
+  if (key === "labels" || key === "applications") {
     return "wrap";
   }
   return "nowrap";
@@ -274,6 +279,7 @@ export const FRONTEND_SORT_METHODS: Record<
   FrontendSortableColumn,
   FrontendSortFunction
 > = {
+  applications: applicationsSort,
   deepInspection: deepInspectionSort,
 };
 

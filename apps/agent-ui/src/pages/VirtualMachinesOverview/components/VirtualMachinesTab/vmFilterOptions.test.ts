@@ -84,6 +84,7 @@ describe("mergeGroupNamesIntoFilterOptions", () => {
       concernCategories: [],
       vmLabels: [],
       groups: ["group1", "group2"],
+      applications: [],
     });
   });
 
@@ -97,6 +98,7 @@ describe("mergeGroupNamesIntoFilterOptions", () => {
           concernCategories: [],
           vmLabels: [],
           groups: ["group1"],
+          applications: [],
         },
         ["group2", "group1"],
       ).groups,

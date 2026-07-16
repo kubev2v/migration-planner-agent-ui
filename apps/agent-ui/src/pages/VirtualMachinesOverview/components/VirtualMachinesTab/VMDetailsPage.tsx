@@ -1,5 +1,6 @@
 import { useInjection } from "@migration-planner-ui/ioc";
 import type {
+  ApplicationOverview,
   DefaultApiInterface,
   VirtualMachineDetail,
   VMIssue,
@@ -46,8 +47,11 @@ import {
 } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Symbols } from "../../../../main/Symbols";
+import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
+import { VMApplicationsCard } from "./VMApplicationsCard";
+import { VMProcessesCard } from "./VMProcessesCard";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { isLikelyCanceledInspectionError } from "./vmInspectionUtils";
 
@@ -66,12 +70,16 @@ interface VMDetailsPageProps {
   vmId: string;
   onBack: () => void;
   inspectionStatus?: VmInspectionStatus;
+  scrollToSection?: string | null;
+  onScrollToSectionComplete?: () => void;
 }
 
 export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   vmId,
   onBack,
   inspectionStatus,
+  scrollToSection,
+  onScrollToSectionComplete,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const [vm, setVm] = useState<VirtualMachineDetailWithUtilization | null>(
@@ -89,6 +97,14 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     Information: false,
     Other: false,
   });
+  const [vmApplications, setVmApplications] = useState<ApplicationOverview[]>(
+    [],
+  );
+  const [applicationsLoading, setApplicationsLoading] = useState(true);
+  const [applicationsError, setApplicationsError] = useState<string | null>(
+    null,
+  );
+  const applicationsSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchVMDetails = async () => {
@@ -115,6 +131,70 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
 
     fetchVMDetails();
   }, [vmId, agentApi]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchApplications = async () => {
+      try {
+        setApplicationsLoading(true);
+        setApplicationsError(null);
+        const response = await agentApi.getApplications();
+        if (!cancelled) {
+          setVmApplications(
+            getApplicationsForVm(response.applications ?? [], vmId),
+          );
+        }
+      } catch (err) {
+        console.warn("Error fetching VM applications:", err);
+        if (!cancelled) {
+          setVmApplications([]);
+          setApplicationsError(
+            err instanceof Error ? err.message : "Failed to load applications.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setApplicationsLoading(false);
+        }
+      }
+    };
+
+    fetchApplications();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [vmId, agentApi]);
+
+  useEffect(() => {
+    if (scrollToSection !== "applications" || loading || applicationsLoading) {
+      return;
+    }
+
+    const target = applicationsSectionRef.current;
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    const timeoutId = window.setTimeout(() => {
+      onScrollToSectionComplete?.();
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    applicationsLoading,
+    loading,
+    onScrollToSectionComplete,
+    scrollToSection,
+  ]);
 
   if (loading) {
     return (
@@ -897,6 +977,21 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
             })()}
           </CardBody>
         </Card>
+      </StackItem>
+
+      <StackItem>
+        <div ref={applicationsSectionRef}>
+          <VMApplicationsCard
+            key={vmId}
+            applications={vmApplications}
+            loading={applicationsLoading}
+            error={applicationsError}
+          />
+        </div>
+      </StackItem>
+
+      <StackItem>
+        <VMProcessesCard key={vmId} processes={vm.processes ?? []} />
       </StackItem>
     </Stack>
   );

@@ -103,6 +103,7 @@ export const GroupDetailPage: React.FC = () => {
     concernCategories: [] as string[],
     vmLabels: [] as string[],
     groups: [] as string[],
+    applications: [] as string[],
   });
   const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
 
@@ -141,6 +142,7 @@ export const GroupDetailPage: React.FC = () => {
     applications: applicationsList,
     loading: applicationsLoading,
     error: applicationsError,
+    refreshApplications,
   } = useApplicationsData(
     agentApi,
     activeTab === REPORT_TAB.applications,
@@ -361,6 +363,19 @@ export const GroupDetailPage: React.FC = () => {
     setSearchParams(buildVmDetailUrl(searchParams, vmId), { replace: true });
     setVmsPage(1);
   };
+
+  const handleClearSelectedApplication = useCallback(() => {
+    setSearchParams(buildApplicationsTabUrl(searchParams), { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const selectedApplicationName = searchParams.get("application");
+
+  const handleViewApplicationInVmList = useCallback(
+    (applicationName: string) => {
+      handleNavigateToVMFilters({ applications: [applicationName] });
+    },
+    [handleNavigateToVMFilters],
+  );
 
   const handleConcernClick = useCallback(
     (concernLabel: string) => {
@@ -625,7 +640,13 @@ export const GroupDetailPage: React.FC = () => {
                   applications={applicationsList}
                   loading={applicationsLoading}
                   error={applicationsError}
+                  agentApi={agentApi}
+                  selectedApplicationName={selectedApplicationName}
+                  onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
+                  onViewInVmList={handleViewApplicationInVmList}
+                  onRefreshApplications={refreshApplications}
+                  onRefreshFilterOptions={refreshFilterOptions}
                 />
               </div>
             </Tab>

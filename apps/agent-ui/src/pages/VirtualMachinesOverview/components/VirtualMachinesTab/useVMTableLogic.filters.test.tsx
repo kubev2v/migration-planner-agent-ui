@@ -21,6 +21,7 @@ const EMPTY_FILTER_OPTIONS: NonNullable<
   concernCategories: [],
   vmLabels: [],
   groups: [],
+  applications: [],
 };
 const PERFORMANCE_CATEGORY = ["Performance"];
 const HIGH_CPU_LABEL = ["High CPU"];
@@ -41,10 +42,7 @@ describe("useVMTableLogic filters", () => {
     mockSearchParams = new URLSearchParams("tab=vms");
     mockSetSearchParams.mockReset();
     mockSetSearchParams.mockImplementation((params: URLSearchParams) => {
-      mockSearchParams =
-        params instanceof URLSearchParams
-          ? new URLSearchParams(params)
-          : new URLSearchParams(params);
+      mockSearchParams = new URLSearchParams(params);
     });
   });
 

@@ -13,12 +13,14 @@ export const VMTable: React.FC<VMTableProps> = ({
   loading,
   initialFilters,
   onVMClick,
+  onVMApplicationsClick,
   totalVMs,
   currentPage = 1,
   pageSize = 20,
   onFiltersChange,
   onPageChange,
   onSortChange,
+  onFrontendSortChange,
   availableFilterOptions,
   selectedVMs = new Set<string>(),
   onSelectionChange,
@@ -60,6 +62,7 @@ export const VMTable: React.FC<VMTableProps> = ({
     onRefreshFilterOptions,
     showExcludedVMs,
     variant,
+    onFrontendSortChange,
   });
 
   return (
@@ -97,6 +100,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         selectedVMs={selectedVMs}
         isGroupRowActions={isGroupRowActions}
         onVMClick={onVMClick}
+        onVMApplicationsClick={onVMApplicationsClick}
         onRunDeepInspection={onRunDeepInspection}
         onExcludeFromReports={onExcludeFromReports}
         onIncludeInReports={onIncludeInReports}

@@ -1,6 +1,6 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import { describe, expect, it } from "vitest";
-import { deepInspectionSort } from "./vmSort";
+import { applicationsSort, deepInspectionSort } from "./vmSort";
 
 const createMockVM = (
   id: string,
@@ -66,5 +66,25 @@ describe("Deep Inspection Sort", () => {
     expect(sorted[5].id).toBe("0-completed");
     expect(sorted[6].id).toBe("pending");
     expect(sorted[7].id).toBe("running");
+  });
+});
+
+describe("Applications Sort", () => {
+  it("sorts by application count ascending", () => {
+    const vms = [
+      { ...createMockVM("none"), applicationNames: [] },
+      { ...createMockVM("many"), applicationNames: ["a", "b", "c"] },
+      { ...createMockVM("one"), applicationNames: ["a"] },
+    ];
+
+    const sorted = [...vms].sort(
+      (a, b) => applicationsSort(a) - applicationsSort(b),
+    );
+
+    expect(sorted.map((vm) => vm.id)).toEqual(["none", "one", "many"]);
+  });
+
+  it("treats missing applicationNames as zero", () => {
+    expect(applicationsSort(createMockVM("no-apps"))).toBe(0);
   });
 });

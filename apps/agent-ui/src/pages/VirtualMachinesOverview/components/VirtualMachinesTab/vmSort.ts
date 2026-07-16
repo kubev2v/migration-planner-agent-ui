@@ -3,6 +3,19 @@ import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 // Use a large multiplier to ensure no overlap between groups
 const GROUP_MULTIPLIER = 10_000;
 
+export function getVmApplicationCount(vm: VirtualMachine): number {
+  if (
+    "applicationNames" in vm &&
+    Array.isArray((vm as { applicationNames?: unknown }).applicationNames)
+  ) {
+    return (vm as { applicationNames: string[] }).applicationNames.length;
+  }
+  return 0;
+}
+
+export const applicationsSort: (vm: VirtualMachine) => number = (vm) =>
+  getVmApplicationCount(vm);
+
 export const deepInspectionSort: (vm: VirtualMachine) => number = (vm) => {
   const state = vm.inspectionStatus?.state;
   const concernCount = vm.inspectionConcernCount || 0;

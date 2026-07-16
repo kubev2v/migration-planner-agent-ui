@@ -9,6 +9,7 @@ const EMPTY_VM_TABLE_FILTER_OPTIONS: VMTableFilterOptions = {
   concernCategories: [],
   vmLabels: [],
   groups: [],
+  applications: [],
 };
 
 export const FILTER_OPTIONS_REFRESH_TTL_MS = 60_000;
@@ -59,6 +60,7 @@ export async function fetchVmTableFilterOptions(
     concernCategories: response.concernCategories || [],
     vmLabels: labelsResponse.labels || [],
     groups: groupNames,
+    applications: response.applications || [],
   };
 }
 

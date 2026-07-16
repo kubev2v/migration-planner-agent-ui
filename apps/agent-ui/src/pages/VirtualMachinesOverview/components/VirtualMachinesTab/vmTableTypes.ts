@@ -11,6 +11,7 @@ export interface VMTableFilterOptions {
   concernCategories: string[];
   vmLabels: string[];
   groups: string[];
+  applications: string[];
 }
 
 export interface VMTableProps {
@@ -18,12 +19,14 @@ export interface VMTableProps {
   loading: boolean;
   initialFilters?: VMFilters;
   onVMClick?: (vmId: string) => void;
+  onVMApplicationsClick?: (vmId: string) => void;
   totalVMs?: number;
   currentPage?: number;
   pageSize?: number;
   onFiltersChange?: (filters: VMFilters) => void;
   onPageChange?: (page: number, pageSize: number) => void;
   onSortChange?: (sortFields: string[]) => void;
+  onFrontendSortChange?: (column: ColumnKey | null) => void;
   availableFilterOptions?: VMTableFilterOptions;
   selectedVMs?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
@@ -63,6 +66,7 @@ export type UseVMTableLogicParams = Pick<
   | "onFiltersChange"
   | "onPageChange"
   | "onSortChange"
+  | "onFrontendSortChange"
   | "availableFilterOptions"
   | "selectedVMs"
   | "onSelectionChange"
