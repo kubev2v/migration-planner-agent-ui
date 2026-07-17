@@ -20,6 +20,7 @@ import {
   Select,
   SelectList,
   SelectOption,
+  Spinner,
   Stack,
   StackItem,
   Tab,
@@ -27,6 +28,7 @@ import {
   TabTitleText,
   Title,
 } from "@patternfly/react-core";
+import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -36,6 +38,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
+import { AppEmptyState } from "../../common/components";
 import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
@@ -439,7 +442,11 @@ export const GroupDetailPage: React.FC = () => {
   if (loading) {
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
-        <Content component="p">Loading group...</Content>
+        <AppEmptyState
+          titleText="Loading group"
+          icon={Spinner}
+          bullseyeStyle={{ minHeight: "240px" }}
+        />
       </PageSection>
     );
   }
@@ -607,9 +614,12 @@ export const GroupDetailPage: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <Content component="p" style={{ marginTop: "16px" }}>
-                    No assessment data is available for this group yet.
-                  </Content>
+                  <AppEmptyState
+                    titleText="No assessment data is available for this group yet"
+                    body="Assessment data will appear here once virtual machines in this group have been inventoried."
+                    icon={InboxIcon}
+                    bullseyeStyle={{ minHeight: "240px", marginTop: "16px" }}
+                  />
                 )}
               </div>
             </Tab>

@@ -4,9 +4,11 @@ import {
   ChartLabel,
   ChartLegend,
 } from "@patternfly/react-charts/victory";
-import { Flex, FlexItem } from "@patternfly/react-core";
+import { EmptyStateVariant, Flex, FlexItem } from "@patternfly/react-core";
+import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useMemo } from "react";
+import { AppEmptyState } from "../../../../common/components";
 
 interface OSData {
   name: string;
@@ -220,9 +222,12 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <div className="pf-v6-u-p-xl pf-v6-u-text-align-center">
-        No data available
-      </div>
+      <AppEmptyState
+        titleText="No data available"
+        icon={InboxIcon}
+        variant={EmptyStateVariant.xs}
+        wrapInBullseye={false}
+      />
     );
   }
 

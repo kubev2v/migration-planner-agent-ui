@@ -1,22 +1,16 @@
-import { css } from "@emotion/css";
 import type { Process } from "@openshift-migration-advisor/agent-sdk";
 import { Card, CardBody, CardTitle } from "@patternfly/react-core";
 import { ProcessAutomationIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useMemo } from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { VmDetailListCardToolbar } from "./VmDetailListCardToolbar";
 import { VmDetailListSearchEmptyState } from "./VmDetailListSearchEmptyState";
 import {
   assignStableRowKeys,
   useVmDetailListCardState,
 } from "./vmDetailListCard";
-
-const styles = {
-  subtleText: css`
-    color: var(--pf-t--global--text--color--subtle);
-  `,
-};
 
 interface VMProcessesCardProps {
   processes: Process[];
@@ -54,9 +48,12 @@ export const VMProcessesCard: React.FC<VMProcessesCardProps> = ({
       </CardTitle>
       <CardBody>
         {processes.length === 0 ? (
-          <span className={styles.subtleText}>
-            No processes were detected on this virtual machine.
-          </span>
+          <AppEmptyState
+            titleText="No processes were detected on this virtual machine"
+            body="Processes are identified during virtual machine inspection."
+            icon={ProcessAutomationIcon}
+            bullseyeStyle={{ padding: "16px 0" }}
+          />
         ) : (
           <>
             <VmDetailListCardToolbar

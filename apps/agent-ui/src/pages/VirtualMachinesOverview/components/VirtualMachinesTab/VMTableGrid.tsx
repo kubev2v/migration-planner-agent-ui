@@ -12,9 +12,10 @@ import {
   Spinner,
   Tooltip,
 } from "@patternfly/react-core";
-import { EllipsisVIcon } from "@patternfly/react-icons";
+import { EllipsisVIcon, SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
 import { formatMetric } from "./VMUtilizationMetrics";
@@ -121,7 +122,11 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
         ) : vms.length === 0 ? (
           <Tr>
             <Td colSpan={columns.length + (hideToolbarActions ? 1 : 2)}>
-              No virtual machines found
+              <AppEmptyState
+                titleText="No virtual machines found"
+                body="Try adjusting your filters or search criteria."
+                icon={SearchIcon}
+              />
             </Td>
           </Tr>
         ) : (

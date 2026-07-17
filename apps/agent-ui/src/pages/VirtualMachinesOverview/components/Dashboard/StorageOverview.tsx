@@ -6,12 +6,13 @@ import {
   Dropdown,
   DropdownItem,
   DropdownList,
+  EmptyStateVariant,
   Flex,
   FlexItem,
   MenuToggle,
   type MenuToggleElement,
 } from "@patternfly/react-core";
-import { DatabaseIcon } from "@patternfly/react-icons";
+import { DatabaseIcon, InboxIcon } from "@patternfly/react-icons";
 import chart_color_blue_300 from "@patternfly/react-tokens/dist/esm/chart_color_blue_300";
 import chart_color_green_300 from "@patternfly/react-tokens/dist/esm/chart_color_green_300";
 import chart_color_orange_200 from "@patternfly/react-tokens/dist/esm/chart_color_orange_200";
@@ -23,6 +24,7 @@ import chart_color_teal_300 from "@patternfly/react-tokens/dist/esm/chart_color_
 import chart_color_yellow_400 from "@patternfly/react-tokens/dist/esm/chart_color_yellow_400";
 import type React from "react";
 import { useMemo, useState } from "react";
+import { AppEmptyState } from "../../../../common/components";
 import {
   type NavigateToVMFilters,
   useChartDrillDown,
@@ -171,9 +173,12 @@ const DiskTypeBarChart: React.FC<DiskTypeBarChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className={dashboardStyles.storageNoDataContainer}>
-        No Data Available
-      </div>
+      <AppEmptyState
+        titleText="No data available"
+        icon={InboxIcon}
+        variant={EmptyStateVariant.xs}
+        wrapInBullseye={false}
+      />
     );
   }
 
@@ -524,9 +529,12 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                 }
               />
             ) : (
-              <div className={dashboardStyles.storageNoDataContainer}>
-                No Data Available
-              </div>
+              <AppEmptyState
+                titleText="No data available"
+                icon={InboxIcon}
+                variant={EmptyStateVariant.xs}
+                wrapInBullseye={false}
+              />
             )
           ) : (
             <MigrationDonutChart

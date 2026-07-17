@@ -3,6 +3,7 @@ import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk
 import {
   Button,
   Content,
+  EmptyStateVariant,
   Flex,
   FlexItem,
   Modal,
@@ -14,11 +15,13 @@ import {
 import {
   CheckIcon,
   PencilAltIcon,
+  TagIcon,
   TimesIcon,
   TrashIcon,
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppEmptyState } from "../../../../common/components";
 
 const VM_COLUMN_WIDTH = "3.5rem";
 const ACTIONS_COLUMN_WIDTH = "4.5rem";
@@ -247,7 +250,13 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
           {loading ? (
             <Content component="p">Loading labels...</Content>
           ) : labels.length === 0 ? (
-            <Content component="p">No labels found.</Content>
+            <AppEmptyState
+              titleText="No labels found"
+              body="Use the Add Labels action on your virtual machines to create labels."
+              icon={TagIcon}
+              variant={EmptyStateVariant.xs}
+              wrapInBullseye={false}
+            />
           ) : (
             <div className={styles.labelList}>
               <div className={styles.labelHeader}>
