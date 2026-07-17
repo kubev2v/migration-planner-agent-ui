@@ -60,6 +60,7 @@ import {
   hasActiveFilters,
   searchParamsToFilters,
   type VMFilters,
+  withDefaultReportInclusion,
 } from "./components/VirtualMachinesTab/vmFilters";
 import { Header } from "./Header";
 import {
@@ -103,7 +104,6 @@ export const ReportContainer: React.FC = () => {
   const [vmsPage, setVmsPage] = useState(1);
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
-  const [showExcludedVMs, setShowExcludedVMs] = useState(true);
 
   // Store all available filter options (fetched once for filter UI)
   const [availableFilterOptions, setAvailableFilterOptions] = useState<{
@@ -290,8 +290,9 @@ export const ReportContainer: React.FC = () => {
       try {
         setVmsLoading(true);
 
-        const effectiveFilters = { ...initialVMFilters, showExcludedVMs };
-        const byExpression = filtersToByExpression(effectiveFilters);
+        const byExpression = filtersToByExpression(
+          withDefaultReportInclusion(initialVMFilters),
+        );
 
         const response = await agentApi.getVMs({
           byExpression,
@@ -322,7 +323,6 @@ export const ReportContainer: React.FC = () => {
     activeTab,
     agentApi,
     initialVMFilters,
-    showExcludedVMs,
     vmsPage,
     vmsPageSize,
     vmsSortFields,
@@ -331,8 +331,9 @@ export const ReportContainer: React.FC = () => {
   const refreshVMs = useCallback(async () => {
     const reqId = ++vmsRefreshIdRef.current;
     try {
-      const effectiveFilters = { ...initialVMFilters, showExcludedVMs };
-      const byExpression = filtersToByExpression(effectiveFilters);
+      const byExpression = filtersToByExpression(
+        withDefaultReportInclusion(initialVMFilters),
+      );
       const [response, labelsResponse] = await Promise.all([
         agentApi.getVMs({
           byExpression,
@@ -353,14 +354,7 @@ export const ReportContainer: React.FC = () => {
     } catch (err) {
       console.error("Error refreshing VMs:", err);
     }
-  }, [
-    agentApi,
-    initialVMFilters,
-    showExcludedVMs,
-    vmsSortFields,
-    vmsPage,
-    vmsPageSize,
-  ]);
+  }, [agentApi, initialVMFilters, vmsSortFields, vmsPage, vmsPageSize]);
 
   const discoveryStatus = formatDiscoveryStatus(agentStatus);
 
@@ -579,8 +573,10 @@ export const ReportContainer: React.FC = () => {
 
   const handleConcernClick = (concernLabel: string) => {
     setActiveTab(REPORT_TAB.vms);
-    const newParams = buildVmsTabUrl(searchParams);
-    newParams.set("concernLabels", concernLabel);
+    const newParams = filtersToSearchParams({
+      concernLabels: [concernLabel],
+    });
+    newParams.set("tab", "vms");
     setSearchParams(newParams, { replace: true });
     setVmsPage(1);
   };
@@ -708,11 +704,6 @@ export const ReportContainer: React.FC = () => {
                   onRefreshVMs={refreshVMs}
                   onRefreshInventory={refreshInventory}
                   onRefreshFilterOptions={refreshFilterOptions}
-                  showExcludedVMs={showExcludedVMs}
-                  onShowExcludedVMsChange={(show) => {
-                    setShowExcludedVMs(show);
-                    setVmsPage(1);
-                  }}
                 />
               </div>
             </Tab>

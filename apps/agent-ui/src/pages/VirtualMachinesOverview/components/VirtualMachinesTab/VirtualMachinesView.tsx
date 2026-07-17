@@ -31,7 +31,11 @@ import {
   mergeGroupNamesIntoFilterOptions,
   type RefreshFilterOptionsFn,
 } from "./vmFilterOptions";
-import { filtersToByExpression, type VMFilters } from "./vmFilters";
+import {
+  filtersToByExpression,
+  type VMFilters,
+  withDefaultReportInclusion,
+} from "./vmFilters";
 import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds, fetchAllMatchingVms } from "./vmSelection";
 import type { ColumnKey } from "./vmTableShared";
@@ -150,8 +154,6 @@ interface VirtualMachinesViewProps {
   onGroupMembershipChanged?: () => void | Promise<void>;
   /** Refresh filter dropdown options (e.g. after groups or labels change). */
   onRefreshFilterOptions?: RefreshFilterOptionsFn;
-  showExcludedVMs?: boolean;
-  onShowExcludedVMsChange?: (show: boolean) => void;
   /** When set, VMs are shown inside this group's detail page */
   groupContext?: { id: string; name: string };
   /** Base filter applied before table filters (e.g. group membership). */
@@ -175,8 +177,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   onRefreshInventory,
   onGroupMembershipChanged,
   onRefreshFilterOptions,
-  showExcludedVMs,
-  onShowExcludedVMsChange,
   groupContext,
   scopedFilterExpression,
   sortFields = [],
@@ -290,13 +290,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [loadVmApplications]);
 
   const clientSortFilterExpression = useMemo(() => {
-    const effectiveFilters: VMFilters = {
-      ...(initialFilters ?? {}),
-      ...(showExcludedVMs !== undefined ? { showExcludedVMs } : {}),
-    };
-    const userExpression = filtersToByExpression(effectiveFilters);
+    const userExpression = filtersToByExpression(
+      withDefaultReportInclusion(initialFilters ?? {}),
+    );
     return combineFilterExpressions(scopedFilterExpression, userExpression);
-  }, [initialFilters, scopedFilterExpression, showExcludedVMs]);
+  }, [initialFilters, scopedFilterExpression]);
 
   useEffect(() => {
     if (clientSortColumn !== "applications" || !agentApi) {
@@ -369,12 +367,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     [availableFilterOptions, vmGroupMembership.groupsByName],
   );
 
-  const visibleVms = useMemo(() => {
-    if (showExcludedVMs !== false) {
-      return vmsForTable;
-    }
-    return vmsForTable.filter((vm) => !vm.migrationExcluded);
-  }, [showExcludedVMs, vmsForTable]);
+  const visibleVms = vmsForTable;
 
   const fetchAvailableLabels = useCallback(async () => {
     if (!agentApi) {
@@ -504,11 +497,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       if (!agentApi) {
         return [];
       }
-      const effectiveFilters =
-        showExcludedVMs === undefined
-          ? filters
-          : { ...filters, showExcludedVMs };
-      const userExpression = filtersToByExpression(effectiveFilters);
+      const userExpression = filtersToByExpression(
+        withDefaultReportInclusion(filters),
+      );
       const byExpression = combineFilterExpressions(
         scopedFilterExpression,
         userExpression,
@@ -518,7 +509,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         sort: sortFields.length > 0 ? sortFields : undefined,
       });
     },
-    [agentApi, scopedFilterExpression, showExcludedVMs, sortFields],
+    [agentApi, scopedFilterExpression, sortFields],
   );
 
   const refreshLabels = useCallback(async () => {
@@ -810,8 +801,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         }
         onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
         variant={variant}
-        showExcludedVMs={showExcludedVMs}
-        onShowExcludedVMsChange={onShowExcludedVMsChange}
         inspectionActive={inspectionActive}
         cancelingInspectionVmIds={cancelingInspectionVmIds}
         onCancelInspection={handleCancelInspection}

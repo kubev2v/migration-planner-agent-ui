@@ -71,6 +71,7 @@ export function clearVmFilterParams(params: URLSearchParams): void {
   params.delete("diskUsageRangeMin");
   params.delete("diskUsageRangeMax");
   params.delete("migrationReadiness");
+  params.delete("reportInclusion");
   params.delete("vmLabels");
   params.delete("concernLabels");
   params.delete("concernCategories");
@@ -101,7 +102,6 @@ export function buildApplicationsTabUrl(
   searchParams: URLSearchParams,
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams);
-  clearVmFilterParams(params);
   params.delete("vmId");
   params.set("tab", "applications");
   return params;
@@ -118,7 +118,6 @@ export function buildApplicationDetailUrl(
 
 export function buildVmsTabUrl(searchParams: URLSearchParams): URLSearchParams {
   const params = new URLSearchParams(searchParams);
-  clearVmFilterParams(params);
   params.delete("vmId");
   params.set("tab", "vms");
   return params;
@@ -128,7 +127,6 @@ export function buildOverviewTabUrl(
   searchParams: URLSearchParams,
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams);
-  clearVmFilterParams(params);
   params.delete("vmId");
   params.set("tab", "overview");
   return params;

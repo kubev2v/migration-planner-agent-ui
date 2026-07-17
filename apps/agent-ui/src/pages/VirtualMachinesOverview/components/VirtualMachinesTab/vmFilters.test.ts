@@ -3,6 +3,7 @@ import {
   filtersToByExpression,
   filtersToSearchParams,
   searchParamsToFilters,
+  withDefaultReportInclusion,
 } from "./vmFilters";
 
 describe("filtersToByExpression vmLabels", () => {
@@ -139,25 +140,56 @@ describe("applications URL params", () => {
   });
 });
 
-describe("filtersToByExpression showExcludedVMs", () => {
-  it("hides excluded VMs when the toggle is off", () => {
-    expect(filtersToByExpression({ showExcludedVMs: false })).toBe(
+describe("filtersToByExpression reportInclusion", () => {
+  it("shows only included VMs when only included is selected", () => {
+    expect(filtersToByExpression({ reportInclusion: ["included"] })).toBe(
       "migration_excluded = false",
     );
   });
 
-  it("explicitly includes excluded VMs when the toggle is on", () => {
-    expect(filtersToByExpression({ showExcludedVMs: true })).toBe(
-      "(migration_excluded = true or migration_excluded = false)",
+  it("shows only excluded VMs when only excluded is selected", () => {
+    expect(filtersToByExpression({ reportInclusion: ["excluded"] })).toBe(
+      "migration_excluded = true",
     );
   });
 
-  it("combines the excluded VM filter with other filters", () => {
+  it("shows all VMs when both options are selected", () => {
+    expect(
+      filtersToByExpression({ reportInclusion: ["included", "excluded"] }),
+    ).toBe("(migration_excluded = true or migration_excluded = false)");
+  });
+
+  it("shows all VMs by default when no report inclusion filter is set", () => {
+    expect(filtersToByExpression({})).toBeUndefined();
+  });
+
+  it("shows all VMs when the default report inclusion is applied", () => {
+    expect(
+      filtersToByExpression(withDefaultReportInclusion({ search: "web" })),
+    ).toBe(
+      "name like 'web' and (migration_excluded = true or migration_excluded = false)",
+    );
+  });
+
+  it("combines the report inclusion filter with other filters", () => {
     expect(
       filtersToByExpression({
-        showExcludedVMs: false,
+        reportInclusion: ["included"],
         search: "web",
       }),
     ).toBe("name like 'web' and migration_excluded = false");
+  });
+});
+
+describe("reportInclusion URL params", () => {
+  it("round-trips report inclusion values", () => {
+    const params = filtersToSearchParams({
+      reportInclusion: ["included", "excluded"],
+    });
+    expect(params.get("reportInclusion")).toBe("included,excluded");
+    expect(searchParamsToFilters(params).reportInclusion).toEqual([
+      "included",
+      "excluded",
+    ]);
   });
 });

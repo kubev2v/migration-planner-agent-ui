@@ -13,6 +13,7 @@ export type VMTableFilterSelection = {
   selectedClusters: string[];
   selectedDatacenters: string[];
   selectedMigrationReadiness: string[];
+  selectedReportInclusion: string[];
   selectedVmLabels: string[];
   selectedGroups: string[];
   selectedApplications: string[];
@@ -32,6 +33,7 @@ export const EMPTY_VM_TABLE_FILTER_SELECTION: VMTableFilterSelection = {
   selectedClusters: [],
   selectedDatacenters: [],
   selectedMigrationReadiness: [],
+  selectedReportInclusion: [],
   selectedVmLabels: [],
   selectedGroups: [],
   selectedApplications: [],
@@ -222,6 +224,14 @@ export function buildAppliedFilters(
     });
   }
 
+  for (const inclusion of selection.selectedReportInclusion) {
+    filters.push({
+      category: "Report inclusion",
+      label: inclusion === "included" ? "Included" : "Excluded",
+      key: `report-inclusion-${inclusion}`,
+    });
+  }
+
   for (const label of selection.selectedVmLabels) {
     filters.push({
       category: "Label",
@@ -338,6 +348,15 @@ export function removeFilterFromSelection(
       ...selection,
       selectedMigrationReadiness: selection.selectedMigrationReadiness.filter(
         (s) => s !== status,
+      ),
+    };
+  }
+  if (filterKey.startsWith("report-inclusion-")) {
+    const inclusion = filterKey.replace("report-inclusion-", "");
+    return {
+      ...selection,
+      selectedReportInclusion: selection.selectedReportInclusion.filter(
+        (value) => value !== inclusion,
       ),
     };
   }
