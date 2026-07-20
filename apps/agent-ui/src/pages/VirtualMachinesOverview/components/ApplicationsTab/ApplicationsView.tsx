@@ -17,10 +17,15 @@ import {
   ToolbarItem,
   Tooltip,
 } from "@patternfly/react-core";
-import { QuestionCircleIcon } from "@patternfly/react-icons";
+import {
+  CubesIcon,
+  QuestionCircleIcon,
+  SearchIcon,
+} from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppEmptyState } from "../../../../common/components";
 import {
   AttributeValueFilter,
   type AttributeValueFilterAttribute,
@@ -407,9 +412,21 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
                 ) : filteredApplications.length === 0 ? (
                   <Tr>
                     <Td colSpan={3}>
-                      {applications.length === 0
-                        ? "No applications were detected on your virtual machines."
-                        : "No applications match the current filters."}
+                      <AppEmptyState
+                        titleText={
+                          applications.length === 0
+                            ? "No applications were detected on your virtual machines"
+                            : "No applications match the current filters"
+                        }
+                        body={
+                          applications.length === 0
+                            ? "Applications are identified during virtual machine inspection."
+                            : "Try adjusting your filters or search criteria."
+                        }
+                        icon={
+                          applications.length === 0 ? CubesIcon : SearchIcon
+                        }
+                      />
                     </Td>
                   </Tr>
                 ) : (

@@ -6,6 +6,7 @@ import type {
 import {
   Button,
   Content,
+  EmptyStateVariant,
   Form,
   FormGroup,
   MenuToggle,
@@ -19,8 +20,10 @@ import {
   SelectOption,
   Spinner,
 } from "@patternfly/react-core";
+import { DesktopIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { Symbols } from "../../../../main/Symbols";
 import { addVmsToGroupFilter } from "../../utils/groupFilters";
 import {
@@ -142,9 +145,13 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
         {loading ? (
           <Spinner size="lg" />
         ) : groups.length === 0 ? (
-          <Content component="p">
-            No groups available. Create a group first.
-          </Content>
+          <AppEmptyState
+            titleText="No groups available"
+            body="Create a group first."
+            icon={DesktopIcon}
+            variant={EmptyStateVariant.xs}
+            wrapInBullseye={false}
+          />
         ) : (
           <Form>
             <FormGroup label="Group" isRequired fieldId="add-to-group-select">

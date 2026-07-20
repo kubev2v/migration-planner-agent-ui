@@ -3,6 +3,7 @@ import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk
 import {
   Button,
   Content,
+  EmptyStateVariant,
   Form,
   FormGroup,
   MenuToggle,
@@ -16,8 +17,10 @@ import {
   SelectOption,
   Spinner,
 } from "@patternfly/react-core";
+import { DesktopIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { Symbols } from "../../../../main/Symbols";
 import { buildGroupFilterAfterRemovingMembers } from "../../utils/groupFilters";
 import {
@@ -226,9 +229,12 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
         {loading ? (
           <Spinner size="lg" />
         ) : groupOptions.length === 0 ? (
-          <Content component="p">
-            The selected virtual machines are not in any group.
-          </Content>
+          <AppEmptyState
+            titleText="The selected virtual machines are not in any group"
+            icon={DesktopIcon}
+            variant={EmptyStateVariant.xs}
+            wrapInBullseye={false}
+          />
         ) : (
           needsGroupPicker && (
             <Form>

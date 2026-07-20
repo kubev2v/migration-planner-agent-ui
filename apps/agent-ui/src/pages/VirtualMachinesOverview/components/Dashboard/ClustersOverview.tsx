@@ -7,15 +7,17 @@ import {
   Dropdown,
   DropdownItem,
   DropdownList,
+  EmptyStateVariant,
   Flex,
   FlexItem,
   MenuToggle,
   type MenuToggleElement,
 } from "@patternfly/react-core";
-import { DatabaseIcon } from "@patternfly/react-icons";
+import { DatabaseIcon, InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo, useState } from "react";
 
+import { AppEmptyState } from "../../../../common/components";
 import { dashboardStyles } from "./dashboardStyles";
 import MigrationDonutChart from "./MigrationDonutChart";
 
@@ -382,9 +384,12 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
       <CardBody>
         {viewMode === "cpuOverCommitment" ? (
           chartData.length === 0 ? (
-            <div style={{ color: "#6a6e73", textAlign: "center" }}>
-              This inventory has no cpuOverCommitment information.
-            </div>
+            <AppEmptyState
+              titleText="This inventory has no CPU overcommitment information"
+              icon={InboxIcon}
+              variant={EmptyStateVariant.xs}
+              wrapInBullseye={false}
+            />
           ) : (
             <>
               <div className={styles.cpuOvercommitBoxes}>

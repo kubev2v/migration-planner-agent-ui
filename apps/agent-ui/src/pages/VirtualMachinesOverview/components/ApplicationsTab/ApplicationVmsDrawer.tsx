@@ -1,7 +1,6 @@
 import { css } from "@emotion/css";
 import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
-  Bullseye,
   Button,
   DrawerActions,
   DrawerCloseButton,
@@ -11,9 +10,6 @@ import {
   Dropdown,
   DropdownItem,
   DropdownList,
-  EmptyState,
-  EmptyStateBody,
-  EmptyStateVariant,
   Flex,
   Label,
   LabelGroup,
@@ -31,6 +27,7 @@ import { SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { VirtualMachineWithGroupItems } from "../../../Groups/utils/vmGroupMembership";
 import { fetchApplicationDrawerVms } from "./applicationDrawerVms";
@@ -233,14 +230,13 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
         </Toolbar>
 
         {loadError && (
-          <EmptyState
-            headingLevel="h3"
+          <AppEmptyState
             titleText="Unable to load virtual machines"
-            variant={EmptyStateVariant.sm}
+            body={loadError}
+            status="danger"
+            wrapInBullseye={false}
             style={{ marginBottom: "16px" }}
-          >
-            <EmptyStateBody>{loadError}</EmptyStateBody>
-          </EmptyState>
+          />
         )}
 
         {loadingVms ? (
@@ -252,18 +248,11 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
             <span>Loading virtual machines...</span>
           </Flex>
         ) : filteredVms.length === 0 ? (
-          <Bullseye style={{ padding: "32px 0" }}>
-            <EmptyState
-              headingLevel="h3"
-              titleText="No virtual machines match this search criteria"
-              icon={SearchIcon}
-              variant={EmptyStateVariant.sm}
-            >
-              <EmptyStateBody>
-                Try a different search term or clear the search field.
-              </EmptyStateBody>
-            </EmptyState>
-          </Bullseye>
+          <AppEmptyState
+            titleText="No virtual machines match this search criteria"
+            body="Try a different search term or clear the search field."
+            icon={SearchIcon}
+          />
         ) : (
           <Table
             aria-label={`Virtual machines running ${application.name}`}

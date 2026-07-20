@@ -25,11 +25,13 @@ import {
   Tabs,
   TabTitleText,
 } from "@patternfly/react-core";
+import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
 import {
+  AppEmptyState,
   DataSharingAlert,
   DataSharingModal,
 } from "../../common/components/index";
@@ -675,11 +677,20 @@ export const ReportContainer: React.FC = () => {
                     onNavigateToVMFilters={handleNavigateToVMFilters}
                   />
                 ) : (
-                  <Content component="p">
-                    {clusterView.isAggregateView
-                      ? "This assessment does not have report data yet."
-                      : "No data is available for the selected cluster."}
-                  </Content>
+                  <AppEmptyState
+                    titleText={
+                      clusterView.isAggregateView
+                        ? "This assessment does not have report data yet"
+                        : "No data is available for the selected cluster"
+                    }
+                    body={
+                      clusterView.isAggregateView
+                        ? "Report data will appear here once inventory collection is complete."
+                        : "Select a different cluster or check that inventory data has been collected."
+                    }
+                    icon={InboxIcon}
+                    bullseyeStyle={{ minHeight: "240px" }}
+                  />
                 )}
               </div>
             </Tab>

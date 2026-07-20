@@ -1,7 +1,6 @@
 import {
   Alert,
   AlertActionCloseButton,
-  Bullseye,
   Button,
   Content,
   Drawer,
@@ -14,6 +13,7 @@ import {
   DrawerPanelContent,
   EmptyState,
   EmptyStateBody,
+  EmptyStateVariant,
   Flex,
   FlexItem,
   MenuToggle,
@@ -28,10 +28,11 @@ import {
   Title,
   Tooltip,
 } from "@patternfly/react-core";
-import { ColumnsIcon, CopyIcon } from "@patternfly/react-icons";
+import { ColumnsIcon, CopyIcon, SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
+import { AppEmptyState } from "../../../common/components";
 import { useCapability } from "../../../credentials/CredentialsContext";
 import useLocalStorage from "../../../hooks/useLocalStorage";
 import type {
@@ -179,7 +180,11 @@ export const StorageOffloadResultsView: React.FC<
           <strong>Target datastore:</strong> {drawerPair.targetDatastore}
         </Content>
         {drawerRuns.length === 0 ? (
-          <Content component="p">No runs recorded for this pair.</Content>
+          <AppEmptyState
+            titleText="No runs recorded for this pair"
+            variant={EmptyStateVariant.xs}
+            wrapInBullseye={false}
+          />
         ) : (
           <Table variant="compact" aria-label="Individual runs">
             <Thead>
@@ -231,8 +236,7 @@ export const StorageOffloadResultsView: React.FC<
 
   if (isLoading) {
     return (
-      <EmptyState>
-        <Spinner size="xl" />
+      <EmptyState icon={Spinner} titleText="Loading results">
         <EmptyStateBody>Loading results…</EmptyStateBody>
       </EmptyState>
     );
@@ -411,13 +415,20 @@ export const StorageOffloadResultsView: React.FC<
                   {filteredPairs.length === 0 ? (
                     <Tr>
                       <Td colSpan={columnCount}>
-                        <Bullseye style={{ padding: "24px" }}>
-                          <Content component="p">
-                            {filter
-                              ? "No datastore pairs match your filter."
-                              : "No estimate runs yet."}
-                          </Content>
-                        </Bullseye>
+                        <AppEmptyState
+                          titleText={
+                            filter
+                              ? "No datastore pairs match your filter"
+                              : "No estimate runs yet"
+                          }
+                          body={
+                            filter
+                              ? "Try a different search term or clear the filter."
+                              : "Add a datastore pair estimate to get started."
+                          }
+                          icon={SearchIcon}
+                          bullseyeStyle={{ padding: "24px" }}
+                        />
                       </Td>
                     </Tr>
                   ) : (

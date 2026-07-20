@@ -331,8 +331,7 @@ export const SelectPairsForm: React.FC<SelectPairsFormProps> = ({
 
   if (isLoading) {
     return (
-      <EmptyState>
-        <Spinner size="xl" />
+      <EmptyState icon={Spinner} titleText="Loading datastores">
         <EmptyStateBody>Loading datastores…</EmptyStateBody>
       </EmptyState>
     );

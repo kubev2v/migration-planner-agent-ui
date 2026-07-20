@@ -11,7 +11,9 @@ import {
   GridItem,
   PageSection,
 } from "@patternfly/react-core";
+import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { AppEmptyState } from "../../../../common/components";
 import type { NavigateToVMFilters } from "../VirtualMachinesTab/vmNavigation";
 import { ClustersOverview } from "./ClustersOverview";
 import { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
@@ -91,11 +93,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   if (!clusterFound && !isAggregateView) {
     return (
       <PageSection hasBodyWrapper={false} className={dashboardStyles.container}>
-        <Grid hasGutter>
-          <GridItem span={12}>
-            No data is available for the selected cluster.
-          </GridItem>
-        </Grid>
+        <AppEmptyState
+          titleText="No data is available for the selected cluster"
+          body="Select a different cluster or check that inventory data has been collected."
+          icon={InboxIcon}
+          bullseyeStyle={{ minHeight: "240px" }}
+        />
       </PageSection>
     );
   }

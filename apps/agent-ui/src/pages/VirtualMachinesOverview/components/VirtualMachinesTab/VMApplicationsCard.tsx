@@ -11,6 +11,7 @@ import { CubesIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback } from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { getApplicationVendor } from "../ApplicationsTab/applicationVendor";
 import { VmDetailListCardToolbar } from "./VmDetailListCardToolbar";
 import { VmDetailListSearchEmptyState } from "./VmDetailListSearchEmptyState";
@@ -23,9 +24,6 @@ const styles = {
     display: flex;
     align-items: center;
     gap: 8px;
-  `,
-  subtleText: css`
-    color: var(--pf-t--global--text--color--subtle);
   `,
 };
 
@@ -76,9 +74,12 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
             <span>Loading applications...</span>
           </div>
         ) : applications.length === 0 ? (
-          <span className={styles.subtleText}>
-            No applications were detected on this virtual machine.
-          </span>
+          <AppEmptyState
+            titleText="No applications were detected on this virtual machine"
+            body="Applications are identified during virtual machine inspection."
+            icon={CubesIcon}
+            bullseyeStyle={{ padding: "16px 0" }}
+          />
         ) : (
           <>
             <VmDetailListCardToolbar

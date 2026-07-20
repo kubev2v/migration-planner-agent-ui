@@ -1,30 +1,32 @@
 import { css } from "@emotion/css";
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import {
-  Bullseye,
   Button,
   Dropdown,
   DropdownItem,
   DropdownList,
-  EmptyState,
   EmptyStateActions,
-  EmptyStateBody,
   EmptyStateFooter,
-  EmptyStateVariant,
   MenuToggle,
   type MenuToggleElement,
   Pagination,
+  Spinner,
   Title,
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
   ToolbarItem,
 } from "@patternfly/react-core";
-import { DesktopIcon, EllipsisVIcon } from "@patternfly/react-icons";
+import {
+  DesktopIcon,
+  EllipsisVIcon,
+  SearchIcon,
+} from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { AppEmptyState } from "../../../common/components";
 import {
   AttributeValueFilter,
   type AttributeValueFilterAttribute,
@@ -187,36 +189,42 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
         <Tbody>
           {loading ? (
             <Tr>
-              <Td colSpan={5}>Loading groups...</Td>
+              <Td colSpan={5}>
+                <AppEmptyState
+                  titleText="Loading groups"
+                  icon={Spinner}
+                  wrapInBullseye={false}
+                />
+              </Td>
             </Tr>
           ) : showWelcomeEmpty ? (
             <Tr>
               <Td colSpan={5}>
-                <Bullseye>
-                  <EmptyState
-                    headingLevel="h2"
-                    titleText="No virtual machine groups yet"
-                    icon={DesktopIcon}
-                    variant={EmptyStateVariant.sm}
-                  >
-                    <EmptyStateBody>
-                      Create virtual machine groups to generate targeted
-                      assessment reports and enhanced VM management.
-                    </EmptyStateBody>
-                    <EmptyStateFooter>
-                      <EmptyStateActions>
-                        <Button variant="primary" onClick={onCreateGroup}>
-                          Create VM group
-                        </Button>
-                      </EmptyStateActions>
-                    </EmptyStateFooter>
-                  </EmptyState>
-                </Bullseye>
+                <AppEmptyState
+                  headingLevel="h2"
+                  titleText="No virtual machine groups yet"
+                  body="Create virtual machine groups to generate targeted assessment reports and enhanced VM management."
+                  icon={DesktopIcon}
+                >
+                  <EmptyStateFooter>
+                    <EmptyStateActions>
+                      <Button variant="primary" onClick={onCreateGroup}>
+                        Create VM group
+                      </Button>
+                    </EmptyStateActions>
+                  </EmptyStateFooter>
+                </AppEmptyState>
               </Td>
             </Tr>
           ) : groups.length === 0 ? (
             <Tr>
-              <Td colSpan={5}>No groups found.</Td>
+              <Td colSpan={5}>
+                <AppEmptyState
+                  titleText="No groups match the current filters"
+                  body="Try adjusting your filters or clear all filters."
+                  icon={SearchIcon}
+                />
+              </Td>
             </Tr>
           ) : (
             groups.map((group) => (

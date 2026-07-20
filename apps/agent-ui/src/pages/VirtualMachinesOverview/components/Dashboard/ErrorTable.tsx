@@ -1,7 +1,14 @@
 import type { MigrationIssue } from "@openshift-migration-advisor/agent-sdk";
-import { Card, CardBody, CardTitle, Icon } from "@patternfly/react-core";
+import {
+  Card,
+  CardBody,
+  CardTitle,
+  EmptyStateVariant,
+  Icon,
+} from "@patternfly/react-core";
 import { ExclamationCircleIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { ReportTable } from "../../../Groups/components/ReportTable";
 import { dashboardStyles } from "./dashboardStyles";
 
@@ -37,7 +44,12 @@ export const ErrorTable: React.FC<ErrorTableProps> = ({
       </CardTitle>
       <CardBody>
         {errors.length === 0 ? (
-          <div>No errors found</div>
+          <AppEmptyState
+            titleText="No errors found"
+            status="success"
+            variant={EmptyStateVariant.xs}
+            wrapInBullseye={false}
+          />
         ) : (
           <div>
             <ReportTable<MigrationIssue>
