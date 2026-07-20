@@ -22,6 +22,7 @@ import { ErrorTable } from "./ErrorTable";
 import { HostsOverview } from "./HostsOverview";
 import { NetworkOverview } from "./NetworkOverview";
 import { OSDistribution } from "./OSDistribution";
+import type { OSDistributionEntry } from "./osSupportTier";
 import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
 import { WarningsTable } from "./WarningsTable";
@@ -60,17 +61,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           acc[osName] = {
             count: osInfo.count,
             supported: osInfo.supported,
+            supportTier: osInfo.supportTier,
             upgradeRecommendation: osInfo.upgradeRecommendation || "",
           };
           return acc;
         },
-        {} as {
-          [osName: string]: {
-            count: number;
-            supported: boolean;
-            upgradeRecommendation: string;
-          };
-        },
+        {} as Record<string, OSDistributionEntry>,
       )
     : Object.entries(vms.os || {}).reduce(
         (acc, [osName, count]) => {
@@ -81,13 +77,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           };
           return acc;
         },
-        {} as {
-          [osName: string]: {
-            count: number;
-            supported: boolean;
-            upgradeRecommendation: string;
-          };
-        },
+        {} as Record<string, OSDistributionEntry>,
       );
 
   if (!clusterFound && !isAggregateView) {

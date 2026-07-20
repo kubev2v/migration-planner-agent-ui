@@ -8,3 +8,7 @@ import { chart_color_yellow_300 } from "@patternfly/react-tokens/dist/esm/chart_
  */
 export const chartColorSuccess = chart_color_blue_300.value;
 export const chartColorFailure = chart_color_yellow_300.value;
+
+export const REPORT_CARD_EMPTY_STATE_TITLES = {
+  operatingSystems: "Operating system data not collected",
+} as const;
