@@ -219,4 +219,79 @@ describe("useVMTableLogic filters", () => {
       }),
     );
   });
+
+  it("clears VM selection when a filter is applied", () => {
+    const onSelectionChange = vi.fn();
+    const selectedVMs = new Set(["vm-1", "vm-2"]);
+
+    const { result } = renderHook(() =>
+      useVMTableLogic({
+        vms: EMPTY_VMS,
+        selectedVMs,
+        onSelectionChange,
+      }),
+    );
+
+    const statusAttribute = getCheckboxAttribute(
+      result.current.filterAttributes,
+      "status",
+    );
+
+    act(() => {
+      statusAttribute.onSelectionsChange(["poweredOn"]);
+    });
+
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
+  });
+
+  it("clears VM selection when search filter changes", () => {
+    const onSelectionChange = vi.fn();
+    const selectedVMs = new Set(["vm-1"]);
+
+    const { result } = renderHook(() =>
+      useVMTableLogic({
+        vms: EMPTY_VMS,
+        selectedVMs,
+        onSelectionChange,
+      }),
+    );
+
+    const nameAttribute = result.current.filterAttributes.find(
+      (attribute) => attribute.id === "name",
+    );
+    if (!nameAttribute || nameAttribute.type !== "text") {
+      throw new Error('Expected text attribute "name"');
+    }
+
+    act(() => {
+      nameAttribute.onChange("web-server");
+    });
+
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
+  });
+
+  it("clears VM selection when initialFilters change from URL navigation", () => {
+    const onSelectionChange = vi.fn();
+
+    const { rerender } = renderHook(
+      (props: UseVMTableLogicParams) => useVMTableLogic(props),
+      {
+        initialProps: {
+          vms: EMPTY_VMS,
+          initialFilters: {},
+          selectedVMs: new Set(["vm-1", "vm-2"]),
+          onSelectionChange,
+        },
+      },
+    );
+
+    rerender({
+      vms: EMPTY_VMS,
+      initialFilters: { statuses: ["poweredOn"] },
+      selectedVMs: new Set(["vm-1", "vm-2"]),
+      onSelectionChange,
+    });
+
+    expect(onSelectionChange).toHaveBeenCalledWith(new Set());
+  });
 });
