@@ -110,6 +110,25 @@ export function resolveSupportTier(
     : OsInfoSupportTierEnum.SpecialHandling;
 }
 
+export function hasOsUpgradeNotice(
+  osData: Record<string, OSDistributionEntry>,
+): boolean {
+  return Object.entries(osData).some(([osName, entry]) => {
+    if (!osName.trim()) {
+      return false;
+    }
+
+    if (entry.upgradeRecommendation.trim() !== "") {
+      return true;
+    }
+
+    return (
+      resolveSupportTier(entry.supportTier, entry.supported) !==
+      OsInfoSupportTierEnum.Certified
+    );
+  });
+}
+
 export function getSupportTierSortOrder(tier: SupportTier): number {
   return SUPPORT_TIER_SORT_ORDER[tier];
 }

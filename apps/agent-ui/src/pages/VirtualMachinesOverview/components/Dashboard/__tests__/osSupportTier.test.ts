@@ -6,6 +6,7 @@ import {
   getSupportTierDefinition,
   getSupportTierLegendLabel,
   getSupportTierSortOrder,
+  hasOsUpgradeNotice,
   resolveSupportTier,
   SUPPORT_TIER_DEFINITIONS,
 } from "../osSupportTier";
@@ -84,5 +85,29 @@ describe("osSupportTier", () => {
       backgroundColor: "#b9dafc",
       color: "#004d99",
     });
+  });
+
+  it("detects when the upgrade notice should be shown", () => {
+    expect(
+      hasOsUpgradeNotice({
+        "Red Hat Enterprise Linux 9 (64-bit)": {
+          count: 1,
+          supported: true,
+          supportTier: OsInfoSupportTierEnum.Certified,
+          upgradeRecommendation: "",
+        },
+      }),
+    ).toBe(false);
+
+    expect(
+      hasOsUpgradeNotice({
+        "CentOS 7 (64-bit)": {
+          count: 1,
+          supported: false,
+          supportTier: OsInfoSupportTierEnum.SpecialHandling,
+          upgradeRecommendation: "",
+        },
+      }),
+    ).toBe(true);
   });
 });

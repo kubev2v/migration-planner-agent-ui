@@ -3,10 +3,8 @@ import {
   Card,
   CardBody,
   CardTitle,
-  Content,
   Flex,
   FlexItem,
-  Icon,
   MenuToggle,
   type MenuToggleElement,
   SearchInput,
@@ -17,7 +15,7 @@ import {
   ToolbarContent,
   ToolbarItem,
 } from "@patternfly/react-core";
-import { DesktopIcon, InfoCircleIcon } from "@patternfly/react-icons";
+import { DesktopIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { CardEmptyState } from "./CardEmptyState";
@@ -25,6 +23,8 @@ import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants";
 import { dashboardStyles } from "./dashboardStyles";
 import { EmptySearchResults } from "./EmptySearchResults";
 import { OsSupportTiersHelpPopover } from "./OsSupportTiersHelpPopover";
+import { OsUpgradeNotice } from "./OsUpgradeNotice";
+import { OsNameCell } from "./OsUpgradeRecommendationPopover";
 import {
   getSupportTierLegendLabel,
   ORDERED_SUPPORT_TIERS,
@@ -62,55 +62,29 @@ interface OSDistributionProps {
 export const OSDistribution: React.FC<OSDistributionProps> = ({
   osData,
   isExportMode = false,
-}) => {
-  const hasUpgradeRecommendation = Object.values(osData).some(
-    (o) => o.upgradeRecommendation && o.upgradeRecommendation.trim() !== "",
-  );
-
-  return (
-    <Card
-      className={
-        isExportMode ? dashboardStyles.cardPrint : dashboardStyles.card
-      }
-      id="os-distribution"
-    >
-      <CardTitle>
-        <Flex
-          alignItems={{ default: "alignItemsCenter" }}
-          spaceItems={{ default: "spaceItemsSm" }}
-        >
-          <FlexItem>
-            <DesktopIcon /> Operating Systems
-          </FlexItem>
-          <FlexItem>
-            <OsSupportTiersHelpPopover />
-          </FlexItem>
-        </Flex>
-      </CardTitle>
-      <CardBody>
-        {hasUpgradeRecommendation ? (
-          <Flex
-            alignItems={{ default: "alignItemsCenter" }}
-            spaceItems={{ default: "spaceItemsSm" }}
-            style={{ marginBottom: "8px" }}
-          >
-            <FlexItem>
-              <Icon status="info">
-                <InfoCircleIcon />
-              </Icon>
-            </FlexItem>
-            <FlexItem>
-              <Content component="p" style={{ fontWeight: 500 }}>
-                Some operating systems may need upgrades before migration
-              </Content>
-            </FlexItem>
-          </Flex>
-        ) : null}
-        <OSBarChart osData={osData} isExportMode={isExportMode} />
-      </CardBody>
-    </Card>
-  );
-};
+}) => (
+  <Card
+    className={isExportMode ? dashboardStyles.cardPrint : dashboardStyles.card}
+    id="os-distribution"
+  >
+    <CardTitle>
+      <Flex
+        alignItems={{ default: "alignItemsCenter" }}
+        spaceItems={{ default: "spaceItemsSm" }}
+      >
+        <FlexItem>
+          <DesktopIcon /> Operating Systems
+        </FlexItem>
+        <FlexItem>
+          <OsSupportTiersHelpPopover />
+        </FlexItem>
+      </Flex>
+    </CardTitle>
+    <CardBody>
+      <OSBarChart osData={osData} isExportMode={isExportMode} />
+    </CardBody>
+  </Card>
+);
 
 interface OSBarChartProps {
   osData: Record<string, OSDistributionEntry>;
@@ -177,6 +151,8 @@ export const OSBarChart: React.FC<OSBarChartProps> = ({
         </Toolbar>
       ) : null}
 
+      {vm.showUpgradeNotice ? <OsUpgradeNotice /> : null}
+
       <div
         className={isExportMode ? undefined : tableScrollStyle}
         style={isExportMode ? undefined : { maxHeight: "350px" }}
@@ -199,7 +175,13 @@ export const OSBarChart: React.FC<OSBarChartProps> = ({
             ) : (
               vm.filteredRows.map((row) => (
                 <Tr key={row.osName}>
-                  <Td dataLabel="OS">{row.osName}</Td>
+                  <Td dataLabel="OS">
+                    <OsNameCell
+                      osName={row.osName}
+                      upgradeRecommendation={row.upgradeRecommendation}
+                      isExportMode={isExportMode}
+                    />
+                  </Td>
                   <Td dataLabel="Tier">
                     <SupportTierBadge
                       tier={row.tier}

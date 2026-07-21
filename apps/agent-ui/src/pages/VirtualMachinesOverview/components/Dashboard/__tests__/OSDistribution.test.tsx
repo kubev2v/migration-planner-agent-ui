@@ -67,6 +67,33 @@ describe("OSBarChart", () => {
     expect(rows[1]).toHaveTextContent("CentOS 7 (64-bit)");
   });
 
+  it("shows upgrade recommendation details next to the operating system", async () => {
+    const user = userEvent.setup();
+
+    render(<OSBarChart osData={sampleOsData} />);
+
+    const upgradeButton = screen.getByRole("button", {
+      name: "Open operating system upgrade information",
+    });
+    await user.click(upgradeButton);
+
+    const popover = await screen.findByRole("dialog");
+    expect(
+      within(popover).getByText("Upgrade to get support"),
+    ).toBeInTheDocument();
+    expect(within(popover).getByText("Upgrade to RHEL 7")).toBeInTheDocument();
+  });
+
+  it("does not show upgrade recommendation icon in export mode", () => {
+    render(<OSBarChart osData={sampleOsData} isExportMode />);
+
+    expect(
+      screen.queryByRole("button", {
+        name: "Open operating system upgrade information",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows official Red Hat definitions in tier badge tooltips", async () => {
     const user = userEvent.setup();
 
@@ -169,13 +196,45 @@ describe("OSDistribution", () => {
     ).toHaveAttribute("href", "https://access.redhat.com/articles/4234591");
   });
 
-  it("shows the upgrade recommendation banner when needed", () => {
-    render(<OSDistribution osData={sampleOsData} />);
+  it("shows the upgrade notice when non-certified operating systems are present", () => {
+    render(
+      <OSDistribution
+        osData={{
+          "CentOS 7 (64-bit)": {
+            count: 2,
+            supported: false,
+            supportTier: OsInfoSupportTierEnum.SpecialHandling,
+            upgradeRecommendation: "",
+          },
+        }}
+      />,
+    );
 
     expect(
       screen.getByText(
         "Some operating systems may need upgrades before migration",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("does not show the upgrade notice when all operating systems are certified", () => {
+    render(
+      <OSDistribution
+        osData={{
+          "Red Hat Enterprise Linux 9 (64-bit)": {
+            count: 5,
+            supported: true,
+            supportTier: OsInfoSupportTierEnum.Certified,
+            upgradeRecommendation: "",
+          },
+        }}
+      />,
+    );
+
+    expect(
+      screen.queryByText(
+        "Some operating systems may need upgrades before migration",
+      ),
+    ).not.toBeInTheDocument();
   });
 });
