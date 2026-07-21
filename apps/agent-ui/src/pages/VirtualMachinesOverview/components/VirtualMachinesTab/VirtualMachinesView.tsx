@@ -38,7 +38,10 @@ import {
 } from "./vmFilters";
 import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds, fetchAllMatchingVms } from "./vmSelection";
-import type { ColumnKey } from "./vmTableShared";
+import {
+  type ClientSortAllVmColumn,
+  isClientSortAllVmsColumn,
+} from "./vmTableShared";
 
 async function updateVmMigrationExcluded(
   agentApi: DefaultApiInterface,
@@ -243,9 +246,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [vmApplicationsMap, setVmApplicationsMap] = useState<
     Map<string, string[]>
   >(new Map());
-  const [clientSortColumn, setClientSortColumn] = useState<ColumnKey | null>(
-    null,
-  );
+  const [clientSortColumn, setClientSortColumn] =
+    useState<ClientSortAllVmColumn | null>(null);
   const [allVmsForClientSort, setAllVmsForClientSort] = useState<
     VirtualMachine[] | null
   >(null);
@@ -297,7 +299,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [initialFilters, scopedFilterExpression]);
 
   useEffect(() => {
-    if (clientSortColumn !== "applications" || !agentApi) {
+    if (!isClientSortAllVmsColumn(clientSortColumn) || !agentApi) {
       setAllVmsForClientSort(null);
       setClientSortLoading(false);
       return;
@@ -315,7 +317,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
           setAllVmsForClientSort(fetched);
         }
       } catch (err) {
-        console.error("Error fetching VMs for applications sort:", err);
+        console.error("Error fetching VMs for client-side sort:", err);
         if (!cancelled) {
           setAllVmsForClientSort(null);
         }
@@ -334,14 +336,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [agentApi, clientSortColumn, clientSortFilterExpression]);
 
   const sourceVms = useMemo(() => {
-    if (clientSortColumn === "applications" && allVmsForClientSort) {
+    if (isClientSortAllVmsColumn(clientSortColumn) && allVmsForClientSort) {
       return allVmsForClientSort;
     }
     return vms;
   }, [allVmsForClientSort, clientSortColumn, vms]);
 
   const tableTotalVMs = useMemo(() => {
-    if (clientSortColumn === "applications" && allVmsForClientSort) {
+    if (isClientSortAllVmsColumn(clientSortColumn) && allVmsForClientSort) {
       return allVmsForClientSort.length;
     }
     return totalVMs;

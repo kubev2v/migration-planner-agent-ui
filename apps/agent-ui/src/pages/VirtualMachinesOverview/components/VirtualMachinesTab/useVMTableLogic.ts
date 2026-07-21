@@ -26,6 +26,7 @@ import {
   FRONTEND_SORT_METHODS,
   type FrontendSortableColumn,
   isBackendSortableColumn,
+  isClientSortAllVmsColumn,
   isSortableColumn,
   MANDATORY_COLUMNS,
   resolveVisibleColumns,
@@ -345,9 +346,7 @@ export function useVMTableLogic({
 
   useEffect(() => {
     onFrontendSortChange?.(
-      sortByColumnKey && !isBackendSortableColumn(sortByColumnKey)
-        ? sortByColumnKey
-        : null,
+      isClientSortAllVmsColumn(sortByColumnKey) ? sortByColumnKey : null,
     );
   }, [onFrontendSortChange, sortByColumnKey]);
 
