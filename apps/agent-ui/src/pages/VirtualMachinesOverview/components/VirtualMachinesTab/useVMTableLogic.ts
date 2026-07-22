@@ -311,6 +311,10 @@ export function useVMTableLogic({
       const next = initialFilters?.search || "";
       return previous === next ? previous : next;
     });
+
+    if (selectedVMs.size > 0) {
+      onSelectionChange?.(new Set());
+    }
   }, [initialFiltersSnapshot]);
   // Selection state
   // const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
@@ -372,8 +376,9 @@ export function useVMTableLogic({
       isUserInteraction.current = true;
       updater();
       onPageChange?.(1, pageSize);
+      onSelectionChange?.(new Set());
     },
-    [onPageChange, pageSize],
+    [onPageChange, onSelectionChange, pageSize],
   );
 
   // Update URL and trigger backend refetch when filters change due to user interaction
@@ -518,8 +523,7 @@ export function useVMTableLogic({
       buildVmTableFilterAttributes({
         searchValue,
         onSearchChange: (value) => {
-          isUserInteraction.current = true;
-          setSearchValue(value);
+          applyFilterChange(() => setSearchValue(value));
         },
         selectedConcernCategories,
         onConcernCategoriesChange: (values) => {
