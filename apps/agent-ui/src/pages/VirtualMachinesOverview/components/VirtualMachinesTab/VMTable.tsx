@@ -104,6 +104,7 @@ export const VMTable: React.FC<VMTableProps> = ({
         onRemoveFromGroup={onRemoveFromGroup}
         openCancelInspectionConfirm={logic.openCancelInspectionConfirm}
         cancelingInspectionVmIds={cancelingInspectionVmIds}
+        inspectionActive={inspectionActive}
       />
 
       <VMTableModals

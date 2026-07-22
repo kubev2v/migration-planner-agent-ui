@@ -48,6 +48,7 @@ export interface VMTableGridProps {
   onRemoveFromGroup?: (vmIds: string[]) => void;
   openCancelInspectionConfirm: (vmId: string) => void;
   cancelingInspectionVmIds?: Set<string>;
+  inspectionActive?: boolean;
 }
 
 export const VMTableGrid: React.FC<VMTableGridProps> = ({
@@ -67,6 +68,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   onRemoveFromGroup,
   openCancelInspectionConfirm,
   cancelingInspectionVmIds,
+  inspectionActive = false,
 }) => {
   const {
     columns,
@@ -150,13 +152,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                     rowIndex,
                     onSelect: (_event, isSelected) =>
                       onSelectVM(vm, isSelected),
-                    isSelected:
-                      selectedVMs.has(vm.id) ||
-                      vm.inspectionStatus?.state === "running" ||
-                      vm.inspectionStatus?.state === "pending",
-                    isDisabled:
-                      vm.inspectionStatus?.state === "running" ||
-                      vm.inspectionStatus?.state === "pending",
+                    isSelected: selectedVMs.has(vm.id),
                   }}
                 />
                 {isColumnVisible("name") && (
@@ -358,6 +354,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                             return (
                               <DropdownItem
                                 key="rerun-inspection"
+                                isDisabled={inspectionActive}
                                 onClick={() => onRunDeepInspection?.(vm.id)}
                               >
                                 Re-run deep inspection
@@ -367,6 +364,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                           return (
                             <DropdownItem
                               key="inspect"
+                              isDisabled={inspectionActive}
                               onClick={() => onRunDeepInspection?.(vm.id)}
                             >
                               Run deep inspection

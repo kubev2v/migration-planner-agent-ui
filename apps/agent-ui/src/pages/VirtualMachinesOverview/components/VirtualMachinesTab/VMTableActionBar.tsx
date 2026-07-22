@@ -182,11 +182,17 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                 </Button>
               </Tooltip>
             ) : (
-              <Tooltip content="Select VMs for deep inspection.">
+              <Tooltip
+                content={
+                  inspectionActive
+                    ? "A deep inspection is already in progress."
+                    : "Select VMs for deep inspection."
+                }
+              >
                 <Button
                   variant="primary"
                   icon={<MagicIcon />}
-                  isAriaDisabled={selectedVMs.size === 0}
+                  isAriaDisabled={selectedVMs.size === 0 || inspectionActive}
                   onClick={() => {
                     if (shouldRequestCredentials) {
                       openEditModal(() => onRunDeepInspection?.());
@@ -202,7 +208,7 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
           </ToolbarItem>
           {inspectionActive && (
             <ToolbarItem>
-              <Spinner size="md" />
+              <Spinner size="md" aria-label="Deep inspection in progress" />
             </ToolbarItem>
           )}
         </>
