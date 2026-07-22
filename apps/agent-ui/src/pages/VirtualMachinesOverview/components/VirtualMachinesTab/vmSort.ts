@@ -16,6 +16,22 @@ export function getVmApplicationCount(vm: VirtualMachine): number {
 export const applicationsSort: (vm: VirtualMachine) => number = (vm) =>
   getVmApplicationCount(vm);
 
+export function getVmLabelCount(vm: VirtualMachine): number {
+  const labels = (vm as VirtualMachine & { labels?: unknown }).labels;
+  return Array.isArray(labels) ? labels.length : 0;
+}
+
+export const labelsSort: (vm: VirtualMachine) => number = (vm) =>
+  getVmLabelCount(vm);
+
+export function getVmGroupCount(vm: VirtualMachine): number {
+  const groupItems = (vm as { groupItems?: unknown }).groupItems;
+  return Array.isArray(groupItems) ? groupItems.length : 0;
+}
+
+export const groupsSort: (vm: VirtualMachine) => number = (vm) =>
+  getVmGroupCount(vm);
+
 export const deepInspectionSort: (vm: VirtualMachine) => number = (vm) => {
   const state = vm.inspectionStatus?.state;
   const concernCount = vm.inspectionConcernCount || 0;

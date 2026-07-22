@@ -1,6 +1,11 @@
 import { css } from "@emotion/css";
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
-import { applicationsSort, deepInspectionSort } from "./vmSort";
+import {
+  applicationsSort,
+  deepInspectionSort,
+  groupsSort,
+  labelsSort,
+} from "./vmSort";
 
 export type ColumnKey =
   | "name"
@@ -35,7 +40,18 @@ export const BACKEND_SORTABLE_COLUMNS = [
 export const FRONTEND_SORTABLE_COLUMNS = [
   "applications",
   "deepInspection",
+  "labels",
+  "groups",
 ] as const;
+
+/** Frontend sorts that require fetching all matching VMs (not just the current page). */
+export const CLIENT_SORT_ALL_VM_COLUMNS = [
+  "applications",
+  "labels",
+  "groups",
+] as const;
+
+export type ClientSortAllVmColumn = (typeof CLIENT_SORT_ALL_VM_COLUMNS)[number];
 
 export type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
 export type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
@@ -84,6 +100,12 @@ export const isBackendSortableColumn = (
 ): key is BackendSortableColumn =>
   key !== null &&
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
+
+export const isClientSortAllVmsColumn = (
+  key: ColumnKey | null,
+): key is ClientSortAllVmColumn =>
+  key !== null &&
+  (CLIENT_SORT_ALL_VM_COLUMNS as readonly ColumnKey[]).includes(key);
 
 export const utilizationPercentRanges = [
   { label: "0-25%", min: 0, max: 25 },
@@ -281,6 +303,8 @@ export const FRONTEND_SORT_METHODS: Record<
 > = {
   applications: applicationsSort,
   deepInspection: deepInspectionSort,
+  labels: labelsSort,
+  groups: groupsSort,
 };
 
 export const formatDiskSize = (sizeInMB: number): string => {
