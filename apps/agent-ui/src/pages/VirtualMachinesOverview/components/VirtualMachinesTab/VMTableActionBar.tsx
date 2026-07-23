@@ -17,6 +17,10 @@ import {
 import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCapability } from "../../../../credentials/CredentialsContext";
+import {
+  getDeepInspectionDisabledTooltip,
+  getDeepInspectionEnablement,
+} from "./vmInspectionUtils";
 import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
 
@@ -39,6 +43,8 @@ export interface VMTableActionBarProps {
   onRemoveFromGroup?: (vmIds: string[]) => void;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onResetInspection?: () => void;
+  inspectionContextVms?: VirtualMachine[];
+  selectionContextLoadFailed?: boolean;
 }
 
 export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
@@ -60,6 +66,8 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   onRemoveFromGroup,
   onRunDeepInspection,
   onResetInspection,
+  inspectionContextVms,
+  selectionContextLoadFailed = false,
 }) => {
   const {
     shouldShowTooltip,
@@ -81,6 +89,12 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   } = logic;
 
   const { hideToolbarActions } = variantUI;
+  const deepInspectionEnablement = selectionContextLoadFailed
+    ? { enabled: false as const, reason: "selection-load-failed" as const }
+    : getDeepInspectionEnablement(selectedVMs, inspectionContextVms ?? vms);
+  const deepInspectionTooltip = deepInspectionEnablement.enabled
+    ? "Run deep inspection on the selected VMs."
+    : getDeepInspectionDisabledTooltip(deepInspectionEnablement.reason);
 
   return (
     <>
@@ -182,17 +196,11 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                 </Button>
               </Tooltip>
             ) : (
-              <Tooltip
-                content={
-                  inspectionActive
-                    ? "A deep inspection is already in progress."
-                    : "Select VMs for deep inspection."
-                }
-              >
+              <Tooltip content={deepInspectionTooltip}>
                 <Button
                   variant="primary"
                   icon={<MagicIcon />}
-                  isAriaDisabled={selectedVMs.size === 0 || inspectionActive}
+                  isAriaDisabled={!deepInspectionEnablement.enabled}
                   onClick={() => {
                     if (shouldRequestCredentials) {
                       openEditModal(() => onRunDeepInspection?.());

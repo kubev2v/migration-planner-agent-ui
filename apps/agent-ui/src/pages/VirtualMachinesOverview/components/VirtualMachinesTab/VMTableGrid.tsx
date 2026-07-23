@@ -19,6 +19,7 @@ import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
 import { formatMetric } from "./VMUtilizationMetrics";
+import { getDeepInspectionEnablementForVmAction } from "./vmInspectionUtils";
 import {
   renderVmInspectionStatus,
   renderVmStatus,
@@ -48,7 +49,8 @@ export interface VMTableGridProps {
   onRemoveFromGroup?: (vmIds: string[]) => void;
   openCancelInspectionConfirm: (vmId: string) => void;
   cancelingInspectionVmIds?: Set<string>;
-  inspectionActive?: boolean;
+  inspectionContextVms?: VirtualMachine[];
+  selectionContextLoadFailed?: boolean;
 }
 
 export const VMTableGrid: React.FC<VMTableGridProps> = ({
@@ -68,7 +70,8 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   onRemoveFromGroup,
   openCancelInspectionConfirm,
   cancelingInspectionVmIds,
-  inspectionActive = false,
+  inspectionContextVms,
+  selectionContextLoadFailed = false,
 }) => {
   const {
     columns,
@@ -81,6 +84,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
   } = logic;
 
   const { hideToolbarActions, disableVmNavigation } = variantUI;
+  const inspectionVms = inspectionContextVms ?? vms;
 
   return (
     <Table
@@ -351,20 +355,34 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                             vmState === "error" ||
                             vmState === "canceled"
                           ) {
+                            const rowInspectionEnabled =
+                              !selectionContextLoadFailed &&
+                              getDeepInspectionEnablementForVmAction(
+                                vm.id,
+                                selectedVMs,
+                                inspectionVms,
+                              ).enabled;
                             return (
                               <DropdownItem
                                 key="rerun-inspection"
-                                isDisabled={inspectionActive}
+                                isDisabled={!rowInspectionEnabled}
                                 onClick={() => onRunDeepInspection?.(vm.id)}
                               >
                                 Re-run deep inspection
                               </DropdownItem>
                             );
                           }
+                          const rowInspectionEnabled =
+                            !selectionContextLoadFailed &&
+                            getDeepInspectionEnablementForVmAction(
+                              vm.id,
+                              selectedVMs,
+                              inspectionVms,
+                            ).enabled;
                           return (
                             <DropdownItem
                               key="inspect"
-                              isDisabled={inspectionActive}
+                              isDisabled={!rowInspectionEnabled}
                               onClick={() => onRunDeepInspection?.(vm.id)}
                             >
                               Run deep inspection

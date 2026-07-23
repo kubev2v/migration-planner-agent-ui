@@ -2,6 +2,11 @@ import type {
   DefaultApiInterface,
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
+import { vmIdsToFilterExpression } from "../../../Groups/utils/groupFilters";
+import {
+  collectVmIdsUnderInspection,
+  isVmUnderInspection,
+} from "./vmInspectionUtils";
 
 const VM_FETCH_PAGE_SIZE = 100;
 
@@ -34,6 +39,45 @@ export async function fetchAllMatchingVms(
   }
 
   return vms;
+}
+
+/** Fetches VM records for the given IDs (all pages if needed). */
+export async function fetchVmsByIds(
+  agentApi: DefaultApiInterface,
+  vmIds: string[],
+): Promise<VirtualMachine[]> {
+  if (vmIds.length === 0) {
+    return [];
+  }
+  return fetchAllMatchingVms(agentApi, {
+    byExpression: vmIdsToFilterExpression(vmIds),
+  });
+}
+
+/** Returns IDs for every VM currently pending or running deep inspection. */
+export async function fetchVmIdsUnderInspection(
+  agentApi: DefaultApiInterface,
+  knownVms: VirtualMachine[] = [],
+): Promise<string[]> {
+  const ids = new Set(collectVmIdsUnderInspection(knownVms));
+
+  let page = 1;
+  let pageCount = 1;
+  do {
+    const response = await agentApi.getVMs({
+      page,
+      pageSize: VM_FETCH_PAGE_SIZE,
+    });
+    for (const vm of response.vms) {
+      if (isVmUnderInspection(vm)) {
+        ids.add(vm.id);
+      }
+    }
+    pageCount = response.pageCount ?? 1;
+    page += 1;
+  } while (page <= pageCount);
+
+  return [...ids];
 }
 
 /** Fetches IDs for every VM matching the given query (all pages). */
