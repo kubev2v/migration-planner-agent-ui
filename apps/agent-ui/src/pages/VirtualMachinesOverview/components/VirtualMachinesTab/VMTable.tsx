@@ -36,6 +36,8 @@ export const VMTable: React.FC<VMTableProps> = ({
   onAddToGroup,
   onRemoveFromGroup,
   inspectionActive = false,
+  inspectionContextVms,
+  selectionContextLoadFailed,
   cancelingInspectionVmIds,
   onCancelInspection,
   onResetInspection,
@@ -85,6 +87,8 @@ export const VMTable: React.FC<VMTableProps> = ({
         onRemoveFromGroup={onRemoveFromGroup}
         onRunDeepInspection={onRunDeepInspection}
         onResetInspection={onResetInspection}
+        inspectionContextVms={inspectionContextVms}
+        selectionContextLoadFailed={selectionContextLoadFailed}
       />
 
       <VMTableGrid
@@ -104,7 +108,8 @@ export const VMTable: React.FC<VMTableProps> = ({
         onRemoveFromGroup={onRemoveFromGroup}
         openCancelInspectionConfirm={logic.openCancelInspectionConfirm}
         cancelingInspectionVmIds={cancelingInspectionVmIds}
-        inspectionActive={inspectionActive}
+        inspectionContextVms={inspectionContextVms}
+        selectionContextLoadFailed={selectionContextLoadFailed}
       />
 
       <VMTableModals

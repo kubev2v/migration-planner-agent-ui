@@ -3,6 +3,7 @@ import type {
   DefaultApiInterface,
   InspectorStatus,
   VddkProperties,
+  VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
 import {
@@ -30,16 +31,25 @@ import {
   InfoCircleIcon,
 } from "@patternfly/react-icons";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
+import {
+  buildStartInspectionVmIds,
+  MAX_INSPECTION_VMS,
+} from "./vmInspectionUtils";
+import { fetchVmIdsUnderInspection } from "./vmSelection";
 
 interface DeepInspectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedVMIds: string[];
+  knownVmsForInspection?: VirtualMachine[];
   agentApi: DefaultApiInterface;
   onInspectionStarted: () => void;
+  onInspectionQueueChanged?: () => void;
 }
+
+type InspectorRunningState = "running" | "ready" | "unknown";
 
 type SectionStatus = "notConfigured" | "configured" | "error";
 
@@ -102,8 +112,10 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   isOpen,
   onClose,
   selectedVMIds,
+  knownVmsForInspection = [],
   agentApi,
   onInspectionStarted,
+  onInspectionQueueChanged,
 }) => {
   // Section expand/collapse
   const [vddkExpanded, setVddkExpanded] = useState(true);
@@ -119,6 +131,15 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   // Global state
   const [configuring, setConfiguring] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [existingInspectionVmIds, setExistingInspectionVmIds] = useState<
+    string[]
+  >([]);
+  const [inspectorRunning, setInspectorRunning] = useState(false);
+  const [inspectionContextError, setInspectionContextError] = useState<
+    string | null
+  >(null);
+  const [loadingInspectionContext, setLoadingInspectionContext] =
+    useState(false);
 
   const extractErrorMessage = async (
     err: unknown,
@@ -156,11 +177,85 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     }
   }, [agentApi]);
 
+  const getInspectorRunningState =
+    useCallback(async (): Promise<InspectorRunningState> => {
+      try {
+        const status = await agentApi.getInspectorStatus({});
+        return status.state === "running" ? "running" : "ready";
+      } catch (err) {
+        console.error("Error checking inspector status:", err);
+        return "unknown";
+      }
+    }, [agentApi]);
+
   useEffect(() => {
-    if (isOpen) {
-      fetchExistingStatus();
+    if (!isOpen) {
+      return;
     }
-  }, [isOpen, fetchExistingStatus]);
+
+    let cancelled = false;
+
+    const loadModalContext = async () => {
+      setLoadingInspectionContext(true);
+      setInspectionContextError(null);
+      try {
+        await fetchExistingStatus();
+
+        const runningState = await getInspectorRunningState();
+        if (cancelled) {
+          return;
+        }
+
+        const running = runningState === "running";
+        setInspectorRunning(running);
+
+        if (running) {
+          const vmIdsUnderInspection = await fetchVmIdsUnderInspection(
+            agentApi,
+            knownVmsForInspection,
+          );
+          if (cancelled) {
+            return;
+          }
+          if (vmIdsUnderInspection.length === 0) {
+            setExistingInspectionVmIds([]);
+            setInspectionContextError(
+              "Unable to load VMs currently under deep inspection. Refresh the table and try again.",
+            );
+          } else {
+            setExistingInspectionVmIds(vmIdsUnderInspection);
+          }
+        } else {
+          setExistingInspectionVmIds([]);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Error loading deep inspection context:", err);
+          setExistingInspectionVmIds([]);
+          setInspectorRunning(false);
+          setInspectionContextError(
+            "Unable to load deep inspection status. Try again in a moment.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingInspectionContext(false);
+        }
+      }
+    };
+
+    void loadModalContext();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    agentApi,
+    fetchExistingStatus,
+    getInspectorRunningState,
+    isOpen,
+    knownVmsForInspection,
+  ]);
 
   const resetState = () => {
     setVddkFile(null);
@@ -172,6 +267,10 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setConfiguring(false);
     setGlobalError(null);
     setVddkExpanded(true);
+    setExistingInspectionVmIds([]);
+    setInspectorRunning(false);
+    setInspectionContextError(null);
+    setLoadingInspectionContext(false);
   };
 
   const handleClose = () => {
@@ -217,34 +316,51 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     }
   };
 
-  const MAX_VMS = 10;
-  const tooManyVMs = selectedVMIds.length > MAX_VMS;
-
   const hasVMsSelected = selectedVMIds.length > 0;
+  const addingToExistingInspection = inspectorRunning;
+  const startInspectionVmIds = useMemo(
+    () =>
+      hasVMsSelected
+        ? buildStartInspectionVmIds(selectedVMIds, existingInspectionVmIds)
+        : [],
+    [existingInspectionVmIds, hasVMsSelected, selectedVMIds],
+  );
+  const tooManyVMs = startInspectionVmIds.length > MAX_INSPECTION_VMS;
 
   const canConfigure =
-    vddkStatus === "configured" && (!hasVMsSelected || !tooManyVMs);
+    vddkStatus === "configured" &&
+    !loadingInspectionContext &&
+    !inspectionContextError &&
+    (!hasVMsSelected || !tooManyVMs);
 
-  const isInspectorRunning = async (): Promise<boolean> => {
-    try {
-      const status = await agentApi.getInspectorStatus({});
-      return status.state === "running";
-    } catch {
-      // Can't determine state — assume it may be running so the caller
-      // attempts a stop, which is harmless if it's already stopped.
-      return true;
-    }
-  };
-
-  const waitForInspectorReady = async (): Promise<void> => {
+  const waitForInspectorReady = useCallback(async (): Promise<boolean> => {
     const MAX_WAIT_ATTEMPTS = 10;
     const POLL_INTERVAL_MS = 500;
     for (let i = 0; i < MAX_WAIT_ATTEMPTS; i++) {
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-      if (!(await isInspectorRunning())) return;
+      const state = await getInspectorRunningState();
+      if (state === "ready") {
+        return true;
+      }
+      if (state === "unknown") {
+        return false;
+      }
     }
-    // Best-effort: proceed even if the inspector didn't fully stop.
-  };
+    return (await getInspectorRunningState()) === "ready";
+  }, [getInspectorRunningState]);
+
+  const resolveVmIdsUnderInspection = useCallback(async (): Promise<
+    string[] | null
+  > => {
+    if (existingInspectionVmIds.length > 0) {
+      return existingInspectionVmIds;
+    }
+    const vmIdsUnderInspection = await fetchVmIdsUnderInspection(
+      agentApi,
+      knownVmsForInspection,
+    );
+    return vmIdsUnderInspection.length > 0 ? vmIdsUnderInspection : null;
+  }, [agentApi, existingInspectionVmIds, knownVmsForInspection]);
 
   const handleConfigure = async () => {
     // When no VMs are selected the user is only updating the configuration
@@ -258,19 +374,42 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setConfiguring(true);
     setGlobalError(null);
 
+    let stoppedForAdd = false;
     try {
-      // If the inspector is still alive (from a previous run or an active
-      // one), stop it and wait for the server to finish tearing it down
-      // before starting a new run with the full VM list.
-      const inspectorRunning = await isInspectorRunning();
-      if (inspectorRunning) {
+      let vmIds = selectedVMIds;
+      const inspectorState = await getInspectorRunningState();
+      if (inspectorState === "unknown") {
+        setGlobalError(
+          "Unable to verify deep inspection status. Try again in a moment.",
+        );
+        return;
+      }
+
+      if (inspectorState === "running") {
+        const vmIdsUnderInspection = await resolveVmIdsUnderInspection();
+        if (!vmIdsUnderInspection) {
+          setGlobalError(
+            "Unable to determine which VMs are currently under deep inspection. Refresh the table and try again.",
+          );
+          return;
+        }
+        vmIds = buildStartInspectionVmIds(selectedVMIds, vmIdsUnderInspection);
         await agentApi.stopInspection();
-        await waitForInspectorReady();
+        stoppedForAdd = true;
+        onInspectionQueueChanged?.();
+
+        const inspectorReady = await waitForInspectorReady();
+        if (!inspectorReady) {
+          setGlobalError(
+            "The inspector did not stop in time. Refresh the table, confirm the current run status, and try again.",
+          );
+          return;
+        }
       }
 
       await agentApi.startInspection({
         startInspectionRequest: {
-          vmIds: selectedVMIds,
+          vmIds,
         },
       });
       onInspectionStarted();
@@ -280,7 +419,14 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
         err,
         "Failed to start deep inspection",
       );
-      setGlobalError(message);
+      if (stoppedForAdd) {
+        onInspectionQueueChanged?.();
+        setGlobalError(
+          `${message} The previous deep inspection run was stopped. Select all affected VMs and start inspection again.`,
+        );
+      } else {
+        setGlobalError(message);
+      }
     } finally {
       setConfiguring(false);
     }
@@ -326,18 +472,46 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
           granular, disk-level scan.
           <br />
           {hasVMsSelected
-            ? `Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}`
+            ? addingToExistingInspection
+              ? `Add ${selectedVMIds.length} VM${selectedVMIds.length !== 1 ? "s" : ""} to the deep inspection already in progress.`
+              : `Configure deep inspection for ${selectedVMIds.length} selected VM${selectedVMIds.length !== 1 ? "s" : ""}.`
             : "Update the VDDK archive and credentials for deep inspection"}
         </Content>
+
+        {addingToExistingInspection && hasVMsSelected && (
+          <Alert
+            variant="warning"
+            title="Adding VMs restarts the inspection queue"
+            isInline
+            style={{ marginBottom: "16px" }}
+          >
+            The inspector stops briefly and restarts with the existing queue
+            plus the newly selected VMs. A VM currently being scanned may start
+            over from the beginning.
+          </Alert>
+        )}
 
         {tooManyVMs && (
           <Alert
             variant="warning"
-            title={`Deep inspection can be run on up to ${MAX_VMS} VMs at a time.`}
+            title={`Deep inspection can be run on up to ${MAX_INSPECTION_VMS} VMs at a time.`}
             isInline
             style={{ marginBottom: "16px" }}
           >
-            You have selected {selectedVMIds.length} VMs.
+            {addingToExistingInspection
+              ? `This inspection already includes ${existingInspectionVmIds.length} VM${existingInspectionVmIds.length !== 1 ? "s" : ""}. Adding the selected VM${selectedVMIds.length !== 1 ? "s" : ""} would exceed the limit (${startInspectionVmIds.length} total).`
+              : `You have selected ${selectedVMIds.length} VMs.`}
+          </Alert>
+        )}
+
+        {inspectionContextError && (
+          <Alert
+            variant="danger"
+            title="Unable to load inspection status"
+            isInline
+            style={{ marginBottom: "16px" }}
+          >
+            {inspectionContextError}
           </Alert>
         )}
 
@@ -460,10 +634,14 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
         <Button
           variant="primary"
           onClick={handleConfigure}
-          isLoading={configuring}
-          isDisabled={!canConfigure || configuring}
+          isLoading={configuring || loadingInspectionContext}
+          isDisabled={!canConfigure || configuring || loadingInspectionContext}
         >
-          {hasVMsSelected ? "Configure" : "Save configuration"}
+          {hasVMsSelected
+            ? addingToExistingInspection
+              ? "Add to inspection"
+              : "Configure"
+            : "Save configuration"}
         </Button>
         <Button variant="link" onClick={handleClose} isDisabled={configuring}>
           Cancel

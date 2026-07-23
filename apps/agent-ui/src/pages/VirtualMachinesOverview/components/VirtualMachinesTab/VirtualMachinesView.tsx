@@ -36,8 +36,15 @@ import {
   type VMFilters,
   withDefaultReportInclusion,
 } from "./vmFilters";
-import { cancelVmInspectionWithRetry } from "./vmInspectionUtils";
-import { fetchAllMatchingVmIds, fetchAllMatchingVms } from "./vmSelection";
+import {
+  cancelVmInspectionWithRetry,
+  getDeepInspectionEnablement,
+} from "./vmInspectionUtils";
+import {
+  fetchAllMatchingVmIds,
+  fetchAllMatchingVms,
+  fetchVmsByIds,
+} from "./vmSelection";
 import {
   type ClientSortAllVmColumn,
   isClientSortAllVmsColumn,
@@ -252,6 +259,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     VirtualMachine[] | null
   >(null);
   const [clientSortLoading, setClientSortLoading] = useState(false);
+  const [offPageSelectedVms, setOffPageSelectedVms] = useState<
+    VirtualMachine[]
+  >([]);
+  const [offPageSelectionLoadFailed, setOffPageSelectionLoadFailed] =
+    useState(false);
 
   const basePath = useMemo(
     () => (agentApi ? getAgentApiBasePath(agentApi) : ""),
@@ -370,6 +382,66 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   );
 
   const visibleVms = vmsForTable;
+
+  const visibleVmIds = useMemo(
+    () => new Set(vmsForTable.map((vm) => vm.id)),
+    [vmsForTable],
+  );
+
+  useEffect(() => {
+    if (!agentApi) {
+      setOffPageSelectedVms([]);
+      setOffPageSelectionLoadFailed(false);
+      return;
+    }
+
+    const missingIds = [...selectedVMs].filter((id) => !visibleVmIds.has(id));
+    if (missingIds.length === 0) {
+      setOffPageSelectedVms([]);
+      setOffPageSelectionLoadFailed(false);
+      return;
+    }
+
+    let cancelled = false;
+    setOffPageSelectionLoadFailed(false);
+    void (async () => {
+      try {
+        const fetched = await fetchVmsByIds(agentApi, missingIds);
+        if (!cancelled) {
+          setOffPageSelectedVms(fetched);
+          setOffPageSelectionLoadFailed(false);
+        }
+      } catch (err) {
+        console.error("Error fetching selected VM inspection context:", err);
+        if (!cancelled) {
+          setOffPageSelectedVms([]);
+          setOffPageSelectionLoadFailed(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agentApi, selectedVMs, visibleVmIds]);
+
+  const inspectionContextVms = useMemo((): VirtualMachine[] => {
+    const byId = new Map<string, VirtualMachine>();
+    for (const vm of vmsForTable) {
+      byId.set(vm.id, vm);
+    }
+    for (const vm of offPageSelectedVms) {
+      byId.set(vm.id, vm);
+    }
+    return [...byId.values()];
+  }, [offPageSelectedVms, vmsForTable]);
+
+  const selectionContextLoadFailed = useMemo(() => {
+    if (!offPageSelectionLoadFailed) {
+      return false;
+    }
+    return [...selectedVMs].some((id) => !visibleVmIds.has(id));
+  }, [offPageSelectionLoadFailed, selectedVMs, visibleVmIds]);
 
   const fetchAvailableLabels = useCallback(async () => {
     if (!agentApi) {
@@ -494,6 +566,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     onRefreshVMs,
   ]);
 
+  const handleGroupActionComplete = useCallback(async () => {
+    await handleGroupsChanged();
+    setSelectedVMs(new Set());
+  }, [handleGroupsChanged]);
+
   const handleFetchAllVmIds = useCallback(
     async (filters: VMFilters) => {
       if (!agentApi) {
@@ -542,6 +619,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
       await Promise.all([...addPromises, ...removePromises]);
       await refreshLabels();
+      setSelectedVMs(new Set());
     },
     [addLabelsVMIds, agentApi, refreshLabels],
   );
@@ -579,25 +657,25 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   };
 
   const handleRunDeepInspection = (includeVmId?: string) => {
+    if (selectionContextLoadFailed) {
+      return;
+    }
+
     const merged = new Set(selectedVMs);
     if (includeVmId) {
       merged.add(includeVmId);
     }
-    // startInspection replaces the entire run on the server, so VMs that are
-    // currently running or pending must be included in every new call or the
-    // server will cancel them by omission.
-    for (const vm of vms) {
-      if (
-        vm.inspectionStatus?.state === "running" ||
-        vm.inspectionStatus?.state === "pending"
-      ) {
-        merged.add(vm.id);
-      }
+
+    const enablement = getDeepInspectionEnablement(
+      merged,
+      inspectionContextVms,
+    );
+    if (!enablement.enabled) {
+      return;
     }
-    if (merged.size > 0) {
-      setSelectedVMs(merged);
-      setIsInspectionModalOpen(true);
-    }
+
+    setSelectedVMs(merged);
+    setIsInspectionModalOpen(true);
   };
 
   const stopPolling = useCallback(() => {
@@ -804,6 +882,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
         variant={variant}
         inspectionActive={inspectionActive}
+        inspectionContextVms={inspectionContextVms}
+        selectionContextLoadFailed={selectionContextLoadFailed}
         cancelingInspectionVmIds={cancelingInspectionVmIds}
         onCancelInspection={handleCancelInspection}
         onResetInspection={handleResetInspection}
@@ -813,8 +893,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
           isOpen={isInspectionModalOpen}
           onClose={() => setIsInspectionModalOpen(false)}
           selectedVMIds={Array.from(selectedVMs)}
+          knownVmsForInspection={inspectionContextVms}
           agentApi={agentApi}
           onInspectionStarted={handleInspectionStarted}
+          onInspectionQueueChanged={onRefreshVMs}
         />
       )}
       <AddLabelsModal
@@ -839,13 +921,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
             isOpen={isCreateGroupModalOpen}
             vmIds={groupActionVMIds}
             onClose={() => setIsCreateGroupModalOpen(false)}
-            onCreated={handleGroupsChanged}
+            onCreated={handleGroupActionComplete}
           />
           <AddToGroupModal
             isOpen={isAddToGroupModalOpen}
             vmIds={groupActionVMIds}
             onClose={() => setIsAddToGroupModalOpen(false)}
-            onUpdated={handleGroupsChanged}
+            onUpdated={handleGroupActionComplete}
           />
           <RemoveFromGroupModal
             isOpen={isRemoveFromGroupModalOpen}
@@ -855,7 +937,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
             fixedGroupName={groupContext?.name}
             groupNames={groupNamesForRemoval}
             onClose={() => setIsRemoveFromGroupModalOpen(false)}
-            onUpdated={handleGroupsChanged}
+            onUpdated={handleGroupActionComplete}
           />
         </>
       )}
