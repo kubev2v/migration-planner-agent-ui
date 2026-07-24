@@ -32,7 +32,7 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
       </div>
       {showExport && onExportClick ? (
         <Button variant="link" onClick={onExportClick} icon={<ExportIcon />}>
-          Export as CSV
+          Export
         </Button>
       ) : null}
     </div>
