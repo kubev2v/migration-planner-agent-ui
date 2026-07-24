@@ -1,8 +1,27 @@
-export function getExportZipFilename(date = new Date()): string {
+import type { ExportFormat } from "./exportScopes";
+
+function getExportDatePrefix(date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  return `migration-export-${year}-${month}-${day}.zip`;
+  return `migration-export-${year}-${month}-${day}`;
+}
+
+export function getExportZipFilename(date = new Date()): string {
+  return `${getExportDatePrefix(date)}.zip`;
+}
+
+export function getExportXlsxFilename(date = new Date()): string {
+  return `${getExportDatePrefix(date)}.xlsx`;
+}
+
+export function getExportFilename(
+  format: ExportFormat,
+  date = new Date(),
+): string {
+  return format === "xlsx"
+    ? getExportXlsxFilename(date)
+    : getExportZipFilename(date);
 }
 
 export function downloadExportBlob(blob: Blob, filename: string): void {
