@@ -39,7 +39,7 @@ import {
 } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
 import { AppEmptyState } from "../../common/components";
-import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
+import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -474,8 +474,6 @@ export const GroupDetailPage: React.FC = () => {
   });
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
-  const discoveryStatus = formatDiscoveryStatus(agentStatus);
-
   return (
     <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
       <Stack hasGutter>
@@ -502,7 +500,8 @@ export const GroupDetailPage: React.FC = () => {
                 {group.name}
               </Title>
               <Content component="p" style={{ marginTop: "8px" }}>
-                Discovery VM status: {discoveryStatus}
+                Red Hat sharing status:{" "}
+                <DiscoveryStatus agentStatus={agentStatus} />
               </Content>
             </div>
             <Dropdown

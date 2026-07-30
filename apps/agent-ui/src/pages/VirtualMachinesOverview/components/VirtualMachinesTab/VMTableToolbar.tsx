@@ -29,6 +29,8 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     onRemoveFromGroup,
     onRunDeepInspection,
     onResetInspection,
+    inspectionContextVms,
+    selectionContextLoadFailed,
   } = props;
 
   const filterBarProps = {
@@ -58,6 +60,8 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     onRemoveFromGroup,
     onRunDeepInspection,
     onResetInspection,
+    inspectionContextVms,
+    selectionContextLoadFailed,
   };
 
   return (
