@@ -46,6 +46,9 @@ export interface VMTableProps {
   onAddToGroup?: (vmIds: string[]) => void;
   onRemoveFromGroup?: (vmIds: string[]) => void;
   inspectionActive?: boolean;
+  /** VM records for selected rows, including off-page selections when available. */
+  inspectionContextVms?: VirtualMachine[];
+  selectionContextLoadFailed?: boolean;
   cancelingInspectionVmIds?: Set<string>;
   onCancelInspection?: (vmId: string) => Promise<void>;
   onResetInspection?: () => void;

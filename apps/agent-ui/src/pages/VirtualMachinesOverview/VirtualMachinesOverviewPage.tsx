@@ -35,7 +35,6 @@ import {
   DataSharingAlert,
   DataSharingModal,
 } from "../../common/components/index";
-import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -76,11 +75,7 @@ import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const {
-    agentStatus,
-    hasCollectionData,
-    refetch: refetchAgentStatus,
-  } = useAgentStatus();
+  const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [vmsList, setVmsList] = useState<VirtualMachine[]>([]);
@@ -358,27 +353,24 @@ export const ReportContainer: React.FC = () => {
     }
   }, [agentApi, initialVMFilters, vmsSortFields, vmsPage, vmsPageSize]);
 
-  const discoveryStatus = formatDiscoveryStatus(agentStatus);
-
   const {
     isExportModalOpen,
-    showExport,
     exportError,
     isExporting,
     openExportModal,
     closeExportModal,
     confirmExport,
-  } = useExportInventory(agentApi, {
-    hasCollectionData,
-    hasInventory: Boolean(inventory),
-  });
+  } = useExportInventory(agentApi);
 
   if (loading) {
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader discoveryStatus={discoveryStatus} />
+            <ReportPageHeader
+              agentStatus={agentStatus}
+              onExportClick={openExportModal}
+            />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -387,6 +379,13 @@ export const ReportContainer: React.FC = () => {
             <Content component="p">Loading inventory data...</Content>
           </StackItem>
         </Stack>
+        <ExportCsvModal
+          isOpen={isExportModalOpen}
+          error={exportError}
+          isExporting={isExporting}
+          onClose={closeExportModal}
+          onExport={confirmExport}
+        />
       </PageSection>
     );
   }
@@ -396,7 +395,10 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader discoveryStatus={discoveryStatus} />
+            <ReportPageHeader
+              agentStatus={agentStatus}
+              onExportClick={openExportModal}
+            />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -407,6 +409,13 @@ export const ReportContainer: React.FC = () => {
             </Alert>
           </StackItem>
         </Stack>
+        <ExportCsvModal
+          isOpen={isExportModalOpen}
+          error={exportError}
+          isExporting={isExporting}
+          onClose={closeExportModal}
+          onExport={confirmExport}
+        />
       </PageSection>
     );
   }
@@ -416,7 +425,10 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader discoveryStatus={discoveryStatus} />
+            <ReportPageHeader
+              agentStatus={agentStatus}
+              onExportClick={openExportModal}
+            />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -428,6 +440,13 @@ export const ReportContainer: React.FC = () => {
             </Alert>
           </StackItem>
         </Stack>
+        <ExportCsvModal
+          isOpen={isExportModalOpen}
+          error={exportError}
+          isExporting={isExporting}
+          onClose={closeExportModal}
+          onExport={confirmExport}
+        />
       </PageSection>
     );
   }
@@ -588,8 +607,7 @@ export const ReportContainer: React.FC = () => {
       <Stack hasGutter>
         <StackItem>
           <ReportPageHeader
-            discoveryStatus={discoveryStatus}
-            showExport={showExport}
+            agentStatus={agentStatus}
             onExportClick={openExportModal}
           />
         </StackItem>
