@@ -5,18 +5,22 @@ import {
   Checkbox,
   Content,
   Divider,
+  FormGroup,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Radio,
   Stack,
   StackItem,
 } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  DEFAULT_EXPORT_FORMAT,
   DEFAULT_EXPORT_SCOPES,
   EXPORT_SCOPE_OPTIONS,
+  type ExportFormat,
   type ExportScopeId,
 } from "./exportScopes";
 
@@ -36,12 +40,21 @@ const scopeListStyle = css`
   padding-right: var(--pf-t--global--spacer--sm);
 `;
 
+const formatOptionsStyle = css`
+  display: flex;
+  flex-direction: column;
+  gap: var(--pf-t--global--spacer--sm);
+`;
+
 interface ExportCsvModalProps {
   isOpen: boolean;
   error?: string | null;
   isExporting?: boolean;
   onClose: () => void;
-  onExport: (scopes: ExportScopeId[]) => void | Promise<void>;
+  onExport: (
+    scopes: ExportScopeId[],
+    format: ExportFormat,
+  ) => void | Promise<void>;
 }
 
 export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
@@ -54,6 +67,9 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   const [selectedScopes, setSelectedScopes] = useState<ExportScopeId[]>(
     DEFAULT_EXPORT_SCOPES,
   );
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>(
+    DEFAULT_EXPORT_FORMAT,
+  );
 
   const allScopeIds = useMemo(
     () => EXPORT_SCOPE_OPTIONS.map((option) => option.id),
@@ -63,6 +79,7 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSelectedScopes(DEFAULT_EXPORT_SCOPES);
+      setSelectedFormat(DEFAULT_EXPORT_FORMAT);
     }
   }, [isOpen]);
 
@@ -92,19 +109,19 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
       return;
     }
 
-    void onExport(selectedScopes);
+    void onExport(selectedScopes, selectedFormat);
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      aria-labelledby="export-csv-modal-title"
-      aria-describedby="export-csv-modal-body"
+      aria-labelledby="export-modal-title"
+      aria-describedby="export-modal-body"
       variant="medium"
     >
-      <ModalHeader title="Export as CSV" labelId="export-csv-modal-title" />
-      <ModalBody id="export-csv-modal-body">
+      <ModalHeader title="Export" labelId="export-modal-title" />
+      <ModalBody id="export-modal-body">
         <Stack hasGutter>
           {error ? (
             <StackItem>
@@ -114,8 +131,46 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
             </StackItem>
           ) : null}
           <StackItem>
+            <FormGroup label="Format" isRequired fieldId="export-format-xlsx">
+              <div
+                className={formatOptionsStyle}
+                role="radiogroup"
+                aria-label="Export format"
+              >
+                <Radio
+                  id="export-format-xlsx"
+                  name="export-format"
+                  label={
+                    <div>
+                      <div className={scopeLabelStyle}>Excel (.xlsx)</div>
+                      <div className={scopeDescriptionStyle}>
+                        One workbook with a sheet per selected scope
+                      </div>
+                    </div>
+                  }
+                  isChecked={selectedFormat === "xlsx"}
+                  onChange={() => setSelectedFormat("xlsx")}
+                />
+                <Radio
+                  id="export-format-zip"
+                  name="export-format"
+                  label={
+                    <div>
+                      <div className={scopeLabelStyle}>ZIP (CSV files)</div>
+                      <div className={scopeDescriptionStyle}>
+                        CSV files packaged in a ZIP archive
+                      </div>
+                    </div>
+                  }
+                  isChecked={selectedFormat === "zip"}
+                  onChange={() => setSelectedFormat("zip")}
+                />
+              </div>
+            </FormGroup>
+          </StackItem>
+          <StackItem>
             <Content component="p">
-              Select the data you want to include in your CSV export.
+              Select the data you want to include in your export.
             </Content>
           </StackItem>
           <StackItem>
