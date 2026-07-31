@@ -4,7 +4,7 @@ import { fetchAllGroups, invalidateAllGroupsCache } from "./groupList";
 describe("fetchAllGroups cache", () => {
   it("reuses cached results within the TTL", async () => {
     const agentApi = {
-      listGroups: vi.fn().mockResolvedValue({
+      listLatestGroups: vi.fn().mockResolvedValue({
         groups: [{ id: "1", name: "group-a", filter: "id = 'vm-1'" }],
         pageCount: 1,
       }),
@@ -14,12 +14,12 @@ describe("fetchAllGroups cache", () => {
     const second = await fetchAllGroups(agentApi);
 
     expect(first).toEqual(second);
-    expect(agentApi.listGroups).toHaveBeenCalledTimes(1);
+    expect(agentApi.listLatestGroups).toHaveBeenCalledTimes(1);
   });
 
   it("bypasses cache for name searches", async () => {
     const agentApi = {
-      listGroups: vi.fn().mockResolvedValue({
+      listLatestGroups: vi.fn().mockResolvedValue({
         groups: [],
         pageCount: 1,
       }),
@@ -28,12 +28,12 @@ describe("fetchAllGroups cache", () => {
     await fetchAllGroups(agentApi, { byName: "prod" });
     await fetchAllGroups(agentApi, { byName: "prod" });
 
-    expect(agentApi.listGroups).toHaveBeenCalledTimes(2);
+    expect(agentApi.listLatestGroups).toHaveBeenCalledTimes(2);
   });
 
   it("refetches after cache invalidation", async () => {
     const agentApi = {
-      listGroups: vi.fn().mockResolvedValue({
+      listLatestGroups: vi.fn().mockResolvedValue({
         groups: [{ id: "1", name: "group-a", filter: "id = 'vm-1'" }],
         pageCount: 1,
       }),
@@ -43,6 +43,6 @@ describe("fetchAllGroups cache", () => {
     invalidateAllGroupsCache(agentApi);
     await fetchAllGroups(agentApi);
 
-    expect(agentApi.listGroups).toHaveBeenCalledTimes(2);
+    expect(agentApi.listLatestGroups).toHaveBeenCalledTimes(2);
   });
 });

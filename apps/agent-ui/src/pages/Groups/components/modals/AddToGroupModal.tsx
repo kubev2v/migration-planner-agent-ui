@@ -1,8 +1,5 @@
 import { useInjection } from "@migration-planner-ui/ioc";
-import type {
-  DefaultApiInterface,
-  Group,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -23,6 +20,7 @@ import {
 import { DesktopIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import { Symbols } from "../../../../main/Symbols";
 import { addVmsToGroupFilter } from "../../utils/groupFilters";
@@ -110,8 +108,8 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
     setIsSaving(true);
     setError(null);
     try {
-      await agentApi.updateGroup({
-        id: selectedGroup.id,
+      await agentApi.updateLatestGroup({
+        groupId: selectedGroup.id,
         updateGroupRequest: {
           filter: addVmsToGroupFilter(selectedGroup.filter, vmIds),
         },

@@ -1,7 +1,5 @@
-import type {
-  DefaultApiInterface,
-  VirtualMachine,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../../common/agentApi";
 import { fetchAllMatchingVmIds } from "../../VirtualMachinesOverview/components/VirtualMachinesTab/vmSelection";
 import { parseIdsFromFilter } from "./groupFilters";
 import { fetchAllGroups } from "./groupList";
@@ -74,18 +72,11 @@ export function mergeVmGroupItems(
   vms: VirtualMachine[],
   membership: VmGroupMembershipData,
 ): VirtualMachineWithGroupItems[] {
-  const { vmIdToGroups, groupsByName } = membership;
+  const { vmIdToGroups } = membership;
 
   return vms.map((vm) => {
-    let groupItems = vmIdToGroups[vm.id];
+    const groupItems = vmIdToGroups[vm.id] ?? [];
 
-    if (!groupItems?.length && vm.groups?.length) {
-      groupItems = vm.groups
-        .map((name) => groupsByName[name])
-        .filter((group): group is GroupListItem => group !== undefined)
-        .sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return { ...vm, groupItems: groupItems ?? [] };
+    return { ...vm, groupItems };
   });
 }

@@ -3,7 +3,6 @@ import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   CapabilityStatusCapabilities,
   CredentialStatus,
-  DefaultApiInterface,
   VcenterCredentials,
 } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
@@ -15,6 +14,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { DefaultApiInterface } from "../common/agentApi";
 import { parseApiError } from "../common/parseApiError";
 import { Symbols } from "../main/Symbols";
 import { getCapabilities, getCredentialStatus } from "./credentialsApi";

@@ -11,17 +11,11 @@ export function getExportZipFilename(date = new Date()): string {
   return `${getExportDatePrefix(date)}.zip`;
 }
 
-export function getExportXlsxFilename(date = new Date()): string {
-  return `${getExportDatePrefix(date)}.xlsx`;
-}
-
 export function getExportFilename(
-  format: ExportFormat,
+  _format: ExportFormat = "zip",
   date = new Date(),
 ): string {
-  return format === "xlsx"
-    ? getExportXlsxFilename(date)
-    : getExportZipFilename(date);
+  return getExportZipFilename(date);
 }
 
 export function downloadExportBlob(blob: Blob, filename: string): void {

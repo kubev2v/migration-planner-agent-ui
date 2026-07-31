@@ -1,14 +1,24 @@
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { downloadExportBlob, getExportFilename } from "./downloadExportBlob";
 import { fetchExportInventory } from "./exportInventoryApi";
 import type { ExportFormat, ExportScopeId } from "./exportScopes";
 
-export function useExportInventory(agentApi: DefaultApiInterface) {
+type UseExportInventoryOptions = {
+  hasCollectionData: boolean;
+  hasInventory: boolean;
+};
+
+export function useExportInventory(
+  agentApi: DefaultApiInterface,
+  { hasCollectionData, hasInventory }: UseExportInventoryOptions,
+) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const isExportingRef = useRef(false);
+
+  const showExport = hasCollectionData && hasInventory;
 
   const openExportModal = useCallback(() => {
     setExportError(null);
@@ -56,6 +66,7 @@ export function useExportInventory(agentApi: DefaultApiInterface) {
 
   return {
     isExportModalOpen,
+    showExport,
     exportError,
     isExporting,
     openExportModal,

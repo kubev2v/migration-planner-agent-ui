@@ -1,5 +1,4 @@
 import { useInjection } from "@migration-planner-ui/ioc";
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -20,6 +19,7 @@ import {
 import { DesktopIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import { Symbols } from "../../../../main/Symbols";
 import { buildGroupFilterAfterRemovingMembers } from "../../utils/groupFilters";
@@ -52,8 +52,8 @@ async function fetchAllGroupMemberIds(
   agentApi: DefaultApiInterface,
   groupId: string,
 ): Promise<string[]> {
-  const firstPage = await agentApi.getGroup({
-    id: groupId,
+  const firstPage = await agentApi.getLatestGroup({
+    groupId,
     page: 1,
     pageSize: GROUP_PAGE_SIZE,
   });
@@ -62,8 +62,8 @@ async function fetchAllGroupMemberIds(
   const pageCount = firstPage.pageCount ?? 1;
 
   for (let page = 2; page <= pageCount; page++) {
-    const response = await agentApi.getGroup({
-      id: groupId,
+    const response = await agentApi.getLatestGroup({
+      groupId,
       page,
       pageSize: GROUP_PAGE_SIZE,
     });
@@ -191,8 +191,8 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
         vmIds,
       );
 
-      await agentApi.updateGroup({
-        id: resolvedGroupId,
+      await agentApi.updateLatestGroup({
+        groupId: resolvedGroupId,
         updateGroupRequest: {
           filter: updatedFilter,
         },

@@ -1,4 +1,4 @@
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import {
   buildVmGroupMembership,
   mergeVmGroupItems,

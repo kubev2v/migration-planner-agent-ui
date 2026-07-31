@@ -1,4 +1,4 @@
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../common/agentApi";
 
 /** Workaround: access SDK configuration.basePath (not exposed on DefaultApiInterface). */
 export type ApiWithConfig = DefaultApiInterface & {
@@ -8,6 +8,6 @@ export type ApiWithConfig = DefaultApiInterface & {
 export function getAgentApiBasePath(agentApi?: DefaultApiInterface): string {
   return (
     (agentApi as ApiWithConfig | undefined)?.configuration?.basePath ||
-    `${window.location.origin}/agent/api/v1`
+    `${window.location.origin}/agent/api/v2`
   );
 }

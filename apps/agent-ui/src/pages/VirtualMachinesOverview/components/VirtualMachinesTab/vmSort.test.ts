@@ -16,6 +16,7 @@ const createMockVM = (
 ): VirtualMachine => ({
   id,
   name: `VM-${id}`,
+  vCenterID: "vc-1",
   vCenterState: "poweredOn",
   cluster: "test-cluster",
   datacenter: "test-dc",
@@ -25,7 +26,10 @@ const createMockVM = (
   inspectionStatus: inspectionStatus?.state
     ? {
         state: inspectionStatus.state,
-        message: `Mock ${inspectionStatus.state} status`,
+        error:
+          inspectionStatus.state === "error"
+            ? `Mock ${inspectionStatus.state} status`
+            : undefined,
       }
     : undefined,
   inspectionConcernCount: inspectionStatus?.concernCount,

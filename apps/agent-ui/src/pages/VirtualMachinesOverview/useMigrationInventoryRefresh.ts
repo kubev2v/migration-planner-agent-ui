@@ -1,9 +1,6 @@
-import type {
-  DefaultApiInterface,
-  Inventory,
-  VirtualMachine,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../common/agentApi";
 import { getAgentApiBasePath } from "./agentApiConfig";
 import {
   adjustInventoryForMigrationExcludedChange,
@@ -11,13 +8,15 @@ import {
   fetchInventoryAfterMigrationChange,
   fetchInventoryFromApi,
   getInventoryAggregateView,
+  type InventoryPayload,
   type MigrationExcludedInventoryChange,
 } from "./inventoryParsing";
+import type { VirtualMachineWithExclusion } from "./virtualMachineParsing";
 
 type UseMigrationInventoryRefreshOptions = {
   agentApi: DefaultApiInterface;
   groupId?: string;
-  setInventory: React.Dispatch<React.SetStateAction<Inventory | null>>;
+  setInventory: React.Dispatch<React.SetStateAction<InventoryPayload | null>>;
   setVmsList: React.Dispatch<React.SetStateAction<VirtualMachine[]>>;
 };
 
@@ -48,13 +47,14 @@ export function useMigrationInventoryRefresh({
     setRevision((current) => current + 1);
   }, []);
 
-  const fetchInventory = useCallback(async (): Promise<Inventory | null> => {
-    if (groupId) {
-      return fetchGroupAssessmentInventory(agentApi, groupId);
-    }
-    const basePath = getAgentApiBasePath(agentApi);
-    return fetchInventoryFromApi(basePath);
-  }, [agentApi, groupId]);
+  const fetchInventory =
+    useCallback(async (): Promise<InventoryPayload | null> => {
+      if (groupId) {
+        return fetchGroupAssessmentInventory(agentApi, groupId);
+      }
+      const basePath = getAgentApiBasePath(agentApi);
+      return fetchInventoryFromApi(basePath);
+    }, [agentApi, groupId]);
 
   const refreshInventory = useCallback(
     async (change: MigrationExcludedInventoryChange): Promise<void> => {
@@ -66,13 +66,16 @@ export function useMigrationInventoryRefresh({
             setVmsList((current) =>
               current.map((vm) =>
                 change.vmIds.includes(vm.id)
-                  ? { ...vm, migrationExcluded: change.excluded }
+                  ? ({
+                      ...vm,
+                      migrationExcluded: change.excluded,
+                    } as VirtualMachineWithExclusion)
                   : vm,
               ),
             );
 
             let previousTotal: number | undefined;
-            let optimisticInventory: Inventory | null = null;
+            let optimisticInventory: InventoryPayload | null = null;
 
             setInventory((current) => {
               if (!current) {

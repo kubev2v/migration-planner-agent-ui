@@ -5,12 +5,10 @@ import {
   Checkbox,
   Content,
   Divider,
-  FormGroup,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
-  Radio,
   Stack,
   StackItem,
 } from "@patternfly/react-core";
@@ -40,12 +38,6 @@ const scopeListStyle = css`
   padding-right: var(--pf-t--global--spacer--sm);
 `;
 
-const formatOptionsStyle = css`
-  display: flex;
-  flex-direction: column;
-  gap: var(--pf-t--global--spacer--sm);
-`;
-
 interface ExportCsvModalProps {
   isOpen: boolean;
   error?: string | null;
@@ -67,9 +59,6 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   const [selectedScopes, setSelectedScopes] = useState<ExportScopeId[]>(
     DEFAULT_EXPORT_SCOPES,
   );
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>(
-    DEFAULT_EXPORT_FORMAT,
-  );
 
   const allScopeIds = useMemo(
     () => EXPORT_SCOPE_OPTIONS.map((option) => option.id),
@@ -79,7 +68,6 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSelectedScopes(DEFAULT_EXPORT_SCOPES);
-      setSelectedFormat(DEFAULT_EXPORT_FORMAT);
     }
   }, [isOpen]);
 
@@ -109,7 +97,7 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
       return;
     }
 
-    void onExport(selectedScopes, selectedFormat);
+    void onExport(selectedScopes, DEFAULT_EXPORT_FORMAT);
   };
 
   return (
@@ -131,46 +119,10 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
             </StackItem>
           ) : null}
           <StackItem>
-            <FormGroup label="Format" isRequired fieldId="export-format-xlsx">
-              <div
-                className={formatOptionsStyle}
-                role="radiogroup"
-                aria-label="Export format"
-              >
-                <Radio
-                  id="export-format-xlsx"
-                  name="export-format"
-                  label={
-                    <div>
-                      <div className={scopeLabelStyle}>Excel (.xlsx)</div>
-                      <div className={scopeDescriptionStyle}>
-                        One workbook with a sheet per selected scope
-                      </div>
-                    </div>
-                  }
-                  isChecked={selectedFormat === "xlsx"}
-                  onChange={() => setSelectedFormat("xlsx")}
-                />
-                <Radio
-                  id="export-format-zip"
-                  name="export-format"
-                  label={
-                    <div>
-                      <div className={scopeLabelStyle}>ZIP (CSV files)</div>
-                      <div className={scopeDescriptionStyle}>
-                        CSV files packaged in a ZIP archive
-                      </div>
-                    </div>
-                  }
-                  isChecked={selectedFormat === "zip"}
-                  onChange={() => setSelectedFormat("zip")}
-                />
-              </div>
-            </FormGroup>
-          </StackItem>
-          <StackItem>
+            <Content component="h2">Data to include</Content>
             <Content component="p">
-              Select the data you want to include in your export.
+              Choose which scopes to include. Each selected scope becomes a CSV
+              file in the ZIP archive.
             </Content>
           </StackItem>
           <StackItem>

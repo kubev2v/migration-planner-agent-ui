@@ -17,6 +17,7 @@ function vm(
   return {
     id,
     name: id,
+    vCenterID: "",
     vCenterState: "",
     cluster: "",
     datacenter: "",
@@ -24,7 +25,7 @@ function vm(
     memory: 0,
     issueCount: 0,
     migratable: false,
-    ...(state ? { inspectionStatus: { state, message: "" } } : {}),
+    ...(state ? { inspectionStatus: { state } } : {}),
   };
 }
 

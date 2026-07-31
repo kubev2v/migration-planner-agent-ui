@@ -12,6 +12,7 @@ import {
 import { useSearchParams } from "react-router-dom";
 import useLocalStorage from "../../../../hooks/useLocalStorage";
 import type { VirtualMachineWithGroupItems } from "../../../Groups/utils/vmGroupMembership";
+import { getMigrationExcluded } from "../../virtualMachineParsing";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";
 import { buildVmTableFilterAttributes } from "./vmTableFilterAttributes";
 import {
@@ -196,7 +197,7 @@ export function useVMTableLogic({
     for (const id of selectedVMs) {
       const vm = vmById.get(id);
       if (!vm) continue;
-      if (vm.migrationExcluded) {
+      if (getMigrationExcluded(vm)) {
         excluded.push(id);
       } else {
         included.push(id);

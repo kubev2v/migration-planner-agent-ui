@@ -22,7 +22,8 @@ export const AgentUIVersion: React.FC = () => {
 
   return (
     <div data-testid="agent-api-lib-version" hidden>
-      Agent: {agentStatus.mode} - Connection: {agentStatus.console_connection}
+      Agent: {agentStatus.mode} - Connection:{" "}
+      {agentStatus.consoleConnection?.status ?? "unknown"}
     </div>
   );
 };

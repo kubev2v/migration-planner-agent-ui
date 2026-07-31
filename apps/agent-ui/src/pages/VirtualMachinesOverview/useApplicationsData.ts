@@ -1,8 +1,7 @@
-import type {
-  ApplicationOverview,
-  DefaultApiInterface,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { ApplicationOverview } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useState } from "react";
+import type { DefaultApiInterface } from "../../common/agentApi";
+import { getLatestCollectionId } from "../../common/collectionApi";
 import { scopeApplicationsToVms } from "./components/ApplicationsTab/applicationsApi";
 import { fetchAllMatchingVmIds } from "./components/VirtualMachinesTab/vmSelection";
 
@@ -27,7 +26,13 @@ export function useApplicationsData(
     try {
       setLoading(true);
       setError(null);
-      const response = await agentApi.getApplications();
+      const collectionId = await getLatestCollectionId(agentApi);
+      if (!collectionId) {
+        setApplications([]);
+        return;
+      }
+
+      const response = await agentApi.listApplications({ id: collectionId });
       const data = response.applications ?? [];
 
       let scoped = data;

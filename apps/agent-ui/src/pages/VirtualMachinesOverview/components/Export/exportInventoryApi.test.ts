@@ -1,4 +1,3 @@
-import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
 import { describe, expect, it, vi } from "vitest";
 import {
   detectExportFormatFromContentType,
@@ -25,12 +24,7 @@ function mockExportRawResponse({
 }
 
 describe("detectExportFormatFromContentType", () => {
-  it("detects Excel and ZIP content types", () => {
-    expect(
-      detectExportFormatFromContentType(
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ),
-    ).toBe("xlsx");
+  it("detects ZIP content types", () => {
     expect(detectExportFormatFromContentType("application/zip")).toBe("zip");
     expect(
       detectExportFormatFromContentType("application/x-zip-compressed"),
@@ -49,82 +43,38 @@ describe("detectExportFormatFromContentType", () => {
 });
 
 describe("fetchExportInventory", () => {
-  it("requests export with selected scopes, format, and no-store cache", async () => {
-    const exportInventoryRaw = vi
+  it("requests export with selected scopes and no-store cache", async () => {
+    const exportCollectionRaw = vi
       .fn()
       .mockResolvedValue(
         mockExportRawResponse({ contentType: "application/zip" }),
       );
-    const agentApi = { exportInventoryRaw } as never;
+    const listCollections = vi.fn().mockResolvedValue({
+      collections: [{ id: "col-1", name: "latest", createdAt: new Date() }],
+    });
+    const agentApi = { exportCollectionRaw, listCollections } as never;
 
     await fetchExportInventory(agentApi, ["overview", "hosts"], "zip");
 
-    expect(exportInventoryRaw).toHaveBeenCalledWith(
+    expect(exportCollectionRaw).toHaveBeenCalledWith(
       {
+        id: "col-1",
         scope: "overview,hosts",
-        format: "zip",
       },
       { cache: "no-store" },
-    );
-  });
-
-  it("requests Excel export when format is xlsx", async () => {
-    const exportInventoryRaw = vi.fn().mockResolvedValue(
-      mockExportRawResponse({
-        contentType:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      }),
-    );
-    const agentApi = { exportInventoryRaw } as never;
-
-    await fetchExportInventory(agentApi, ["overview"], "xlsx");
-
-    expect(exportInventoryRaw).toHaveBeenCalledWith(
-      {
-        scope: "overview",
-        format: "xlsx",
-      },
-      { cache: "no-store" },
-    );
-  });
-
-  it("rejects Excel requests when the agent returns a ZIP body", async () => {
-    const exportInventoryRaw = vi
-      .fn()
-      .mockResolvedValue(
-        mockExportRawResponse({ contentType: "application/zip" }),
-      );
-    const agentApi = { exportInventoryRaw } as never;
-
-    await expect(
-      fetchExportInventory(agentApi, ["overview"], "xlsx"),
-    ).rejects.toThrow(
-      "Excel export is not supported by this agent. Choose ZIP (CSV files), or upgrade the agent.",
-    );
-  });
-
-  it("rejects Excel requests when Content-Type is unrecognized", async () => {
-    const exportInventoryRaw = vi
-      .fn()
-      .mockResolvedValue(
-        mockExportRawResponse({ contentType: "application/octet-stream" }),
-      );
-    const agentApi = { exportInventoryRaw } as never;
-
-    await expect(
-      fetchExportInventory(agentApi, ["overview"], "xlsx"),
-    ).rejects.toThrow(
-      "Could not verify Excel export response. Choose ZIP (CSV files), or try again.",
     );
   });
 
   it("allows ZIP download when Content-Type is unrecognized", async () => {
-    const exportInventoryRaw = vi
+    const exportCollectionRaw = vi
       .fn()
       .mockResolvedValue(
         mockExportRawResponse({ contentType: "application/octet-stream" }),
       );
-    const agentApi = { exportInventoryRaw } as never;
+    const listCollections = vi.fn().mockResolvedValue({
+      collections: [{ id: "col-1", name: "latest", createdAt: new Date() }],
+    });
+    const agentApi = { exportCollectionRaw, listCollections } as never;
 
     await expect(
       fetchExportInventory(agentApi, ["overview"], "zip"),
@@ -132,13 +82,19 @@ describe("fetchExportInventory", () => {
   });
 
   it("surfaces API error messages from ResponseError", async () => {
+    const { ResponseError } = await import(
+      "@openshift-migration-advisor/agent-sdk"
+    );
     const response = new Response(JSON.stringify({ error: "invalid scope" }), {
       status: 400,
     });
-    const exportInventoryRaw = vi
+    const exportCollectionRaw = vi
       .fn()
       .mockRejectedValue(new ResponseError(response, "Bad Request"));
-    const agentApi = { exportInventoryRaw } as never;
+    const listCollections = vi.fn().mockResolvedValue({
+      collections: [{ id: "col-1", name: "latest", createdAt: new Date() }],
+    });
+    const agentApi = { exportCollectionRaw, listCollections } as never;
 
     await expect(
       fetchExportInventory(agentApi, ["overview"], "zip"),

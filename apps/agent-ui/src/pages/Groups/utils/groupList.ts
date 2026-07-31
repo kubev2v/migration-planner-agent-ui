@@ -1,12 +1,10 @@
-import type {
-  DefaultApiInterface,
-  Group,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { Group } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../../common/agentApi";
 
 const GROUP_LIST_PAGE_SIZE = 100;
 const GROUP_LIST_CACHE_TTL_MS = 30_000;
 
-type GroupListAgentApi = Pick<DefaultApiInterface, "listGroups">;
+type GroupListAgentApi = Pick<DefaultApiInterface, "listLatestGroups">;
 
 type GroupListCacheEntry = {
   expiresAt: number;
@@ -29,7 +27,7 @@ async function fetchAllGroupsUncached(
   let pageCount = 1;
 
   while (page <= pageCount) {
-    const response = await agentApi.listGroups({
+    const response = await agentApi.listLatestGroups({
       byName: options?.byName,
       page,
       pageSize: GROUP_LIST_PAGE_SIZE,

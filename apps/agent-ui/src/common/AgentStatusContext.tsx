@@ -2,7 +2,6 @@ import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   AgentStatus,
   CollectorStatus,
-  DefaultApiInterface,
 } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import {
@@ -13,6 +12,10 @@ import {
   useState,
 } from "react";
 import { Symbols } from "../main/Symbols";
+import type { DefaultApiInterface } from "./agentApi";
+import { getLatestCollectionId } from "./collectionApi";
+import { getCollectorStatus } from "./collectorApi";
+import { isCollectorInProgress } from "./collectorStatus";
 
 interface AgentStatusContextValue {
   agentStatus: AgentStatus | null;
@@ -34,6 +37,7 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [collectorStatus, setCollectorStatus] =
     useState<CollectorStatus | null>(null);
+  const [hasCollectionData, setHasCollectionData] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +47,7 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const [agentResult, collectorResult] = await Promise.allSettled([
       agentApi.getAgentStatus(),
-      agentApi.getCollectorStatus(),
+      getCollectorStatus(agentApi),
     ]);
 
     if (agentResult.status === "fulfilled") {
@@ -57,9 +61,31 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     if (collectorResult.status === "fulfilled") {
-      setCollectorStatus(collectorResult.value);
+      const nextCollectorStatus = collectorResult.value;
+      setCollectorStatus(nextCollectorStatus);
+
+      if (nextCollectorStatus.status === "collected") {
+        setHasCollectionData(true);
+      } else if (
+        isCollectorInProgress(nextCollectorStatus.status) ||
+        nextCollectorStatus.status === "error" ||
+        nextCollectorStatus.status === "ready"
+      ) {
+        try {
+          const collectionId = await getLatestCollectionId(agentApi);
+          if (collectionId) {
+            setHasCollectionData(true);
+          }
+        } catch (collectionErr) {
+          console.error(
+            "Error checking for existing collections:",
+            collectionErr,
+          );
+        }
+      }
     } else {
       console.error("Error fetching collector status:", collectorResult.reason);
+      setCollectorStatus(null);
     }
 
     setLoading(false);
@@ -74,7 +100,7 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
     collectorStatus,
     loading,
     error,
-    hasCollectionData: collectorStatus?.status === "collected",
+    hasCollectionData,
     refetch: fetchStatus,
   };
 

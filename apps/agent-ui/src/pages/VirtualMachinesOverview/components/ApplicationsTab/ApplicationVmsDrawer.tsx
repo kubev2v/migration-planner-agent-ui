@@ -1,5 +1,4 @@
 import { css } from "@emotion/css";
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   DrawerActions,
@@ -27,9 +26,11 @@ import { SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { VirtualMachineWithGroupItems } from "../../../Groups/utils/vmGroupMembership";
+import { getVmTags } from "../../virtualMachineParsing";
 import { fetchApplicationDrawerVms } from "./applicationDrawerVms";
 import { filterVmsBySearch } from "./applicationFilters";
 import type { ApplicationOverview } from "./applicationsApi";
@@ -79,6 +80,7 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
         application.vms.map((vm) => ({
           id: vm.id,
           name: vm.name,
+          vCenterID: "",
           vCenterState: "",
           cluster: "",
           datacenter: "",
@@ -291,17 +293,20 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
                     )}
                   </Td>
                   <Td dataLabel="Labels">
-                    {vm.labels && vm.labels.length > 0 ? (
-                      <LabelGroup numLabels={3}>
-                        {vm.labels.map((label) => (
-                          <Label key={label} isCompact>
-                            {label}
-                          </Label>
-                        ))}
-                      </LabelGroup>
-                    ) : (
-                      "–"
-                    )}
+                    {(() => {
+                      const vmTags = getVmTags(vm);
+                      return vmTags.length > 0 ? (
+                        <LabelGroup numLabels={3}>
+                          {vmTags.map((label) => (
+                            <Label key={label} isCompact>
+                              {label}
+                            </Label>
+                          ))}
+                        </LabelGroup>
+                      ) : (
+                        "–"
+                      );
+                    })()}
                   </Td>
                   <Td dataLabel="Groups">
                     {vm.groupItems.length > 0 ? (

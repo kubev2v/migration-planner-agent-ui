@@ -1,5 +1,4 @@
 import { useInjection } from "@migration-planner-ui/ioc";
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
   CardBody,
@@ -17,6 +16,7 @@ import {
 import { VirtualMachineIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { Symbols } from "../../../../main/Symbols";
 import { combineFilterExpressions } from "../../../Groups/utils/groupFilters";
 import {
@@ -121,20 +121,20 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
         setIssuesBreakdownError(false);
 
         const pageSize = 500;
-        const firstResponse = await agentApi.getVMs({
+        const firstResponse = await agentApi.listLatestVirtualMachines({
           byExpression,
           page: 1,
           pageSize,
         });
 
-        let allVmsWithIssues = [...(firstResponse.vms || [])];
+        let allVmsWithIssues = [...(firstResponse.virtualMachines || [])];
 
         if (firstResponse.total > allVmsWithIssues.length) {
           const totalPages = firstResponse.pageCount;
           const remainingPages = [];
           for (let page = 2; page <= totalPages; page++) {
             remainingPages.push(
-              agentApi.getVMs({
+              agentApi.listLatestVirtualMachines({
                 byExpression,
                 page,
                 pageSize,
@@ -144,7 +144,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
 
           const remainingResponses = await Promise.all(remainingPages);
           const additionalVms = remainingResponses.flatMap(
-            (response) => response.vms || [],
+            (response) => response.virtualMachines || [],
           );
           allVmsWithIssues = [...allVmsWithIssues, ...additionalVms];
         }
@@ -170,13 +170,13 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
 
         const batchSize = 50;
         const vmDetailsResults: PromiseSettledResult<
-          Awaited<ReturnType<typeof agentApi.getVM>>
+          Awaited<ReturnType<typeof agentApi.getLatestVirtualMachine>>
         >[] = [];
 
         for (let i = 0; i < allVmsWithIssues.length; i += batchSize) {
           const batch = allVmsWithIssues.slice(i, i + batchSize);
           const batchPromises = batch.map((vm) =>
-            agentApi.getVM({ id: vm.id }),
+            agentApi.getLatestVirtualMachine({ vmId: vm.id }),
           );
           const batchResults = await Promise.allSettled(batchPromises);
           vmDetailsResults.push(...batchResults);

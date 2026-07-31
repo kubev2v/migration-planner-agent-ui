@@ -1,6 +1,5 @@
 import { css } from "@emotion/css";
 import type {
-  DefaultApiInterface,
   InspectorStatus,
   VddkProperties,
   VirtualMachine,
@@ -32,6 +31,7 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
 import {
   buildStartInspectionVmIds,

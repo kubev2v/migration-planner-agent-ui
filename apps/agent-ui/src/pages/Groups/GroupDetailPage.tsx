@@ -1,8 +1,6 @@
 import { useInjection } from "@migration-planner-ui/ioc";
 import {
-  type DefaultApiInterface,
   type Group,
-  type Inventory,
   ResponseError,
   type VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
@@ -38,8 +36,9 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
+import type { DefaultApiInterface } from "../../common/agentApi";
 import { AppEmptyState } from "../../common/components";
-import { DiscoveryStatus } from "../../common/DiscoveryStatus";
+import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -71,6 +70,8 @@ import type { VMTableFilterOptions } from "../VirtualMachinesOverview/components
 import { Header } from "../VirtualMachinesOverview/Header";
 import {
   getInventoryAggregateView,
+  type InventoryPayload,
+  inventoryFromGroupResponse,
   type MigrationExcludedInventoryChange,
 } from "../VirtualMachinesOverview/inventoryParsing";
 import { useApplicationsData } from "../VirtualMachinesOverview/useApplicationsData";
@@ -88,7 +89,7 @@ export const GroupDetailPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [group, setGroup] = useState<Group | null>(null);
-  const [inventory, setInventory] = useState<Inventory | null>(null);
+  const [inventory, setInventory] = useState<InventoryPayload | null>(null);
   const [vmsList, setVmsList] = useState<VirtualMachine[]>([]);
   const [vmsLoading, setVmsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -180,15 +181,15 @@ export const GroupDetailPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const response = await agentApi.getGroup({
-          id: groupId,
+        const response = await agentApi.getLatestGroup({
+          groupId,
           page: 1,
           pageSize: 1,
         });
 
         setGroup(response.group);
         setVmsTotalCount(response.total ?? 0);
-        setInventory(response.inventory ?? null);
+        setInventory(inventoryFromGroupResponse(response));
       } catch (err) {
         console.error("Error loading group detail:", err);
         if (err instanceof ResponseError && err.response?.status === 404) {
@@ -243,7 +244,7 @@ export const GroupDetailPage: React.FC = () => {
           userExpression,
         );
 
-        const response = await agentApi.getVMs({
+        const response = await agentApi.listLatestVirtualMachines({
           byExpression,
           sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
           page: vmsPage,
@@ -251,7 +252,7 @@ export const GroupDetailPage: React.FC = () => {
         });
 
         if (currentRequestId === vmsRequestIdRef.current) {
-          setVmsList(normalizeVirtualMachines(response.vms));
+          setVmsList(normalizeVirtualMachines(response.virtualMachines));
           setVmsTotalCount(response.total || 0);
         }
       } catch (err) {
@@ -292,16 +293,16 @@ export const GroupDetailPage: React.FC = () => {
         userExpression,
       );
       const [response, labelsResponse] = await Promise.all([
-        agentApi.getVMs({
+        agentApi.listLatestVirtualMachines({
           byExpression,
           sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
           page: vmsPage,
           pageSize: vmsPageSize,
         }),
-        agentApi.getVMLabels().catch(() => null),
+        agentApi.getLatestVMLabels().catch(() => null),
       ]);
       if (vmsRefreshIdRef.current === reqId) {
-        setVmsList(normalizeVirtualMachines(response.vms));
+        setVmsList(normalizeVirtualMachines(response.virtualMachines));
         setVmsTotalCount(response.total || 0);
         setAvailableFilterOptions((prev) => ({
           ...prev,
@@ -346,13 +347,12 @@ export const GroupDetailPage: React.FC = () => {
     }
 
     try {
-      const response = await agentApi.getGroup({
-        id: groupId,
+      const response = await agentApi.getLatestGroup({
+        groupId,
         page: 1,
         pageSize: 1,
       });
       setGroup(response.group);
-      setInventory(response.inventory ?? null);
       setVmsTotalCount(response.total ?? 0);
       setVmsPage(1);
       bumpInventoryRevision();
@@ -424,8 +424,8 @@ export const GroupDetailPage: React.FC = () => {
     if (!group) {
       return;
     }
-    const updated = await agentApi.updateGroup({
-      id: group.id,
+    const updated = await agentApi.updateLatestGroup({
+      groupId: group.id,
       updateGroupRequest: { name },
     });
     setGroup(updated);
@@ -435,7 +435,7 @@ export const GroupDetailPage: React.FC = () => {
     if (!group) {
       return;
     }
-    await agentApi.deleteGroup({ id: group.id });
+    await agentApi.deleteLatestGroup({ groupId: group.id });
     navigate("/report/groups");
   };
 
@@ -474,6 +474,8 @@ export const GroupDetailPage: React.FC = () => {
   });
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
+  const discoveryStatus = formatDiscoveryStatus(agentStatus);
+
   return (
     <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
       <Stack hasGutter>
@@ -500,8 +502,7 @@ export const GroupDetailPage: React.FC = () => {
                 {group.name}
               </Title>
               <Content component="p" style={{ marginTop: "8px" }}>
-                Red Hat sharing status:{" "}
-                <DiscoveryStatus agentStatus={agentStatus} />
+                Discovery VM status: {discoveryStatus}
               </Content>
             </div>
             <Dropdown

@@ -18,6 +18,7 @@ import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
+import { getMigrationExcluded, getVmTags } from "../../virtualMachineParsing";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { getDeepInspectionEnablementForVmAction } from "./vmInspectionUtils";
 import {
@@ -31,6 +32,20 @@ import {
   type VMTableVariantUI,
 } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
+
+type VirtualMachineListUtilization = VirtualMachine & {
+  utilization_cpu_max?: number;
+  utilization_mem_max?: number;
+  utilization_disk?: number;
+};
+
+const getListVmUtilization = (
+  vm: VirtualMachine,
+  field: keyof Pick<
+    VirtualMachineListUtilization,
+    "utilization_cpu_max" | "utilization_mem_max" | "utilization_disk"
+  >,
+): number | undefined => (vm as VirtualMachineListUtilization)[field];
 
 export interface VMTableGridProps {
   logic: VMTableLogic;
@@ -176,7 +191,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                         <span>{vm.name}</span>
                       </Tooltip>
                     )}
-                    {vm.migrationExcluded && (
+                    {getMigrationExcluded(vm) && (
                       <div style={{ marginTop: "4px" }}>
                         <Label isCompact color="grey">
                           Excluded
@@ -188,10 +203,8 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                 {isColumnVisible("labels") && (
                   <Td dataLabel="Labels">
                     {(() => {
-                      const vmLabels: string[] | undefined = (
-                        vm as VirtualMachine & { labels?: string[] }
-                      ).labels;
-                      if (vmLabels && vmLabels.length > 0) {
+                      const vmLabels = getVmTags(vm);
+                      if (vmLabels.length > 0) {
                         return (
                           <LabelGroup numLabels={5}>
                             {vmLabels.map((lbl: string) => (
@@ -250,17 +263,21 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
 
                 {isColumnVisible("cpuUsage") && (
                   <Td dataLabel="CPU usage" modifier="fitContent">
-                    {formatMetric(vm.utilization_cpu_max)}
+                    {formatMetric(
+                      getListVmUtilization(vm, "utilization_cpu_max"),
+                    )}
                   </Td>
                 )}
                 {isColumnVisible("ramUsage") && (
                   <Td dataLabel="RAM usage" modifier="fitContent">
-                    {formatMetric(vm.utilization_mem_max)}
+                    {formatMetric(
+                      getListVmUtilization(vm, "utilization_mem_max"),
+                    )}
                   </Td>
                 )}
                 {isColumnVisible("diskUsage") && (
                   <Td dataLabel="Disk usage" modifier="fitContent">
-                    {formatMetric(vm.utilization_disk)}
+                    {formatMetric(getListVmUtilization(vm, "utilization_disk"))}
                   </Td>
                 )}
                 {isColumnVisible("datacenter") && (
@@ -382,7 +399,7 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                             </DropdownItem>
                           );
                         })()}
-                        {vm.migrationExcluded ? (
+                        {getMigrationExcluded(vm) ? (
                           <DropdownItem
                             key="include-in-reports"
                             onClick={() => onIncludeInReports?.([vm.id])}

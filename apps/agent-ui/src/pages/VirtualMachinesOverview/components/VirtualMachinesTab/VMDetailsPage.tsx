@@ -1,9 +1,9 @@
 import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   ApplicationOverview,
-  DefaultApiInterface,
+  InspectionStatus,
   VirtualMachineDetail,
-  VMIssue,
+  VirtualMachineIssue,
   VmUtilizationDetails,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
@@ -47,11 +47,14 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
+import { getLatestCollectionId } from "../../../../common/collectionApi";
 import { Symbols } from "../../../../main/Symbols";
 import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
 import { VMApplicationsCard } from "./VMApplicationsCard";
 import { VMProcessesCard } from "./VMProcessesCard";
 import { formatMetric } from "./VMUtilizationMetrics";
+import { isLikelyCanceledInspectionError } from "./vmInspectionUtils";
 
 const MB_IN_GB = 1024;
 
@@ -67,26 +70,15 @@ interface VirtualMachineDetailWithUtilization extends VirtualMachineDetail {
 interface VMDetailsPageProps {
   vmId: string;
   onBack: () => void;
-  /** When true, poll even if the first getVM still shows a stale terminal status. */
-  inspectionActive?: boolean;
+  inspectionStatus?: InspectionStatus;
   scrollToSection?: string | null;
   onScrollToSectionComplete?: () => void;
 }
 
-const INSPECTION_POLL_INTERVAL_MS = 5000;
-// Match VirtualMachinesView: allow a couple of round-trips before trusting a
-// terminal status that may still be stale from the previous inspection run.
-const MIN_POLL_TICKS_BEFORE_DONE = 2;
-const MAX_POLL_TICKS = 60;
-
-const isInspectionInProgress = (
-  state: string | undefined,
-): state is "pending" | "running" => state === "pending" || state === "running";
-
 export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   vmId,
   onBack,
-  inspectionActive = false,
+  inspectionStatus,
   scrollToSection,
   onScrollToSectionComplete,
 }) => {
@@ -114,22 +106,16 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     null,
   );
   const applicationsSectionRef = useRef<HTMLDivElement>(null);
-  // Local poll session for this detail view (may outlive a single status value
-  // when a re-run still reports the previous terminal state).
-  const [inspectionPolling, setInspectionPolling] = useState(false);
-  const seenRunningRef = useRef(false);
-  const pollTicksRef = useRef(0);
-  const inspectionStateRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const fetchVMDetails = async () => {
       try {
         setLoading(true);
         setError(null);
-        const vmData = await agentApi.getVM({ id: vmId });
+        const vmData = await agentApi.getLatestVirtualMachine({ vmId });
         let utilization: VmUtilizationDetails | undefined;
         try {
-          utilization = await agentApi.getVMUtilization({ id: vmId });
+          utilization = await agentApi.getLatestVMUtilization({ vmId });
         } catch (utilizationError) {
           console.warn("Error fetching VM utilization:", utilizationError);
         }
@@ -147,99 +133,6 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     fetchVMDetails();
   }, [vmId, agentApi]);
 
-  const inspectionState = vm?.inspectionStatus?.state;
-  inspectionStateRef.current = inspectionState;
-
-  // Start/reset a poll session when a run becomes active (may still show a
-  // stale terminal status from the previous run on the first getVM).
-  useEffect(() => {
-    if (!inspectionActive) {
-      return;
-    }
-    seenRunningRef.current = isInspectionInProgress(inspectionStateRef.current);
-    pollTicksRef.current = 0;
-    setInspectionPolling(true);
-  }, [inspectionActive]);
-
-  // Also poll whenever the detail status itself is pending/running.
-  useEffect(() => {
-    if (!isInspectionInProgress(inspectionState)) {
-      return;
-    }
-    seenRunningRef.current = true;
-    setInspectionPolling(true);
-  }, [inspectionState]);
-
-  // Refresh detail while deep inspection may still be transitioning.
-  useEffect(() => {
-    if (!inspectionPolling) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const pollVmDetails = async () => {
-      try {
-        const vmData = await agentApi.getVM({ id: vmId });
-        if (cancelled) {
-          return;
-        }
-        pollTicksRef.current += 1;
-        setVm((prev) =>
-          prev ? { ...vmData, utilization: prev.utilization } : vmData,
-        );
-      } catch (err) {
-        console.warn("Error refreshing VM inspection status:", err);
-      }
-    };
-
-    void pollVmDetails();
-    const intervalId = setInterval(pollVmDetails, INSPECTION_POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
-  }, [vmId, agentApi, inspectionPolling]);
-
-  // Stop only after we've seen pending/running (or waited grace ticks) and
-  // the status is terminal again — same lifecycle rules as the list view.
-  useEffect(() => {
-    if (!inspectionPolling) {
-      return;
-    }
-
-    const inProgress = isInspectionInProgress(inspectionState);
-    if (inProgress) {
-      seenRunningRef.current = true;
-      return;
-    }
-
-    // Still loading initial detail — don't treat missing state as terminal yet.
-    if (vm === null) {
-      return;
-    }
-
-    const ticks = pollTicksRef.current;
-
-    // Active run may still be queueing this VM; keep polling until we observe
-    // pending/running (or hit the ceiling). Grace ticks apply once the run
-    // signal clears without ever seeing an in-progress state.
-    if (inspectionActive && !seenRunningRef.current) {
-      if (ticks >= MAX_POLL_TICKS) {
-        setInspectionPolling(false);
-      }
-      return;
-    }
-
-    const seenAndDone = seenRunningRef.current;
-    const waitedAndDone = ticks >= MIN_POLL_TICKS_BEFORE_DONE;
-    const exhausted = ticks >= MAX_POLL_TICKS;
-
-    if (seenAndDone || waitedAndDone || exhausted) {
-      setInspectionPolling(false);
-    }
-  }, [inspectionState, inspectionPolling, vm, inspectionActive]);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -247,7 +140,10 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
       try {
         setApplicationsLoading(true);
         setApplicationsError(null);
-        const response = await agentApi.getApplications();
+        const collectionId = await getLatestCollectionId(agentApi);
+        const response = collectionId
+          ? await agentApi.listApplications({ id: collectionId })
+          : { applications: [] };
         if (!cancelled) {
           setVmApplications(
             getApplicationsForVm(response.applications ?? [], vmId),
@@ -364,8 +260,6 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     }
   };
 
-  const inspectionStatus = vm.inspectionStatus;
-
   return (
     <Stack hasGutter>
       <StackItem>
@@ -406,7 +300,8 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
               !c.label?.toLowerCase().includes("no inspection concerns"),
           );
           const hasError =
-            inspectionStatus.state === "error" && !!inspectionStatus.error;
+            !!inspectionStatus.error &&
+            !isLikelyCanceledInspectionError(inspectionStatus.error);
           const hasContent = hasError || concerns.length > 0;
 
           return (
@@ -426,9 +321,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                             isPlain
                             title="Inspection error"
                           >
-                            <span style={{ whiteSpace: "pre-wrap" }}>
-                              {inspectionStatus.error}
-                            </span>
+                            {inspectionStatus.error}
                           </Alert>
                         </StackItem>
                       )}
@@ -462,7 +355,10 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                         ? "Inspection pending…"
                         : inspectionStatus.state === "running"
                           ? "Inspection in progress…"
-                          : inspectionStatus.state === "canceled"
+                          : inspectionStatus.state === "canceled" ||
+                              isLikelyCanceledInspectionError(
+                                inspectionStatus.error,
+                              )
                             ? "Inspection was canceled"
                             : inspectionStatus.state === "error"
                               ? "Inspection failed"
@@ -876,8 +772,8 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                         <Tr key={nic.mac || `nic-${nic.index}`}>
                           <Td>{nic.network || "—"}</Td>
                           <Td>{nic.mac || "—"}</Td>
-                          <Td>{nic.ipv4Address || "—"}</Td>
-                          <Td>{nic.ipv6Address || "—"}</Td>
+                          <Td>—</Td>
+                          <Td>—</Td>
                         </Tr>
                       ))}
                     </Tbody>
@@ -1007,7 +903,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                   acc[cat].push(issue);
                   return acc;
                 },
-                {} as Record<string, VMIssue[]>,
+                {} as Record<string, VirtualMachineIssue[]>,
               );
 
               const toggleCategory = (category: string) => {
@@ -1099,7 +995,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
       </StackItem>
 
       <StackItem>
-        <VMProcessesCard key={vmId} processes={vm.processes ?? []} />
+        <VMProcessesCard key={vmId} processes={[]} />
       </StackItem>
     </Stack>
   );

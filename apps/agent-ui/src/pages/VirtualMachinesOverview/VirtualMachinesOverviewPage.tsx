@@ -1,15 +1,9 @@
 import { useInjection } from "@migration-planner-ui/ioc";
 import type {
-  DefaultApiInterface,
-  Inventory,
   RightsizingClusterUtilization,
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
-import {
-  instanceOfInventory,
-  instanceOfUpdateInventory,
-  ResponseError,
-} from "@openshift-migration-advisor/agent-sdk";
+import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   Content,
@@ -30,11 +24,14 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAgentStatus } from "../../common/AgentStatusContext";
+import type { DefaultApiInterface } from "../../common/agentApi";
+import { getLatestCollectionId } from "../../common/collectionApi";
 import {
   AppEmptyState,
   DataSharingAlert,
   DataSharingModal,
 } from "../../common/components/index";
+import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -67,6 +64,8 @@ import { Header } from "./Header";
 import {
   fetchInventoryFromApi,
   getInventoryAggregateView,
+  type InventoryPayload,
+  unwrapInventoryPayload,
 } from "./inventoryParsing";
 import { ReportPageHeader } from "./ReportPageHeader";
 import { useApplicationsData } from "./useApplicationsData";
@@ -75,9 +74,13 @@ import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
+  const {
+    agentStatus,
+    hasCollectionData,
+    refetch: refetchAgentStatus,
+  } = useAgentStatus();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [inventory, setInventory] = useState<Inventory | null>(null);
+  const [inventory, setInventory] = useState<InventoryPayload | null>(null);
   const [vmsList, setVmsList] = useState<VirtualMachine[]>([]);
   const [vmsLoading, setVmsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -179,10 +182,11 @@ export const ReportContainer: React.FC = () => {
     }
   }, [searchParams, activeTab]);
 
-  const fetchInventory = useCallback(async (): Promise<Inventory | null> => {
-    const basePath = getAgentApiBasePath(agentApi);
-    return fetchInventoryFromApi(basePath);
-  }, [agentApi]);
+  const fetchInventory =
+    useCallback(async (): Promise<InventoryPayload | null> => {
+      const basePath = getAgentApiBasePath(agentApi);
+      return fetchInventoryFromApi(basePath);
+    }, [agentApi]);
 
   const {
     revision: inventoryRevision,
@@ -232,7 +236,16 @@ export const ReportContainer: React.FC = () => {
 
     const fetchUtilizationMetrics = async () => {
       try {
+        const collectionId = await getLatestCollectionId(agentApi);
+        if (!collectionId) {
+          if (!cancelled) {
+            setUtilizationMetrics(null);
+          }
+          return;
+        }
+
         const response = await agentApi.getClusterUtilization({
+          id: collectionId,
           clusterId: selectedClusterId,
         });
 
@@ -248,7 +261,7 @@ export const ReportContainer: React.FC = () => {
       }
     };
 
-    fetchUtilizationMetrics();
+    void fetchUtilizationMetrics();
 
     return () => {
       cancelled = true;
@@ -291,7 +304,7 @@ export const ReportContainer: React.FC = () => {
           withDefaultReportInclusion(initialVMFilters),
         );
 
-        const response = await agentApi.getVMs({
+        const response = await agentApi.listLatestVirtualMachines({
           byExpression,
           sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
           page: vmsPage,
@@ -299,7 +312,7 @@ export const ReportContainer: React.FC = () => {
         });
 
         if (currentRequestId === vmsRequestIdRef.current) {
-          setVmsList(normalizeVirtualMachines(response.vms));
+          setVmsList(normalizeVirtualMachines(response.virtualMachines));
           setVmsTotalCount(response.total || 0);
         }
       } catch (err) {
@@ -332,16 +345,16 @@ export const ReportContainer: React.FC = () => {
         withDefaultReportInclusion(initialVMFilters),
       );
       const [response, labelsResponse] = await Promise.all([
-        agentApi.getVMs({
+        agentApi.listLatestVirtualMachines({
           byExpression,
           sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
           page: vmsPage,
           pageSize: vmsPageSize,
         }),
-        agentApi.getVMLabels().catch(() => null),
+        agentApi.getLatestVMLabels().catch(() => null),
       ]);
       if (vmsRefreshIdRef.current === reqId) {
-        setVmsList(normalizeVirtualMachines(response.vms));
+        setVmsList(normalizeVirtualMachines(response.virtualMachines));
         setVmsTotalCount(response.total || 0);
         setAvailableFilterOptions((prev) => ({
           ...prev,
@@ -353,24 +366,27 @@ export const ReportContainer: React.FC = () => {
     }
   }, [agentApi, initialVMFilters, vmsSortFields, vmsPage, vmsPageSize]);
 
+  const discoveryStatus = formatDiscoveryStatus(agentStatus);
+
   const {
     isExportModalOpen,
+    showExport,
     exportError,
     isExporting,
     openExportModal,
     closeExportModal,
     confirmExport,
-  } = useExportInventory(agentApi);
+  } = useExportInventory(agentApi, {
+    hasCollectionData,
+    hasInventory: Boolean(inventory),
+  });
 
   if (loading) {
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader
-              agentStatus={agentStatus}
-              onExportClick={openExportModal}
-            />
+            <ReportPageHeader discoveryStatus={discoveryStatus} />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -379,13 +395,6 @@ export const ReportContainer: React.FC = () => {
             <Content component="p">Loading inventory data...</Content>
           </StackItem>
         </Stack>
-        <ExportCsvModal
-          isOpen={isExportModalOpen}
-          error={exportError}
-          isExporting={isExporting}
-          onClose={closeExportModal}
-          onExport={confirmExport}
-        />
       </PageSection>
     );
   }
@@ -395,10 +404,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader
-              agentStatus={agentStatus}
-              onExportClick={openExportModal}
-            />
+            <ReportPageHeader discoveryStatus={discoveryStatus} />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -409,13 +415,6 @@ export const ReportContainer: React.FC = () => {
             </Alert>
           </StackItem>
         </Stack>
-        <ExportCsvModal
-          isOpen={isExportModalOpen}
-          error={exportError}
-          isExporting={isExporting}
-          onClose={closeExportModal}
-          onExport={confirmExport}
-        />
       </PageSection>
     );
   }
@@ -425,10 +424,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader
-              agentStatus={agentStatus}
-              onExportClick={openExportModal}
-            />
+            <ReportPageHeader discoveryStatus={discoveryStatus} />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -440,13 +436,6 @@ export const ReportContainer: React.FC = () => {
             </Alert>
           </StackItem>
         </Stack>
-        <ExportCsvModal
-          isOpen={isExportModalOpen}
-          error={exportError}
-          isExporting={isExporting}
-          onClose={closeExportModal}
-          onExport={confirmExport}
-        />
       </PageSection>
     );
   }
@@ -499,14 +488,14 @@ export const ReportContainer: React.FC = () => {
 
   const handleDownloadInventory = async () => {
     try {
-      const response = await agentApi.getInventory({ withAgentId: true });
-
-      let downloadData: unknown = response;
-      if (instanceOfInventory(response)) {
-        downloadData = { agent_id: "", inventory: response };
-      } else if (!instanceOfUpdateInventory(response)) {
-        throw new Error("Unexpected inventory response format");
-      }
+      const response = await agentApi.getLatestInventory();
+      const payload = unwrapInventoryPayload(response);
+      const downloadData = payload
+        ? {
+            agent_id: response.inventory?.agentId ?? "",
+            inventory: payload,
+          }
+        : response;
 
       const jsonString = JSON.stringify(downloadData, null, 2);
 
@@ -607,7 +596,8 @@ export const ReportContainer: React.FC = () => {
       <Stack hasGutter>
         <StackItem>
           <ReportPageHeader
-            agentStatus={agentStatus}
+            discoveryStatus={discoveryStatus}
+            showExport={showExport}
             onExportClick={openExportModal}
           />
         </StackItem>

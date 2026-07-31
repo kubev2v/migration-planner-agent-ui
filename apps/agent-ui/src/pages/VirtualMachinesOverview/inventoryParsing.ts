@@ -1,18 +1,58 @@
 import type {
-  DefaultApiInterface,
-  GetInventory200Response,
   Infra,
   Inventory,
+  Inventory1,
   InventoryData,
   VirtualMachine,
   VMs,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
+  Inventory1FromJSON,
   InventoryFromJSON,
   instanceOfInventory,
   instanceOfUpdateInventory,
   UpdateInventoryFromJSON,
 } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../common/agentApi";
+import { getMigrationExcluded } from "./virtualMachineParsing";
+
+/** vCenter/cluster inventory payload (nested inside GET /inventory wrapper). */
+export type InventoryPayload = Inventory1;
+
+export function unwrapInventoryPayload(
+  inventory: Inventory | InventoryPayload | null | undefined,
+): InventoryPayload | null {
+  if (!inventory || typeof inventory !== "object") {
+    return null;
+  }
+  if ("vcenter_id" in inventory && "clusters" in inventory) {
+    return inventory as InventoryPayload;
+  }
+  if (instanceOfInventory(inventory)) {
+    return inventory.inventory?.inventory ?? null;
+  }
+  if (
+    typeof inventory === "object" &&
+    "agentId" in inventory &&
+    "inventory" in inventory &&
+    instanceOfUpdateInventory(inventory as object)
+  ) {
+    return (inventory as { inventory?: InventoryPayload }).inventory ?? null;
+  }
+  return null;
+}
+
+export function wrapInventoryPayload(
+  payload: InventoryPayload,
+  agentId = "",
+): Inventory {
+  return {
+    inventory: {
+      agentId,
+      inventory: payload,
+    },
+  };
+}
 
 export type MigrationExcludedInventoryChange = {
   vmIds: string[];
@@ -20,8 +60,10 @@ export type MigrationExcludedInventoryChange = {
   affectedVms: VirtualMachine[];
 };
 
-/** Parse inventory from GET /inventory (direct Inventory or UpdateInventory wrapper). */
-export function parseInventoryResponse(jsonData: unknown): Inventory | null {
+/** Parse inventory from GET /inventory JSON (wrapper or legacy payload). */
+export function parseInventoryResponse(
+  jsonData: unknown,
+): InventoryPayload | null {
   if (!jsonData || typeof jsonData !== "object") {
     return null;
   }
@@ -30,56 +72,59 @@ export function parseInventoryResponse(jsonData: unknown): Inventory | null {
     return null;
   }
   if ("vcenter_id" in record && "clusters" in record) {
-    return InventoryFromJSON(jsonData);
+    return Inventory1FromJSON(jsonData);
   }
   if ("inventory" in record) {
+    const parsed = InventoryFromJSON(jsonData);
+    return unwrapInventoryPayload(parsed);
+  }
+  if ("agentId" in record && "inventory" in record) {
     const updateInventory = UpdateInventoryFromJSON(jsonData);
     return updateInventory.inventory ?? null;
   }
   return null;
 }
 
-/** Extract inventory from GET /inventory SDK response. */
+/** Extract inventory payload from GET /inventory SDK response. */
 export function inventoryFromGetInventoryResponse(
-  response: GetInventory200Response | null | undefined,
-): Inventory | null {
-  if (!response || typeof response !== "object") {
-    return null;
-  }
-  if (Object.keys(response).length === 0) {
-    return null;
-  }
-  if (instanceOfInventory(response)) {
-    return response;
-  }
-  if (instanceOfUpdateInventory(response) && response.inventory) {
-    return response.inventory;
-  }
-  return null;
+  response: Inventory | null | undefined,
+): InventoryPayload | null {
+  return unwrapInventoryPayload(response);
 }
 
 /** Parse inventory JSON from GET /groups/{id} or GET /inventory. */
-export function parseInventoryFromJson(json: unknown): Inventory | null {
+export function parseInventoryFromJson(json: unknown): InventoryPayload | null {
   return parseInventoryResponse(json);
 }
 
-/** Fetch group-scoped assessment inventory from GET /groups/{id}. */
+/** Extract group-scoped assessment inventory from a GroupResponse. */
+export function inventoryFromGroupResponse(response: {
+  inventory?: InventoryPayload | null;
+}): InventoryPayload | null {
+  return unwrapInventoryPayload(response.inventory);
+}
+
+/** Load group-scoped inventory from GET /groups/{groupId} (v2 GroupResponse.inventory). */
 export async function fetchGroupAssessmentInventory(
   agentApi: DefaultApiInterface,
   groupId: string,
-): Promise<Inventory | null> {
-  const response = await agentApi.getGroup({
-    id: groupId,
-    page: 1,
-    pageSize: 1,
-  });
-  return response.inventory ?? null;
+): Promise<InventoryPayload | null> {
+  try {
+    const response = await agentApi.getLatestGroup({
+      groupId,
+      page: 1,
+      pageSize: 1,
+    });
+    return inventoryFromGroupResponse(response);
+  } catch {
+    return null;
+  }
 }
 
 /** Fetch inventory from GET /inventory (bypasses SDK response parsing bug). */
 export async function fetchInventoryFromApi(
   basePath: string,
-): Promise<Inventory | null> {
+): Promise<InventoryPayload | null> {
   const url = new URL(`${basePath}/inventory`);
 
   const httpResponse = await fetch(url.toString(), { cache: "no-store" });
@@ -106,16 +151,16 @@ function adjustVmsTotals(
   };
 }
 
-function cloneInventory(inventory: Inventory): Inventory {
+function cloneInventory(inventory: InventoryPayload): InventoryPayload {
   try {
     return structuredClone(inventory);
   } catch {
-    return JSON.parse(JSON.stringify(inventory)) as Inventory;
+    return JSON.parse(JSON.stringify(inventory)) as InventoryPayload;
   }
 }
 
 function findClusterKey(
-  clusters: Inventory["clusters"] | undefined,
+  clusters: InventoryPayload["clusters"] | undefined,
   clusterName: string,
 ): string | undefined {
   if (!clusters) {
@@ -129,7 +174,10 @@ function findClusterKey(
 }
 
 /** Write aggregate VM totals to the inventory location the dashboard reads. */
-function writeAggregateVms(inventory: Inventory, vms: VMs): Inventory {
+function writeAggregateVms(
+  inventory: InventoryPayload,
+  vms: VMs,
+): InventoryPayload {
   if (inventory.vcenter?.vms) {
     return {
       ...inventory,
@@ -165,11 +213,11 @@ function writeAggregateVms(inventory: Inventory, vms: VMs): Inventory {
  * Keeps the assessment report in sync while the server recomputes inventory.
  */
 export function adjustInventoryForMigrationExcludedChange(
-  inventory: Inventory,
+  inventory: InventoryPayload,
   vmIds: string[],
   excluded: boolean,
   knownVms: VirtualMachine[],
-): Inventory {
+): InventoryPayload {
   const sign = excluded ? -1 : 1;
   let totalDelta = 0;
   let migratableDelta = 0;
@@ -180,7 +228,7 @@ export function adjustInventoryForMigrationExcludedChange(
 
   for (const id of vmIds) {
     const vm = knownVms.find((candidate) => candidate.id === id);
-    if (vm?.migrationExcluded === excluded) {
+    if (getMigrationExcluded(vm) === excluded) {
       continue;
     }
 
@@ -246,7 +294,7 @@ function countMigrationExcludedDelta(
   let count = 0;
   for (const id of change.vmIds) {
     const vm = change.affectedVms.find((candidate) => candidate.id === id);
-    if (!vm || vm.migrationExcluded !== change.excluded) {
+    if (!vm || getMigrationExcluded(vm) !== change.excluded) {
       count += 1;
     }
   }
@@ -269,11 +317,11 @@ function getExpectedInventoryTotal(
 
 /** Prefer server inventory when it reflects the change; otherwise keep optimistic state. */
 export function resolveInventoryAfterMigrationChange(
-  optimisticInventory: Inventory | null,
-  fetchedInventory: Inventory | null,
+  optimisticInventory: InventoryPayload | null,
+  fetchedInventory: InventoryPayload | null,
   change: MigrationExcludedInventoryChange,
   previousTotal: number | undefined,
-): Inventory | null {
+): InventoryPayload | null {
   if (!fetchedInventory) {
     return optimisticInventory;
   }
@@ -289,7 +337,6 @@ export function resolveInventoryAfterMigrationChange(
     return fetchedInventory;
   }
 
-  // Server inventory can lag behind VM updates; keep the optimistic totals.
   if (
     expectedDelta < 0 &&
     fetchedTotal !== undefined &&
@@ -309,12 +356,12 @@ export function resolveInventoryAfterMigrationChange(
 }
 
 export async function fetchInventoryAfterMigrationChange(
-  fetchInventory: () => Promise<Inventory | null>,
+  fetchInventory: () => Promise<InventoryPayload | null>,
   change: MigrationExcludedInventoryChange,
   previousTotal: number | undefined,
-  optimisticInventory: Inventory | null,
+  optimisticInventory: InventoryPayload | null,
   options?: { maxAttempts?: number },
-): Promise<Inventory | null> {
+): Promise<InventoryPayload | null> {
   const expectedTotal = getExpectedInventoryTotal(previousTotal, change);
   const maxAttempts = options?.maxAttempts ?? 8;
 
@@ -352,14 +399,13 @@ export type InventoryAggregateView = {
 
 /** Aggregate infra/vms for the dashboard (vcenter scope, or cluster fallback). */
 export function getInventoryAggregateView(
-  inventory: Inventory | null,
+  inventory: InventoryPayload | Inventory | null,
 ): InventoryAggregateView {
-  const clusters = inventory?.clusters ?? {};
-  const vcenterInfra = inventory?.vcenter?.infra;
-  const vcenterVms = inventory?.vcenter?.vms;
+  const payload = unwrapInventoryPayload(inventory);
+  const clusters = payload?.clusters ?? {};
+  const vcenterInfra = payload?.vcenter?.infra;
+  const vcenterVms = payload?.vcenter?.vms;
 
-  // Prefer vcenter VM totals whenever present — this is what GET /inventory updates
-  // and what writeAggregateVms writes to after exclude/include.
   if (vcenterVms) {
     return { infra: vcenterInfra, vms: vcenterVms, clusters };
   }

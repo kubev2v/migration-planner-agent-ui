@@ -15,14 +15,14 @@ describe("createRefreshVmTableFilterOptions", () => {
     vi.useFakeTimers();
 
     const agentApi = {
-      getVMsFilterOptions: vi.fn().mockResolvedValue({
+      getLatestVMFilterOptions: vi.fn().mockResolvedValue({
         clusters: [],
         datacenters: [],
         concernLabels: [],
         concernCategories: [],
       }),
-      getVMLabels: vi.fn().mockResolvedValue({ labels: [] }),
-      listGroups: vi.fn().mockResolvedValue({ groups: [], pageCount: 1 }),
+      getLatestVMLabels: vi.fn().mockResolvedValue({ labels: [] }),
+      listLatestGroups: vi.fn().mockResolvedValue({ groups: [], pageCount: 1 }),
     };
     const setOptions = vi.fn();
     const refresh = createRefreshVmTableFilterOptions(
@@ -47,7 +47,7 @@ describe("createRefreshVmTableFilterOptions", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     const agentApi = {
-      getVMsFilterOptions: vi
+      getLatestVMFilterOptions: vi
         .fn()
         .mockRejectedValueOnce(new Error("network error"))
         .mockResolvedValue({
@@ -56,8 +56,8 @@ describe("createRefreshVmTableFilterOptions", () => {
           concernLabels: [],
           concernCategories: [],
         }),
-      getVMLabels: vi.fn().mockResolvedValue({ labels: [] }),
-      listGroups: vi.fn().mockResolvedValue({ groups: [], pageCount: 1 }),
+      getLatestVMLabels: vi.fn().mockResolvedValue({ labels: [] }),
+      listLatestGroups: vi.fn().mockResolvedValue({ groups: [], pageCount: 1 }),
     };
     const setOptions = vi.fn();
     const refresh = createRefreshVmTableFilterOptions(
@@ -69,7 +69,7 @@ describe("createRefreshVmTableFilterOptions", () => {
     await refresh();
 
     expect(setOptions).toHaveBeenCalledTimes(1);
-    expect(agentApi.getVMsFilterOptions).toHaveBeenCalledTimes(2);
+    expect(agentApi.getLatestVMFilterOptions).toHaveBeenCalledTimes(2);
   });
 });
 

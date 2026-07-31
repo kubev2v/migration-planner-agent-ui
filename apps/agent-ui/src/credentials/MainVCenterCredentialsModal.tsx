@@ -30,11 +30,10 @@ const getProgressInfo = (
   error?: ApiError | null,
 ): { percentage: number; statusText: string } => {
   switch (status) {
-    case "ready":
-      return { percentage: 0, statusText: "Ready to start" };
     case "connecting":
       return { percentage: 20, statusText: "Connecting to vCenter..." };
     case "collecting":
+    case "collecting metrics":
       return { percentage: 60, statusText: "Collecting inventory data..." };
     case "parsing":
       return { percentage: 90, statusText: "Parsing..." };

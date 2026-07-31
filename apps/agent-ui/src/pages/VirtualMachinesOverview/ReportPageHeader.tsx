@@ -1,16 +1,16 @@
-import type { AgentStatus } from "@openshift-migration-advisor/agent-sdk";
 import { Button, Content, Title } from "@patternfly/react-core";
 import { ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 
 interface ReportPageHeaderProps {
-  agentStatus: AgentStatus | null | undefined;
-  onExportClick: () => void;
+  discoveryStatus: string;
+  showExport?: boolean;
+  onExportClick?: () => void;
 }
 
 export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
-  agentStatus,
+  discoveryStatus,
+  showExport = false,
   onExportClick,
 }) => {
   return (
@@ -27,12 +27,14 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
           Virtual machines overview
         </Title>
         <Content component="p" style={{ marginTop: "8px" }}>
-          Red Hat sharing status: <DiscoveryStatus agentStatus={agentStatus} />
+          Discovery VM status: {discoveryStatus}
         </Content>
       </div>
-      <Button variant="link" onClick={onExportClick} icon={<ExportIcon />}>
-        Export
-      </Button>
+      {showExport && onExportClick ? (
+        <Button variant="link" onClick={onExportClick} icon={<ExportIcon />}>
+          Export
+        </Button>
+      ) : null}
     </div>
   );
 };

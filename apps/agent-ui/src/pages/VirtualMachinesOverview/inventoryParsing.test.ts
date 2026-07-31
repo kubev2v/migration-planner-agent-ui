@@ -1,6 +1,5 @@
 import type {
   Infra,
-  Inventory,
   VirtualMachine,
   VMs,
 } from "@openshift-migration-advisor/agent-sdk";
@@ -8,8 +7,11 @@ import { describe, expect, it } from "vitest";
 import {
   adjustInventoryForMigrationExcludedChange,
   getInventoryAggregateView,
+  type InventoryPayload,
+  inventoryFromGroupResponse,
   resolveInventoryAfterMigrationChange,
 } from "./inventoryParsing";
+import type { VirtualMachineWithExclusion } from "./virtualMachineParsing";
 
 const emptyResourceBreakdown = {
   total: 0,
@@ -37,7 +39,7 @@ const testVms = (total: number, totalMigratable: number): VMs => ({
   migrationWarnings: [],
 });
 
-const baseInventory: Inventory = {
+const baseInventory: InventoryPayload = {
   vcenter_id: "vc-1",
   clusters: {
     "cluster-a": {
@@ -51,9 +53,10 @@ const baseInventory: Inventory = {
   },
 };
 
-const vm: VirtualMachine = {
+const vm: VirtualMachineWithExclusion = {
   id: "vm-1",
   name: "web-1",
+  vCenterID: "vc-1",
   vCenterState: "poweredOn",
   cluster: "cluster-a",
   datacenter: "dc-1",
@@ -78,7 +81,7 @@ describe("adjustInventoryForMigrationExcludedChange", () => {
   });
 
   it("updates cluster aggregate totals when vcenter VMs are absent", () => {
-    const clusterOnlyInventory: Inventory = {
+    const clusterOnlyInventory: InventoryPayload = {
       vcenter_id: "vc-1",
       clusters: {
         prod: {
@@ -102,7 +105,7 @@ describe("adjustInventoryForMigrationExcludedChange", () => {
 
 describe("getInventoryAggregateView", () => {
   it("prefers vcenter VM totals even when vcenter infra is missing", () => {
-    const inventory: Inventory = {
+    const inventory: InventoryPayload = {
       vcenter_id: "vc-1",
       clusters: {
         prod: {
@@ -133,7 +136,7 @@ describe("sequential migration excluded changes", () => {
       inventory,
       ["vm-1"],
       false,
-      [{ ...vm, migrationExcluded: true }],
+      [{ ...vm, migrationExcluded: true } as VirtualMachineWithExclusion],
     );
 
     expect(getInventoryAggregateView(inventory).vms?.total).toBe(2);
@@ -141,7 +144,7 @@ describe("sequential migration excluded changes", () => {
 
   it("applies bulk exclude then bulk include", () => {
     const vm2: VirtualMachine = { ...vm, id: "vm-2", name: "web-2" };
-    const inventoryWithTwo: Inventory = {
+    const inventoryWithTwo: InventoryPayload = {
       ...baseInventory,
       vcenter: {
         infra: testInfra(1),
@@ -160,8 +163,8 @@ describe("sequential migration excluded changes", () => {
       ["vm-1", "vm-2"],
       false,
       [
-        { ...vm, migrationExcluded: true },
-        { ...vm2, migrationExcluded: true },
+        { ...vm, migrationExcluded: true } as VirtualMachineWithExclusion,
+        { ...vm2, migrationExcluded: true } as VirtualMachineWithExclusion,
       ],
     );
 
@@ -186,5 +189,20 @@ describe("resolveInventoryAfterMigrationChange", () => {
     );
 
     expect(getInventoryAggregateView(resolved).vms?.total).toBe(1);
+  });
+});
+
+describe("inventoryFromGroupResponse", () => {
+  it("returns group-scoped Inventory1 payloads", () => {
+    expect(
+      inventoryFromGroupResponse({
+        inventory: baseInventory,
+      }),
+    ).toEqual(baseInventory);
+  });
+
+  it("returns null when the group has no inventory", () => {
+    expect(inventoryFromGroupResponse({})).toBeNull();
+    expect(inventoryFromGroupResponse({ inventory: null })).toBeNull();
   });
 });

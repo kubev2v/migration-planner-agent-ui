@@ -1,4 +1,5 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import { getVmTags } from "../../virtualMachineParsing";
 
 // Use a large multiplier to ensure no overlap between groups
 const GROUP_MULTIPLIER = 10_000;
@@ -17,8 +18,7 @@ export const applicationsSort: (vm: VirtualMachine) => number = (vm) =>
   getVmApplicationCount(vm);
 
 export function getVmLabelCount(vm: VirtualMachine): number {
-  const labels = (vm as VirtualMachine & { labels?: unknown }).labels;
-  return Array.isArray(labels) ? labels.length : 0;
+  return getVmTags(vm).length;
 }
 
 export const labelsSort: (vm: VirtualMachine) => number = (vm) =>

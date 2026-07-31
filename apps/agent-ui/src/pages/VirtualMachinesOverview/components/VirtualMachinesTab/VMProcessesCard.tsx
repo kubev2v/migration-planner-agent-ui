@@ -1,4 +1,3 @@
-import type { Process } from "@openshift-migration-advisor/agent-sdk";
 import { Card, CardBody, CardTitle } from "@patternfly/react-core";
 import { ProcessAutomationIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
@@ -12,13 +11,19 @@ import {
   useVmDetailListCardState,
 } from "./vmDetailListCard";
 
+/** Local stand-in for removed SDK Process type (v2 detail model has no processes). */
+export type DetectedProcess = {
+  name: string;
+  version?: string;
+};
+
 interface VMProcessesCardProps {
-  processes: Process[];
+  processes: DetectedProcess[];
 }
 
-const getProcessName = (process: Process) => process.name;
+const getProcessName = (process: DetectedProcess) => process.name;
 
-const getProcessRowKey = (process: Process) =>
+const getProcessRowKey = (process: DetectedProcess) =>
   `${process.name}\0${process.version ?? ""}`;
 
 export const VMProcessesCard: React.FC<VMProcessesCardProps> = ({

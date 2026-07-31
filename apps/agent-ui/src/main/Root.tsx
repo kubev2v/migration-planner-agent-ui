@@ -4,16 +4,14 @@ import {
   Container,
   Provider as DependencyInjectionProvider,
 } from "@migration-planner-ui/ioc";
-import {
-  Configuration,
-  DefaultApi,
-} from "@openshift-migration-advisor/agent-sdk";
+import { Configuration } from "@openshift-migration-advisor/agent-sdk";
 import { Spinner } from "@patternfly/react-core";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { AgentStatusProvider } from "../common/AgentStatusContext.tsx";
 import { AgentUIVersion } from "../common/AgentUIVersion.tsx";
+import { createAgentApi } from "../common/agentApi";
 import { CredentialsProvider } from "../credentials/CredentialsContext.tsx";
 import { router } from "./Router.tsx";
 import { Symbols } from "./Symbols.ts";
@@ -22,11 +20,11 @@ export const getConfigurationBasePath = (): string => {
   if (import.meta.env.PROD) {
     // In production, use HTTPS
     const origin = window.location.origin.replace(/^http:/, "https:");
-    return `${origin}/api/v1`;
+    return `${origin}/api/v2`;
   }
 
   // In development, use the current origin (allows HTTP for local dev)
-  return `${window.location.origin}/agent/api/v1`;
+  return `${window.location.origin}/agent/api/v2`;
 };
 
 function getConfiguredContainer(): Container {
@@ -35,7 +33,7 @@ function getConfiguredContainer(): Container {
     fetchApi: (url, init) => fetch(url, { ...init, cache: "no-store" }),
   });
   const container = new Container();
-  container.register(Symbols.AgentApi, new DefaultApi(agentApiConfig));
+  container.register(Symbols.AgentApi, createAgentApi(agentApiConfig));
 
   return container;
 }

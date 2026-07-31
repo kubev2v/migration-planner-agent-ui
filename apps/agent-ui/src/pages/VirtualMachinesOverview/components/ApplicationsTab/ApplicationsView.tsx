@@ -1,5 +1,4 @@
 import { css } from "@emotion/css";
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   AlertActionCloseButton,
@@ -25,6 +24,7 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import {
   AttributeValueFilter,
@@ -123,7 +123,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
       return;
     }
     try {
-      const data = await agentApi.getVMLabels();
+      const data = await agentApi.getLatestVMLabels();
       setAvailableLabels(data.labels ?? []);
     } catch (err) {
       console.error("Error fetching labels:", err);
@@ -176,7 +176,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
       setActionError(null);
       const results = await Promise.allSettled(
         labelsToAdd.map((label) =>
-          agentApi.updateLabelVMs({
+          agentApi.updateLatestLabelVMs({
             label,
             updateLabelVMsRequest: { add: actionVmIds },
           }),

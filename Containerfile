@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/nodejs-24-minimal@sha256:5225726fc98379c9868b87ccb5b9c0f205555e0372cd7d0ecc6e772df8f1e5d1 AS builder
+FROM registry.access.redhat.com/ubi9/nodejs-24-minimal@sha256:1770f8731fa5fe4053203fa72a26f30229126c20c7435dd46eda0ae212ba018f AS builder
 USER 1001
 WORKDIR ${APP_ROOT}/repo
 COPY --chown=1001:0 . .
@@ -8,7 +8,7 @@ ARG GIT_TAG
 ENV GIT_TAG=${GIT_TAG}
 RUN node .yarn/releases/yarn-4.12.0.cjs install --immutable && node .yarn/releases/yarn-4.12.0.cjs build:all
 
-FROM registry.access.redhat.com/ubi9/nginx-124@sha256:beb7ad927c18341b77134d3b696e81801ce7dd1749a191719457c376904ad7de
+FROM registry.access.redhat.com/ubi9/nginx-124@sha256:62c469e0343bd135722577fee540e7282d271e2156d4ae364b6b0df62f86b8b2
 # Required labels for Red Hat / Enterprise Contract
 ARG IMAGE_NAME=migration-planner-agent-ui
 ARG IMAGE_VERSION=0.0.0

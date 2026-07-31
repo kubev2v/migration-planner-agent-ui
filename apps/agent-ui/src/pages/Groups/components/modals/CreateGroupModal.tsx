@@ -1,8 +1,5 @@
 import { useInjection } from "@migration-planner-ui/ioc";
-import type {
-  DefaultApiInterface,
-  VirtualMachine,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   Button,
@@ -20,6 +17,7 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { parseApiError } from "../../../../common/parseApiError";
 import { Symbols } from "../../../../main/Symbols";
 import { VMTable } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/VMTable";
@@ -109,7 +107,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           withDefaultReportInclusion(filters),
         );
 
-        const response = await agentApi.getVMs({
+        const response = await agentApi.listLatestVirtualMachines({
           byExpression,
           sort: sortFields.length > 0 ? sortFields : undefined,
           page,
@@ -117,7 +115,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         });
 
         if (requestId === requestIdRef.current) {
-          setVms(response.vms || []);
+          setVms(response.virtualMachines || []);
           setTotalVMs(response.total || 0);
         }
       } catch (err) {
@@ -158,7 +156,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     setIsCreating(true);
     setError(null);
     try {
-      await agentApi.createGroup({
+      await agentApi.createLatestGroup({
         createGroupRequest: {
           name: trimmed,
           filter: vmIdsToFilterExpression(Array.from(selectedVMs)),

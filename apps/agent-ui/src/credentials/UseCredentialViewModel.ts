@@ -1,13 +1,13 @@
 import { useInjection } from "@migration-planner-ui/ioc";
 import type {
-  CollectorStartRequest,
   CollectorStatus,
-  DefaultApiInterface,
   VcenterCredentials,
 } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { newAbortSignal } from "../common/AbortSignal";
+import type { DefaultApiInterface } from "../common/agentApi";
+import { getCollectorStatus } from "../common/collectorApi";
 import type { ApiError } from "../common/components/index";
 import { parseApiError } from "../common/parseApiError";
 import { Symbols } from "../main/Symbols";
@@ -55,7 +55,6 @@ export const useLoginViewModel = (
         setVersion(versionInfo.version);
       } catch (err) {
         console.warn("Failed to fetch agent version:", err);
-        // Don't set error state, just log - version is not critical
       }
     };
 
@@ -66,17 +65,12 @@ export const useLoginViewModel = (
   useEffect(() => {
     const checkInitialStatus = async () => {
       try {
-        const signal = newAbortSignal(
-          "Initial collector status request timed out.",
-        );
-        const collectorStatus = await agentApi.getCollectorStatus({ signal });
+        const collectorStatus = await getCollectorStatus(agentApi);
 
-        // If already collected, redirect to report page
         if (collectorStatus.status === "collected") {
           navigate("/report");
         }
       } catch (err) {
-        // Silently fail - user can still use login form
         console.warn("Failed to check initial collector status:", err);
       }
     };
@@ -90,23 +84,17 @@ export const useLoginViewModel = (
       return;
     }
 
-    // Reset failure counter when polling starts
     pollFailuresRef.current = 0;
 
     const pollStatus = async () => {
       try {
-        // Create a timed abort signal to prevent requests from piling up
         const signal = newAbortSignal("Collector status request timed out.");
+        const collectorStatus = await getCollectorStatus(agentApi, { signal });
 
-        const collectorStatus = await agentApi.getCollectorStatus({ signal });
-
-        // Clear failure counter on successful response
         pollFailuresRef.current = 0;
         setStatus(collectorStatus.status);
 
-        // Check if collection is complete or has error
         if (collectorStatus.status === "collected") {
-          // Navigate to report page using client-side navigation
           navigate("/report");
         } else if (collectorStatus.status === "error") {
           setIsCollecting(false);
@@ -115,21 +103,17 @@ export const useLoginViewModel = (
           });
         }
       } catch (err) {
-        // Handle AbortError (timeout) separately - log but don't show error to user
         if (err instanceof Error && err.name === "AbortError") {
           console.warn(
             "Collector status poll timed out, will retry on next interval",
           );
-          // Don't increment failure counter for timeouts - they're expected to retry
         } else {
-          // Increment consecutive failure counter
           pollFailuresRef.current += 1;
           console.error(
             `Error polling collector status (failure ${pollFailuresRef.current}/${MAX_POLL_FAILURES}):`,
             err,
           );
 
-          // If threshold exceeded, surface error to user and stop polling
           if (pollFailuresRef.current >= MAX_POLL_FAILURES) {
             setIsCollecting(false);
             setError({
@@ -143,13 +127,11 @@ export const useLoginViewModel = (
       }
     };
 
-    // Poll every 2 seconds
     const interval = setInterval(pollStatus, 2000);
-    pollStatus(); // Initial call
+    pollStatus();
 
     return () => {
       clearInterval(interval);
-      // Reset failure counter on cleanup
       pollFailuresRef.current = 0;
     };
   }, [isCollecting, agentApi, navigate]);
@@ -159,13 +141,11 @@ export const useLoginViewModel = (
       setError(null);
       setIsCollecting(true);
       setStatus("connecting");
-      // Reset failure counter when starting new collection
       pollFailuresRef.current = 0;
 
       let modeChangeSucceeded = false;
 
       try {
-        // Step 1: If data sharing is enabled, change agent mode to "connected"
         if (isDataShared) {
           const signal = newAbortSignal(
             "The server didn't respond in a timely fashion.",
@@ -177,47 +157,31 @@ export const useLoginViewModel = (
           );
           modeChangeSucceeded = true;
 
-          // Refetch agent status to update the UI (isolated error handling)
           if (refetchAgentStatus) {
             try {
               await refetchAgentStatus();
             } catch (refetchErr) {
-              // Log but don't fail the collection process
               console.error("Failed to refetch agent status:", refetchErr);
             }
           }
         }
 
-        // Step 2: Save vCenter credentials
-        const vcenterCredentials = {
+        await updateCredential({
           url: credentials.url,
           username: credentials.username,
           password: credentials.password,
-        };
-
-        await updateCredential(vcenterCredentials);
-
-        // Step 3: Start the collection process
-        const collectorRequest: CollectorStartRequest = {
-          url: credentials.url,
-          username: credentials.username,
-          password: credentials.password,
-        };
+        });
 
         const signal = newAbortSignal(
           "The server didn't respond in a timely fashion.",
         );
 
-        await agentApi.startCollector(
-          { collectorStartRequest: collectorRequest },
-          { signal },
-        );
-        // Status will be updated by the polling effect
+        const started = await agentApi.startCollector({ signal });
+        setStatus(started.status);
       } catch (err) {
         setIsCollecting(false);
         setStatus(null);
 
-        // Provide context-aware error messages
         let fallbackMessage: string;
         if (modeChangeSucceeded) {
           fallbackMessage =
@@ -242,7 +206,6 @@ export const useLoginViewModel = (
       setIsCollecting(false);
       setStatus(null);
       setError(null);
-      // Reset failure counter when cancelling
       pollFailuresRef.current = 0;
     } catch (err) {
       const errorMessage = await parseApiError(

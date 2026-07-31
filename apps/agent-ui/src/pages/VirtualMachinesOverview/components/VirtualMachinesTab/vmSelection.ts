@@ -1,7 +1,5 @@
-import type {
-  DefaultApiInterface,
-  VirtualMachine,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { vmIdsToFilterExpression } from "../../../Groups/utils/groupFilters";
 import { collectVmIdsUnderInspection } from "./vmInspectionUtils";
 
@@ -18,24 +16,24 @@ export async function fetchAllMatchingVms(
     sort?: string[];
   },
 ): Promise<VirtualMachine[]> {
-  const firstPage = await agentApi.getVMs({
+  const firstPage = await agentApi.listLatestVirtualMachines({
     byExpression: options.byExpression,
     sort: options.sort,
     page: 1,
     pageSize: VM_FETCH_PAGE_SIZE,
   });
 
-  const vms = [...firstPage.vms];
+  const vms = [...firstPage.virtualMachines];
   const pageCount = firstPage.pageCount ?? 1;
 
   for (let page = 2; page <= pageCount; page++) {
-    const response = await agentApi.getVMs({
+    const response = await agentApi.listLatestVirtualMachines({
       byExpression: options.byExpression,
       sort: options.sort,
       page,
       pageSize: VM_FETCH_PAGE_SIZE,
     });
-    vms.push(...response.vms);
+    vms.push(...response.virtualMachines);
   }
 
   return vms;

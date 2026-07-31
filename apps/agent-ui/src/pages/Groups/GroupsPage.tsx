@@ -1,12 +1,11 @@
 import { useInjection } from "@migration-planner-ui/ioc";
-import type {
-  DefaultApiInterface,
-  Group,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import { PageSection } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../common/agentApi";
 import { Symbols } from "../../main/Symbols";
+import { getVmTags } from "../VirtualMachinesOverview/virtualMachineParsing";
 import type { GroupRow } from "./components/GroupsTable";
 import { GroupsTable } from "./components/GroupsTable";
 
@@ -23,32 +22,28 @@ async function enrichGroup(
 ): Promise<GroupRow> {
   const labelSet = new Set<string>();
 
-  const firstPage = await agentApi.getGroup({
-    id: group.id,
+  const firstPage = await agentApi.getLatestGroup({
+    groupId: group.id,
     page: 1,
     pageSize: GROUP_VM_PAGE_SIZE,
   });
 
   for (const vm of firstPage.vms) {
-    if (vm.labels) {
-      for (const label of vm.labels) {
-        labelSet.add(label);
-      }
+    for (const label of getVmTags(vm)) {
+      labelSet.add(label);
     }
   }
 
   const pageCount = firstPage.pageCount ?? 1;
   for (let vmPage = 2; vmPage <= pageCount; vmPage++) {
-    const response = await agentApi.getGroup({
-      id: group.id,
+    const response = await agentApi.getLatestGroup({
+      groupId: group.id,
       page: vmPage,
       pageSize: GROUP_VM_PAGE_SIZE,
     });
     for (const vm of response.vms) {
-      if (vm.labels) {
-        for (const label of vm.labels) {
-          labelSet.add(label);
-        }
+      for (const label of getVmTags(vm)) {
+        labelSet.add(label);
       }
     }
   }
@@ -116,7 +111,7 @@ export const GroupsPage: React.FC = () => {
         return;
       }
 
-      const response = await agentApi.listGroups({
+      const response = await agentApi.listLatestGroups({
         byName: debouncedNameFilter || undefined,
         page,
         pageSize,
@@ -158,7 +153,7 @@ export const GroupsPage: React.FC = () => {
   useEffect(() => {
     const fetchLabels = async () => {
       try {
-        const response = await agentApi.getVMLabels();
+        const response = await agentApi.getLatestVMLabels();
         setAvailableLabels(response.labels || []);
       } catch (err) {
         console.error("Error fetching VM labels:", err);
@@ -181,8 +176,8 @@ export const GroupsPage: React.FC = () => {
     if (!editingGroup) {
       return;
     }
-    await agentApi.updateGroup({
-      id: editingGroup.id,
+    await agentApi.updateLatestGroup({
+      groupId: editingGroup.id,
       updateGroupRequest: { name },
     });
     invalidateAllGroupsCache(agentApi);
@@ -193,7 +188,7 @@ export const GroupsPage: React.FC = () => {
     if (!deletingGroup) {
       return;
     }
-    await agentApi.deleteGroup({ id: deletingGroup.id });
+    await agentApi.deleteLatestGroup({ groupId: deletingGroup.id });
     invalidateAllGroupsCache(agentApi);
     await fetchGroups();
   };

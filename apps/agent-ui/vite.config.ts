@@ -7,7 +7,7 @@ export default defineConfig((_env) => {
     plugins: [react()],
     server: {
       proxy: {
-        "/agent/api/v1": {
+        "/agent/api/v2": {
           target: process.env.VITE_API_BASE_URL || "http://localhost:8000",
           changeOrigin: true,
           rewrite: (path): string => path.replace(/^\/agent/, ""),

@@ -1,4 +1,5 @@
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
+import type { Group } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { fetchAllGroups } from "../../../Groups/utils/groupList";
 import type { VMTableFilterOptions } from "./vmTableTypes";
 
@@ -40,11 +41,11 @@ export async function fetchVmTableFilterOptions(
   agentApi: DefaultApiInterface,
 ): Promise<VMTableFilterOptions> {
   const [response, labelsResponse, groups] = await Promise.all([
-    agentApi.getVMsFilterOptions(),
-    agentApi.getVMLabels().catch(() => ({ labels: [] as string[] })),
+    agentApi.getLatestVMFilterOptions(),
+    agentApi.getLatestVMLabels().catch(() => ({ labels: [] as string[] })),
     fetchAllGroups(agentApi).catch((err) => {
       console.error("Error fetching groups for filter options:", err);
-      return [];
+      return [] as Group[];
     }),
   ]);
 

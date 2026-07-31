@@ -1,5 +1,4 @@
 import { useInjection } from "@migration-planner-ui/ioc";
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -13,6 +12,7 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { parseApiError } from "../../../../common/parseApiError";
 import { Symbols } from "../../../../main/Symbols";
 import { vmIdsToFilterExpression } from "../../utils/groupFilters";
@@ -54,7 +54,7 @@ export const CreateGroupFromSelectionModal: React.FC<
     setIsCreating(true);
     setError(null);
     try {
-      await agentApi.createGroup({
+      await agentApi.createLatestGroup({
         createGroupRequest: {
           name: trimmed,
           filter: vmIdsToFilterExpression(vmIds),

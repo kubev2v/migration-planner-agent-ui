@@ -1,5 +1,4 @@
 import { css } from "@emotion/css";
-import type { DefaultApiInterface } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -21,7 +20,9 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { AppEmptyState } from "../../../../common/components";
+import { getVmTags } from "../../../VirtualMachinesOverview/virtualMachineParsing";
 
 const VM_COLUMN_WIDTH = "3.5rem";
 const ACTIONS_COLUMN_WIDTH = "4.5rem";
@@ -110,7 +111,7 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
   const fetchLabelsWithCounts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await agentApi.getVMLabels();
+      const data = await agentApi.getLatestVMLabels();
       setLabels(
         (data.labels ?? []).map((name, i) => ({
           name,
@@ -190,7 +191,7 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     setIsSaving(true);
     try {
       for (const labelName of pendingDeletes.current) {
-        await agentApi.deleteLabelGlobally({ label: labelName });
+        await agentApi.deleteLatestLabelGlobally({ label: labelName });
       }
 
       for (const { oldName, newName } of pendingRenames.current) {
@@ -198,9 +199,12 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
         let page = 1;
         let hasMore = true;
         while (hasMore) {
-          const vmsData = await agentApi.getVMs({ page, pageSize: 1000 });
-          for (const vm of vmsData.vms ?? []) {
-            if (vm.labels?.includes(oldName)) {
+          const vmsData = await agentApi.listLatestVirtualMachines({
+            page,
+            pageSize: 1000,
+          });
+          for (const vm of vmsData.virtualMachines ?? []) {
+            if (getVmTags(vm).includes(oldName)) {
               vmIds.push(vm.id);
             }
           }
@@ -210,13 +214,13 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
         }
 
         if (vmIds.length > 0) {
-          await agentApi.updateLabelVMs({
+          await agentApi.updateLatestLabelVMs({
             label: newName,
             updateLabelVMsRequest: { add: vmIds },
           });
         }
 
-        await agentApi.deleteLabelGlobally({ label: oldName });
+        await agentApi.deleteLatestLabelGlobally({ label: oldName });
       }
 
       pendingDeletes.current = [];

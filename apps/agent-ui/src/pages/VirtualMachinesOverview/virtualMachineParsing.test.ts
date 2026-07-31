@@ -1,15 +1,20 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import { describe, expect, it } from "vitest";
-import { normalizeVirtualMachine } from "./virtualMachineParsing";
+import {
+  getMigrationExcluded,
+  getVmTags,
+  normalizeVirtualMachine,
+} from "./virtualMachineParsing";
 
 const baseVm: VirtualMachine = {
   id: "vm-1",
-  name: "web-1",
+  name: "vm-1",
+  vCenterID: "vc-1",
   vCenterState: "poweredOn",
-  cluster: "cluster-a",
-  datacenter: "dc-1",
-  diskSize: 1024,
-  memory: 4096,
+  cluster: "c1",
+  datacenter: "dc1",
+  diskSize: 1,
+  memory: 1,
   issueCount: 0,
 };
 
@@ -18,8 +23,18 @@ describe("normalizeVirtualMachine", () => {
     const normalized = normalizeVirtualMachine({
       ...baseVm,
       migration_excluded: true,
-    } as VirtualMachine & { migration_excluded: boolean });
+    } as VirtualMachine & { migration_excluded?: boolean });
 
-    expect(normalized.migrationExcluded).toBe(true);
+    expect(getMigrationExcluded(normalized)).toBe(true);
+  });
+
+  it("keeps labels on the VM model", () => {
+    const normalized = normalizeVirtualMachine({
+      ...baseVm,
+      labels: ["prod"],
+    });
+
+    expect(normalized.labels).toEqual(["prod"]);
+    expect(getVmTags(normalized)).toEqual(["prod"]);
   });
 });
