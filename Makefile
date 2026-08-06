@@ -52,5 +52,25 @@ help:
 	@echo ""
 	@echo "Container runtime: $(CONTAINER_RUNTIME)"
 
+.PHONY: build-local run-local stop-local
+
+build-local:
+	@echo "📦 Installing agent UI dependencies..."
+	@if command -v yarn >/dev/null 2>&1; then \
+		yarn install; \
+	else \
+		echo "❌ Error: yarn is required. Install with: npm install -g yarn"; \
+		exit 1; \
+	fi
+
+run-local:
+	@echo ""
+	@echo "Agent UI: http://localhost:3001"
+	@echo ""
+	cd apps/agent-ui && npx vite --host 127.0.0.1 --port 3001
+
+stop-local:
+	@echo "Agent UI runs in foreground - stopped when process is terminated"
+
 # Default target to show help
 .DEFAULT_GOAL := help
