@@ -1,7 +1,13 @@
-import { Button } from "@patternfly/react-core";
+import {
+  Button,
+  EmptyState,
+  EmptyStateActions,
+  EmptyStateBody,
+  EmptyStateFooter,
+  EmptyStateVariant,
+} from "@patternfly/react-core";
 import { HistoryIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { AppEmptyState } from "../../common/components";
 
 interface ReportComparisonEmptyStateProps {
   reportCount: number;
@@ -26,21 +32,27 @@ export const ReportComparisonEmptyState: React.FC<
     );
 
   return (
-    <AppEmptyState
+    <EmptyState
+      variant={EmptyStateVariant.sm}
       titleText="No comparison data available yet"
+      headingLevel="h4"
       icon={HistoryIcon}
-      body={body}
     >
+      <EmptyStateBody>{body}</EmptyStateBody>
       {onRunNewReportClick ? (
-        <Button
-          variant="primary"
-          onClick={onRunNewReportClick}
-          isDisabled={isCollecting}
-        >
-          Run new report
-        </Button>
+        <EmptyStateFooter>
+          <EmptyStateActions>
+            <Button
+              variant="primary"
+              onClick={onRunNewReportClick}
+              isDisabled={isCollecting}
+            >
+              Run new report
+            </Button>
+          </EmptyStateActions>
+        </EmptyStateFooter>
       ) : null}
-    </AppEmptyState>
+    </EmptyState>
   );
 };
 
