@@ -1,18 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { formatDiscoveryStatus } from "./formatDiscoveryStatus";
+import { getDiscoverySharingStatus } from "./formatDiscoveryStatus";
 
-describe("formatDiscoveryStatus", () => {
-  it("capitalizes the console connection status", () => {
+describe("getDiscoverySharingStatus", () => {
+  it("returns Sharing when console connection is connected", () => {
     expect(
-      formatDiscoveryStatus({
+      getDiscoverySharingStatus({
+        mode: "connected",
+        consoleConnection: { status: "connected" },
+      }),
+    ).toEqual({ label: "Sharing" });
+  });
+
+  it("returns Not sharing when console connection is disconnected", () => {
+    expect(
+      getDiscoverySharingStatus({
         mode: "disconnected",
         consoleConnection: { status: "disconnected" },
       }),
-    ).toBe("Disconnected");
+    ).toEqual({ label: "Not sharing" });
   });
 
-  it("returns Unknown when agent status is missing", () => {
-    expect(formatDiscoveryStatus(null)).toBe("Unknown");
-    expect(formatDiscoveryStatus(undefined)).toBe("Unknown");
+  it("returns Sharing error when console connection has an error", () => {
+    expect(
+      getDiscoverySharingStatus({
+        mode: "connected",
+        consoleConnection: { status: "disconnected", error: "timeout" },
+      }),
+    ).toEqual({ label: "Sharing error", error: "timeout" });
+  });
+
+  it("returns Not sharing when agent status is null", () => {
+    expect(getDiscoverySharingStatus(null)).toEqual({ label: "Not sharing" });
   });
 });

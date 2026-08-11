@@ -1,7 +1,13 @@
-import { Button, Content, Title } from "@patternfly/react-core";
-import { ExportIcon, SyncAltIcon } from "@patternfly/react-icons";
+import {
+  Button,
+  Content,
+  ContentVariants,
+  Flex,
+  FlexItem,
+} from "@patternfly/react-core";
+import { ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { formatReportRunDate } from "./comparisonFormatting";
+import { RunReport } from "../../common/components/RunReport";
 
 interface ReportComparisonHeaderProps {
   latestReportRun?: Date | null;
@@ -28,49 +34,21 @@ export const ReportComparisonHeader: React.FC<ReportComparisonHeaderProps> = ({
   const canExport = showExport && Boolean(onExportClick);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "16px",
-      }}
-    >
-      <div>
-        <Title headingLevel="h1" size="2xl">
-          Report comparison
-        </Title>
-        {latestReportRun ? (
-          <Content component="p" style={{ marginTop: "8px" }}>
-            Latest report run: {formatReportRunDate(latestReportRun)}
-          </Content>
+    <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
+      <FlexItem>
+        <Content component={ContentVariants.h1}>Report comparison</Content>
+        {description ? <Content component="p">{description}</Content> : null}
+      </FlexItem>
+      <Flex alignItems={{ default: "alignItemsCenter" }}>
+        {canRunNewReport ? (
+          <RunReport
+            latestReportRun={latestReportRun}
+            isCollecting={isCollecting}
+            onRunNewReportClick={onRunNewReportClick}
+          />
         ) : null}
-        {description ? (
-          <Content component="p" style={{ marginTop: "8px" }}>
-            {description}
-          </Content>
-        ) : null}
-      </div>
-      {canRunNewReport || canExport ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            flexShrink: 0,
-          }}
-        >
-          {canRunNewReport ? (
-            <Button
-              variant="secondary"
-              onClick={onRunNewReportClick}
-              icon={<SyncAltIcon />}
-              isDisabled={isCollecting}
-            >
-              Run new report
-            </Button>
-          ) : null}
-          {canExport ? (
+        {canExport ? (
+          <FlexItem>
             <Button
               variant="link"
               onClick={onExportClick}
@@ -80,10 +58,10 @@ export const ReportComparisonHeader: React.FC<ReportComparisonHeaderProps> = ({
             >
               Export To report as ZIP
             </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+          </FlexItem>
+        ) : null}
+      </Flex>
+    </Flex>
   );
 };
 

@@ -2,6 +2,8 @@ import { css } from "@emotion/css";
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
+  Content,
+  ContentVariants,
   Dropdown,
   DropdownItem,
   DropdownList,
@@ -11,7 +13,6 @@ import {
   type MenuToggleElement,
   Pagination,
   Spinner,
-  Title,
   Toolbar,
   ToolbarContent,
   ToolbarGroup,
@@ -40,9 +41,6 @@ export interface GroupRow extends Group {
 }
 
 const styles = {
-  pageTitle: css`
-    margin-bottom: 24px;
-  `,
   toolbar: css`
     margin-bottom: 16px;
   `,
@@ -141,9 +139,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
 
   return (
     <>
-      <Title headingLevel="h1" size="2xl" className={styles.pageTitle}>
-        Groups
-      </Title>
+      <Content component={ContentVariants.h1}>Groups</Content>
 
       <Toolbar
         className={`${styles.toolbar} ${attributeValueFilterToolbarStyle}`}
