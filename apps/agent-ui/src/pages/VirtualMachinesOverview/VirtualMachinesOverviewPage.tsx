@@ -34,7 +34,6 @@ import {
   DataSharingAlert,
   DataSharingModal,
 } from "../../common/components/index";
-import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -372,8 +371,6 @@ export const ReportContainer: React.FC = () => {
     }
   }, [agentApi, initialVMFilters, vmsSortFields, vmsPage, vmsPageSize]);
 
-  const discoveryStatus = formatDiscoveryStatus(agentStatus);
-
   const handleReportRefreshCompleted = useCallback(async () => {
     setVmsPage(1);
     setFilterOptionsFetched(false);
@@ -461,7 +458,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader discoveryStatus={discoveryStatus} />
+            <ReportPageHeader agentStatus={agentStatus} />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -479,7 +476,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader discoveryStatus={discoveryStatus} />
+            <ReportPageHeader agentStatus={agentStatus} />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -499,7 +496,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader discoveryStatus={discoveryStatus} />
+            <ReportPageHeader agentStatus={agentStatus} />
           </StackItem>
           <StackItem>
             <Header totalVMs={0} totalClusters={0} />
@@ -671,7 +668,7 @@ export const ReportContainer: React.FC = () => {
       <Stack hasGutter>
         <StackItem>
           <ReportPageHeader
-            discoveryStatus={discoveryStatus}
+            agentStatus={agentStatus}
             latestReportRun={latestReportRun}
             showRunNewReport={hasCollectionData}
             isCollecting={isCollecting}

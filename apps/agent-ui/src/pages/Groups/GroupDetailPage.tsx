@@ -9,9 +9,12 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   Content,
+  ContentVariants,
   Dropdown,
   DropdownItem,
   DropdownList,
+  Flex,
+  FlexItem,
   MenuToggle,
   type MenuToggleElement,
   PageSection,
@@ -38,7 +41,7 @@ import {
 import { useAgentStatus } from "../../common/AgentStatusContext";
 import type { DefaultApiInterface } from "../../common/agentApi";
 import { AppEmptyState } from "../../common/components";
-import { formatDiscoveryStatus } from "../../common/formatDiscoveryStatus";
+import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
 
 import {
@@ -474,8 +477,6 @@ export const GroupDetailPage: React.FC = () => {
   });
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
-  const discoveryStatus = formatDiscoveryStatus(agentStatus);
-
   return (
     <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
       <Stack hasGutter>
@@ -489,59 +490,54 @@ export const GroupDetailPage: React.FC = () => {
         </StackItem>
 
         <StackItem>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: "16px",
-            }}
+          <Flex
+            justifyContent={{ default: "justifyContentSpaceBetween" }}
+            alignItems={{ default: "alignItemsFlexStart" }}
+            gap={{ default: "gapMd" }}
           >
-            <div>
-              <Title headingLevel="h1" size="2xl">
-                {group.name}
-              </Title>
-              <Content component="p" style={{ marginTop: "8px" }}>
-                Discovery VM status: {discoveryStatus}
-              </Content>
-            </div>
-            <Dropdown
-              isOpen={isActionsOpen}
-              onOpenChange={setIsActionsOpen}
-              onSelect={() => setIsActionsOpen(false)}
-              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                <MenuToggle
-                  ref={toggleRef}
-                  onClick={() => setIsActionsOpen((open) => !open)}
-                  isExpanded={isActionsOpen}
-                >
-                  Actions
-                </MenuToggle>
-              )}
-              popperProps={{ position: "right" }}
-            >
-              <DropdownList>
-                <DropdownItem
-                  key="edit"
-                  onClick={() => {
-                    setIsEditModalOpen(true);
-                    setIsActionsOpen(false);
-                  }}
-                >
-                  Edit group name
-                </DropdownItem>
-                <DropdownItem
-                  key="delete"
-                  onClick={() => {
-                    setIsDeleteModalOpen(true);
-                    setIsActionsOpen(false);
-                  }}
-                >
-                  Delete group
-                </DropdownItem>
-              </DropdownList>
-            </Dropdown>
-          </div>
+            <FlexItem>
+              <Content component={ContentVariants.h1}>{group.name}</Content>
+              <DiscoveryStatus agentStatus={agentStatus} />
+            </FlexItem>
+            <FlexItem>
+              <Dropdown
+                isOpen={isActionsOpen}
+                onOpenChange={setIsActionsOpen}
+                onSelect={() => setIsActionsOpen(false)}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                  <MenuToggle
+                    ref={toggleRef}
+                    onClick={() => setIsActionsOpen((open) => !open)}
+                    isExpanded={isActionsOpen}
+                  >
+                    Actions
+                  </MenuToggle>
+                )}
+                popperProps={{ position: "right" }}
+              >
+                <DropdownList>
+                  <DropdownItem
+                    key="edit"
+                    onClick={() => {
+                      setIsEditModalOpen(true);
+                      setIsActionsOpen(false);
+                    }}
+                  >
+                    Edit group name
+                  </DropdownItem>
+                  <DropdownItem
+                    key="delete"
+                    onClick={() => {
+                      setIsDeleteModalOpen(true);
+                      setIsActionsOpen(false);
+                    }}
+                  >
+                    Delete group
+                  </DropdownItem>
+                </DropdownList>
+              </Dropdown>
+            </FlexItem>
+          </Flex>
         </StackItem>
 
         <StackItem>

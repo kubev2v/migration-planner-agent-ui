@@ -1,5 +1,6 @@
 import {
   Content,
+  ContentVariants,
   Flex,
   FlexItem,
   Stack,
@@ -640,29 +641,15 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setupDraft.vmAcknowledged;
 
   return (
-    <Stack hasGutter style={{ padding: "24px 0" }}>
+    <Stack hasGutter>
       <StackItem>
-        <Flex
-          alignItems={{ default: "alignItemsCenter" }}
-          gap={{ default: "gapSm" }}
-        >
-          <FlexItem>
-            <Content component="h2" style={{ margin: 0 }}>
-              Storage offload estimator
-            </Content>
-          </FlexItem>
-          <FlexItem>
-            <TechnologyPreviewBadge />
-          </FlexItem>
-        </Flex>
-        <div
-          style={{
-            color: "var(--pf-t--global--text--color--200)",
-            marginTop: "8px",
-          }}
-        >
+        <TechnologyPreviewBadge />
+        <Content component={ContentVariants.h1}>
+          Storage offload estimator
+        </Content>
+        <Content component={ContentVariants.p}>
           Estimate migration time between vSphere datastore pairs.
-        </div>
+        </Content>
       </StackItem>
 
       <StackItem>

@@ -1,9 +1,18 @@
-import { Button, Content, Title } from "@patternfly/react-core";
-import { ExportIcon, SyncAltIcon } from "@patternfly/react-icons";
+import type { AgentStatus } from "@openshift-migration-advisor/agent-sdk";
+import {
+  Button,
+  Content,
+  ContentVariants,
+  Flex,
+  FlexItem,
+} from "@patternfly/react-core";
+import { ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { RunReport } from "../../common/components/RunReport";
+import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 
 interface ReportPageHeaderProps {
-  discoveryStatus: string;
+  agentStatus: AgentStatus | null | undefined;
   latestReportRun?: Date | null;
   showRunNewReport?: boolean;
   isCollecting?: boolean;
@@ -13,7 +22,7 @@ interface ReportPageHeaderProps {
 }
 
 export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
-  discoveryStatus,
+  agentStatus,
   latestReportRun = null,
   showRunNewReport = false,
   isCollecting = false,
@@ -25,47 +34,23 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
   const canExport = showExport && Boolean(onExportClick);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "16px",
-      }}
-    >
-      <div>
-        <Title headingLevel="h1" size="2xl">
+    <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
+      <FlexItem>
+        <Content component={ContentVariants.h1}>
           Virtual machines overview
-        </Title>
-        <Content component="p" style={{ marginTop: "8px" }}>
-          Discovery VM status: {discoveryStatus}
         </Content>
-        {latestReportRun ? (
-          <Content component="p" style={{ marginTop: "4px" }}>
-            Latest report run: {latestReportRun.toLocaleString()}
-          </Content>
-        ) : null}
-      </div>
-      {canRunNewReport || canExport ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            flexShrink: 0,
-          }}
-        >
-          {canRunNewReport ? (
-            <Button
-              variant="secondary"
-              onClick={onRunNewReportClick}
-              icon={<SyncAltIcon />}
-              isDisabled={isCollecting}
-            >
-              Run new report
-            </Button>
-          ) : null}
-          {canExport ? (
+        <DiscoveryStatus agentStatus={agentStatus} />
+      </FlexItem>
+      <Flex alignItems={{ default: "alignItemsCenter" }}>
+        {canRunNewReport && (
+          <RunReport
+            latestReportRun={latestReportRun}
+            isCollecting={isCollecting}
+            onRunNewReportClick={onRunNewReportClick}
+          />
+        )}
+        {canExport && (
+          <FlexItem>
             <Button
               variant="link"
               onClick={onExportClick}
@@ -73,10 +58,10 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
             >
               Export as CSV
             </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+          </FlexItem>
+        )}
+      </Flex>
+    </Flex>
   );
 };
 
