@@ -14,6 +14,7 @@ import {
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { parseApiError } from "../../../../common/parseApiError";
 
 interface RunNewReportModalProps {
   isOpen: boolean;
@@ -52,9 +53,10 @@ export const RunNewReportModal: React.FC<RunNewReportModalProps> = ({
     } catch (err) {
       console.error("Failed to start new report:", err);
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to start a new report. Please try again.",
+        await parseApiError(
+          err,
+          "Failed to start a new report. Please try again.",
+        ),
       );
       setIsStarting(false);
     }
