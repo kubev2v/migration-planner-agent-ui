@@ -2,6 +2,10 @@ name: Create a new release and update latest
 on:
   release:
     types: [created]
+
+permissions:
+  contents: read
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest

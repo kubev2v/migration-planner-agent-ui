@@ -5,6 +5,8 @@ on:
       - main
       - stable
 
+permissions: {}
+
 jobs:
   wait-for-image:
     runs-on: ubuntu-latest
