@@ -1,8 +1,6 @@
 import {
   Content,
   ContentVariants,
-  Flex,
-  FlexItem,
   Stack,
   StackItem,
 } from "@patternfly/react-core";

@@ -7,15 +7,11 @@ function getExportDatePrefix(date = new Date()): string {
   return `migration-export-${year}-${month}-${day}`;
 }
 
-export function getExportZipFilename(date = new Date()): string {
-  return `${getExportDatePrefix(date)}.zip`;
-}
-
 export function getExportFilename(
-  _format: ExportFormat = "zip",
+  format: ExportFormat,
   date = new Date(),
 ): string {
-  return getExportZipFilename(date);
+  return `${getExportDatePrefix(date)}.${format}`;
 }
 
 export function downloadExportBlob(blob: Blob, filename: string): void {

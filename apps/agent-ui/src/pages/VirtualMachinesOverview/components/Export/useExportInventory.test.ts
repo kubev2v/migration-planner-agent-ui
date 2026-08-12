@@ -3,15 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useExportInventory } from "./useExportInventory";
 
 const downloadExportBlob = vi.fn();
-const getExportFilename = vi.fn((_format?: "zip", _date?: Date) => {
-  return "migration-export-2026-07-01.zip";
-});
+const getExportFilename = vi.fn((format: "zip" | "xlsx") =>
+  format === "xlsx"
+    ? "migration-export-2026-07-01.xlsx"
+    : "migration-export-2026-07-01.zip",
+);
 const fetchExportInventory = vi.fn();
 
 vi.mock("./downloadExportBlob", () => ({
   downloadExportBlob: (...args: unknown[]) => downloadExportBlob(...args),
-  getExportFilename: (format?: "zip", date?: Date) =>
-    getExportFilename(format, date),
+  getExportFilename: (...args: unknown[]) =>
+    getExportFilename(...(args as ["zip" | "xlsx"])),
 }));
 
 vi.mock("./exportInventoryApi", () => ({
@@ -22,6 +24,32 @@ describe("useExportInventory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchExportInventory.mockResolvedValue(new Blob(["export"]));
+  });
+
+  it("downloads an Excel file when format is xlsx", async () => {
+    const agentApi = {} as never;
+    const { result } = renderHook(() =>
+      useExportInventory(agentApi, {
+        hasCollectionData: true,
+        hasInventory: true,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.confirmExport(["overview", "hosts"], "xlsx");
+    });
+
+    expect(fetchExportInventory).toHaveBeenCalledWith(
+      agentApi,
+      ["overview", "hosts"],
+      "xlsx",
+    );
+    expect(getExportFilename).toHaveBeenCalledWith("xlsx");
+    expect(downloadExportBlob).toHaveBeenCalledWith(
+      expect.any(Blob),
+      "migration-export-2026-07-01.xlsx",
+    );
+    expect(result.current.isExportModalOpen).toBe(false);
   });
 
   it("downloads a ZIP file when format is zip", async () => {
@@ -42,7 +70,7 @@ describe("useExportInventory", () => {
       ["overview"],
       "zip",
     );
-    expect(getExportFilename).toHaveBeenCalledWith("zip", undefined);
+    expect(getExportFilename).toHaveBeenCalledWith("zip");
     expect(downloadExportBlob).toHaveBeenCalledWith(
       expect.any(Blob),
       "migration-export-2026-07-01.zip",
@@ -67,7 +95,7 @@ describe("useExportInventory", () => {
     });
 
     await act(async () => {
-      await result.current.confirmExport(["overview"], "zip");
+      await result.current.confirmExport(["overview"], "xlsx");
     });
 
     expect(result.current.isExportModalOpen).toBe(true);

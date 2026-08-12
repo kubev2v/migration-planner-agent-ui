@@ -1,14 +1,14 @@
 /**
- * Export scopes for GET /collections/{id}/export (`scope` query param).
+ * Export scopes for GET /export (`scope` query param).
  *
- * Keep this list aligned with the agent OpenAPI spec
- * (`assisted-migration-agent/api/v2/openapi.yaml`). v2 returns a ZIP of CSV
- * files only (no xlsx / format query param).
+ * Keep this list aligned with the agent OpenAPI spec.
+ *
+ * Output format is controlled separately via `format=zip|xlsx`.
  */
 
-export type ExportFormat = "zip";
+export type ExportFormat = "zip" | "xlsx";
 
-export const DEFAULT_EXPORT_FORMAT: ExportFormat = "zip";
+export const DEFAULT_EXPORT_FORMAT: ExportFormat = "xlsx";
 export type ExportScopeId =
   | "overview"
   | "hosts"

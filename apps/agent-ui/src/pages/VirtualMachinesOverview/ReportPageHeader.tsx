@@ -56,7 +56,7 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
               onClick={onExportClick}
               icon={<ExportIcon />}
             >
-              Export as CSV
+              Export
             </Button>
           </FlexItem>
         )}
