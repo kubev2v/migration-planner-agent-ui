@@ -47,10 +47,7 @@ import {
   fetchAllMatchingVms,
   fetchVmsByIds,
 } from "./vmSelection";
-import {
-  type ClientSortAllVmColumn,
-  isClientSortAllVmsColumn,
-} from "./vmTableShared";
+import type { FrontendSortableColumn } from "./vmTableShared";
 
 async function updateVmMigrationExcluded(
   agentApi: DefaultApiInterface,
@@ -262,7 +259,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     Map<string, string[]>
   >(new Map());
   const [clientSortColumn, setClientSortColumn] =
-    useState<ClientSortAllVmColumn | null>(null);
+    useState<FrontendSortableColumn | null>(null);
   const [allVmsForClientSort, setAllVmsForClientSort] = useState<
     VirtualMachine[] | null
   >(null);
@@ -341,7 +338,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [initialFilters, scopedFilterExpression]);
 
   useEffect(() => {
-    if (!isClientSortAllVmsColumn(clientSortColumn) || !agentApi) {
+    if (!clientSortColumn || !agentApi) {
       setAllVmsForClientSort(null);
       setClientSortLoading(false);
       return;
@@ -378,14 +375,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [agentApi, clientSortColumn, clientSortFilterExpression]);
 
   const sourceVms = useMemo(() => {
-    if (isClientSortAllVmsColumn(clientSortColumn) && allVmsForClientSort) {
+    if (clientSortColumn && allVmsForClientSort) {
       return allVmsForClientSort;
     }
     return vms;
   }, [allVmsForClientSort, clientSortColumn, vms]);
 
   const tableTotalVMs = useMemo(() => {
-    if (isClientSortAllVmsColumn(clientSortColumn) && allVmsForClientSort) {
+    if (clientSortColumn && allVmsForClientSort) {
       return allVmsForClientSort.length;
     }
     return totalVMs;
@@ -509,7 +506,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const currentVMLabels = useMemo(() => {
     if (addLabelsVMIds.length === 0) return [];
     const labelSet = new Set<string>();
-    for (const vm of vms) {
+    for (const vm of vmsForTable) {
       if (addLabelsVMIds.includes(vm.id)) {
         const vmLabels = getVmTags(vm);
         if (vmLabels) {
@@ -518,13 +515,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       }
     }
     return [...labelSet].sort();
-  }, [addLabelsVMIds, vms]);
+  }, [addLabelsVMIds, vmsForTable]);
 
   const selectedVMName = useMemo(() => {
     if (addLabelsVMIds.length !== 1) return undefined;
-    const vm = vms.find((v) => v.id === addLabelsVMIds[0]);
+    const vm = vmsForTable.find((v) => v.id === addLabelsVMIds[0]);
     return vm?.name;
-  }, [addLabelsVMIds, vms]);
+  }, [addLabelsVMIds, vmsForTable]);
 
   const handleAddLabels = useCallback(
     (vmIds: string[]) => {
@@ -567,9 +564,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const groupActionVmNames = useMemo(
     () =>
       groupActionVMIds
-        .map((id) => vms.find((vm) => vm.id === id)?.name)
+        .map((id) => vmsForTable.find((vm) => vm.id === id)?.name)
         .filter((name): name is string => Boolean(name)),
-    [groupActionVMIds, vms],
+    [groupActionVMIds, vmsForTable],
   );
 
   const handleCreateGroup = useCallback((vmIds: string[]) => {

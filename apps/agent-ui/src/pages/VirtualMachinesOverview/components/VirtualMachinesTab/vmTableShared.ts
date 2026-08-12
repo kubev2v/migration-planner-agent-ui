@@ -44,15 +44,6 @@ export const FRONTEND_SORTABLE_COLUMNS = [
   "groups",
 ] as const;
 
-/** Frontend sorts that require fetching all matching VMs (not just the current page). */
-export const CLIENT_SORT_ALL_VM_COLUMNS = [
-  "applications",
-  "labels",
-  "groups",
-] as const;
-
-export type ClientSortAllVmColumn = (typeof CLIENT_SORT_ALL_VM_COLUMNS)[number];
-
 export type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
 export type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
 export type SortableColumn = BackendSortableColumn | FrontendSortableColumn;
@@ -95,17 +86,17 @@ export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
   (FRONTEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
 
+export const isFrontendSortableColumn = (
+  key: ColumnKey | null,
+): key is FrontendSortableColumn =>
+  key !== null &&
+  (FRONTEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
+
 export const isBackendSortableColumn = (
   key: ColumnKey | null,
 ): key is BackendSortableColumn =>
   key !== null &&
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key);
-
-export const isClientSortAllVmsColumn = (
-  key: ColumnKey | null,
-): key is ClientSortAllVmColumn =>
-  key !== null &&
-  (CLIENT_SORT_ALL_VM_COLUMNS as readonly ColumnKey[]).includes(key);
 
 export const utilizationPercentRanges = [
   { label: "0-25%", min: 0, max: 25 },
@@ -388,6 +379,9 @@ export const vmTableStyles = {
       justify-content: space-between;
       gap: 0.5rem;
     }
+  `,
+  gridScrollContainer: css`
+    overflow-x: auto;
   `,
 };
 

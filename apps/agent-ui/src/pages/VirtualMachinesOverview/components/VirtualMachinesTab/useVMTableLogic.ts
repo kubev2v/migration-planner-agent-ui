@@ -27,7 +27,7 @@ import {
   FRONTEND_SORT_METHODS,
   type FrontendSortableColumn,
   isBackendSortableColumn,
-  isClientSortAllVmsColumn,
+  isFrontendSortableColumn,
   isSortableColumn,
   MANDATORY_COLUMNS,
   resolveVisibleColumns,
@@ -346,9 +346,11 @@ export function useVMTableLogic({
   }, [sortByColumnKey, isColumnVisible, onFrontendSortChange, onSortChange]);
 
   useEffect(() => {
-    onFrontendSortChange?.(
-      isClientSortAllVmsColumn(sortByColumnKey) ? sortByColumnKey : null,
-    );
+    if (isFrontendSortableColumn(sortByColumnKey)) {
+      onFrontendSortChange?.(sortByColumnKey);
+    } else {
+      onFrontendSortChange?.(null);
+    }
   }, [onFrontendSortChange, sortByColumnKey]);
 
   // Column definitions - filtered by visibility

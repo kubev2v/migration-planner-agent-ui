@@ -3,8 +3,8 @@ import type { ThProps } from "@patternfly/react-table";
 import type { RefreshFilterOptionsFn } from "./vmFilterOptions";
 import type { VMFilters } from "./vmFilters";
 import type {
-  ClientSortAllVmColumn,
   ColumnKey,
+  FrontendSortableColumn,
   VMTableVariant,
 } from "./vmTableShared";
 
@@ -30,7 +30,7 @@ export interface VMTableProps {
   onFiltersChange?: (filters: VMFilters) => void;
   onPageChange?: (page: number, pageSize: number) => void;
   onSortChange?: (sortFields: string[]) => void;
-  onFrontendSortChange?: (column: ClientSortAllVmColumn | null) => void;
+  onFrontendSortChange?: (column: FrontendSortableColumn | null) => void;
   availableFilterOptions?: VMTableFilterOptions;
   selectedVMs?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;

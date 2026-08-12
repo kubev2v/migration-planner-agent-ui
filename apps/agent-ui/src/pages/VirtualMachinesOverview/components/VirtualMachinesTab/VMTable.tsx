@@ -91,26 +91,28 @@ export const VMTable: React.FC<VMTableProps> = ({
         selectionContextLoadFailed={selectionContextLoadFailed}
       />
 
-      <VMTableGrid
-        logic={logic}
-        variantUI={variantUI}
-        loading={loading}
-        vms={vms}
-        selectedVMs={selectedVMs}
-        isGroupRowActions={isGroupRowActions}
-        onVMClick={onVMClick}
-        onVMApplicationsClick={onVMApplicationsClick}
-        onRunDeepInspection={onRunDeepInspection}
-        onExcludeFromReports={onExcludeFromReports}
-        onIncludeInReports={onIncludeInReports}
-        onEditLabels={onEditLabels}
-        onAddToGroup={onAddToGroup}
-        onRemoveFromGroup={onRemoveFromGroup}
-        openCancelInspectionConfirm={logic.openCancelInspectionConfirm}
-        cancelingInspectionVmIds={cancelingInspectionVmIds}
-        inspectionContextVms={inspectionContextVms}
-        selectionContextLoadFailed={selectionContextLoadFailed}
-      />
+      <div className={vmTableStyles.gridScrollContainer}>
+        <VMTableGrid
+          logic={logic}
+          variantUI={variantUI}
+          loading={loading}
+          vms={vms}
+          selectedVMs={selectedVMs}
+          isGroupRowActions={isGroupRowActions}
+          onVMClick={onVMClick}
+          onVMApplicationsClick={onVMApplicationsClick}
+          onRunDeepInspection={onRunDeepInspection}
+          onExcludeFromReports={onExcludeFromReports}
+          onIncludeInReports={onIncludeInReports}
+          onEditLabels={onEditLabels}
+          onAddToGroup={onAddToGroup}
+          onRemoveFromGroup={onRemoveFromGroup}
+          openCancelInspectionConfirm={logic.openCancelInspectionConfirm}
+          cancelingInspectionVmIds={cancelingInspectionVmIds}
+          inspectionContextVms={inspectionContextVms}
+          selectionContextLoadFailed={selectionContextLoadFailed}
+        />
+      </div>
 
       <VMTableModals
         logic={logic}
