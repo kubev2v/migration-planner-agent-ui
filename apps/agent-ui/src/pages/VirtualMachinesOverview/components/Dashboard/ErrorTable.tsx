@@ -56,7 +56,6 @@ export const ErrorTable: React.FC<ErrorTableProps> = ({
               data={errors}
               columns={["Description", "Total VMs"]}
               fields={["assessment", "count"]}
-              withoutBorder
               onRowClick={
                 onConcernClick && !isExportMode ? handleRowClick : undefined
               }

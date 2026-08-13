@@ -56,7 +56,6 @@ export const WarningsTable: React.FC<WarningsTableProps> = ({
               data={warnings}
               columns={["Description", "Total VMs"]}
               fields={["assessment", "count"]}
-              withoutBorder
               onRowClick={
                 onConcernClick && !isExportMode ? handleRowClick : undefined
               }

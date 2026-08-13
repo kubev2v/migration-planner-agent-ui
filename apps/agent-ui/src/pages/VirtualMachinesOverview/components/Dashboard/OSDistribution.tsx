@@ -18,6 +18,7 @@ import {
 import { DesktopIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
+import { commonStyles } from "../../../../common/styles";
 import { CardEmptyState } from "./CardEmptyState";
 import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants";
 import { dashboardStyles } from "./dashboardStyles";
@@ -157,7 +158,11 @@ export const OSBarChart: React.FC<OSBarChartProps> = ({
         className={isExportMode ? undefined : tableScrollStyle}
         style={isExportMode ? undefined : { maxHeight: "350px" }}
       >
-        <Table aria-label="Operating systems" variant="compact">
+        <Table
+          aria-label="Operating systems"
+          variant="compact"
+          className={commonStyles.tableFullWidth}
+        >
           <Thead>
             <Tr>
               <Th>OS</Th>

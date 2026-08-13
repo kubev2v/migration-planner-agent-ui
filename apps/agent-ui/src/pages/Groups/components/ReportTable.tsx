@@ -1,13 +1,12 @@
 import { Button } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
+import { commonStyles } from "../../../common/styles";
 
 export interface ReportTableProps<DataItem> {
   columns: string[];
   data: DataItem[];
   fields: Array<keyof DataItem>;
-  style?: React.CSSProperties;
-  withoutBorder?: boolean;
   caption?: string;
   onRowClick?: (item: DataItem) => void;
   clickableFields?: Array<keyof DataItem>;
@@ -20,8 +19,6 @@ export function ReportTable<DataItem>(
     columns,
     data,
     fields,
-    style,
-    withoutBorder = false,
     caption,
     onRowClick,
     clickableFields = [],
@@ -59,14 +56,16 @@ export function ReportTable<DataItem>(
   };
 
   return (
-    <Table variant="compact" borders={!withoutBorder} style={style}>
+    <Table
+      variant="compact"
+      borders={false}
+      className={commonStyles.tableFullWidth}
+    >
       {caption && <caption>{caption}</caption>}
       <Thead>
         <Tr>
           {columns.map((name) => (
-            <Th key={name} hasRightBorder={!withoutBorder}>
-              {name}
-            </Th>
+            <Th key={name}>{name}</Th>
           ))}
         </Tr>
       </Thead>
@@ -74,9 +73,7 @@ export function ReportTable<DataItem>(
         {data.map((item) => (
           <Tr key={`row-${String(item[fields[0]])}`}>
             {fields.map((f) => (
-              <Td key={String(f)} hasRightBorder={!withoutBorder}>
-                {renderCell(item, f)}
-              </Td>
+              <Td key={String(f)}>{renderCell(item, f)}</Td>
             ))}
           </Tr>
         ))}
