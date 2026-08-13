@@ -42,7 +42,7 @@ export const WarningsTable: React.FC<WarningsTableProps> = ({
         </Icon>{" "}
         Warnings
       </CardTitle>
-      <CardBody>
+      <CardBody className={dashboardStyles.cardBodyScrollable}>
         {warnings.length === 0 ? (
           <AppEmptyState
             titleText="No warning found"

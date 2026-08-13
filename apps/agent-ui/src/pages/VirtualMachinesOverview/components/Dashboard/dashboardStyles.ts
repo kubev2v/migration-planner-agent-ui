@@ -38,9 +38,10 @@ export const dashboardStyles = {
       border-radius: 10px;
     }
 
-    .pf-v6-c-card__body {
-      overflow: auto;
-    }
+  `,
+
+  cardBodyScrollable: css`
+    overflow: auto;
   `,
 
   card: css`

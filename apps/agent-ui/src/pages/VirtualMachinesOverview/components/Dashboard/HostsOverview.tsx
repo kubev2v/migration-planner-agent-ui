@@ -108,7 +108,7 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
           </FlexItem>
         </Flex>
       </CardTitle>
-      <CardBody>
+      <CardBody className={dashboardStyles.cardBodyScrollable}>
         <MigrationDonutChart
           data={slices}
           height={300}

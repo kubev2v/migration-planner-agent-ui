@@ -503,7 +503,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
           )}
         </Flex>
       </CardTitle>
-      <CardBody>
+      <CardBody className={dashboardStyles.cardBodyScrollable}>
         {!isExportMode || !exportAllViews ? (
           viewMode === "vmCountByDiskType" ? (
             <DiskTypeBarChart

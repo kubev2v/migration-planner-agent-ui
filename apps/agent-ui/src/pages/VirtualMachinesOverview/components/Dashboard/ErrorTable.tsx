@@ -42,7 +42,7 @@ export const ErrorTable: React.FC<ErrorTableProps> = ({
         </Icon>{" "}
         Errors
       </CardTitle>
-      <CardBody>
+      <CardBody className={dashboardStyles.cardBodyScrollable}>
         {errors.length === 0 ? (
           <AppEmptyState
             titleText="No errors found"

@@ -381,7 +381,7 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
           )}
         </Flex>
       </CardTitle>
-      <CardBody>
+      <CardBody className={dashboardStyles.cardBodyScrollable}>
         {viewMode === "cpuOverCommitment" ? (
           chartData.length === 0 ? (
             <AppEmptyState

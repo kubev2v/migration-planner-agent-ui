@@ -308,7 +308,7 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
           )}
         </Flex>
       </CardTitle>
-      <CardBody>
+      <CardBody className={dashboardStyles.cardBodyScrollable}>
         {viewMode === "networkDistribution" && (
           <MigrationDonutChart
             data={chartData}

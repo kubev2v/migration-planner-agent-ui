@@ -363,7 +363,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
           )}
         </Flex>
       </CardTitle>
-      <CardBody>
+      <CardBody className={dashboardStyles.cardBodyScrollable}>
         {viewMode === "issuesVsNoIssues" ? (
           <MigrationDonutChart
             data={donutData}
