@@ -1,7 +1,14 @@
 import type { MigrationIssue } from "@openshift-migration-advisor/agent-sdk";
-import { Card, CardBody, CardTitle, Icon } from "@patternfly/react-core";
+import {
+  Card,
+  CardBody,
+  CardTitle,
+  EmptyStateVariant,
+  Icon,
+} from "@patternfly/react-core";
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { AppEmptyState } from "../../../../common/components";
 import { ReportTable } from "../../../Groups/components/ReportTable";
 import { dashboardStyles } from "./dashboardStyles";
 
@@ -36,20 +43,29 @@ export const WarningsTable: React.FC<WarningsTableProps> = ({
         Warnings
       </CardTitle>
       <CardBody>
-        <div>
-          <ReportTable<MigrationIssue>
-            data={warnings}
-            columns={["Description", "Total VMs"]}
-            fields={["assessment", "count"]}
-            withoutBorder
-            onRowClick={
-              onConcernClick && !isExportMode ? handleRowClick : undefined
-            }
-            clickableFields={
-              onConcernClick && !isExportMode ? ["assessment"] : []
-            }
+        {warnings.length === 0 ? (
+          <AppEmptyState
+            titleText="No warning found"
+            status="success"
+            variant={EmptyStateVariant.xs}
+            wrapInBullseye={false}
           />
-        </div>
+        ) : (
+          <div>
+            <ReportTable<MigrationIssue>
+              data={warnings}
+              columns={["Description", "Total VMs"]}
+              fields={["assessment", "count"]}
+              withoutBorder
+              onRowClick={
+                onConcernClick && !isExportMode ? handleRowClick : undefined
+              }
+              clickableFields={
+                onConcernClick && !isExportMode ? ["assessment"] : []
+              }
+            />
+          </div>
+        )}
       </CardBody>
     </Card>
   );

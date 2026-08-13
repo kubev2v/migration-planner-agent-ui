@@ -37,6 +37,10 @@ export const dashboardStyles = {
       flex-direction: column;
       border-radius: 10px;
     }
+
+    .pf-v6-c-card__body {
+      overflow: auto;
+    }
   `,
 
   card: css`

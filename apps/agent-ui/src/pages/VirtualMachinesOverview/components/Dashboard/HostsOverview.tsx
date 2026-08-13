@@ -119,8 +119,6 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
           title={`${totalHosts}`}
           subTitle="Hosts"
           subTitleColor="#9a9da0"
-          itemsPerRow={2}
-          marginLeft="0%"
           tooltipLabelFormatter={({
             datum,
             percent,

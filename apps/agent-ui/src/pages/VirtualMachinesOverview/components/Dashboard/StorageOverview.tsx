@@ -522,7 +522,6 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                 customColors={SHARED_DISKS_COLORS}
                 title={`${totalVMs} VMs`}
                 subTitle={`${totalWithSharedDisks ?? 0} with shared disks`}
-                itemsPerRow={2}
                 marginLeft="25%"
                 tooltipLabelFormatter={({ datum, percent }) =>
                   `${datum.x}: ${datum.countDisplay}\n${percent.toFixed(1)}%`
@@ -557,7 +556,6 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   ? `${totals.totalVMs} VMs`
                   : `${totals.totalSize.toFixed(2)} TB`
               }
-              itemsPerRow={Math.ceil(chartData.length / 2)}
               legendLabelFormatter={({ x, countDisplay }) =>
                 `${x} (${countDisplay})`
               }
@@ -598,7 +596,6 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                 legend={tierLegendForVmCount}
                 title={`${totals.totalVMs} VMs`}
                 subTitle={`${totals.totalSize.toFixed(2)} TB`}
-                itemsPerRow={Math.ceil(chartDataForVmCount.length / 2)}
                 tooltipLabelFormatter={({ datum, percent }) =>
                   `${datum.x}: ${datum.countDisplay}\n${percent.toFixed(1)}%`
                 }
@@ -617,7 +614,6 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                 legend={tierLegendForTotalSize}
                 title={`${totals.totalSize.toFixed(2)} TB`}
                 subTitle={`${totals.totalVMs} VMs`}
-                itemsPerRow={Math.ceil(chartDataForTotalSize.length / 2)}
                 tooltipLabelFormatter={({ datum, percent }) =>
                   `${datum.x}: ${datum.countDisplay}\n${percent.toFixed(1)}%`
                 }
@@ -637,7 +633,6 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   customColors={SHARED_DISKS_COLORS}
                   title={`${totalVMs} VMs`}
                   subTitle={`${totalWithSharedDisks ?? 0} with shared disks`}
-                  itemsPerRow={2}
                   marginLeft="25%"
                   tooltipLabelFormatter={({ datum, percent }) =>
                     `${datum.x}: ${datum.countDisplay}\n${percent.toFixed(1)}%`

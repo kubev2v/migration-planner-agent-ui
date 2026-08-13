@@ -203,7 +203,6 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
           donutThickness={18}
           titleFontSize={34}
           legend={legend}
-          legendWidth={680}
           title={`${totalVMs} VMs`}
           subTitle={
             viewMode === "memoryTiers"
@@ -215,7 +214,6 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
                 : undefined
           }
           subTitleColor="#9a9da0"
-          itemsPerRow={Math.ceil(activeSlices.length / 2)}
           legendLabelFormatter={({ x, countDisplay }) =>
             `${x} (${countDisplay})`
           }

@@ -376,7 +376,6 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
             subTitle="VMs"
             subTitleColor="#9a9da0"
             titleFontSize={34}
-            itemsPerRow={2}
             legendLabelFormatter={({ x, countDisplay }) =>
               `${x} (${countDisplay})`
             }

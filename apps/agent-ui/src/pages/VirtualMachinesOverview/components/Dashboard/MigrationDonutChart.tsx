@@ -1,9 +1,5 @@
 import { css } from "@emotion/css";
-import {
-  ChartDonut,
-  ChartLabel,
-  ChartLegend,
-} from "@patternfly/react-charts/victory";
+import { ChartDonut, ChartLabel } from "@patternfly/react-charts/victory";
 import { EmptyStateVariant, Flex, FlexItem } from "@patternfly/react-core";
 import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
@@ -25,16 +21,13 @@ interface MigrationDonutChartProps {
   data: OSData[];
   legend?: Record<string, string>;
   customColors?: Record<string, string>;
-  legendWidth?: number;
   height?: number;
   width?: number;
   title?: string;
   subTitle?: string;
   titleColor?: string;
   subTitleColor?: string;
-  itemsPerRow?: number;
   marginLeft?: string;
-  labelFontSize?: number;
   titleFontSize?: number;
   subTitleFontSize?: number;
   donutThickness?: number;
@@ -60,9 +53,49 @@ interface MigrationDonutChartProps {
 
 const legendColors = ["#0066cc", "#5e40be", "#b6a6e9", "#b98412"];
 
-const legendStyles = {
-  icon: css`
-  margin-right: 4px;
+const styles = {
+  legendIcon: css`
+    margin-right: 4px;
+  `,
+  cursorPointer: css`
+    cursor: pointer;
+  `,
+  cursorDefault: css`
+    cursor: default;
+  `,
+  chartContainer: css`
+    padding: 1em 0;
+  `,
+  donutWrapper: css`
+    position: relative;
+    display: inline-block;
+  `,
+  legendContainer: css`
+    overflow: hidden;
+    min-height: 40px;
+  `,
+  legendButton: css`
+    gap: var(--pf-t--global--spacer--lg);
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: var(--pf-t--global--spacer--xs) var(--pf-t--global--spacer--ml);
+    margin: 0;
+    transition: opacity var(--pf-t--global--motion--duration--short);
+    white-space: nowrap;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  `,
+  legendLabel: css`
+    gap: var(--pf-t--global--spacer--lg);
+    padding: var(--pf-t--global--spacer--xs) var(--pf-t--global--spacer--ml);
+    white-space: nowrap;
+  `,
+  legendInner: css`
+    max-width: 680px;
+    padding: var(--pf-t--global--spacer--ml);
   `,
 };
 
@@ -70,16 +103,13 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   data,
   legend,
   customColors,
-  legendWidth,
   height = 260,
   width = 420,
   title,
   subTitle,
   titleColor = "#000000",
   subTitleColor = "#000000",
-  itemsPerRow = 1,
   marginLeft = "0%",
-  labelFontSize = 14,
   titleFontSize = 28,
   subTitleFontSize = 14,
   donutThickness = 45,
@@ -127,39 +157,6 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
   const colorScale = useMemo(() => {
     return chartData.map((item) => getColor(item.legendCategory));
   }, [chartData, getColor]);
-
-  const legendData = useMemo(() => {
-    return chartData.map((item) => ({
-      name: legendLabelFormatter
-        ? legendLabelFormatter({
-            x: item.x,
-            countDisplay: item.countDisplay,
-          })
-        : `${item.x} (${item.countDisplay})`,
-      symbol: { fill: getColor(item.legendCategory) },
-    }));
-  }, [chartData, getColor, legendLabelFormatter]);
-
-  const legendWidthValue = legendWidth ?? 800;
-
-  const legendX = useMemo(() => {
-    const symbolAndGap = 34;
-    const charWidth = labelFontSize * 0.55;
-    const itemWidths = legendData.map(
-      (d) => symbolAndGap + d.name.length * charWidth,
-    );
-    const numCols = Math.min(legendData.length, itemsPerRow);
-    const gutter = 16;
-    let contentWidth = (numCols - 1) * gutter;
-    for (let c = 0; c < numCols; c++) {
-      let maxW = 0;
-      for (let i = c; i < itemWidths.length; i += itemsPerRow) {
-        maxW = Math.max(maxW, itemWidths[i] ?? 0);
-      }
-      contentWidth += maxW;
-    }
-    return Math.max(0, (legendWidthValue - contentWidth) / 2);
-  }, [legendData, itemsPerRow, legendWidthValue, labelFontSize]);
 
   const innerRadius = useMemo(() => {
     const outerApprox = Math.min(width, height) / 2;
@@ -235,9 +232,9 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
     <Flex
       direction={{ default: "column" }}
       alignItems={{ default: "alignItemsCenter" }}
-      style={{ cursor: onItemClick ? "pointer" : "default" }}
+      className={`${onItemClick ? styles.cursorPointer : styles.cursorDefault} ${styles.chartContainer}`}
     >
-      <div style={{ position: "relative", display: "inline-block" }}>
+      <div className={styles.donutWrapper}>
         <ChartDonut
           ariaDesc="Migration data donut chart"
           data={chartData}
@@ -310,17 +307,17 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
           // biome-ignore lint/a11y/useSemanticElements: Transparent overlay requires precise positioning and styling that button element would interfere with
           <div
             onClick={onTitleClick}
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: `${innerRadius * 2}px`,
-              height: `${innerRadius * 2}px`,
-              cursor: "pointer",
-              borderRadius: "50%",
-              zIndex: 10,
-            }}
+            className={css`
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: ${innerRadius * 2}px;
+              height: ${innerRadius * 2}px;
+              cursor: pointer;
+              border-radius: 50%;
+              z-index: 10;
+            `}
             title="Click to view all VMs"
             role="button"
             tabIndex={0}
@@ -334,87 +331,61 @@ const MigrationDonutChart: React.FC<MigrationDonutChartProps> = ({
         )}
       </div>
       <Flex
-        className="pf-v6-u-w-100"
-        style={{
-          marginLeft: marginLeft,
-          overflow: "hidden",
-          minHeight: "40px",
-        }}
+        className={`${styles.legendContainer} ${css`margin-left: ${marginLeft};`}`}
         justifyContent={{ default: "justifyContentCenter" }}
         alignItems={{ default: "alignItemsFlexStart" }}
       >
-        {onItemClick ? (
-          // Custom clickable legend
-          <Flex
-            style={{
-              maxWidth: legendWidth ?? 800,
-              padding: "var(--pf-t--global--spacer--ml)",
-            }}
-            spaceItems={{ default: "spaceItemsMd" }}
-            justifyContent={{ default: "justifyContentCenter" }}
-            alignItems={{ default: "alignItemsCenter" }}
-            flexWrap={{ default: "wrap" }}
-          >
-            {data.map((item) => (
-              <FlexItem key={`${item.legendCategory}-${item.name}`}>
-                <button
-                  type="button"
-                  onClick={() => onItemClick(item)}
-                  className="pf-v6-u-display-inline-flex pf-v6-u-align-items-center"
-                  style={{
-                    gap: "var(--pf-t--global--spacer--lg)",
-                    cursor: "pointer",
-                    border: "none",
-                    background: "none",
-                    padding:
-                      "var(--pf-t--global--spacer--xs) var(--pf-t--global--spacer--ml)",
-                    margin: 0,
-                    transition:
-                      "opacity var(--pf-t--global--motion--duration--short)",
-                    whiteSpace: "nowrap",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = "0.7";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = "1";
-                  }}
+        <Flex
+          className={styles.legendInner}
+          spaceItems={{ default: "spaceItemsMd" }}
+          justifyContent={{ default: "justifyContentCenter" }}
+          alignItems={{ default: "alignItemsCenter" }}
+          flexWrap={{ default: "wrap" }}
+        >
+          {data.map((item) => {
+            const label = legendLabelFormatter
+              ? legendLabelFormatter({
+                  x: item.name,
+                  countDisplay: item.countDisplay,
+                })
+              : item.name;
+
+            const content = (
+              <>
+                <svg
+                  width="10"
+                  height="10"
+                  aria-hidden="true"
+                  className={styles.legendIcon}
                 >
-                  <svg
+                  <title>Legend color indicator</title>
+                  <rect
                     width="10"
                     height="10"
-                    aria-hidden="true"
-                    className={legendStyles.icon}
+                    fill={getColor(item.legendCategory)}
+                  />
+                </svg>
+                <span>{label}</span>
+              </>
+            );
+
+            return (
+              <FlexItem key={`${item.legendCategory}-${item.name}`}>
+                {onItemClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onItemClick(item)}
+                    className={styles.legendButton}
                   >
-                    <title>Legend color indicator</title>
-                    <rect
-                      width="10"
-                      height="10"
-                      fill={getColor(item.legendCategory)}
-                    />
-                  </svg>
-                  <span>
-                    {legendLabelFormatter
-                      ? legendLabelFormatter({
-                          x: item.name,
-                          countDisplay: item.countDisplay,
-                        })
-                      : item.name}
-                  </span>
-                </button>
+                    {content}
+                  </button>
+                ) : (
+                  <span className={styles.legendLabel}>{content}</span>
+                )}
               </FlexItem>
-            ))}
-          </Flex>
-        ) : (
-          // Standard non-clickable legend (centered via x offset)
-          <ChartLegend
-            data={legendData}
-            orientation="horizontal"
-            width={legendWidthValue}
-            itemsPerRow={itemsPerRow}
-            x={legendX}
-          />
-        )}
+            );
+          })}
+        </Flex>
       </Flex>
     </Flex>
   );
