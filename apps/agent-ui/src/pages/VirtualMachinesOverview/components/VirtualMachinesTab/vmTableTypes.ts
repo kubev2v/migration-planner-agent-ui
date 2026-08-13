@@ -2,11 +2,7 @@ import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type { ThProps } from "@patternfly/react-table";
 import type { RefreshFilterOptionsFn } from "./vmFilterOptions";
 import type { VMFilters } from "./vmFilters";
-import type {
-  ColumnKey,
-  FrontendSortableColumn,
-  VMTableVariant,
-} from "./vmTableShared";
+import type { ColumnKey, VMTableVariant } from "./vmTableShared";
 
 export interface VMTableFilterOptions {
   clusters: string[];
@@ -30,7 +26,6 @@ export interface VMTableProps {
   onFiltersChange?: (filters: VMFilters) => void;
   onPageChange?: (page: number, pageSize: number) => void;
   onSortChange?: (sortFields: string[]) => void;
-  onFrontendSortChange?: (column: FrontendSortableColumn | null) => void;
   availableFilterOptions?: VMTableFilterOptions;
   selectedVMs?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
@@ -71,7 +66,6 @@ export type UseVMTableLogicParams = Pick<
   | "onFiltersChange"
   | "onPageChange"
   | "onSortChange"
-  | "onFrontendSortChange"
   | "availableFilterOptions"
   | "selectedVMs"
   | "onSelectionChange"

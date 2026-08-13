@@ -27,7 +27,6 @@ import {
   FRONTEND_SORT_METHODS,
   type FrontendSortableColumn,
   isBackendSortableColumn,
-  isFrontendSortableColumn,
   isSortableColumn,
   MANDATORY_COLUMNS,
   resolveVisibleColumns,
@@ -85,7 +84,6 @@ export function useVMTableLogic({
   onFiltersChange,
   onPageChange,
   onSortChange,
-  onFrontendSortChange,
   availableFilterOptions = {
     clusters: [],
     datacenters: [],
@@ -341,17 +339,8 @@ export function useVMTableLogic({
     if (sortByColumnKey && !isColumnVisible(sortByColumnKey)) {
       setSortByColumnKey(null);
       onSortChange?.([]);
-      onFrontendSortChange?.(null);
     }
-  }, [sortByColumnKey, isColumnVisible, onFrontendSortChange, onSortChange]);
-
-  useEffect(() => {
-    if (isFrontendSortableColumn(sortByColumnKey)) {
-      onFrontendSortChange?.(sortByColumnKey);
-    } else {
-      onFrontendSortChange?.(null);
-    }
-  }, [onFrontendSortChange, sortByColumnKey]);
+  }, [sortByColumnKey, isColumnVisible, onSortChange]);
 
   // Column definitions - filtered by visibility
   const columns = useMemo(
@@ -676,20 +665,16 @@ export function useVMTableLogic({
     if (!sortFn) {
       return vms;
     }
-    const sorted = [...vms].sort((a, b) => {
+    return [...vms].sort((a, b) => {
       const diff = sortFn(a) - sortFn(b);
       return activeSortDirection === "asc" ? diff : -diff;
     });
-    const start = (page - 1) * pageSize;
-    return sorted.slice(start, start + pageSize);
-  }, [vms, sortByColumnKey, activeSortDirection, page, pageSize]);
+  }, [vms, sortByColumnKey, activeSortDirection]);
 
-  const totalMatchingCount = useMemo(() => {
-    if (sortByColumnKey && !isBackendSortableColumn(sortByColumnKey)) {
-      return vms.length;
-    }
-    return totalVMs ?? vms.length;
-  }, [sortByColumnKey, totalVMs, vms.length]);
+  const totalMatchingCount = useMemo(
+    () => totalVMs ?? vms.length,
+    [totalVMs, vms.length],
+  );
 
   const currentFilters = useMemo((): VMFilters => {
     return {

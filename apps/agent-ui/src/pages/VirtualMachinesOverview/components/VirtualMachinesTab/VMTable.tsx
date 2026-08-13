@@ -20,7 +20,6 @@ export const VMTable: React.FC<VMTableProps> = ({
   onFiltersChange,
   onPageChange,
   onSortChange,
-  onFrontendSortChange,
   availableFilterOptions,
   selectedVMs = new Set<string>(),
   onSelectionChange,
@@ -61,7 +60,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     onFetchAllVmIds,
     onRefreshFilterOptions,
     variant,
-    onFrontendSortChange,
   });
 
   return (

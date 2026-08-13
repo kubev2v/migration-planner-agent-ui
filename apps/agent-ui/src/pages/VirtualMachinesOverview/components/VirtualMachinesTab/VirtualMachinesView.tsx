@@ -42,12 +42,7 @@ import {
   cancelVmInspectionWithRetry,
   getDeepInspectionEnablement,
 } from "./vmInspectionUtils";
-import {
-  fetchAllMatchingVmIds,
-  fetchAllMatchingVms,
-  fetchVmsByIds,
-} from "./vmSelection";
-import type { FrontendSortableColumn } from "./vmTableShared";
+import { fetchAllMatchingVmIds, fetchVmsByIds } from "./vmSelection";
 
 async function updateVmMigrationExcluded(
   agentApi: DefaultApiInterface,
@@ -258,12 +253,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [vmApplicationsMap, setVmApplicationsMap] = useState<
     Map<string, string[]>
   >(new Map());
-  const [clientSortColumn, setClientSortColumn] =
-    useState<FrontendSortableColumn | null>(null);
-  const [allVmsForClientSort, setAllVmsForClientSort] = useState<
-    VirtualMachine[] | null
-  >(null);
-  const [clientSortLoading, setClientSortLoading] = useState(false);
   const [offPageSelectedVms, setOffPageSelectedVms] = useState<
     VirtualMachine[]
   >([]);
@@ -330,71 +319,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     };
   }, [agentApi, applicationLookupKey]);
 
-  const clientSortFilterExpression = useMemo(() => {
-    const userExpression = filtersToByExpression(
-      withDefaultReportInclusion(initialFilters ?? {}),
-    );
-    return combineFilterExpressions(scopedFilterExpression, userExpression);
-  }, [initialFilters, scopedFilterExpression]);
-
-  useEffect(() => {
-    if (!clientSortColumn || !agentApi) {
-      setAllVmsForClientSort(null);
-      setClientSortLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        setClientSortLoading(true);
-        const fetched = await fetchAllMatchingVms(agentApi, {
-          byExpression: clientSortFilterExpression,
-        });
-        if (!cancelled) {
-          setAllVmsForClientSort(fetched);
-        }
-      } catch (err) {
-        console.error("Error fetching VMs for client-side sort:", err);
-        if (!cancelled) {
-          setAllVmsForClientSort(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setClientSortLoading(false);
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agentApi, clientSortColumn, clientSortFilterExpression]);
-
-  const sourceVms = useMemo(() => {
-    if (clientSortColumn && allVmsForClientSort) {
-      return allVmsForClientSort;
-    }
-    return vms;
-  }, [allVmsForClientSort, clientSortColumn, vms]);
-
-  const tableTotalVMs = useMemo(() => {
-    if (clientSortColumn && allVmsForClientSort) {
-      return allVmsForClientSort.length;
-    }
-    return totalVMs;
-  }, [allVmsForClientSort, clientSortColumn, totalVMs]);
-
   const vmsForTable = useMemo(
     () =>
       mergeVmApplicationNames(
-        mergeVmGroupItems(sourceVms, vmGroupMembership),
+        mergeVmGroupItems(vms, vmGroupMembership),
         vmApplicationsMap,
       ),
-    [sourceVms, vmGroupMembership, vmApplicationsMap],
+    [vms, vmGroupMembership, vmApplicationsMap],
   );
 
   const mergedFilterOptions = useMemo(
@@ -890,17 +821,16 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     <>
       <VMTable
         vms={visibleVms}
-        loading={loading || clientSortLoading}
+        loading={loading}
         onVMClick={handleVMClick}
         onVMApplicationsClick={handleVMApplicationsClick}
         initialFilters={initialFilters}
-        totalVMs={tableTotalVMs}
+        totalVMs={totalVMs}
         currentPage={currentPage}
         pageSize={pageSize}
         onFiltersChange={onFiltersChange}
         onPageChange={onPageChange}
         onSortChange={onSortChange}
-        onFrontendSortChange={setClientSortColumn}
         availableFilterOptions={mergedFilterOptions}
         selectedVMs={selectedVMs}
         onSelectionChange={setSelectedVMs}
