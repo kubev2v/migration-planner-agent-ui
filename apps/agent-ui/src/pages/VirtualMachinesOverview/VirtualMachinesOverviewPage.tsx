@@ -23,22 +23,13 @@ import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { DefaultApiInterface } from "../../common/agentApi";
-import { getLatestCollectionId } from "../../common/collectionApi";
+import type { DefaultApiInterface } from "../../api/agentApi";
+import { getAgentApiBasePath } from "../../api/agentApiConfig";
+import { getLatestCollectionId } from "../../api/collectionApi";
 import { AppEmptyState } from "../../common/components/index";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
-import { useRunNewReportContext } from "../../common/report/RunNewReportContext";
+import { useReportsContext } from "../../common/report/ReportsContext";
 import { Symbols } from "../../main/Symbols";
-import {
-  buildApplicationsTabUrl,
-  buildOverviewTabUrl,
-  buildVmDetailUrl,
-  buildVmsTabUrl,
-  clearVmFilterParams,
-  REPORT_TAB,
-  resolveReportTab,
-} from "../reportTabNavigation";
-import { getAgentApiBasePath } from "./agentApiConfig";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { ApplicationsView } from "./components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "./components/Dashboard/Dashboard";
@@ -62,13 +53,22 @@ import {
   type InventoryPayload,
 } from "./inventoryParsing";
 import { ReportPageHeader } from "./ReportPageHeader";
+import {
+  buildApplicationsTabUrl,
+  buildOverviewTabUrl,
+  buildVmDetailUrl,
+  buildVmsTabUrl,
+  clearVmFilterParams,
+  REPORT_TAB,
+  resolveReportTab,
+} from "./reportTabNavigation";
 import { useApplicationsData } from "./useApplicationsData";
 import { useMigrationInventoryRefresh } from "./useMigrationInventoryRefresh";
 import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { hasCollectionData } = useRunNewReportContext();
+  const { hasCollectionData } = useReportsContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [inventory, setInventory] = useState<InventoryPayload | null>(null);
   const [vmsList, setVmsList] = useState<VirtualMachine[]>([]);
@@ -354,7 +354,7 @@ export const ReportContainer: React.FC = () => {
     }
   }, [agentApi, initialVMFilters, vmsSortFields, vmsPage, vmsPageSize]);
 
-  const { onCompleted } = useRunNewReportContext();
+  const { onCompleted } = useReportsContext();
 
   const handleReportRefreshCompleted = useCallback(async () => {
     setVmsPage(1);

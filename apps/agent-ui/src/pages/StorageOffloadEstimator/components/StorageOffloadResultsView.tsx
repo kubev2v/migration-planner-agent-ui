@@ -33,8 +33,8 @@ import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { AppEmptyState } from "../../../common/components";
+import useLocalStorage from "../../../common/hooks/useLocalStorage";
 import { useCapability } from "../../../credentials/CredentialsContext";
-import useLocalStorage from "../../../hooks/useLocalStorage";
 import type {
   ForecasterStatus,
   ForecastRun,

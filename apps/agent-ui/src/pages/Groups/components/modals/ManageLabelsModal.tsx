@@ -20,7 +20,7 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import { getVmTags } from "../../../VirtualMachinesOverview/virtualMachineParsing";
 

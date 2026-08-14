@@ -1,6 +1,6 @@
 import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
-import { getLatestCollectionId } from "../../../../common/collectionApi";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
+import { getLatestCollectionId } from "../../../../api/collectionApi";
 import {
   DEFAULT_EXPORT_FORMAT,
   type ExportFormat,

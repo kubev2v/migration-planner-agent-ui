@@ -14,7 +14,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { DefaultApiInterface } from "../common/agentApi";
+import type { DefaultApiInterface } from "../api/agentApi";
 import { parseApiError } from "../common/parseApiError";
 import { Symbols } from "../main/Symbols";
 import { getCapabilities, getCredentialStatus } from "./credentialsApi";

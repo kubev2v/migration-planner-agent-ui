@@ -7,7 +7,7 @@ import {
 } from "@patternfly/react-core";
 import { ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { RunReport } from "../../common/report/RunReport";
+import { RunNewReportButton } from "../../common/report/RunNewReportButton";
 
 interface ReportPageHeaderProps {
   showExport?: boolean;
@@ -28,7 +28,7 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
         </Content>
       </FlexItem>
       <Flex alignItems={{ default: "alignItemsCenter" }}>
-        <RunReport />
+        <RunNewReportButton />
         {canExport && (
           <FlexItem>
             <Button

@@ -9,10 +9,13 @@ import {
   useRef,
   useState,
 } from "react";
+import type { DefaultApiInterface } from "../../api/agentApi";
+import {
+  getLatestCollection,
+  waitForNewerCollection,
+} from "../../api/collectionApi";
+import { getCollectorStatus } from "../../api/collectorApi";
 import { newAbortSignal } from "../AbortSignal";
-import type { DefaultApiInterface } from "../agentApi";
-import { getLatestCollection, waitForNewerCollection } from "../collectionApi";
-import { getCollectorStatus } from "../collectorApi";
 import { isCollectorInProgress } from "../collectorStatus";
 import { parseApiError } from "../parseApiError";
 
@@ -70,7 +73,7 @@ async function settleNewReport(
   await onCompleted();
 }
 
-export function useRunNewReport(
+export function useReports(
   agentApi: DefaultApiInterface,
   {
     onCompleted,

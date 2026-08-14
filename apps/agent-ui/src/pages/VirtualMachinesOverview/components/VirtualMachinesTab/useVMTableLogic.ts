@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "react-router-dom";
-import useLocalStorage from "../../../../hooks/useLocalStorage";
+import useLocalStorage from "../../../../common/hooks/useLocalStorage";
 import type { VirtualMachineWithGroupItems } from "../../../Groups/utils/vmGroupMembership";
 import { getMigrationExcluded } from "../../virtualMachineParsing";
 import { filtersToSearchParams, type VMFilters } from "./vmFilters";

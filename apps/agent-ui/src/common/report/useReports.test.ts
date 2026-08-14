@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useRunNewReport } from "./useRunNewReport";
+import { useReports } from "./useReports";
 
-describe("useRunNewReport", () => {
+describe("useReports", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -39,7 +39,7 @@ describe("useRunNewReport", () => {
     };
 
     const { result } = renderHook(() =>
-      useRunNewReport(agentApi as never, {
+      useReports(agentApi as never, {
         onCompleted,
         collectionWaitTimeoutMs: 5_000,
         collectionWaitIntervalMs: 1_000,
@@ -75,7 +75,7 @@ describe("useRunNewReport", () => {
     };
 
     const { result } = renderHook(() =>
-      useRunNewReport(agentApi as never, {
+      useReports(agentApi as never, {
         onCompleted,
         collectionWaitTimeoutMs: 10,
         collectionWaitIntervalMs: 1,
@@ -113,7 +113,7 @@ describe("useRunNewReport", () => {
     };
 
     const { result } = renderHook(() =>
-      useRunNewReport(agentApi as never, { onCompleted }),
+      useReports(agentApi as never, { onCompleted }),
     );
 
     await act(async () => {

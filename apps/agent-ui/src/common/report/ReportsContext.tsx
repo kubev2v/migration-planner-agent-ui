@@ -9,14 +9,14 @@ import {
   useRef,
   useState,
 } from "react";
+import type { DefaultApiInterface } from "../../api/agentApi";
+import { getLatestCollection } from "../../api/collectionApi";
 import { Symbols } from "../../main/Symbols";
 import { useAgentStatus } from "../AgentStatusContext";
-import type { DefaultApiInterface } from "../agentApi";
-import { getLatestCollection } from "../collectionApi";
 import { RunNewReportModal } from "./RunNewReportModal";
-import { useRunNewReport } from "./useRunNewReport";
+import { useReports } from "./useReports";
 
-interface RunNewReportContextValue {
+interface ReportsContextValue {
   isCollecting: boolean;
   collectorStatus: CollectorStatus["status"] | null;
   showReadyAlert: boolean;
@@ -31,11 +31,11 @@ interface RunNewReportContextValue {
   onCompleted: (listener: () => Promise<void>) => () => void;
 }
 
-const RunNewReportContext = createContext<RunNewReportContextValue | undefined>(
+const ReportsContext = createContext<ReportsContextValue | undefined>(
   undefined,
 );
 
-export const RunNewReportProvider: React.FC<{ children: React.ReactNode }> = ({
+export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
@@ -97,9 +97,9 @@ export const RunNewReportProvider: React.FC<{ children: React.ReactNode }> = ({
     confirmRun,
     dismissReadyAlert,
     dismissCollectError,
-  } = useRunNewReport(agentApi, { onCompleted: handleCompleted });
+  } = useReports(agentApi, { onCompleted: handleCompleted });
 
-  const value: RunNewReportContextValue = {
+  const value: ReportsContextValue = {
     isCollecting,
     collectorStatus,
     showReadyAlert,
@@ -115,23 +115,21 @@ export const RunNewReportProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <RunNewReportContext.Provider value={value}>
+    <ReportsContext.Provider value={value}>
       {children}
       <RunNewReportModal
         isOpen={isModalOpen}
         onConfirm={confirmRun}
         onCancel={closeModal}
       />
-    </RunNewReportContext.Provider>
+    </ReportsContext.Provider>
   );
 };
 
-export const useRunNewReportContext = (): RunNewReportContextValue => {
-  const context = useContext(RunNewReportContext);
+export const useReportsContext = (): ReportsContextValue => {
+  const context = useContext(ReportsContext);
   if (context === undefined) {
-    throw new Error(
-      "useRunNewReportContext must be used within RunNewReportProvider",
-    );
+    throw new Error("useReportsContext must be used within ReportsProvider");
   }
   return context;
 };

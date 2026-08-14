@@ -1,5 +1,5 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { vmIdsToFilterExpression } from "../../../Groups/utils/groupFilters";
 import { collectVmIdsUnderInspection } from "./vmInspectionUtils";
 

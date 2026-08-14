@@ -1,7 +1,7 @@
 import type { ApplicationOverview } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useState } from "react";
-import type { DefaultApiInterface } from "../../common/agentApi";
-import { getLatestCollectionId } from "../../common/collectionApi";
+import type { DefaultApiInterface } from "../../api/agentApi";
+import { getLatestCollectionId } from "../../api/collectionApi";
 import { scopeApplicationsToVms } from "./components/ApplicationsTab/applicationsApi";
 import { fetchAllMatchingVmIds } from "./components/VirtualMachinesTab/vmSelection";
 

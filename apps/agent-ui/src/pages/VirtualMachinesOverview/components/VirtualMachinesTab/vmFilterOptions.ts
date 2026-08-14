@@ -1,5 +1,5 @@
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { fetchAllGroups } from "../../../Groups/utils/groupList";
 import type { VMTableFilterOptions } from "./vmTableTypes";
 

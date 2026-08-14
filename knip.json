@@ -1,0 +1,7 @@
+{
+  "workspaces": {
+    "apps/agent-ui": {
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  }
+}

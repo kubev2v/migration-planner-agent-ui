@@ -3,16 +3,16 @@ import { SyncAltIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect } from "react";
 import { formatReportRunDate } from "../../pages/ReportComparison/comparisonFormatting";
-import { useRunNewReportContext } from "./RunNewReportContext";
+import { useReportsContext } from "./ReportsContext";
 
-export const RunReport: React.FC = () => {
+export const RunNewReportButton: React.FC = () => {
   const {
     latestCollectionDate,
     isCollecting,
     hasCollectionData,
     refetchCollections,
     openModal,
-  } = useRunNewReportContext();
+  } = useReportsContext();
 
   useEffect(() => {
     void refetchCollections();
@@ -42,4 +42,4 @@ export const RunReport: React.FC = () => {
   );
 };
 
-RunReport.displayName = "RunReport";
+RunNewReportButton.displayName = "RunNewReportButton";

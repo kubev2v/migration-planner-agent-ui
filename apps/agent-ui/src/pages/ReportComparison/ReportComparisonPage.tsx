@@ -10,10 +10,10 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { DefaultApiInterface } from "../../common/agentApi";
-import { listCollectionsNewestFirst } from "../../common/collectionApi";
-import { fetchCollectionComparison } from "../../common/collectionComparisonApi";
-import { useRunNewReportContext } from "../../common/report/RunNewReportContext";
+import type { DefaultApiInterface } from "../../api/agentApi";
+import { listCollectionsNewestFirst } from "../../api/collectionApi";
+import { fetchCollectionComparison } from "../../api/collectionComparisonApi";
+import { useReportsContext } from "../../common/report/ReportsContext";
 import { Symbols } from "../../main/Symbols";
 import { downloadExportBlob } from "../VirtualMachinesOverview/components/Export/downloadExportBlob";
 import { pickDefaultComparisonIds } from "./comparisonSelection";
@@ -23,7 +23,7 @@ import { ReportComparisonView } from "./ReportComparisonView";
 
 export const ReportComparisonPage: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { onCompleted } = useRunNewReportContext();
+  const { onCompleted } = useReportsContext();
   const [collections, setCollections] = useState<
     Awaited<ReturnType<typeof listCollectionsNewestFirst>>
   >([]);

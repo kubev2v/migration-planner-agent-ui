@@ -9,10 +9,10 @@ import { Spinner } from "@patternfly/react-core";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
+import { createAgentApi } from "../api/agentApi.ts";
 import { AgentStatusProvider } from "../common/AgentStatusContext.tsx";
 import { AgentUIVersion } from "../common/AgentUIVersion.tsx";
-import { createAgentApi } from "../common/agentApi";
-import { RunNewReportProvider } from "../common/report/RunNewReportContext.tsx";
+import { ReportsProvider } from "../common/report/ReportsContext.tsx";
 import { CredentialsProvider } from "../credentials/CredentialsContext.tsx";
 import { router } from "./Router.tsx";
 import { Symbols } from "./Symbols.ts";
@@ -54,12 +54,12 @@ function main(): void {
       <DependencyInjectionProvider container={container}>
         <AgentStatusProvider>
           <CredentialsProvider>
-            <RunNewReportProvider>
+            <ReportsProvider>
               <React.Suspense fallback={<Spinner />}>
                 <AgentUIVersion />
                 <RouterProvider router={router} />
               </React.Suspense>
-            </RunNewReportProvider>
+            </ReportsProvider>
           </CredentialsProvider>
         </AgentStatusProvider>
       </DependencyInjectionProvider>

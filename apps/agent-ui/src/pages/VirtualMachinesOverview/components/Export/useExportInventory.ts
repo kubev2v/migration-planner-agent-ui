@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { downloadExportBlob, getExportFilename } from "./downloadExportBlob";
 import { fetchExportInventory } from "./exportInventoryApi";
 import type { ExportFormat, ExportScopeId } from "./exportScopes";

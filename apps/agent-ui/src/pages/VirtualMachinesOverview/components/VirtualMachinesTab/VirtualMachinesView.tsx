@@ -2,9 +2,10 @@ import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
-import { getLatestCollectionId } from "../../../../common/collectionApi";
-import { useRunNewReportContext } from "../../../../common/report/RunNewReportContext";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
+import { getAgentApiBasePath } from "../../../../api/agentApiConfig";
+import { getLatestCollectionId } from "../../../../api/collectionApi";
+import { useReportsContext } from "../../../../common/report/ReportsContext";
 import { AddLabelsModal } from "../../../Groups/components/modals/AddLabelsModal";
 import { AddToGroupModal } from "../../../Groups/components/modals/AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals/CreateGroupFromSelectionModal";
@@ -17,9 +18,8 @@ import {
   mergeVmGroupItems,
   type VmGroupMembershipData,
 } from "../../../Groups/utils/vmGroupMembership";
-import { buildVmDetailUrl } from "../../../reportTabNavigation";
-import { getAgentApiBasePath } from "../../agentApiConfig";
 import type { MigrationExcludedInventoryChange } from "../../inventoryParsing";
+import { buildVmDetailUrl } from "../../reportTabNavigation";
 import type { VirtualMachineWithExclusion } from "../../virtualMachineParsing";
 import { getVmTags } from "../../virtualMachineParsing";
 import {
@@ -187,7 +187,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   scopedFilterExpression,
   sortFields = [],
 }) => {
-  const { latestCollectionId } = useRunNewReportContext();
+  const { latestCollectionId } = useReportsContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const variant = groupContext ? "groups" : "overview";
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);

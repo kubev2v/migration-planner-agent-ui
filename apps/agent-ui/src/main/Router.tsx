@@ -22,12 +22,10 @@ export const router = createBrowserRouter(
     {
       path: "/report",
       lazy: async () => {
-        const { ProtectedReportRoute } = await import(
-          "../pages/ProtectedReportRoute.tsx"
-        );
+        const { ProtectedRoute } = await import("../pages/ProtectedRoute.tsx");
 
         return {
-          Component: ProtectedReportRoute,
+          Component: ProtectedRoute,
         };
       },
       children: [

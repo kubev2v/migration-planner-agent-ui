@@ -47,9 +47,9 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
-import { getLatestCollectionId } from "../../../../common/collectionApi";
-import { useRunNewReportContext } from "../../../../common/report/RunNewReportContext";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
+import { getLatestCollectionId } from "../../../../api/collectionApi";
+import { useReportsContext } from "../../../../common/report/ReportsContext";
 import { Symbols } from "../../../../main/Symbols";
 import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
 import { VMApplicationsCard } from "./VMApplicationsCard";
@@ -85,7 +85,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   onScrollToSectionComplete,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { latestCollectionId } = useRunNewReportContext();
+  const { latestCollectionId } = useReportsContext();
   const [vm, setVm] = useState<VirtualMachineDetailWithUtilization | null>(
     null,
   );

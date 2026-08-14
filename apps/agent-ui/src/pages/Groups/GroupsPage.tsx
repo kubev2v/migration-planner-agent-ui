@@ -3,7 +3,7 @@ import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import { PageSection } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../common/agentApi";
+import type { DefaultApiInterface } from "../../api/agentApi";
 import { Symbols } from "../../main/Symbols";
 import { getVmTags } from "../VirtualMachinesOverview/virtualMachineParsing";
 import type { GroupRow } from "./components/GroupsTable";

@@ -3,7 +3,7 @@ import type {
   CredentialStatus,
 } from "@openshift-migration-advisor/agent-sdk";
 import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
-import type { DefaultApiInterface } from "../common/agentApi";
+import type { DefaultApiInterface } from "../api/agentApi";
 
 export async function getCredentialStatus(
   agentApi: DefaultApiInterface,

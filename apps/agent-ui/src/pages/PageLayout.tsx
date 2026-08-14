@@ -33,7 +33,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import RedHatOpenShiftLogo from "../assets/RedHatOpenShiftLogo.png";
 import { getCollectionProgressInfo } from "../common/collectionProgress";
 import { CollectionProgress } from "../common/components";
-import { useRunNewReportContext } from "../common/report/RunNewReportContext";
+import { useReportsContext } from "../common/report/ReportsContext";
 import VCenterCredentialsDropdownMenu from "../credentials/VCenterCredentialsDropdownMenu";
 
 interface ReportNavItem {
@@ -102,7 +102,7 @@ const RunNewReportAlerts: React.FC = () => {
     collectError,
     dismissReadyAlert,
     dismissCollectError,
-  } = useRunNewReportContext();
+  } = useReportsContext();
 
   const collectionProgress = getCollectionProgressInfo(
     collectorStatus,
@@ -172,7 +172,7 @@ const RunNewReportAlerts: React.FC = () => {
   );
 };
 
-export const ReportLayout: React.FC = () => {
+export const PageLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -266,4 +266,4 @@ export const ReportLayout: React.FC = () => {
   );
 };
 
-ReportLayout.displayName = "ReportLayout";
+PageLayout.displayName = "PageLayout";

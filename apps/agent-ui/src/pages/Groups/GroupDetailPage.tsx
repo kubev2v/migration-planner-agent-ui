@@ -38,20 +38,10 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import type { DefaultApiInterface } from "../../common/agentApi";
+import type { DefaultApiInterface } from "../../api/agentApi";
 import { AppEmptyState } from "../../common/components";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 import { Symbols } from "../../main/Symbols";
-
-import {
-  buildApplicationsTabUrl,
-  buildOverviewTabUrl,
-  buildVmDetailUrl,
-  buildVmsTabUrl,
-  clearVmFilterParams,
-  REPORT_TAB,
-  resolveReportTab,
-} from "../reportTabNavigation";
 import {
   buildClusterViewModel,
   type ClusterOption,
@@ -76,6 +66,15 @@ import {
   inventoryFromGroupResponse,
   type MigrationExcludedInventoryChange,
 } from "../VirtualMachinesOverview/inventoryParsing";
+import {
+  buildApplicationsTabUrl,
+  buildOverviewTabUrl,
+  buildVmDetailUrl,
+  buildVmsTabUrl,
+  clearVmFilterParams,
+  REPORT_TAB,
+  resolveReportTab,
+} from "../VirtualMachinesOverview/reportTabNavigation";
 import { useApplicationsData } from "../VirtualMachinesOverview/useApplicationsData";
 import { useMigrationInventoryRefresh } from "../VirtualMachinesOverview/useMigrationInventoryRefresh";
 import { normalizeVirtualMachines } from "../VirtualMachinesOverview/virtualMachineParsing";

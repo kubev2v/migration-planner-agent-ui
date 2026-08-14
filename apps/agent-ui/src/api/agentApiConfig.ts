@@ -1,4 +1,4 @@
-import type { DefaultApiInterface } from "../../common/agentApi";
+import type { DefaultApiInterface } from "./agentApi";
 
 /** Workaround: access SDK configuration.basePath (not exposed on DefaultApiInterface). */
 export type ApiWithConfig = DefaultApiInterface & {

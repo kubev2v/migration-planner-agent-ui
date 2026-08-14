@@ -1,4 +1,4 @@
-import type { DefaultApiInterface } from "../../../../common/agentApi";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
 import {
   buildVmGroupMembership,
   mergeVmGroupItems,

@@ -13,7 +13,7 @@ import {
   instanceOfUpdateInventory,
   UpdateInventoryFromJSON,
 } from "@openshift-migration-advisor/agent-sdk";
-import type { DefaultApiInterface } from "../../common/agentApi";
+import type { DefaultApiInterface } from "../../api/agentApi";
 import { getMigrationExcluded } from "./virtualMachineParsing";
 
 /** vCenter/cluster inventory payload (nested inside GET /inventory wrapper). */

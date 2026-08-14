@@ -7,7 +7,7 @@ import {
 } from "@patternfly/react-core";
 import { ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { RunReport } from "../../common/report/RunReport";
+import { RunNewReportButton } from "../../common/report/RunNewReportButton";
 
 interface ReportComparisonHeaderProps {
   showExport?: boolean;
@@ -31,7 +31,7 @@ export const ReportComparisonHeader: React.FC<ReportComparisonHeaderProps> = ({
         {description ? <Content component="p">{description}</Content> : null}
       </FlexItem>
       <Flex alignItems={{ default: "alignItemsCenter" }}>
-        <RunReport />
+        <RunNewReportButton />
         {canExport ? (
           <FlexItem>
             <Button

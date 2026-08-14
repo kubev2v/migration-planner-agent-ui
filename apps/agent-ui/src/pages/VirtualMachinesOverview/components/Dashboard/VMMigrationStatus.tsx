@@ -16,7 +16,7 @@ import {
 import { VirtualMachineIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { Symbols } from "../../../../main/Symbols";
 import { combineFilterExpressions } from "../../../Groups/utils/groupFilters";
 import {

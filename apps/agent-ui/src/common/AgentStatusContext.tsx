@@ -2,8 +2,8 @@ import { useInjection } from "@migration-planner-ui/ioc";
 import type { AgentStatus } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import { createContext, useCallback, useContext, useState } from "react";
+import type { DefaultApiInterface } from "../api/agentApi";
 import { Symbols } from "../main/Symbols";
-import type { DefaultApiInterface } from "./agentApi";
 import {
   type DiscoverySharingStatus,
   getDiscoverySharingStatus,

@@ -5,9 +5,9 @@ import type {
 } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { DefaultApiInterface } from "../api/agentApi";
+import { getCollectorStatus } from "../api/collectorApi";
 import { newAbortSignal } from "../common/AbortSignal";
-import type { DefaultApiInterface } from "../common/agentApi";
-import { getCollectorStatus } from "../common/collectorApi";
 import type { ApiError } from "../common/components/index";
 import { parseApiError } from "../common/parseApiError";
 import { Symbols } from "../main/Symbols";

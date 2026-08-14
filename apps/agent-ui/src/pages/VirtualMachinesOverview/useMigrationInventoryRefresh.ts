@@ -1,7 +1,7 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../common/agentApi";
-import { getAgentApiBasePath } from "./agentApiConfig";
+import type { DefaultApiInterface } from "../../api/agentApi";
+import { getAgentApiBasePath } from "../../api/agentApiConfig";
 import {
   adjustInventoryForMigrationExcludedChange,
   fetchGroupAssessmentInventory,

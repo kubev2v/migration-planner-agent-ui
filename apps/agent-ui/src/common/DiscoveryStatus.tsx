@@ -14,10 +14,10 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import type { DefaultApiInterface } from "../api/agentApi";
 import { Symbols } from "../main/Symbols";
 import { unwrapInventoryPayload } from "../pages/VirtualMachinesOverview/inventoryParsing";
 import { useAgentStatus } from "./AgentStatusContext";
-import type { DefaultApiInterface } from "./agentApi";
 import { DataSharingAlert } from "./components/DataSharingAlert";
 import { DataSharingModal } from "./components/DataSharingModal";
 

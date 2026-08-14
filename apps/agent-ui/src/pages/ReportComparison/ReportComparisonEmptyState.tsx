@@ -8,7 +8,7 @@ import {
 } from "@patternfly/react-core";
 import { HistoryIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useRunNewReportContext } from "../../common/report/RunNewReportContext";
+import { useReportsContext } from "../../common/report/ReportsContext";
 
 interface ReportComparisonEmptyStateProps {
   reportCount: number;
@@ -17,7 +17,7 @@ interface ReportComparisonEmptyStateProps {
 export const ReportComparisonEmptyState: React.FC<
   ReportComparisonEmptyStateProps
 > = ({ reportCount }) => {
-  const { openModal, isCollecting } = useRunNewReportContext();
+  const { openModal, isCollecting } = useReportsContext();
 
   return (
     <EmptyState
