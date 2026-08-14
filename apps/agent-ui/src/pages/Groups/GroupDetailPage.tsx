@@ -604,7 +604,6 @@ export const GroupDetailPage: React.FC = () => {
                       clusters={clusterView.viewClusters}
                       isAggregateView={clusterView.isAggregateView}
                       clusterFound={clusterView.clusterFound}
-                      scopedFilterExpression={group.filter}
                       onConcernClick={handleConcernClick}
                       onNavigateToVMFilters={handleNavigateToVMFilters}
                     />

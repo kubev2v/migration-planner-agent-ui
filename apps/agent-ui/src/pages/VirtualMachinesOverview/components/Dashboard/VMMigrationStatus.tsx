@@ -1,4 +1,4 @@
-import { useInjection } from "@migration-planner-ui/ioc";
+import type { IssuesBreakdown } from "@openshift-migration-advisor/agent-sdk";
 import {
   Card,
   CardBody,
@@ -11,14 +11,10 @@ import {
   FlexItem,
   MenuToggle,
   type MenuToggleElement,
-  Spinner,
 } from "@patternfly/react-core";
 import { VirtualMachineIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../../../api/agentApi";
-import { Symbols } from "../../../../main/Symbols";
-import { combineFilterExpressions } from "../../../Groups/utils/groupFilters";
+import { useMemo, useState } from "react";
 import {
   type NavigateToVMFilters,
   useChartDrillDown,
@@ -34,8 +30,8 @@ interface VmMigrationStatusProps {
     migratable: number;
     nonMigratable: number;
   };
+  issuesBreakdown?: IssuesBreakdown;
   isExportMode?: boolean;
-  scopedFilterExpression?: string;
   onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
@@ -70,182 +66,18 @@ const categoryColors: Record<string, string> = {
 
 export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   data,
+  issuesBreakdown,
   isExportMode = false,
-  scopedFilterExpression,
   onNavigateToVMFilters,
 }) => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
   const [viewMode, setViewMode] = useState<ViewMode>("issuesVsNoIssues");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [issuesBreakdown, setIssuesBreakdown] = useState<{
-    critical: number;
-    error: number;
-    warning: number;
-    information: number;
-    advisory: number;
-  } | null>(null);
-  const [isLoadingBreakdown, setIsLoadingBreakdown] = useState(false);
-  const [isIncompleteData, setIsIncompleteData] = useState(false);
-  const [issuesBreakdownError, setIssuesBreakdownError] = useState(false);
-  const cachedBreakdownExpressionRef = useRef<string | null>(null);
 
   const viewModeLabels: Record<ViewMode, string> = {
     issuesVsNoIssues: "No issues vs with issues",
     issuesBreakdown: "With issues breakdown",
   };
-
-  useEffect(() => {
-    if (viewMode !== "issuesBreakdown" || isExportMode) {
-      return;
-    }
-
-    const issuesFilter = "issues_count >= 1 and migration_excluded = false";
-    const byExpression =
-      combineFilterExpressions(scopedFilterExpression, issuesFilter) ??
-      issuesFilter;
-
-    if (
-      issuesBreakdown &&
-      cachedBreakdownExpressionRef.current === byExpression
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchIssuesBreakdown = async () => {
-      try {
-        setIsLoadingBreakdown(true);
-        setIsIncompleteData(false);
-        setIssuesBreakdownError(false);
-
-        const pageSize = 500;
-        const firstResponse = await agentApi.listLatestVirtualMachines({
-          byExpression,
-          page: 1,
-          pageSize,
-        });
-
-        let allVmsWithIssues = [...(firstResponse.virtualMachines || [])];
-
-        if (firstResponse.total > allVmsWithIssues.length) {
-          const totalPages = firstResponse.pageCount;
-          const remainingPages = [];
-          for (let page = 2; page <= totalPages; page++) {
-            remainingPages.push(
-              agentApi.listLatestVirtualMachines({
-                byExpression,
-                page,
-                pageSize,
-              }),
-            );
-          }
-
-          const remainingResponses = await Promise.all(remainingPages);
-          const additionalVms = remainingResponses.flatMap(
-            (response) => response.virtualMachines || [],
-          );
-          allVmsWithIssues = [...allVmsWithIssues, ...additionalVms];
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        if (firstResponse.total > allVmsWithIssues.length) {
-          console.warn(
-            `Incomplete data: Expected ${firstResponse.total} VMs, but only received ${allVmsWithIssues.length}`,
-          );
-          setIsIncompleteData(true);
-        }
-
-        const categoryCount: Record<string, Set<string>> = {
-          Critical: new Set(),
-          Error: new Set(),
-          Warning: new Set(),
-          Information: new Set(),
-          Advisory: new Set(),
-        };
-
-        const batchSize = 50;
-        const vmDetailsResults: PromiseSettledResult<
-          Awaited<ReturnType<typeof agentApi.getLatestVirtualMachine>>
-        >[] = [];
-
-        for (let i = 0; i < allVmsWithIssues.length; i += batchSize) {
-          const batch = allVmsWithIssues.slice(i, i + batchSize);
-          const batchPromises = batch.map((vm) =>
-            agentApi.getLatestVirtualMachine({ vmId: vm.id }),
-          );
-          const batchResults = await Promise.allSettled(batchPromises);
-          vmDetailsResults.push(...batchResults);
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        let failedVmCount = 0;
-        for (const result of vmDetailsResults) {
-          if (result.status === "fulfilled") {
-            const vmDetail = result.value;
-            const issues = vmDetail.issues || [];
-
-            for (const issue of issues) {
-              const category = issue.category;
-              if (categoryCount[category]) {
-                categoryCount[category].add(vmDetail.id);
-              }
-            }
-          } else {
-            failedVmCount++;
-            console.error("Error fetching VM details:", result.reason);
-          }
-        }
-
-        if (failedVmCount > 0) {
-          console.warn(
-            `Failed to fetch details for ${failedVmCount} VMs. Chart shows partial data.`,
-          );
-          setIsIncompleteData(true);
-        }
-
-        setIssuesBreakdown({
-          critical: categoryCount.Critical.size,
-          error: categoryCount.Error.size,
-          warning: categoryCount.Warning.size,
-          information: categoryCount.Information.size,
-          advisory: categoryCount.Advisory.size,
-        });
-        cachedBreakdownExpressionRef.current = byExpression;
-      } catch (err) {
-        if (cancelled) {
-          return;
-        }
-        console.error("Error fetching issues breakdown:", err);
-        setIssuesBreakdown(null);
-        cachedBreakdownExpressionRef.current = null;
-        setIssuesBreakdownError(true);
-      } finally {
-        if (!cancelled) {
-          setIsLoadingBreakdown(false);
-        }
-      }
-    };
-
-    fetchIssuesBreakdown();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    viewMode,
-    issuesBreakdown,
-    agentApi,
-    isExportMode,
-    scopedFilterExpression,
-  ]);
 
   const donutData = [
     {
@@ -272,8 +104,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
 
     return categoryOrder.map((category) => ({
       name: category,
-      count:
-        issuesBreakdown[category.toLowerCase() as keyof typeof issuesBreakdown],
+      count: issuesBreakdown[category.toLowerCase() as keyof IssuesBreakdown],
     }));
   }, [issuesBreakdown]);
 
@@ -382,32 +213,6 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
             onItemClick={!isExportMode ? handleItemClick : undefined}
             onTitleClick={!isExportMode ? handleTitleClick : undefined}
           />
-        ) : isLoadingBreakdown ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "300px",
-            }}
-          >
-            <Spinner size="lg" />
-          </div>
-        ) : issuesBreakdownError ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "300px",
-              color: "var(--pf-t--global--color--danger)",
-              textAlign: "center",
-            }}
-          >
-            <Content>
-              Unable to load issues breakdown data. Please try again later.
-            </Content>
-          </div>
         ) : (
           <div>
             <div className={dashboardStyles.storageChartWrapper}>
@@ -511,21 +316,6 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
                 Totals may exceed the unique VM count because a VM can appear in
                 multiple categories
               </Content>
-              {isIncompleteData && (
-                <Content
-                  component="small"
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--pf-t--global--color--warning)",
-                    marginTop: "8px",
-                    textAlign: "center",
-                    display: "block",
-                    fontWeight: 600,
-                  }}
-                >
-                  Warning: Incomplete data - Some VMs could not be loaded
-                </Content>
-              )}
             </div>
           </div>
         )}

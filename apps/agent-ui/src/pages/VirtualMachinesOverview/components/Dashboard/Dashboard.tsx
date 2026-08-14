@@ -37,7 +37,6 @@ interface DashboardProps {
   isAggregateView?: boolean;
   clusterFound?: boolean;
   onConcernClick?: (concernLabel: string) => void;
-  scopedFilterExpression?: string;
   onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
@@ -51,7 +50,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isAggregateView = true,
   clusterFound = true,
   onConcernClick,
-  scopedFilterExpression,
   onNavigateToVMFilters,
 }) => {
   // Transform osInfo to include both count and supported fields
@@ -107,8 +105,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     (vms.total || 0) - (vms.totalMigratable || 0),
                   ),
                 }}
+                issuesBreakdown={vms.issuesBreakdown}
                 isExportMode={isExportMode}
-                scopedFilterExpression={scopedFilterExpression}
                 onNavigateToVMFilters={onNavigateToVMFilters}
               />
             </GalleryItem>
