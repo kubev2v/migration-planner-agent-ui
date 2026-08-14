@@ -1,6 +1,9 @@
 import { css } from "@emotion/css";
 import {
+  Alert,
+  AlertActionCloseButton,
   Brand,
+  Content,
   Masthead,
   MastheadBrand,
   MastheadContent,
@@ -12,9 +15,12 @@ import {
   NavItem,
   NavList,
   Page,
+  PageSection,
   PageSidebar,
   PageSidebarBody,
   PageToggleButton,
+  Stack,
+  StackItem,
   Title,
   Toolbar,
   ToolbarContent,
@@ -25,6 +31,9 @@ import type React from "react";
 import { useEffect, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import RedHatOpenShiftLogo from "../assets/RedHatOpenShiftLogo.png";
+import { getCollectionProgressInfo } from "../common/collectionProgress";
+import { CollectionProgress } from "../common/components";
+import { useRunNewReportContext } from "../common/report/RunNewReportContext";
 import VCenterCredentialsDropdownMenu from "../credentials/VCenterCredentialsDropdownMenu";
 
 interface ReportNavItem {
@@ -84,6 +93,84 @@ const navItemStyle = css`
     font-weight: var(--pf-t--global--font--weight--body--default);
   }
 `;
+
+const RunNewReportAlerts: React.FC = () => {
+  const {
+    isCollecting,
+    collectorStatus,
+    showReadyAlert,
+    collectError,
+    dismissReadyAlert,
+    dismissCollectError,
+  } = useRunNewReportContext();
+
+  const collectionProgress = getCollectionProgressInfo(
+    collectorStatus,
+    collectError,
+  );
+
+  const hasAlerts =
+    isCollecting ||
+    (showReadyAlert && !isCollecting) ||
+    (collectError && !isCollecting);
+
+  if (!hasAlerts) {
+    return null;
+  }
+
+  return (
+    <PageSection hasBodyWrapper={false} style={{ padding: "24px 24px 0" }}>
+      <Stack hasGutter>
+        {isCollecting && (
+          <StackItem>
+            <Alert variant="info" isInline title="Running a new vSphere report">
+              <Content component="p">
+                Capturing a fresh snapshot can take a few minutes.
+              </Content>
+              {collectionProgress.statusText ? (
+                <CollectionProgress
+                  percentage={collectionProgress.percentage}
+                  statusText={collectionProgress.statusText}
+                />
+              ) : null}
+            </Alert>
+          </StackItem>
+        )}
+
+        {showReadyAlert && !isCollecting && (
+          <StackItem>
+            <Alert
+              variant="success"
+              isInline
+              title="New report ready"
+              actionClose={
+                <AlertActionCloseButton onClose={dismissReadyAlert} />
+              }
+            >
+              Your migration report now reflects the latest infrastructure
+              snapshot.
+            </Alert>
+          </StackItem>
+        )}
+
+        {collectError && !isCollecting && (
+          <StackItem>
+            <Alert
+              variant="danger"
+              isInline
+              title="New report failed"
+              actionClose={
+                <AlertActionCloseButton onClose={dismissCollectError} />
+              }
+            >
+              {collectError}
+            </Alert>
+          </StackItem>
+        )}
+      </Stack>
+    </PageSection>
+  );
+};
 
 export const ReportLayout: React.FC = () => {
   const location = useLocation();
@@ -173,6 +260,7 @@ export const ReportLayout: React.FC = () => {
         </PageSidebar>
       }
     >
+      <RunNewReportAlerts />
       <Outlet />
     </Page>
   );

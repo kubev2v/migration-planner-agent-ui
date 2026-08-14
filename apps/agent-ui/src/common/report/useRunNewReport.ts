@@ -9,15 +9,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { newAbortSignal } from "../../../../common/AbortSignal";
-import type { DefaultApiInterface } from "../../../../common/agentApi";
-import {
-  getLatestCollection,
-  waitForNewerCollection,
-} from "../../../../common/collectionApi";
-import { getCollectorStatus } from "../../../../common/collectorApi";
-import { isCollectorInProgress } from "../../../../common/collectorStatus";
-import { parseApiError } from "../../../../common/parseApiError";
+import { newAbortSignal } from "../AbortSignal";
+import type { DefaultApiInterface } from "../agentApi";
+import { getLatestCollection, waitForNewerCollection } from "../collectionApi";
+import { getCollectorStatus } from "../collectorApi";
+import { isCollectorInProgress } from "../collectorStatus";
+import { parseApiError } from "../parseApiError";
 
 type UseRunNewReportOptions = {
   onCompleted: () => Promise<void>;
@@ -43,12 +40,11 @@ async function settleNewReport(
   agentApi: DefaultApiInterface,
   previousCollection: Pick<Collection, "id" | "createdAt"> | null,
   onCompleted: () => Promise<void>,
-  setLatestReportRun: (value: Date | null) => void,
   isCancelled: () => boolean,
   collectionWaitTimeoutMs: number,
   collectionWaitIntervalMs: number,
 ): Promise<void> {
-  const { collection, foundNewer } = await waitForNewerCollection(
+  const { foundNewer } = await waitForNewerCollection(
     agentApi,
     previousCollection,
     {
@@ -67,8 +63,6 @@ async function settleNewReport(
     );
   }
 
-  setLatestReportRun(collection?.createdAt ?? null);
-
   if (isCancelled()) {
     return;
   }
@@ -84,7 +78,6 @@ export function useRunNewReport(
     collectionWaitIntervalMs = COLLECTION_WAIT_INTERVAL_MS,
   }: UseRunNewReportOptions,
 ) {
-  const [latestReportRun, setLatestReportRun] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCollecting, setIsCollecting] = useState(false);
   const [collectorStatus, setCollectorStatus] = useState<
@@ -114,23 +107,6 @@ export function useRunNewReport(
   }, []);
 
   const isCancelled = useCallback(() => !mountedRef.current, []);
-
-  const refreshLatestReportRun = useCallback(async () => {
-    try {
-      const latest = await getLatestCollection(agentApi);
-      if (mountedRef.current) {
-        setLatestReportRun(latest?.createdAt ?? null);
-      }
-      return latest;
-    } catch (err) {
-      console.error("Error loading latest report run:", err);
-      return undefined;
-    }
-  }, [agentApi]);
-
-  useEffect(() => {
-    void refreshLatestReportRun();
-  }, [refreshLatestReportRun]);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +155,6 @@ export function useRunNewReport(
           agentApi,
           previousCollectionRef.current,
           onCompletedRef.current,
-          setLatestReportRun,
           isCancelled,
           collectionWaitTimeoutMs,
           collectionWaitIntervalMs,
@@ -355,7 +330,6 @@ export function useRunNewReport(
   }, []);
 
   return {
-    latestReportRun,
     isModalOpen,
     isCollecting,
     collectorStatus,

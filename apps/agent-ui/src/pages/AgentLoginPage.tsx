@@ -7,7 +7,7 @@ import { MainVCenterCredentialsModal } from "../credentials/MainVCenterCredentia
 import { useLoginViewModel } from "../credentials/UseCredentialViewModel";
 
 const AgentLoginPage: React.FC = () => {
-  const { agentStatus, refetch: refetchAgentStatus } = useAgentStatus();
+  const { agentStatus, fetchStatus: refetchAgentStatus } = useAgentStatus();
   const vm = useLoginViewModel({ refetchAgentStatus });
 
   useEffect(() => {

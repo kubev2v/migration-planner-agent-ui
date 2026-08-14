@@ -7,13 +7,9 @@ import {
 } from "@patternfly/react-core";
 import { ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { RunReport } from "../../common/components/RunReport";
+import { RunReport } from "../../common/report/RunReport";
 
 interface ReportComparisonHeaderProps {
-  latestReportRun?: Date | null;
-  showRunNewReport?: boolean;
-  isCollecting?: boolean;
-  onRunNewReportClick?: () => void;
   showExport?: boolean;
   onExportClick?: () => void;
   isExporting?: boolean;
@@ -21,16 +17,11 @@ interface ReportComparisonHeaderProps {
 }
 
 export const ReportComparisonHeader: React.FC<ReportComparisonHeaderProps> = ({
-  latestReportRun = null,
-  showRunNewReport = false,
-  isCollecting = false,
-  onRunNewReportClick,
   showExport = false,
   onExportClick,
   isExporting = false,
   description,
 }) => {
-  const canRunNewReport = showRunNewReport && Boolean(onRunNewReportClick);
   const canExport = showExport && Boolean(onExportClick);
 
   return (
@@ -40,13 +31,7 @@ export const ReportComparisonHeader: React.FC<ReportComparisonHeaderProps> = ({
         {description ? <Content component="p">{description}</Content> : null}
       </FlexItem>
       <Flex alignItems={{ default: "alignItemsCenter" }}>
-        {canRunNewReport ? (
-          <RunReport
-            latestReportRun={latestReportRun}
-            isCollecting={isCollecting}
-            onRunNewReportClick={onRunNewReportClick}
-          />
-        ) : null}
+        <RunReport />
         {canExport ? (
           <FlexItem>
             <Button
@@ -56,7 +41,7 @@ export const ReportComparisonHeader: React.FC<ReportComparisonHeaderProps> = ({
               isLoading={isExporting}
               isDisabled={isExporting}
             >
-              Export To report as ZIP
+              Export report as ZIP
             </Button>
           </FlexItem>
         ) : null}

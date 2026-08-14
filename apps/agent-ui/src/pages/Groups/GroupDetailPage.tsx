@@ -38,7 +38,6 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { useAgentStatus } from "../../common/AgentStatusContext";
 import type { DefaultApiInterface } from "../../common/agentApi";
 import { AppEmptyState } from "../../common/components";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
@@ -88,7 +87,6 @@ export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { agentStatus } = useAgentStatus();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [group, setGroup] = useState<Group | null>(null);
@@ -497,7 +495,6 @@ export const GroupDetailPage: React.FC = () => {
           >
             <FlexItem>
               <Content component={ContentVariants.h1}>{group.name}</Content>
-              <DiscoveryStatus agentStatus={agentStatus} />
             </FlexItem>
             <FlexItem>
               <Dropdown
@@ -538,6 +535,10 @@ export const GroupDetailPage: React.FC = () => {
               </Dropdown>
             </FlexItem>
           </Flex>
+        </StackItem>
+
+        <StackItem>
+          <DiscoveryStatus />
         </StackItem>
 
         <StackItem>
@@ -646,7 +647,6 @@ export const GroupDetailPage: React.FC = () => {
                   groupContext={{ id: group.id, name: group.name }}
                   scopedFilterExpression={group.filter}
                   sortFields={vmsSortFields}
-                  collectionRefreshKey={inventoryRevision}
                 />
               </div>
             </Tab>

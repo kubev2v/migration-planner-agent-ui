@@ -2,9 +2,9 @@ import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useAgentStatus } from "../../../../common/AgentStatusContext";
 import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { getLatestCollectionId } from "../../../../common/collectionApi";
+import { useRunNewReportContext } from "../../../../common/report/RunNewReportContext";
 import { AddLabelsModal } from "../../../Groups/components/modals/AddLabelsModal";
 import { AddToGroupModal } from "../../../Groups/components/modals/AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals/CreateGroupFromSelectionModal";
@@ -165,7 +165,6 @@ interface VirtualMachinesViewProps {
   scopedFilterExpression?: string;
   sortFields?: string[];
   /** Bumps when inventory/collection data is reloaded so lookups refresh. */
-  collectionRefreshKey?: number;
 }
 
 export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
@@ -187,10 +186,8 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   groupContext,
   scopedFilterExpression,
   sortFields = [],
-  collectionRefreshKey = 0,
 }) => {
-  const { latestCollectionId, collectorStatus } = useAgentStatus();
-  const applicationLookupKey = `${latestCollectionId ?? ""}:${collectorStatus?.status ?? ""}:${collectionRefreshKey}`;
+  const { latestCollectionId } = useRunNewReportContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const variant = groupContext ? "groups" : "overview";
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
@@ -280,7 +277,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     void loadVmGroupMembership();
   }, [loadVmGroupMembership]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-fetch when collection context or inventory revision changes
   useEffect(() => {
     if (!agentApi) {
       return;
@@ -317,7 +313,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [agentApi, applicationLookupKey]);
+  }, [agentApi, latestCollectionId]);
 
   const vmsForTable = useMemo(
     () =>
@@ -812,7 +808,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         inspectionStatus={selectedVM?.inspectionStatus}
         scrollToSection={vmSectionParam}
         onScrollToSectionComplete={handleScrollToSectionComplete}
-        collectionRefreshKey={collectionRefreshKey}
       />
     );
   }

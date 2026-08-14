@@ -14,7 +14,7 @@ import {
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { parseApiError } from "../../../../common/parseApiError";
+import { parseApiError } from "../parseApiError";
 
 interface RunNewReportModalProps {
   isOpen: boolean;

@@ -1,31 +1,10 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRunNewReport } from "./useRunNewReport";
 
 describe("useRunNewReport", () => {
   afterEach(() => {
     vi.useRealTimers();
-  });
-
-  it("loads the latest report run timestamp", async () => {
-    const createdAt = new Date("2026-03-28T15:45:00.000Z");
-    const agentApi = {
-      listCollections: vi.fn().mockResolvedValue({
-        collections: [{ id: "c1", name: "latest", createdAt }],
-      }),
-      getCollectorStatus: vi.fn().mockResolvedValue({ status: "collected" }),
-      startCollector: vi.fn(),
-    };
-
-    const { result } = renderHook(() =>
-      useRunNewReport(agentApi as never, {
-        onCompleted: vi.fn().mockResolvedValue(undefined),
-      }),
-    );
-
-    await waitFor(() => {
-      expect(result.current.latestReportRun).toEqual(createdAt);
-    });
   });
 
   it("waits for a newer collection before refreshing page data", async () => {
@@ -70,7 +49,6 @@ describe("useRunNewReport", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(result.current.latestReportRun).toEqual(olderCreatedAt);
 
     await act(async () => {
       const runPromise = result.current.confirmRun();
@@ -83,7 +61,6 @@ describe("useRunNewReport", () => {
     expect(onCompleted).toHaveBeenCalledTimes(1);
     expect(result.current.showReadyAlert).toBe(true);
     expect(result.current.isCollecting).toBe(false);
-    expect(result.current.latestReportRun).toEqual(newerCreatedAt);
   });
 
   it("does not show success when a newer collection never appears", async () => {
@@ -104,10 +81,6 @@ describe("useRunNewReport", () => {
         collectionWaitIntervalMs: 1,
       }),
     );
-
-    await waitFor(() => {
-      expect(result.current.latestReportRun).toEqual(createdAt);
-    });
 
     await act(async () => {
       await expect(result.current.confirmRun()).rejects.toThrow(

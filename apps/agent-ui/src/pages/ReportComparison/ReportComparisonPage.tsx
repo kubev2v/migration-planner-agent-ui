@@ -10,16 +10,12 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAgentStatus } from "../../common/AgentStatusContext";
 import type { DefaultApiInterface } from "../../common/agentApi";
 import { listCollectionsNewestFirst } from "../../common/collectionApi";
 import { fetchCollectionComparison } from "../../common/collectionComparisonApi";
-import { getCollectionProgressInfo } from "../../common/collectionProgress";
-import { CollectionProgress } from "../../common/components";
+import { useRunNewReportContext } from "../../common/report/RunNewReportContext";
 import { Symbols } from "../../main/Symbols";
 import { downloadExportBlob } from "../VirtualMachinesOverview/components/Export/downloadExportBlob";
-import { RunNewReportModal } from "../VirtualMachinesOverview/components/RunNewReport/RunNewReportModal";
-import { useRunNewReport } from "../VirtualMachinesOverview/components/RunNewReport/useRunNewReport";
 import { pickDefaultComparisonIds } from "./comparisonSelection";
 import { ReportComparisonEmptyState } from "./ReportComparisonEmptyState";
 import { ReportComparisonHeader } from "./ReportComparisonHeader";
@@ -27,7 +23,7 @@ import { ReportComparisonView } from "./ReportComparisonView";
 
 export const ReportComparisonPage: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { hasCollectionData, refetch: refetchAgentStatus } = useAgentStatus();
+  const { onCompleted } = useRunNewReportContext();
   const [collections, setCollections] = useState<
     Awaited<ReturnType<typeof listCollectionsNewestFirst>>
   >([]);
@@ -52,7 +48,6 @@ export const ReportComparisonPage: React.FC = () => {
 
   const handleReportRefreshCompleted = useCallback(async () => {
     const nextCollections = await reloadCollections();
-    await refetchAgentStatus();
     if (nextCollections.length >= 2) {
       const defaults = pickDefaultComparisonIds(nextCollections);
       if (defaults) {
@@ -60,28 +55,11 @@ export const ReportComparisonPage: React.FC = () => {
         setToId(defaults.toId);
       }
     }
-  }, [refetchAgentStatus, reloadCollections]);
+  }, [reloadCollections]);
 
-  const {
-    latestReportRun,
-    isModalOpen: isRunNewReportModalOpen,
-    isCollecting,
-    collectorStatus,
-    showReadyAlert,
-    collectError,
-    openModal: openRunNewReportModal,
-    closeModal: closeRunNewReportModal,
-    confirmRun: confirmRunNewReport,
-    dismissReadyAlert,
-    dismissCollectError,
-  } = useRunNewReport(agentApi, {
-    onCompleted: handleReportRefreshCompleted,
-  });
-
-  const collectionProgress = getCollectionProgressInfo(
-    collectorStatus,
-    collectError,
-  );
+  useEffect(() => {
+    return onCompleted(handleReportRefreshCompleted);
+  }, [onCompleted, handleReportRefreshCompleted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -213,63 +191,12 @@ export const ReportComparisonPage: React.FC = () => {
       <Stack hasGutter>
         <StackItem>
           <ReportComparisonHeader
-            latestReportRun={latestReportRun}
-            showRunNewReport={hasCollectionData}
-            isCollecting={isCollecting}
-            onRunNewReportClick={openRunNewReportModal}
             showExport={canCompare}
             onExportClick={handleExportComparison}
             isExporting={isExporting}
             description={headerDescription}
           />
         </StackItem>
-
-        {isCollecting ? (
-          <StackItem>
-            <Alert variant="info" isInline title="Running a new vSphere report">
-              <Content component="p">
-                Capturing a fresh snapshot can take a few minutes.
-              </Content>
-              {collectionProgress.statusText ? (
-                <CollectionProgress
-                  percentage={collectionProgress.percentage}
-                  statusText={collectionProgress.statusText}
-                />
-              ) : null}
-            </Alert>
-          </StackItem>
-        ) : null}
-
-        {showReadyAlert && !isCollecting ? (
-          <StackItem>
-            <Alert
-              variant="success"
-              isInline
-              title="New report ready"
-              actionClose={
-                <AlertActionCloseButton onClose={dismissReadyAlert} />
-              }
-            >
-              Your migration report now reflects the latest infrastructure
-              snapshot.
-            </Alert>
-          </StackItem>
-        ) : null}
-
-        {collectError && !isCollecting ? (
-          <StackItem>
-            <Alert
-              variant="danger"
-              isInline
-              title="New report failed"
-              actionClose={
-                <AlertActionCloseButton onClose={dismissCollectError} />
-              }
-            >
-              {collectError}
-            </Alert>
-          </StackItem>
-        ) : null}
 
         {exportError ? (
           <StackItem>
@@ -304,11 +231,7 @@ export const ReportComparisonPage: React.FC = () => {
 
         {!canCompare ? (
           <StackItem>
-            <ReportComparisonEmptyState
-              reportCount={collections.length}
-              onRunNewReportClick={openRunNewReportModal}
-              isCollecting={isCollecting}
-            />
+            <ReportComparisonEmptyState reportCount={collections.length} />
           </StackItem>
         ) : null}
 
@@ -331,12 +254,6 @@ export const ReportComparisonPage: React.FC = () => {
           </StackItem>
         ) : null}
       </Stack>
-
-      <RunNewReportModal
-        isOpen={isRunNewReportModalOpen}
-        onConfirm={confirmRunNewReport}
-        onCancel={closeRunNewReportModal}
-      />
     </PageSection>
   );
 };

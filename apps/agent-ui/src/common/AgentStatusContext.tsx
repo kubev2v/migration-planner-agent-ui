@@ -1,29 +1,24 @@
 import { useInjection } from "@migration-planner-ui/ioc";
-import type {
-  AgentStatus,
-  CollectorStatus,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { AgentStatus } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import { Symbols } from "../main/Symbols";
 import type { DefaultApiInterface } from "./agentApi";
-import { getLatestCollectionId } from "./collectionApi";
-import { getCollectorStatus } from "./collectorApi";
+import {
+  type DiscoverySharingStatus,
+  getDiscoverySharingStatus,
+} from "./formatDiscoveryStatus";
+import { parseApiError } from "./parseApiError";
 
 interface AgentStatusContextValue {
   agentStatus: AgentStatus | null;
-  collectorStatus: CollectorStatus | null;
+  discoverySharingStatus: DiscoverySharingStatus;
+  discoverySharingError: string | undefined;
+  isDataShared: boolean;
   loading: boolean;
   error: string | null;
-  hasCollectionData: boolean;
-  latestCollectionId: string | null;
-  refetch: () => Promise<void>;
+  fetchStatus: () => Promise<void>;
+  enableSharing: () => Promise<void>;
 }
 
 const AgentStatusContext = createContext<AgentStatusContextValue | undefined>(
@@ -35,12 +30,6 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
-  const [collectorStatus, setCollectorStatus] =
-    useState<CollectorStatus | null>(null);
-  const [hasCollectionData, setHasCollectionData] = useState(false);
-  const [latestCollectionId, setLatestCollectionId] = useState<string | null>(
-    null,
-  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,53 +37,47 @@ export const AgentStatusProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(true);
     setError(null);
 
-    const [agentResult, collectorResult] = await Promise.allSettled([
-      agentApi.getAgentStatus(),
-      getCollectorStatus(agentApi),
-    ]);
-
-    if (agentResult.status === "fulfilled") {
-      setAgentStatus(agentResult.value);
-    } else {
-      const err = agentResult.reason;
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      console.error("Error fetching agent status:", err);
-      setError(`Failed to fetch status: ${errorMessage}`);
-    }
-
-    if (collectorResult.status === "fulfilled") {
-      setCollectorStatus(collectorResult.value);
-    } else {
-      console.error("Error fetching collector status:", collectorResult.reason);
-      setCollectorStatus(null);
-    }
-
     try {
-      const collectionId = await getLatestCollectionId(agentApi);
-      setLatestCollectionId(collectionId ?? null);
-      setHasCollectionData(Boolean(collectionId));
-    } catch (collectionErr) {
-      console.error("Error checking for existing collections:", collectionErr);
-      setLatestCollectionId(null);
-      setHasCollectionData(false);
+      const status = await agentApi.getAgentStatus();
+      setAgentStatus(status);
+    } catch (err) {
+      console.error("Error fetching agent status:", err);
+      setError(await parseApiError(err, "Failed to fetch status"));
     }
 
     setLoading(false);
   }, [agentApi]);
 
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+  const enableSharing = useCallback(async () => {
+    await agentApi.setAgentMode({ agentModeRequest: { mode: "connected" } });
+
+    const MAX_POLLS = 10;
+    const POLL_INTERVAL_MS = 2000;
+    for (let i = 0; i < MAX_POLLS; i++) {
+      const status = await agentApi.getAgentStatus();
+      if (
+        status.consoleConnection?.status === "connected" ||
+        status.consoleConnection?.error
+      ) {
+        setAgentStatus(status);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    }
+    await fetchStatus();
+  }, [agentApi, fetchStatus]);
+
+  const discoverySharingStatus = getDiscoverySharingStatus(agentStatus);
 
   const value: AgentStatusContextValue = {
     agentStatus,
-    collectorStatus,
+    discoverySharingStatus,
+    discoverySharingError: agentStatus?.consoleConnection.error,
+    isDataShared: agentStatus?.mode === "connected",
     loading,
     error,
-    hasCollectionData,
-    latestCollectionId,
-    refetch: fetchStatus,
+    fetchStatus,
+    enableSharing,
   };
 
   return (

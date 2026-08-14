@@ -47,9 +47,9 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useAgentStatus } from "../../../../common/AgentStatusContext";
 import type { DefaultApiInterface } from "../../../../common/agentApi";
 import { getLatestCollectionId } from "../../../../common/collectionApi";
+import { useRunNewReportContext } from "../../../../common/report/RunNewReportContext";
 import { Symbols } from "../../../../main/Symbols";
 import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
 import { VMApplicationsCard } from "./VMApplicationsCard";
@@ -83,11 +83,9 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   inspectionStatus,
   scrollToSection,
   onScrollToSectionComplete,
-  collectionRefreshKey = 0,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { latestCollectionId, collectorStatus } = useAgentStatus();
-  const applicationLookupKey = `${latestCollectionId ?? ""}:${collectorStatus?.status ?? ""}:${collectionRefreshKey}`;
+  const { latestCollectionId } = useRunNewReportContext();
   const [vm, setVm] = useState<VirtualMachineDetailWithUtilization | null>(
     null,
   );
@@ -138,7 +136,6 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     fetchVMDetails();
   }, [vmId, agentApi]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-fetch when collection context or inventory revision changes
   useEffect(() => {
     let cancelled = false;
 
@@ -176,7 +173,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [vmId, agentApi, applicationLookupKey]);
+  }, [vmId, agentApi, latestCollectionId]);
 
   useEffect(() => {
     if (scrollToSection !== "applications" || loading || applicationsLoading) {
