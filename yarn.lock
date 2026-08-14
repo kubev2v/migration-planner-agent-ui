@@ -825,12 +825,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@migration-planner-ui/api-client@workspace:packages/api-client":
-  version: 0.0.0-use.local
-  resolution: "@migration-planner-ui/api-client@workspace:packages/api-client"
-  languageName: unknown
-  linkType: soft
-
 "@migration-planner-ui/ioc@workspace:*, @migration-planner-ui/ioc@workspace:packages/ioc":
   version: 0.0.0-use.local
   resolution: "@migration-planner-ui/ioc@workspace:packages/ioc"

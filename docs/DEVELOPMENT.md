@@ -19,17 +19,12 @@ First, you need to run the migration-planner service, which provides the API bac
 git clone https://github.com/kubev2v/migration-planner.git
 cd migration-planner
 
-# Run using Docker/Podman
-podman run -d \
-  --name migration-planner \
-  -p 3333:3333 \
-  quay.io/kubev2v/migration-planner:latest
-
-# Or if using docker-compose
-docker-compose up -d
+# Build and run the planner
+make build
+make run
 ```
 
-The migration-planner API should now be accessible at `http://localhost:3333`.
+The migration-planner API should now be accessible at `http://localhost:3443`.
 
 ### 2. Start the Assisted Migration Agent
 
@@ -41,45 +36,24 @@ git clone https://github.com/kubev2v/assisted-migration-agent.git
 cd assisted-migration-agent
 
 # Build and run the agent
-# Option 1: Using binary
 make build
-./bin/agent --planner-service http://localhost:3333
-
-# Option 2: Using container
-podman run -d \
-  --name assisted-migration-agent \
-  -p 8080:8080 \
-  -e PLANNER_SERVICE_URL=http://localhost:3333 \
-  quay.io/kubev2v/assisted-migration-agent:latest
+export PLANNER_BASE_URL=http://localhost:3443 make run
 ```
 
-The agent API should now be accessible at `http://localhost:8080`.
+The agent API should now be accessible at `http://localhost:3001`.
 
-### 3. Configure the Agent UI
-
-Make sure the agent UI is configured to point to your local agent service.
-
-Create or update the configuration file at `apps/agent-ui/.env.local`:
-
-```bash
-VITE_AGENT_API_URL=http://localhost:8080
-```
-
-### 4. Install Dependencies
+### 3. Install Dependencies
 
 ```bash
 cd migration-planner-ui
-yarn install
+make install
 ```
 
-### 5. Start the Development Server
+### 4. Start the Development Server
 
 ```bash
 # Start only the agent-ui workspace
-yarn workspace @migration-planner-ui/agent-ui start
-
-# Or use npm
-npm run start --workspace=apps/agent-ui
+make run
 ```
 
 The UI will be available at **http://localhost:3001**
@@ -142,7 +116,7 @@ yarn typecheck:all
            ▼
 ┌─────────────────────┐
 │  Assisted Agent     │
-│  localhost:8080     │
+│  localhost:8000     │
 └──────┬───────┬──────┘
        │       │
        │       │ Collects data from
@@ -155,7 +129,7 @@ yarn typecheck:all
        ▼
 ┌─────────────────────┐
 │ Migration Planner   │
-│  localhost:3333     │
+│  localhost:3443     │
 └─────────────────────┘
 ```
 
@@ -176,6 +150,7 @@ yarn workspace @migration-planner-ui/agent-ui start --port 3002
 ### CORS Issues
 
 If you encounter CORS errors, ensure that:
+
 1. The agent is configured to allow requests from `http://localhost:3001`
 2. Your browser is not blocking the requests
 3. The agent service is running and accessible
@@ -186,7 +161,7 @@ If the UI cannot connect to the agent:
 
 ```bash
 # Check if the agent is running
-curl http://localhost:8080/api/v1/status
+curl http://localhost:8000/api/v1/status
 
 # Check the agent logs
 podman logs assisted-migration-agent
@@ -212,25 +187,9 @@ yarn build:all
 
 The development server supports hot module replacement (HMR). Changes to your source files will automatically reload in the browser without losing application state.
 
-## Environment Variables
-
-You can customize the development environment using these variables in `apps/agent-ui/.env.local`:
-
-```bash
-# Agent API URL
-VITE_AGENT_API_URL=http://localhost:8080
-
-# Enable debug mode
-VITE_DEBUG=true
-
-# API timeout (milliseconds)
-VITE_API_TIMEOUT=30000
-```
-
 ## Additional Resources
 
 - [Migration Planner Repository](https://github.com/kubev2v/migration-planner)
 - [Assisted Migration Agent Repository](https://github.com/kubev2v/assisted-migration-agent)
 - [PatternFly Documentation](https://www.patternfly.org/v6/)
 - [Vite Documentation](https://vitejs.dev/)
-
