@@ -35,7 +35,7 @@ jobs:
   # Validate commit messages
   validate-commits:
     needs: config
-    uses: kubev2v/migration-planner-workflows/.github/workflows/validate-commit-messages.yml@main
+    uses: kubev2v/migration-planner-workflows/.github/workflows/validate-commit-messages.yml@028c8ceddf58ae8f146406aa8f363dec06438c4f # main
     with:
       types: ${{ needs.config.outputs.allowed-types }}
       jira-pattern: ${{ needs.config.outputs.jira-pattern }}
@@ -45,7 +45,7 @@ jobs:
   # Validate PR title and description
   validate-pr-title:
     needs: config
-    uses: kubev2v/migration-planner-workflows/.github/workflows/validate-pr-title-description.yml@main
+    uses: kubev2v/migration-planner-workflows/.github/workflows/validate-pr-title-description.yml@028c8ceddf58ae8f146406aa8f363dec06438c4f # main
     with:
       allowed-types: ${{ needs.config.outputs.allowed-types }}
       jira-pattern: ${{ needs.config.outputs.jira-pattern }}

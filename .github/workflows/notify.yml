@@ -37,7 +37,7 @@ jobs:
 
   notify:
     needs: wait-for-image
-    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@main
+    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@028c8ceddf58ae8f146406aa8f363dec06438c4f # main
     with:
       event-type: agent_ui_updated
     secrets:
