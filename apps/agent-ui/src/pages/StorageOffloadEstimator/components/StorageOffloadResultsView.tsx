@@ -221,8 +221,8 @@ export const StorageOffloadResultsView: React.FC<
                   <Tr key={row.run.id}>
                     <Td>{row.run.iteration}</Td>
                     <Td>{new Date(row.run.createdAt).toLocaleString()}</Td>
-                    <Td>{row.run.durationSec.toFixed(1)}</Td>
-                    <Td>{row.run.throughputMbps.toFixed(1)}</Td>
+                    <Td>{row.run.durationSec?.toFixed(1) ?? "-"}</Td>
+                    <Td>{row.run.throughputMbps?.toFixed(1) ?? "-"}</Td>
                     <Td>{row.run.method ?? "-"}</Td>
                   </Tr>
                 ),

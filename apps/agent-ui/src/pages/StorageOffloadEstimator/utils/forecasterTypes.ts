@@ -80,8 +80,8 @@ export interface ForecastRun {
   diskSizeGb: number;
   /** Time spent on disk creation and random fill (iteration 1 only). */
   prepDurationSec?: number;
-  durationSec: number;
-  throughputMbps: number;
+  durationSec?: number;
+  throughputMbps?: number;
   method?: string;
   error?: string;
   createdAt: string;

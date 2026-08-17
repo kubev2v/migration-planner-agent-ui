@@ -47,7 +47,7 @@ export function formatPairStatsText(
     lines.push("", `Individual runs (${pairRuns.length})`);
     for (const r of pairRuns) {
       lines.push(
-        `  Run ${r.iteration}: ${r.durationSec.toFixed(1)}s  ${r.throughputMbps.toFixed(1)} MB/s  ${r.method ?? "-"}`,
+        `  Run ${r.iteration}: ${r.durationSec?.toFixed(1) ?? "-"}s  ${r.throughputMbps?.toFixed(1) ?? "-"} MB/s  ${r.method ?? "-"}`,
       );
     }
   }
