@@ -17,7 +17,6 @@ import { AppEmptyState } from "../../../../common/components";
 import type { NavigateToVMFilters } from "../VirtualMachinesTab/vmNavigation";
 import { ClustersOverview } from "./ClustersOverview";
 import { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
-import { dashboardStyles } from "./dashboardStyles";
 import { ErrorTable } from "./ErrorTable";
 import { HostsOverview } from "./HostsOverview";
 import { NetworkOverview } from "./NetworkOverview";
@@ -80,7 +79,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   if (!clusterFound && !isAggregateView) {
     return (
-      <PageSection hasBodyWrapper={false} className={dashboardStyles.container}>
+      <PageSection hasBodyWrapper={false}>
         <AppEmptyState
           titleText="No data is available for the selected cluster"
           body="Select a different cluster or check that inventory data has been collected."
@@ -92,7 +91,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }
 
   return (
-    <PageSection hasBodyWrapper={false} className={dashboardStyles.container}>
+    <PageSection hasBodyWrapper={false}>
       <Grid hasGutter>
         <GridItem span={12} data-export-block={isExportMode ? "2" : undefined}>
           <Gallery hasGutter minWidths={{ default: "40%" }}>

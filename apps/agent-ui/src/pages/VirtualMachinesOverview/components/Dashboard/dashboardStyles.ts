@@ -30,16 +30,6 @@ export const dashboardStyles = {
     height: 100%;
   `,
 
-  container: css`
-    .pf-v6-c-card {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      border-radius: 10px;
-    }
-
-  `,
-
   cardBodyScrollable: css`
     overflow: auto;
   `,
