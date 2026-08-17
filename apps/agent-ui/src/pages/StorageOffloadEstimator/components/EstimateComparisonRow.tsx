@@ -88,50 +88,50 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
         <Td>{pair.targetDatastore}</Td>
         {isColumnVisible("expected") && (
           <Td>
-            {stats?.estimatePer1TB?.expected
-              ? formatGoDuration(stats.estimatePer1TB.expected)
+            {stats?.estPer1TB?.expected
+              ? formatGoDuration(stats.estPer1TB.expected)
               : "-"}
           </Td>
         )}
         {isColumnVisible("best") && (
           <Td>
-            {stats?.estimatePer1TB?.bestCase
-              ? formatGoDuration(stats.estimatePer1TB.bestCase)
+            {stats?.estPer1TB?.bestCase
+              ? formatGoDuration(stats.estPer1TB.bestCase)
               : "-"}
           </Td>
         )}
         {isColumnVisible("worst") && (
           <Td>
-            {stats?.estimatePer1TB?.worstCase
-              ? formatGoDuration(stats.estimatePer1TB.worstCase)
+            {stats?.estPer1TB?.worstCase
+              ? formatGoDuration(stats.estPer1TB.worstCase)
               : "-"}
           </Td>
         )}
         {isColumnVisible("samples") && <Td>{stats?.sampleCount ?? "-"}</Td>}
         {isColumnVisible("mean") && (
-          <Td>{stats?.meanMbps != null ? stats.meanMbps.toFixed(1) : "-"}</Td>
+          <Td>{stats?.meanMBps != null ? stats.meanMBps.toFixed(1) : "-"}</Td>
         )}
         {isColumnVisible("median") && (
           <Td>
-            {stats?.medianMbps != null ? stats.medianMbps.toFixed(1) : "-"}
+            {stats?.medianMBps != null ? stats.medianMBps.toFixed(1) : "-"}
           </Td>
         )}
         {isColumnVisible("minMax") && (
           <Td>
-            {stats?.minMbps != null && stats?.maxMbps != null
-              ? `${stats.minMbps.toFixed(1)} / ${stats.maxMbps.toFixed(1)}`
+            {stats?.minMBps != null && stats?.maxMBps != null
+              ? `${stats.minMBps.toFixed(1)} / ${stats.maxMBps.toFixed(1)}`
               : "-"}
           </Td>
         )}
         {isColumnVisible("stddev") && (
           <Td>
-            {stats?.stddevMbps != null ? stats.stddevMbps.toFixed(1) : "-"}
+            {stats?.stdDevMBps != null ? stats.stdDevMBps.toFixed(1) : "-"}
           </Td>
         )}
         {isColumnVisible("ci95") && (
           <Td>
-            {stats?.ci95LowerMbps != null && stats?.ci95UpperMbps != null
-              ? `[${stats.ci95LowerMbps.toFixed(1)}, ${stats.ci95UpperMbps.toFixed(1)}]`
+            {stats?.ci95Lower != null && stats?.ci95Upper != null
+              ? `[${stats.ci95Lower.toFixed(1)}, ${stats.ci95Upper.toFixed(1)}]`
               : "-"}
           </Td>
         )}
@@ -151,19 +151,14 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
           )}
         </Td>
         <Td>{formatLastRun(pairRuns)}</Td>
-        <Td>
+        <Td hasAction>
+          {stateLabel ? <Label color={stateColor}>{stateLabel}</Label> : "-"}
+        </Td>
+        <Td hasAction>
           <Flex
             alignItems={{ default: "alignItemsCenter" }}
-            justifyContent={{ default: "justifyContentSpaceBetween" }}
             gap={{ default: "gapSm" }}
           >
-            <FlexItem>
-              {stateLabel ? (
-                <Label color={stateColor}>{stateLabel}</Label>
-              ) : (
-                "-"
-              )}
-            </FlexItem>
             {stats && stats.sampleCount > 0 && (
               <FlexItem>
                 <Button
@@ -178,22 +173,20 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
             {canCancel && onCancelPair && (
               <FlexItem>
                 <Tooltip content="Cancel benchmark">
-                  <span style={{ display: "inline-flex" }}>
-                    <Button
-                      variant="plain"
-                      aria-label={`Cancel benchmark for ${pair.sourceDatastore} to ${pair.targetDatastore}`}
-                      onClick={() => onCancelPair(pair, pairKey)}
-                      isDisabled={isCancelInFlight || isCanceling}
-                    >
-                      {isCanceling ? (
-                        <Spinner size="sm" aria-label="Canceling" />
-                      ) : (
-                        <Icon status="danger">
-                          <BanIcon />
-                        </Icon>
-                      )}
-                    </Button>
-                  </span>
+                  <Button
+                    variant="plain"
+                    aria-label={`Cancel benchmark for ${pair.sourceDatastore} to ${pair.targetDatastore}`}
+                    onClick={() => onCancelPair(pair, pairKey)}
+                    isDisabled={isCancelInFlight || isCanceling}
+                  >
+                    {isCanceling ? (
+                      <Spinner size="sm" aria-label="Canceling" />
+                    ) : (
+                      <Icon status="danger">
+                        <BanIcon />
+                      </Icon>
+                    )}
+                  </Button>
                 </Tooltip>
               </FlexItem>
             )}
@@ -215,7 +208,7 @@ export const EstimateComparisonRow: React.FC<EstimateComparisonRowProps> = ({
       </Tr>
       {liveStatus?.state === "error" && liveStatus.error && (
         <Tr>
-          <Td colSpan={14}>
+          <Td colSpan={15}>
             <Alert variant="danger" title={liveStatus.error} isInline />
           </Td>
         </Tr>

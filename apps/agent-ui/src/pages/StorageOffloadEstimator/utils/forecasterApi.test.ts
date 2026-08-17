@@ -18,7 +18,7 @@ const sampleRun = (id: number): ForecastRun => ({
   iteration: 1,
   diskSizeGb: 100,
   durationSec: 10,
-  throughputMbps: 100,
+  throughputMBps: 100,
   createdAt: "2024-01-01T00:00:00Z",
 });
 

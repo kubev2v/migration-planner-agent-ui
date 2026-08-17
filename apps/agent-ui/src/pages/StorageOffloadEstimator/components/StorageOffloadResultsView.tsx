@@ -222,7 +222,7 @@ export const StorageOffloadResultsView: React.FC<
                     <Td>{row.run.iteration}</Td>
                     <Td>{new Date(row.run.createdAt).toLocaleString()}</Td>
                     <Td>{row.run.durationSec?.toFixed(1) ?? "-"}</Td>
-                    <Td>{row.run.throughputMbps?.toFixed(1) ?? "-"}</Td>
+                    <Td>{row.run.throughputMBps?.toFixed(1) ?? "-"}</Td>
                     <Td>{row.run.method ?? "-"}</Td>
                   </Tr>
                 ),
@@ -409,6 +409,7 @@ export const StorageOffloadResultsView: React.FC<
                     <Th>Runs</Th>
                     <Th>Last run</Th>
                     <Th>Status</Th>
+                    <Th screenReaderText="Actions" />
                   </Tr>
                 </Thead>
                 <Tbody>

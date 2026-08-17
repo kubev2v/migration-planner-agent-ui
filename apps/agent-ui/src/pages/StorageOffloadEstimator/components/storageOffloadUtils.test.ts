@@ -37,7 +37,7 @@ describe("storageOffloadUtils", () => {
         iteration: 1,
         diskSizeGb: 10,
         durationSec: 1,
-        throughputMbps: 1,
+        throughputMBps: 1,
         createdAt: "2026-06-10T08:00:00.000Z",
       },
     ];
@@ -179,7 +179,7 @@ describe("storageOffloadUtils", () => {
         iteration: 1,
         diskSizeGb: 10,
         durationSec: 1,
-        throughputMbps: 1,
+        throughputMBps: 1,
         createdAt: "2026-06-10T09:00:00.000Z",
       },
       {
@@ -191,7 +191,7 @@ describe("storageOffloadUtils", () => {
         iteration: 1,
         diskSizeGb: 10,
         durationSec: 1,
-        throughputMbps: 1,
+        throughputMBps: 1,
         createdAt: "2026-06-10T08:00:00.000Z",
       },
     ]);

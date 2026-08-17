@@ -81,7 +81,7 @@ export interface ForecastRun {
   /** Time spent on disk creation and random fill (iteration 1 only). */
   prepDurationSec?: number;
   durationSec?: number;
-  throughputMbps?: number;
+  throughputMBps?: number;
   method?: string;
   error?: string;
   createdAt: string;
@@ -96,14 +96,14 @@ export interface EstimateRange {
 export interface ForecastStats {
   pairName: string;
   sampleCount: number;
-  meanMbps?: number;
-  medianMbps?: number;
-  minMbps?: number;
-  maxMbps?: number;
-  stddevMbps?: number;
-  ci95LowerMbps?: number;
-  ci95UpperMbps?: number;
-  estimatePer1TB?: EstimateRange;
+  meanMBps?: number;
+  medianMBps?: number;
+  minMBps?: number;
+  maxMBps?: number;
+  stdDevMBps?: number;
+  ci95Lower?: number;
+  ci95Upper?: number;
+  estPer1TB?: EstimateRange;
 }
 
 export interface PairCapabilityRequest {
