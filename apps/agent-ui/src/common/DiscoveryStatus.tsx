@@ -49,7 +49,7 @@ export const DiscoveryStatus: React.FC = () => {
       const payload = unwrapInventoryPayload(response);
       const downloadData = payload
         ? {
-            agent_id: response.inventory?.agentId ?? "",
+            agentId: response.inventory?.agentId ?? "",
             inventory: payload,
           }
         : response;
