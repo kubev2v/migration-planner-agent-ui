@@ -34,15 +34,17 @@ export const dashboardStyles = {
     overflow: auto;
   `,
 
+  // `!important` on overflow: PatternFly sets `.pf-v6-c-card { overflow: auto }`
+  // at the same specificity, which wins in the production build due to stylesheet
+  // injection order. `!important` forces `hidden` regardless of that order.
   card: css`
-    border-radius: 10px;
     min-height: 430px;
     max-height: 520px;
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    overflow: hidden;
+    overflow: hidden !important;
   `,
 
   cardPrint: css`
