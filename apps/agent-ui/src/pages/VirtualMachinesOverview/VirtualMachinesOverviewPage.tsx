@@ -1,9 +1,9 @@
-import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   RightsizingClusterUtilization,
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Content,

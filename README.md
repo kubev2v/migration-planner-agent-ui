@@ -67,7 +67,7 @@ Apps may include additional scripts like `start` and `preview` for development w
 - ES6 module support
 - Isomorphic code: Works in both Node.js and browser environments
 
-### `@migration-planner-ui/ioc`
+### `@openshift-migration-advisor/ioc`
 
 A lightweight dependency injection (IoC) container solution for React applications, inspired by InversifyJS. Provides a simple way to manage dependencies and inject them into React components.
 

@@ -1,26 +1,18 @@
-# @migration-planner-ui/ioc
+# @openshift-migration-advisor/ioc
 
 A lightweight Inversion of Control (IoC) container solution for React applications, inspired by InversifyJS.
 
 ## Installation
 
 ```bash
-npm install @migration-planner-ui/ioc --save
+npm install @openshift-migration-advisor/ioc --save
 ```
 
 or
 
 ```bash
-yarn add @migration-planner-ui/ioc
+yarn add @openshift-migration-advisor/ioc
 ```
-
-## Peer Dependencies
-
-This package requires the following peer dependencies:
-
-- `react` ^18.3.1
-- `react-dom` ^18.3.1
-- `react-router-dom` ^6.26.0
 
 ## Usage
 
@@ -41,19 +33,19 @@ export const Symbols = Object.freeze({
 Create a container instance and register your dependencies:
 
 ```typescript
-import { Container } from "@migration-planner-ui/ioc";
+import { Container } from "@openshift-migration-advisor/ioc";
 import { Symbols } from "./Symbols";
 import { MyService } from "./services/MyService";
 import { ApiClient } from "./clients/ApiClient";
 
 function getConfiguredContainer(): Container {
   const container = new Container();
-  
+
   // Register dependencies
   container
     .register(Symbols.MyService, new MyService())
     .register(Symbols.ApiClient, new ApiClient());
-  
+
   return container;
 }
 ```
@@ -63,7 +55,7 @@ function getConfiguredContainer(): Container {
 Wrap your application with the `Provider` component:
 
 ```typescript
-import { Provider } from "@migration-planner-ui/ioc";
+import { Provider } from "@openshift-migration-advisor/ioc";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
@@ -83,18 +75,18 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 Use the `useInjection` hook to retrieve dependencies in your React components:
 
 ```typescript
-import { useInjection } from "@migration-planner-ui/ioc";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import { Symbols } from "./Symbols";
 import type { MyServiceInterface } from "./services/MyService";
 
 export const MyComponent: React.FC = () => {
   const myService = useInjection<MyServiceInterface>(Symbols.MyService);
-  
+
   // Use the injected service
   const handleClick = () => {
     myService.doSomething();
   };
-  
+
   return <button onClick={handleClick}>Click me</button>;
 };
 ```
@@ -153,7 +145,7 @@ export const Symbols = Object.freeze({
 });
 
 // 2. Create and configure container
-import { Container, Provider } from "@migration-planner-ui/ioc";
+import { Container, Provider } from "@openshift-migration-advisor/ioc";
 import { UserApi } from "./api/UserApi";
 
 const container = new Container();
@@ -169,16 +161,16 @@ function App() {
 }
 
 // 4. Use dependency in component
-import { useInjection } from "@migration-planner-ui/ioc";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 
 function UserProfile() {
   const userApi = useInjection(Symbols.UserApi);
   const [user, setUser] = useState(null);
-  
+
   useEffect(() => {
     userApi.getUser().then(setUser);
   }, [userApi]);
-  
+
   return <div>{user?.name}</div>;
 }
 ```
@@ -221,4 +213,3 @@ yarn clean
 ## License
 
 [Apache 2.0](LICENSE)
-

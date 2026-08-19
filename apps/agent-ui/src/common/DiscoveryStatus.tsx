@@ -1,5 +1,5 @@
 import { css } from "@emotion/css";
-import { useInjection } from "@migration-planner-ui/ioc";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Flex,
   FlexItem,

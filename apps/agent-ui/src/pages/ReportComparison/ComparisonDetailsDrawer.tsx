@@ -1,6 +1,6 @@
 import { css } from "@emotion/css";
-import { useInjection } from "@migration-planner-ui/ioc";
 import type { CollectionComparisonDiff } from "@openshift-migration-advisor/agent-sdk";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Badge,

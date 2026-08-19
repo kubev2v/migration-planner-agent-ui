@@ -1,4 +1,4 @@
-import { useInjection } from "@migration-planner-ui/ioc";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";

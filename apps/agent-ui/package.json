@@ -1,5 +1,5 @@
 {
-  "name": "@migration-planner-ui/agent-ui",
+  "name": "@openshift-migration-advisor/agent-ui",
   "private": true,
   "version": "1.0.0-alpha",
   "type": "module",
@@ -17,8 +17,8 @@
   "dependencies": {
     "@emotion/css": "^11.13.0",
     "@hookform/resolvers": "^5.4.0",
-    "@migration-planner-ui/ioc": "workspace:*",
     "@openshift-migration-advisor/agent-sdk": "0.20.2-d385a5a71ef0",
+    "@openshift-migration-advisor/ioc": "workspace:*",
     "@patternfly/react-charts": "^8.6.1",
     "@patternfly/react-core": "^6.6.1",
     "@patternfly/react-icons": "^6.6.1",

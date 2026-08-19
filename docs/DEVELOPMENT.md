@@ -74,7 +74,7 @@ The UI will be available at **http://localhost:3001**
 yarn test:all
 
 # Run tests for agent-ui only
-yarn workspace @migration-planner-ui/agent-ui test
+yarn workspace @openshift-migration-advisor/agent-ui test
 ```
 
 ### Linting and Formatting
@@ -94,7 +94,7 @@ yarn check:fix:all
 yarn build:all
 
 # Build only agent-ui
-yarn workspace @migration-planner-ui/agent-ui build
+yarn workspace @openshift-migration-advisor/agent-ui build
 ```
 
 ### Type Checking
@@ -144,7 +144,7 @@ If you get an error that port 3001 is already in use:
 lsof -ti:3001 | xargs kill -9
 
 # Or use a different port
-yarn workspace @migration-planner-ui/agent-ui start --port 3002
+yarn workspace @openshift-migration-advisor/agent-ui start --port 3002
 ```
 
 ### CORS Issues

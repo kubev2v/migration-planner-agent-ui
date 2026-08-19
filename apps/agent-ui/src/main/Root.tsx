@@ -1,10 +1,10 @@
 import "@patternfly/react-core/dist/styles/base.css";
 
+import { Configuration } from "@openshift-migration-advisor/agent-sdk";
 import {
   Container,
   Provider as DependencyInjectionProvider,
-} from "@migration-planner-ui/ioc";
-import { Configuration } from "@openshift-migration-advisor/agent-sdk";
+} from "@openshift-migration-advisor/ioc";
 import { Spinner } from "@patternfly/react-core";
 import React from "react";
 import ReactDOM from "react-dom/client";

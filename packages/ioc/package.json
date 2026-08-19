@@ -1,12 +1,12 @@
 {
-  "name": "@migration-planner-ui/ioc",
-  "version": "1.0.2-alpha",
+  "name": "@openshift-migration-advisor/ioc",
+  "version": "0.0.0",
   "description": "A basic IoC solution for React apps (inspired by InversifyJs)",
   "author": "Jonathan Kilzi <jkilzi@redhat.com>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kubev2v/migration-planner-ui.git",
+    "url": "https://github.com/kubev2v/migration-planner-agent-ui.git",
     "directory": "packages/ioc"
   },
   "type": "module",
@@ -37,11 +37,6 @@
     "check:fix": "yarn run -T biome check --write .",
     "test": "echo 'No tests configured for this package'",
     "typecheck": "yarn run -T tsc -b --noEmit"
-  },
-  "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0"
   },
   "files": [
     "dist",

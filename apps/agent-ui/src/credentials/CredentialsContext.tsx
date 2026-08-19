@@ -1,10 +1,10 @@
 import { css } from "@emotion/css";
-import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   CapabilityStatusCapabilities,
   CredentialStatus,
   VcenterCredentials,
 } from "@openshift-migration-advisor/agent-sdk";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import type React from "react";
 import {
   createContext,

@@ -1,4 +1,4 @@
-import { useInjection } from "@migration-planner-ui/ioc";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import { PageSection } from "@patternfly/react-core";
 import type React from "react";
 import { useMemo } from "react";

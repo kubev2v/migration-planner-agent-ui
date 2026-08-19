@@ -1,4 +1,3 @@
-import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   ApplicationOverview,
   InspectionStatus,
@@ -6,6 +5,7 @@ import type {
   VirtualMachineIssue,
   VmUtilizationDetails,
 } from "@openshift-migration-advisor/agent-sdk";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Breadcrumb,

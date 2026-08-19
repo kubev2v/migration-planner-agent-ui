@@ -1,51 +1,41 @@
-name: Create a new release and update latest
-on:
-  release:
-    types: [created]
+name: Publish ioc package
 
+on:
+  push:
+    branches: [main, stable]
+    paths:
+      - 'packages/ioc/**'
+    tags:
+      - 'v*'
+
+# Required for npm Trusted Publishing (OIDC)
 permissions:
+  id-token: write
   contents: read
 
 jobs:
-  build-and-publish:
+  version:
+    name: Determine version
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - uses: ./.github/actions/install-dependencies
-      - name: Build all workspaces
-        run: yarn build:all
-      - name: Configure npm credentials
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.npmrc
-        env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-          
-      - name: Lookup for workspaces to be published
-        run: |
-          declare -a LIBS=("api-client" "agent-client" "ioc")
-          echo "LIBS=${LIBS[@]}" >> $GITHUB_ENV
-          (IFS=,; printf 'The following workspaces will be published: [%s]\n' "${LIBS[*]}")
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      - name: Configuring git
-        run: |
-          git config user.name '${{ github.actor }}'
-          git config user.email '${{ github.actor }}@users.noreply.github.com'
+      - name: Determine version
+        id: version
+        uses: kubev2v/migration-planner-workflows/.github/actions/determine-version@706ce577094f2687205b5f9c79b952c87dbb48fc
 
-      - name: Bump workspaces to ${{ github.ref_name }}
-        run: |
-          TAG_NAME="${{ github.event.release.tag_name }}"
-          VERSION="${TAG_NAME#v}"
-          for LIB in $(echo ${LIBS}); do
-            echo Bumping @migration-planner-ui/"${LIB}"
-            jq --arg ver "$VERSION" '.version = $ver' packages/"${LIB}"/package.json > packages/"${LIB}"/package.tmp.json
-            mv packages/"${LIB}"/package.tmp.json packages/"${LIB}"/package.json
-          done
-
-      - name: Publish workspaces to NPM
-        env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-        run: |
-          yarn config set npmScopes.migration-planner-ui.npmAuthToken $NPM_AUTH_TOKEN
-          for LIB in $(echo ${LIBS}); do
-            printf 'Publishing @migration-planner-ui/%s\n' "${LIB}"
-            yarn workspace @migration-planner-ui/${LIB} npm publish            
-          done
+  publish:
+    name: Build and publish ioc package
+    needs: version
+    uses: kubev2v/migration-planner-workflows/.github/workflows/build-and-publish-package.yml@706ce577094f2687205b5f9c79b952c87dbb48fc
+    with:
+      package-name: "@openshift-migration-advisor/ioc"
+      package-version: ${{ needs.version.outputs.version }}
+      working-directory: packages/ioc
+      build-command: "yarn workspace @openshift-migration-advisor/ioc build"
+    secrets: inherit

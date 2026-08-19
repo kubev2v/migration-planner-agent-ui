@@ -1,8 +1,8 @@
-import { useInjection } from "@migration-planner-ui/ioc";
 import type {
   CollectorStatus,
   VcenterCredentials,
 } from "@openshift-migration-advisor/agent-sdk";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { DefaultApiInterface } from "../api/agentApi";

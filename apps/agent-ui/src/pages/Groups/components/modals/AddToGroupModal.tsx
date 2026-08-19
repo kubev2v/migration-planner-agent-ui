@@ -1,5 +1,5 @@
-import { useInjection } from "@migration-planner-ui/ioc";
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
+import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Button,
   Content,
