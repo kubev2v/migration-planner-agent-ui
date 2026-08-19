@@ -11,8 +11,6 @@ describe("migrateLegacyWizardState", () => {
   it("maps running and results to results pageView", () => {
     expect(
       migrateLegacyWizardState({
-        url: "",
-        username: "",
         pageView: "empty",
         credentialsSubmitted: false,
         datastores: [],
@@ -23,8 +21,6 @@ describe("migrateLegacyWizardState", () => {
 
     expect(
       migrateLegacyWizardState({
-        url: "",
-        username: "",
         pageView: "empty",
         credentialsSubmitted: false,
         datastores: [],
@@ -37,8 +33,6 @@ describe("migrateLegacyWizardState", () => {
   it("maps credentials and select-pairs to empty pageView", () => {
     expect(
       migrateLegacyWizardState({
-        url: "",
-        username: "",
         pageView: "empty",
         credentialsSubmitted: false,
         datastores: [],
@@ -49,8 +43,6 @@ describe("migrateLegacyWizardState", () => {
 
     expect(
       migrateLegacyWizardState({
-        url: "https://vcenter.example.com",
-        username: "admin",
         pageView: "empty",
         credentialsSubmitted: false,
         datastores: [{ name: "ds-a", type: "VMFS", capacityGb: 1, freeGb: 1 }],
@@ -65,8 +57,6 @@ describe("migrateLegacyWizardState", () => {
 
   it("leaves modern state unchanged", () => {
     const modern = {
-      url: "u",
-      username: "n",
       pageView: "results" as const,
       credentialsSubmitted: true,
       datastores: [],

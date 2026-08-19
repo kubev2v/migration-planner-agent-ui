@@ -9,8 +9,6 @@ export const SESSION_KEY = "forecaster-wizard-state";
 export const CANCELED_PAIRS_SESSION_KEY = "forecaster-canceled-pairs";
 
 export interface PersistedWizardState {
-  url: string;
-  username: string;
   pageView: PageView;
   credentialsSubmitted: boolean;
   datastores: ForecasterDatastore[];
