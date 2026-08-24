@@ -54,7 +54,6 @@ import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
 import { VMApplicationsCard } from "./VMApplicationsCard";
 import { VMProcessesCard } from "./VMProcessesCard";
 import { formatMetric } from "./VMUtilizationMetrics";
-import { isLikelyCanceledInspectionError } from "./vmInspectionUtils";
 
 const MB_IN_GB = 1024;
 
@@ -303,8 +302,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
               !c.label?.toLowerCase().includes("no inspection concerns"),
           );
           const hasError =
-            !!inspectionStatus.error &&
-            !isLikelyCanceledInspectionError(inspectionStatus.error);
+            inspectionStatus.state === "error" && !!inspectionStatus.error;
           const hasContent = hasError || concerns.length > 0;
 
           return (
@@ -358,10 +356,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                         ? "Inspection pending…"
                         : inspectionStatus.state === "running"
                           ? "Inspection in progress…"
-                          : inspectionStatus.state === "canceled" ||
-                              isLikelyCanceledInspectionError(
-                                inspectionStatus.error,
-                              )
+                          : inspectionStatus.state === "canceled"
                             ? "Inspection was canceled"
                             : inspectionStatus.state === "error"
                               ? "Inspection failed"

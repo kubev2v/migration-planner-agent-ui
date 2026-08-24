@@ -13,7 +13,6 @@ import {
   ExclamationTriangleIcon,
 } from "@patternfly/react-icons";
 import type React from "react";
-import { isLikelyCanceledInspectionError } from "./vmInspectionUtils";
 import { statusLabels } from "./vmTableShared";
 
 export function renderVmStatus(vm: VirtualMachine): React.ReactNode {
@@ -74,17 +73,17 @@ export function renderVmInspectionStatus(
     );
   }
 
-  if (state === "error") {
-    if (isLikelyCanceledInspectionError(status.error)) {
-      return (
-        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Label color="grey" isCompact>
-            Canceled
-          </Label>
-        </span>
-      );
-    }
+  if (state === "canceled") {
+    return (
+      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <Label color="grey" isCompact>
+          Canceled
+        </Label>
+      </span>
+    );
+  }
 
+  if (state === "error") {
     const concernCount = vm.inspectionConcernCount || 0;
 
     if (concernCount === 0) {

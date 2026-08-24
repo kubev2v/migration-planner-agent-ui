@@ -108,17 +108,6 @@ export function buildStartInspectionVmIds(
 }
 
 /**
- * Heuristic: the backend may report user-initiated mid-run cancels as `error`
- * (virt-inspector killed with exit code 1) rather than state `canceled`.
- * Natural virt-inspector crashes can match the same pattern — a distinct
- * backend flag would be needed to tell them apart reliably.
- */
-export function isLikelyCanceledInspectionError(error?: string): boolean {
-  if (!error) return false;
-  return /virt-inspector failed \(exit code/i.test(error);
-}
-
-/**
  * Per-VM inspection cancel was removed in Agent API v2.
  * Global stopInspection is the supported path; this helper is kept as a no-op
  * so callers do not hit a removed DELETE /vms/{id}/inspection endpoint.
