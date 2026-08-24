@@ -1,6 +1,5 @@
 import type {
   ApplicationOverview,
-  InspectionStatus,
   VirtualMachineDetail,
   VirtualMachineIssue,
   VmUtilizationDetails,
@@ -71,7 +70,6 @@ interface VirtualMachineDetailWithUtilization extends VirtualMachineDetail {
 interface VMDetailsPageProps {
   vmId: string;
   onBack: () => void;
-  inspectionStatus?: InspectionStatus;
   scrollToSection?: string | null;
   onScrollToSectionComplete?: () => void;
   collectionRefreshKey?: number;
@@ -80,7 +78,6 @@ interface VMDetailsPageProps {
 export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   vmId,
   onBack,
-  inspectionStatus,
   scrollToSection,
   onScrollToSectionComplete,
 }) => {
@@ -234,6 +231,8 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   if (!vm) {
     return null;
   }
+
+  const inspectionStatus = vm.inspectionStatus;
 
   const renderStatusLabel = () => {
     const hasIssues = vm.issues && vm.issues.length > 0;

@@ -800,12 +800,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, [stopPolling]);
 
   if (selectedVMId) {
-    const selectedVM = vms.find((vm) => vm.id === selectedVMId);
     return (
       <VMDetailsPage
         vmId={selectedVMId}
         onBack={handleBack}
-        inspectionStatus={selectedVM?.inspectionStatus}
         scrollToSection={vmSectionParam}
         onScrollToSectionComplete={handleScrollToSectionComplete}
       />
