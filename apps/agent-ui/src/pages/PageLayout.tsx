@@ -35,7 +35,6 @@ import { getCollectionProgressInfo } from "../common/collectionProgress";
 import { CollectionProgress } from "../common/components";
 import { useReportsContext } from "../common/report/ReportsContext";
 import VCenterCredentialsDropdownMenu from "../credentials/VCenterCredentialsDropdownMenu";
-import { useSeedAppMode } from "../store/useSeedAppMode";
 
 interface ReportNavItem {
   path: string;
@@ -176,7 +175,6 @@ const RunNewReportAlerts: React.FC = () => {
 export const PageLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  useSeedAppMode();
 
   const activeItem = useMemo(
     () =>

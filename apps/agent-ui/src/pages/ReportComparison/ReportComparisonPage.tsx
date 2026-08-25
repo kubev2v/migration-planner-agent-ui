@@ -8,15 +8,12 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useReportsContext } from "../../common/report/ReportsContext";
-import { agentApiSlice } from "../../store/api/agentApiSlice";
 import {
   useCompareCollectionsQuery,
   useExportCollectionMutation,
   useListCollectionsQuery,
 } from "../../store/api/comparisonEndpoints";
 import { getSdkErrorMessage } from "../../store/baseQuery";
-import { useAppDispatch } from "../../store/hooks";
 import { downloadExportBlob } from "../VirtualMachinesOverview/components/Export/downloadExportBlob";
 import { pickDefaultComparisonIds } from "./comparisonSelection";
 import { ReportComparisonEmptyState } from "./ReportComparisonEmptyState";
@@ -24,8 +21,6 @@ import { ReportComparisonHeader } from "./ReportComparisonHeader";
 import { ReportComparisonView } from "./ReportComparisonView";
 
 export const ReportComparisonPage: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const { onCompleted } = useReportsContext();
   const [fromId, setFromId] = useState<string>("");
   const [toId, setToId] = useState<string>("");
   const [defaultsAppliedFor, setDefaultsAppliedFor] = useState<string | null>(
@@ -83,15 +78,6 @@ export const ReportComparisonPage: React.FC = () => {
         "Failed to load report comparison.",
       )
     : null;
-
-  // A completed report refreshes the collection list and every comparison entry.
-  const handleReportRefreshCompleted = useCallback(async () => {
-    dispatch(agentApiSlice.util.invalidateTags(["Collections"]));
-  }, [dispatch]);
-
-  useEffect(() => {
-    return onCompleted(handleReportRefreshCompleted);
-  }, [onCompleted, handleReportRefreshCompleted]);
 
   const headerDescription = useMemo(() => {
     if (!canCompare) {

@@ -5,6 +5,10 @@ import { useSearchParams } from "react-router-dom";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { agentApiSlice } from "../../../../store/api/agentApiSlice";
 import {
+  useCancelVirtualMachineInspectionMutation,
+  useStopInspectionMutation,
+} from "../../../../store/api/lifecycleEndpoints";
+import {
   useGetApplicationsQuery,
   useGetVMLabelsQuery,
   useSetVMExclusionMutation,
@@ -39,10 +43,7 @@ import {
   type VMFilters,
   withDefaultReportInclusion,
 } from "./vmFilters";
-import {
-  cancelVmInspection,
-  getDeepInspectionEnablement,
-} from "./vmInspectionUtils";
+import { getDeepInspectionEnablement } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds, fetchVmsByIds } from "./vmSelection";
 
 interface VirtualMachinesViewProps {
@@ -131,6 +132,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [cancelingInspectionVmIds, setCancelingInspectionVmIds] = useState(
     () => new Set<string>(),
   );
+
+  const [stopInspection] = useStopInspectionMutation();
+  const [cancelVmInspection] = useCancelVirtualMachineInspectionMutation();
 
   // --- Cache invalidation helpers ------------------------------------------
   // The VM list (and, for exclusion, the inventory) this view shows lives in
@@ -549,7 +553,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
       setCancelingInspectionVmIds((prev) => new Set(prev).add(vmId));
       try {
-        await cancelVmInspection(agentApi, vmId);
+        await cancelVmInspection({ vmId }).unwrap();
         refreshVmList();
       } catch (err) {
         setCancelingInspectionVmIds((prev) => {
@@ -560,7 +564,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         throw err;
       }
     },
-    [agentApi, refreshVmList],
+    [agentApi, cancelVmInspection, refreshVmList],
   );
 
   const runExclusionChange = useCallback(
@@ -598,14 +602,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const handleResetInspection = useCallback(async () => {
     if (!agentApi) return;
     try {
-      await agentApi.stopInspection();
+      await stopInspection().unwrap();
       setInspectionActive(false);
       refreshVmList();
     } catch (err) {
       console.error("Error stopping inspection for reset:", err);
     }
     setIsInspectionModalOpen(true);
-  }, [agentApi, refreshVmList]);
+  }, [agentApi, stopInspection, refreshVmList]);
 
   const handleInspectionStarted = useCallback(() => {
     seenRunningRef.current = false;

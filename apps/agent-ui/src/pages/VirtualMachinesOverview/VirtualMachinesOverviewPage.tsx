@@ -23,9 +23,8 @@ import type { DefaultApiInterface } from "../../api/agentApi";
 import { getLatestCollectionId } from "../../api/collectionApi";
 import { AppEmptyState } from "../../common/components/index";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
-import { useReportsContext } from "../../common/report/ReportsContext";
 import { Symbols } from "../../main/Symbols";
-import { agentApiSlice } from "../../store/api/agentApiSlice";
+import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
   useGetApplicationsQuery,
   useGetInventoryQuery,
@@ -33,7 +32,6 @@ import {
   useGetVMsQuery,
 } from "../../store/api/vmsEndpoints";
 import { getSdkErrorMessage } from "../../store/baseQuery";
-import { useAppDispatch } from "../../store/hooks";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { ApplicationsView } from "./components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "./components/Dashboard/Dashboard";
@@ -76,8 +74,9 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
 
 export const ReportContainer: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const dispatch = useAppDispatch();
-  const { hasCollectionData } = useReportsContext();
+  const { data: collections } = useListCollectionsQuery();
+  const hasCollectionData = (collections?.length ?? 0) > 0;
+  const newestCollectionId = collections?.[0]?.id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
@@ -224,24 +223,19 @@ export const ReportContainer: React.FC = () => {
     };
   }, [agentApi, selectedClusterId]);
 
-  // When a new report/collection completes, refetch every dependent cache entry
-  // from a single set of invalidations (no manual re-fetch plumbing).
-  const { onCompleted } = useReportsContext();
-  const handleReportRefreshCompleted = useCallback(async () => {
-    setVmsPage(1);
-    dispatch(
-      agentApiSlice.util.invalidateTags([
-        "Inventory",
-        { type: "Vms", id: "LIST" },
-        "VmLabels",
-        { type: "Group", id: "LIST" },
-      ]),
-    );
-  }, [dispatch]);
-
+  // A completed report invalidates the inventory/VM caches through the shared
+  // report-completion tags (see `ReportsContext`), so the queries above refetch
+  // on their own. The page only needs to reset its client-side pagination back
+  // to the first page when a newer collection replaces the current one.
+  const [pagedCollectionId, setPagedCollectionId] = useState<
+    string | undefined
+  >(newestCollectionId);
   useEffect(() => {
-    return onCompleted(handleReportRefreshCompleted);
-  }, [onCompleted, handleReportRefreshCompleted]);
+    if (newestCollectionId !== pagedCollectionId) {
+      setPagedCollectionId(newestCollectionId);
+      setVmsPage(1);
+    }
+  }, [newestCollectionId, pagedCollectionId]);
 
   const {
     isExportModalOpen,

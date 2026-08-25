@@ -36,9 +36,7 @@ import {
 import type { DefaultApiInterface } from "../../api/agentApi";
 import { AppEmptyState } from "../../common/components";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
-import { useReportsContext } from "../../common/report/ReportsContext";
 import { Symbols } from "../../main/Symbols";
-import { agentApiSlice } from "../../store/api/agentApiSlice";
 import {
   useDeleteGroupMutation,
   useGetGroupQuery,
@@ -50,7 +48,6 @@ import {
   useGetVMFilterOptionsQuery,
 } from "../../store/api/vmsEndpoints";
 import { getSdkErrorMessage } from "../../store/baseQuery";
-import { useAppDispatch } from "../../store/hooks";
 import {
   buildClusterViewModel,
   type ClusterOption,
@@ -112,7 +109,6 @@ function getGroupErrorMessage(error: unknown): string {
 export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -215,32 +211,6 @@ export const GroupDetailPage: React.FC = () => {
       setActiveTab(nextTab);
     }
   }, [searchParams, activeTab]);
-
-  // --- Cache invalidation helpers ------------------------------------------
-  // Both the header (getGroup) and the table (getGroupVMs) refetch from the
-  // same invalidation, so their counts can never diverge.
-  const invalidateGroupData = useCallback(() => {
-    if (!groupId) {
-      return;
-    }
-    dispatch(
-      agentApiSlice.util.invalidateTags([
-        { type: "Group", id: groupId },
-        { type: "GroupVms", id: groupId },
-        { type: "GroupInventory", id: groupId },
-      ]),
-    );
-  }, [dispatch, groupId]);
-
-  // Re-collection completion refreshes the group view.
-  const { onCompleted } = useReportsContext();
-  useEffect(
-    () =>
-      onCompleted(async () => {
-        invalidateGroupData();
-      }),
-    [onCompleted, invalidateGroupData],
-  );
 
   const [updateGroupName] = useUpdateGroupNameMutation();
   const [deleteGroup] = useDeleteGroupMutation();

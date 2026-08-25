@@ -48,8 +48,8 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { getLatestCollectionId } from "../../../../api/collectionApi";
-import { useReportsContext } from "../../../../common/report/ReportsContext";
 import { Symbols } from "../../../../main/Symbols";
+import { useListCollectionsQuery } from "../../../../store/api/comparisonEndpoints";
 import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
 import { VMApplicationsCard } from "./VMApplicationsCard";
 import { VMProcessesCard } from "./VMProcessesCard";
@@ -81,7 +81,8 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   onScrollToSectionComplete,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const { latestCollectionId } = useReportsContext();
+  const { data: collections } = useListCollectionsQuery();
+  const latestCollectionId = collections?.[0]?.id ?? null;
   const [vm, setVm] = useState<VirtualMachineDetailWithUtilization | null>(
     null,
   );

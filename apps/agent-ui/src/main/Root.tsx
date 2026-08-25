@@ -12,7 +12,6 @@ import { Provider as ReduxProvider } from "react-redux";
 import { RouterProvider } from "react-router-dom";
 import type { AgentApiClient } from "../api/agentApi.ts";
 import { createAgentApi } from "../api/agentApi.ts";
-import { AgentStatusProvider } from "../common/AgentStatusContext.tsx";
 import { AgentUIVersion } from "../common/AgentUIVersion.tsx";
 import { ReportsProvider } from "../common/report/ReportsContext.tsx";
 import { createStore } from "../store/index.ts";
@@ -59,14 +58,12 @@ function main(): void {
     <React.StrictMode>
       <ReduxProvider store={store}>
         <DependencyInjectionProvider container={container}>
-          <AgentStatusProvider>
-            <ReportsProvider>
-              <React.Suspense fallback={<Spinner />}>
-                <AgentUIVersion />
-                <RouterProvider router={router} />
-              </React.Suspense>
-            </ReportsProvider>
-          </AgentStatusProvider>
+          <ReportsProvider>
+            <React.Suspense fallback={<Spinner />}>
+              <AgentUIVersion />
+              <RouterProvider router={router} />
+            </React.Suspense>
+          </ReportsProvider>
         </DependencyInjectionProvider>
       </ReduxProvider>
     </React.StrictMode>,

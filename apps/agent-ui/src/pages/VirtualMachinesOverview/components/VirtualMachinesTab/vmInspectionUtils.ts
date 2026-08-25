@@ -1,8 +1,5 @@
-import {
-  ResponseError,
-  type VirtualMachine,
-} from "@openshift-migration-advisor/agent-sdk";
-import type { DefaultApiInterface } from "../../../../api/agentApi";
+import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import { getSdkErrorMessage } from "../../../../store/baseQuery";
 
 export function isVmUnderInspection(vm: VirtualMachine): boolean {
   const state = vm.inspectionStatus?.state;
@@ -108,42 +105,20 @@ export function buildStartInspectionVmIds(
   return [...new Set([...selectedVmIds, ...vmIdsUnderInspection])];
 }
 
-export async function cancelVmInspection(
-  agentApi: DefaultApiInterface,
-  vmId: string,
-): Promise<void> {
-  await agentApi.cancelVirtualMachineInspection({ vmId });
-}
-
-export async function extractCancelInspectionErrorMessage(
-  err: unknown,
-): Promise<string> {
-  if (err instanceof ResponseError) {
-    try {
-      const text = await err.response.clone().text();
-      if (text) {
-        const body = JSON.parse(text);
-        if (typeof body?.message === "string" && body.message) {
-          return body.message;
-        }
-        if (typeof body?.error === "string" && body.error) {
-          return body.error;
-        }
-      }
-    } catch {
-      // fall through to status-based message
-    }
-
-    const status = err.response?.status;
-    if (status === 400) {
-      return "This VM cannot be canceled right now. The inspector may still be finishing the current step.";
-    }
-    if (status === 404) {
-      return "This VM is no longer in the inspection queue.";
-    }
+/**
+ * Human-readable message for a failed cancel. The cancel mutation rejects with
+ * the baseQuery `{ status, message }` shape (not a `ResponseError`), so the
+ * status-specific copy is chosen from `status`; any other failure falls back to
+ * the server-provided message.
+ */
+export function extractCancelInspectionErrorMessage(err: unknown): string {
+  const status = (err as { status?: number } | null)?.status;
+  if (status === 400) {
+    return "This VM cannot be canceled right now. The inspector may still be finishing the current step.";
+  }
+  if (status === 404) {
+    return "This VM is no longer in the inspection queue.";
   }
 
-  return err instanceof Error
-    ? err.message
-    : "Failed to cancel deep inspection";
+  return getSdkErrorMessage(err, "Failed to cancel deep inspection");
 }

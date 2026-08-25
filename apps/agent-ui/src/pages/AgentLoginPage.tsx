@@ -2,7 +2,7 @@ import { AgentModeRequestModeEnum } from "@openshift-migration-advisor/agent-sdk
 import { Backdrop, Bullseye } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect } from "react";
-import { useAgentStatus } from "../common/AgentStatusContext";
+import { useAgentStatus } from "../common/useAgentStatus";
 import { MainVCenterCredentialsModal } from "../credentials/MainVCenterCredentialsModal";
 import { useLoginViewModel } from "../credentials/UseCredentialViewModel";
 

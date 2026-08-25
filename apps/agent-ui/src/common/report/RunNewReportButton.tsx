@@ -1,30 +1,22 @@
 import { Button, Content, Flex, FlexItem } from "@patternfly/react-core";
 import { SyncAltIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useEffect } from "react";
 import { formatReportRunDate } from "../../pages/ReportComparison/comparisonFormatting";
+import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import { useReportsContext } from "./ReportsContext";
 
 export const RunNewReportButton: React.FC = () => {
-  const {
-    latestCollectionDate,
-    isCollecting,
-    hasCollectionData,
-    refetchCollections,
-    openModal,
-  } = useReportsContext();
+  const { isCollecting, openModal } = useReportsContext();
+  const { data: collections } = useListCollectionsQuery();
 
-  useEffect(() => {
-    void refetchCollections();
-  }, [refetchCollections]);
-
-  if (!hasCollectionData) return null;
+  const latestCollection = collections?.[0];
+  if (!latestCollection) return null;
   return (
     <Flex alignItems={{ default: "alignItemsCenter" }}>
-      {latestCollectionDate && (
+      {latestCollection.createdAt && (
         <FlexItem>
           <Content component="p">
-            Latest run: {formatReportRunDate(latestCollectionDate)}
+            Latest run: {formatReportRunDate(latestCollection.createdAt)}
           </Content>
         </FlexItem>
       )}

@@ -109,7 +109,7 @@ export const VMTableModals: React.FC<VMTableModalsProps> = ({
                 closeCancelInspectionConfirm();
               } catch (err) {
                 console.error("Error canceling inspection:", err);
-                setCancelError(await extractCancelInspectionErrorMessage(err));
+                setCancelError(extractCancelInspectionErrorMessage(err));
               }
             }}
           >

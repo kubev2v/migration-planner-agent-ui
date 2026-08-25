@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useAgentStatus } from "../common/AgentStatusContext";
+import { useAgentStatus } from "../common/useAgentStatus";
 import { useAppDispatch } from "./hooks";
 import { setAppMode } from "./slices/appModeSlice";
 

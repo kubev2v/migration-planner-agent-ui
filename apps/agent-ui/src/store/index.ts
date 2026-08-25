@@ -11,6 +11,7 @@ import "./api/comparisonEndpoints";
 import "./api/credentialsEndpoints";
 import "./api/forecasterEndpoints";
 import "./api/groupsEndpoints";
+import "./api/lifecycleEndpoints";
 import "./api/vmsEndpoints";
 
 /**

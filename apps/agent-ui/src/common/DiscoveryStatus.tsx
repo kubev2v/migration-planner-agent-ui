@@ -17,9 +17,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { DefaultApiInterface } from "../api/agentApi";
 import { Symbols } from "../main/Symbols";
 import { unwrapInventoryPayload } from "../pages/VirtualMachinesOverview/inventoryParsing";
-import { useAgentStatus } from "./AgentStatusContext";
 import { DataSharingAlert } from "./components/DataSharingAlert";
 import { DataSharingModal } from "./components/DataSharingModal";
+import { useAgentStatus } from "./useAgentStatus";
 
 const dangerIconStyle = css`
   color: var(--pf-t--global--icon--color--status--danger--default);

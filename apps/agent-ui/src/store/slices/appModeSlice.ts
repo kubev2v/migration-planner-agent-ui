@@ -27,3 +27,7 @@ const appModeSlice = createSlice({
 
 export const { setAppMode } = appModeSlice.actions;
 export const appModeReducer = appModeSlice.reducer;
+
+/** Selects the current three-way application mode from client state. */
+export const selectAppMode = (state: { appMode: AppModeState }): AppMode =>
+  state.appMode.mode;

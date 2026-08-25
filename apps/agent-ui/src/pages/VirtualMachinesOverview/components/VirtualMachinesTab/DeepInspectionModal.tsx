@@ -1,10 +1,8 @@
 import { css } from "@emotion/css";
 import type {
-  InspectorStatus,
   VddkProperties,
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
-import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   Button,
@@ -33,6 +31,13 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
+import {
+  useLazyGetInspectorStatusQuery,
+  usePutInspectorVddkMutation,
+  useStartInspectionMutation,
+  useStopInspectionMutation,
+} from "../../../../store/api/lifecycleEndpoints";
+import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import {
   buildStartInspectionVmIds,
   MAX_INSPECTION_VMS,
@@ -141,26 +146,14 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
   const [loadingInspectionContext, setLoadingInspectionContext] =
     useState(false);
 
-  const extractErrorMessage = async (
-    err: unknown,
-    fallback: string,
-  ): Promise<string> => {
-    if (err instanceof ResponseError) {
-      try {
-        const body = await err.response.json();
-        if (body?.error) return body.error;
-      } catch {
-        // response body not parseable
-      }
-    }
-    return err instanceof Error ? err.message : fallback;
-  };
+  const [getInspectorStatus] = useLazyGetInspectorStatusQuery();
+  const [putInspectorVddk] = usePutInspectorVddkMutation();
+  const [startInspection] = useStartInspectionMutation();
+  const [stopInspection] = useStopInspectionMutation();
 
   const fetchExistingStatus = useCallback(async () => {
     try {
-      const status: InspectorStatus = await agentApi.getInspectorStatus({
-        includeVddk: true,
-      });
+      const status = await getInspectorStatus({ includeVddk: true }).unwrap();
 
       if (status.vddk) {
         setVddkStatus("configured");
@@ -168,25 +161,27 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
         setVddkExpanded(false);
       }
     } catch (err) {
-      const isExpectedNotConfigured =
-        err instanceof ResponseError &&
-        (err.response?.status === 404 || err.response?.status === 400);
+      // A 404/400 simply means the inspector is not configured yet; anything
+      // else is a real error worth logging. The baseQuery surfaces the HTTP
+      // status on the rejected `{ status, message }` object.
+      const status = (err as { status?: number } | null)?.status;
+      const isExpectedNotConfigured = status === 404 || status === 400;
       if (!isExpectedNotConfigured) {
         console.error("Error fetching inspector status:", err);
       }
     }
-  }, [agentApi]);
+  }, [getInspectorStatus]);
 
   const getInspectorRunningState =
     useCallback(async (): Promise<InspectorRunningState> => {
       try {
-        const status = await agentApi.getInspectorStatus({});
+        const status = await getInspectorStatus({}).unwrap();
         return status.state === "running" ? "running" : "ready";
       } catch (err) {
         console.error("Error checking inspector status:", err);
         return "unknown";
       }
-    }, [agentApi]);
+    }, [getInspectorStatus]);
 
   const knownVmsForInspectionRef = useRef(knownVmsForInspection);
   useEffect(() => {
@@ -302,13 +297,12 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
     setVddkError(null);
 
     try {
-      const props = await agentApi.putInspectorVddk({ file: vddkFile });
+      const props = await putInspectorVddk({ file: vddkFile }).unwrap();
       setVddkProps(props);
       setVddkStatus("configured");
       setVddkExpanded(false);
     } catch (err) {
-      const message = await extractErrorMessage(err, "Failed to upload VDDK");
-      setVddkError(message);
+      setVddkError(getSdkErrorMessage(err, "Failed to upload VDDK"));
       setVddkStatus("error");
     } finally {
       setVddkUploading(false);
@@ -392,7 +386,7 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
           return;
         }
         vmIds = buildStartInspectionVmIds(selectedVMIds, vmIdsUnderInspection);
-        await agentApi.stopInspection();
+        await stopInspection().unwrap();
         stoppedForAdd = true;
         onInspectionQueueChanged?.();
 
@@ -405,15 +399,11 @@ export const DeepInspectionModal: React.FC<DeepInspectionModalProps> = ({
         }
       }
 
-      await agentApi.startInspection({
-        startInspectionRequest: {
-          vmIds,
-        },
-      });
+      await startInspection({ vmIds }).unwrap();
       onInspectionStarted();
       handleClose();
     } catch (err) {
-      const message = await extractErrorMessage(
+      const message = getSdkErrorMessage(
         err,
         "Failed to start deep inspection",
       );
