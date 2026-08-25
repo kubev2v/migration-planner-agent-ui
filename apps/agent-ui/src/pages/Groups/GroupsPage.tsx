@@ -1,10 +1,9 @@
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import { PageSection } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { DefaultApiInterface } from "../../api/agentApi";
-import { Symbols } from "../../main/Symbols";
+import { useAgentApi } from "../../api/agentApiClient";
 import {
   useDeleteGroupMutation,
   useListGroupsQuery,
@@ -82,7 +81,7 @@ async function fetchAllGroupsPaged(
 }
 
 export const GroupsPage: React.FC = () => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const [updateGroupName] = useUpdateGroupNameMutation();
   const [deleteGroup] = useDeleteGroupMutation();
 

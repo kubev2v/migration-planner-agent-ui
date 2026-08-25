@@ -1,4 +1,3 @@
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Breadcrumb,
@@ -33,10 +32,9 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import type { DefaultApiInterface } from "../../api/agentApi";
+import { useAgentApi } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
-import { Symbols } from "../../main/Symbols";
 import {
   useDeleteGroupMutation,
   useGetGroupQuery,
@@ -109,7 +107,7 @@ function getGroupErrorMessage(error: unknown): string {
 export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");

@@ -1,5 +1,4 @@
 import type { RightsizingClusterUtilization } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Content,
@@ -19,11 +18,10 @@ import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { DefaultApiInterface } from "../../api/agentApi";
+import { useAgentApi } from "../../api/agentApiClient";
 import { getLatestCollectionId } from "../../api/collectionApi";
 import { AppEmptyState } from "../../common/components/index";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
-import { Symbols } from "../../main/Symbols";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
   useGetApplicationsQuery,
@@ -73,7 +71,7 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
 };
 
 export const ReportContainer: React.FC = () => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const { data: collections } = useListCollectionsQuery();
   const hasCollectionData = (collections?.length ?? 0) > 0;
   const newestCollectionId = collections?.[0]?.id;

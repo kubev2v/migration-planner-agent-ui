@@ -1,9 +1,7 @@
 import type { CollectorStatus } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import type React from "react";
 import { createContext, useCallback, useContext } from "react";
-import type { DefaultApiInterface } from "../../api/agentApi";
-import { Symbols } from "../../main/Symbols";
+import { useAgentApi } from "../../api/agentApiClient";
 import { agentApiSlice } from "../../store/api/agentApiSlice";
 import { useAppDispatch } from "../../store/hooks";
 import { RunNewReportModal } from "./RunNewReportModal";
@@ -44,7 +42,7 @@ const ReportsContext = createContext<ReportsContextValue | undefined>(
 export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const dispatch = useAppDispatch();
 
   const handleCompleted = useCallback(async () => {

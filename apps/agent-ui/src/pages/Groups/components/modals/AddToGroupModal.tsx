@@ -1,5 +1,4 @@
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Button,
   Content,
@@ -20,9 +19,8 @@ import {
 import { DesktopIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import type { DefaultApiInterface } from "../../../../api/agentApi";
+import { useAgentApi } from "../../../../api/agentApiClient";
 import { AppEmptyState } from "../../../../common/components";
-import { Symbols } from "../../../../main/Symbols";
 import { useChangeGroupMembershipMutation } from "../../../../store/api/groupsEndpoints";
 import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import { addVmsToGroupFilter } from "../../utils/groupFilters";
@@ -41,7 +39,7 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
   onClose,
   onUpdated,
 }) => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const [changeGroupMembership, { isLoading: isSaving }] =
     useChangeGroupMembershipMutation();
   const [groups, setGroups] = useState<Group[]>([]);

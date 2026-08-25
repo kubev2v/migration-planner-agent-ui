@@ -1,5 +1,4 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Button,
@@ -17,9 +16,8 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../../../api/agentApi";
+import { useAgentApi } from "../../../../api/agentApiClient";
 import { parseApiError } from "../../../../common/parseApiError";
-import { Symbols } from "../../../../main/Symbols";
 import { useCreateGroupMutation } from "../../../../store/api/groupsEndpoints";
 import { VMTable } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/VMTable";
 import { fetchVmTableFilterOptions } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilterOptions";
@@ -47,7 +45,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onClose,
   onCreated,
 }) => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [name, setName] = useState("");
   const [vms, setVms] = useState<VirtualMachine[]>([]);

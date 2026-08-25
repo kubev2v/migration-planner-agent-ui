@@ -2,15 +2,13 @@ import type {
   CollectorStatus,
   VcenterCredentials,
 } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { DefaultApiInterface } from "../api/agentApi";
+import { useAgentApi } from "../api/agentApiClient";
 import { getCollectorStatus } from "../api/collectorApi";
 import { newAbortSignal } from "../common/AbortSignal";
 import type { ApiError } from "../common/components/index";
 import { parseApiError } from "../common/parseApiError";
-import { Symbols } from "../main/Symbols";
 import { usePutCredentialsMutation } from "../store/api/credentialsEndpoints";
 
 // Maximum consecutive polling failures before reporting error to user
@@ -36,7 +34,7 @@ export const useLoginViewModel = (
   props?: UseLoginViewModelProps,
 ): LoginViewModelInterface => {
   const [putCredentials] = usePutCredentialsMutation();
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const navigate = useNavigate();
   const refetchAgentStatus = props?.refetchAgentStatus;
   const [version, setVersion] = useState<string | undefined>(undefined);

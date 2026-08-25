@@ -1,44 +1,15 @@
 import "@patternfly/react-core/dist/styles/base.css";
 
-import { Configuration } from "@openshift-migration-advisor/agent-sdk";
-import {
-  Container,
-  Provider as DependencyInjectionProvider,
-} from "@openshift-migration-advisor/ioc";
 import { Spinner } from "@patternfly/react-core";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Provider as ReduxProvider } from "react-redux";
 import { RouterProvider } from "react-router-dom";
-import type { AgentApiClient } from "../api/agentApi.ts";
-import { createAgentApi } from "../api/agentApi.ts";
+import { getAgentApiClient } from "../api/agentApiClient.ts";
 import { AgentUIVersion } from "../common/AgentUIVersion.tsx";
 import { ReportsProvider } from "../common/report/ReportsContext.tsx";
 import { createStore } from "../store/index.ts";
 import { router } from "./Router.tsx";
-import { Symbols } from "./Symbols.ts";
-
-export const getConfigurationBasePath = (): string => {
-  if (import.meta.env.PROD) {
-    // In production, use HTTPS
-    const origin = window.location.origin.replace(/^http:/, "https:");
-    return `${origin}/api/v2`;
-  }
-
-  // In development, use the current origin (allows HTTP for local dev)
-  return `${window.location.origin}/agent/api/v2`;
-};
-
-function getConfiguredContainer(): Container {
-  const agentApiConfig = new Configuration({
-    basePath: getConfigurationBasePath(),
-    fetchApi: (url, init) => fetch(url, { ...init, cache: "no-store" }),
-  });
-  const container = new Container();
-  container.register(Symbols.AgentApi, createAgentApi(agentApiConfig));
-
-  return container;
-}
 
 function main(): void {
   const root = document.getElementById("root");
@@ -49,22 +20,18 @@ function main(): void {
   }
 
   root.style.height = "inherit";
-  const container = getConfiguredContainer();
-  // Reuse the exact SDK client instance registered in the IoC container so the
-  // store's baseQuery and the `useInjection` consumers share one client.
-  const agentApi = container.get<AgentApiClient>(Symbols.AgentApi);
-  const store = createStore(agentApi);
+  // The store's `extraArgument` is now the single source of the SDK client.
+  // Imperative one-off callers read the same instance via `useAgentApi()`.
+  const store = createStore(getAgentApiClient());
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <ReduxProvider store={store}>
-        <DependencyInjectionProvider container={container}>
-          <ReportsProvider>
-            <React.Suspense fallback={<Spinner />}>
-              <AgentUIVersion />
-              <RouterProvider router={router} />
-            </React.Suspense>
-          </ReportsProvider>
-        </DependencyInjectionProvider>
+        <ReportsProvider>
+          <React.Suspense fallback={<Spinner />}>
+            <AgentUIVersion />
+            <RouterProvider router={router} />
+          </React.Suspense>
+        </ReportsProvider>
       </ReduxProvider>
     </React.StrictMode>,
   );

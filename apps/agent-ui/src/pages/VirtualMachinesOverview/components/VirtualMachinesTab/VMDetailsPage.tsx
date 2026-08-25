@@ -4,7 +4,6 @@ import type {
   VirtualMachineIssue,
   VmUtilizationDetails,
 } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Breadcrumb,
@@ -46,9 +45,8 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import type { DefaultApiInterface } from "../../../../api/agentApi";
+import { useAgentApi } from "../../../../api/agentApiClient";
 import { getLatestCollectionId } from "../../../../api/collectionApi";
-import { Symbols } from "../../../../main/Symbols";
 import { useListCollectionsQuery } from "../../../../store/api/comparisonEndpoints";
 import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
 import { VMApplicationsCard } from "./VMApplicationsCard";
@@ -80,7 +78,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
   scrollToSection,
   onScrollToSectionComplete,
 }) => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const { data: collections } = useListCollectionsQuery();
   const latestCollectionId = collections?.[0]?.id ?? null;
   const [vm, setVm] = useState<VirtualMachineDetailWithUtilization | null>(

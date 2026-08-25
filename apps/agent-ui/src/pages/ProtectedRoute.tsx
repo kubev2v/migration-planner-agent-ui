@@ -1,13 +1,11 @@
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import type { DefaultApiInterface } from "../api/agentApi";
+import { useAgentApi } from "../api/agentApiClient";
 import { getLatestCollectionId } from "../api/collectionApi";
 import { getCollectorStatus } from "../api/collectorApi";
 import { newAbortSignal } from "../common/AbortSignal";
 import { isCollectorInProgress } from "../common/collectorStatus";
-import { Symbols } from "../main/Symbols";
 import { PageLayout } from "./PageLayout";
 
 /**
@@ -16,7 +14,7 @@ import { PageLayout } from "./PageLayout";
  * progress, or at least one collection already exists.
  */
 export const ProtectedRoute: React.FC = () => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const agentApi = useAgentApi();
   const [isChecking, setIsChecking] = useState(true);
   const [hasCollectedData, setHasCollectedData] = useState(false);
 
