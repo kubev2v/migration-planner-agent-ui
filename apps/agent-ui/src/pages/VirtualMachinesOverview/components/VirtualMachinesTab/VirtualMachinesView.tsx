@@ -3,7 +3,6 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
-import { getAgentApiBasePath } from "../../../../api/agentApiConfig";
 import { getLatestCollectionId } from "../../../../api/collectionApi";
 import { useReportsContext } from "../../../../common/report/ReportsContext";
 import { AddLabelsModal } from "../../../Groups/components/modals/AddLabelsModal";
@@ -39,7 +38,7 @@ import {
   withDefaultReportInclusion,
 } from "./vmFilters";
 import {
-  cancelVmInspectionWithRetry,
+  cancelVmInspection,
   getDeepInspectionEnablement,
 } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds, fetchVmsByIds } from "./vmSelection";
@@ -255,11 +254,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   >([]);
   const [offPageSelectionLoadFailed, setOffPageSelectionLoadFailed] =
     useState(false);
-
-  const basePath = useMemo(
-    () => (agentApi ? getAgentApiBasePath(agentApi) : ""),
-    [agentApi],
-  );
 
   const loadVmGroupMembership = useCallback(async () => {
     if (!agentApi) {
@@ -677,7 +671,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
       setCancelingInspectionVmIds((prev) => new Set(prev).add(vmId));
       try {
-        await cancelVmInspectionWithRetry(basePath, vmId);
+        await cancelVmInspection(agentApi, vmId);
         await onRefreshVMs?.();
       } catch (err) {
         setCancelingInspectionVmIds((prev) => {
@@ -688,7 +682,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         throw err;
       }
     },
-    [agentApi, basePath, onRefreshVMs],
+    [agentApi, onRefreshVMs],
   );
 
   const handleExcludeFromReports = useCallback(
