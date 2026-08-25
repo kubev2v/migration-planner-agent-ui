@@ -2,6 +2,7 @@ import {
   ResponseError,
   type VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
+import type { DefaultApiInterface } from "../../../../api/agentApi";
 
 export function isVmUnderInspection(vm: VirtualMachine): boolean {
   const state = vm.inspectionStatus?.state;
@@ -107,16 +108,11 @@ export function buildStartInspectionVmIds(
   return [...new Set([...selectedVmIds, ...vmIdsUnderInspection])];
 }
 
-/**
- * Per-VM inspection cancel was removed in Agent API v2.
- * Global stopInspection is the supported path; this helper is kept as a no-op
- * so callers do not hit a removed DELETE /vms/{id}/inspection endpoint.
- */
-export async function cancelVmInspectionWithRetry(
-  _basePath: string,
-  _vmId: string,
+export async function cancelVmInspection(
+  agentApi: DefaultApiInterface,
+  vmId: string,
 ): Promise<void> {
-  return;
+  await agentApi.cancelVirtualMachineInspection({ vmId });
 }
 
 export async function extractCancelInspectionErrorMessage(
