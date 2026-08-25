@@ -1,5 +1,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
+import { Provider } from "react-redux";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AgentApiClient } from "../../../api/agentApi";
+import { createStore } from "../../../store";
 import { getForecasterStatus } from "./forecasterApi";
 import { useForecasterPolling } from "./useForecasterPolling";
 
@@ -7,19 +11,26 @@ vi.mock("./forecasterApi", () => ({
   getForecasterStatus: vi.fn(),
 }));
 
+/** Render the hook inside a fresh store so its RTK Query polling has a Provider. */
+function renderPollingHook(
+  options: Parameters<typeof useForecasterPolling>[0],
+) {
+  const store = createStore({} as unknown as AgentApiClient);
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(Provider, { store, children });
+  return renderHook(() => useForecasterPolling(options), { wrapper });
+}
+
 describe("useForecasterPolling", () => {
   beforeEach(() => {
     vi.mocked(getForecasterStatus).mockReset();
   });
 
   it("exposes polling state while a benchmark is starting", () => {
-    const { result } = renderHook(() =>
-      useForecasterPolling({
-        basePath: "/api/v1",
-        onStatusUpdate: vi.fn(),
-        onBenchmarkComplete: vi.fn(),
-      }),
-    );
+    const { result } = renderPollingHook({
+      onStatusUpdate: vi.fn(),
+      onBenchmarkComplete: vi.fn(),
+    });
 
     expect(result.current.isPollingActive).toBe(false);
 
@@ -36,13 +47,10 @@ describe("useForecasterPolling", () => {
       pairs: [],
     });
 
-    const { result } = renderHook(() =>
-      useForecasterPolling({
-        basePath: "/api/v1",
-        onStatusUpdate: vi.fn(),
-        onBenchmarkComplete: vi.fn(),
-      }),
-    );
+    const { result } = renderPollingHook({
+      onStatusUpdate: vi.fn(),
+      onBenchmarkComplete: vi.fn(),
+    });
 
     act(() => {
       result.current.finishBenchmarkStart();
@@ -57,13 +65,10 @@ describe("useForecasterPolling", () => {
       pairs: [],
     });
 
-    const { result } = renderHook(() =>
-      useForecasterPolling({
-        basePath: "/api/v1",
-        onStatusUpdate: vi.fn(),
-        onBenchmarkComplete: vi.fn(),
-      }),
-    );
+    const { result } = renderPollingHook({
+      onStatusUpdate: vi.fn(),
+      onBenchmarkComplete: vi.fn(),
+    });
 
     act(() => {
       result.current.finishBenchmarkStart();
@@ -84,19 +89,16 @@ describe("useForecasterPolling", () => {
         state: "running",
         pairs: [],
       })
-      .mockResolvedValueOnce({
+      .mockResolvedValue({
         state: "ready",
         pairs: [],
       });
 
     const onBenchmarkComplete = vi.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() =>
-      useForecasterPolling({
-        basePath: "/api/v1",
-        onStatusUpdate: vi.fn(),
-        onBenchmarkComplete,
-      }),
-    );
+    const { result } = renderPollingHook({
+      onStatusUpdate: vi.fn(),
+      onBenchmarkComplete,
+    });
 
     act(() => {
       result.current.finishBenchmarkStart();

@@ -206,7 +206,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     armWasRunning,
     refreshStatus,
   } = useForecasterPolling({
-    basePath,
     onStatusUpdate: setForecastStatus,
     onBenchmarkComplete,
   });

@@ -9,6 +9,7 @@ import { credentialsUiReducer } from "./slices/credentialsUiSlice";
 // Attach endpoint definitions to the api slice (side-effect imports).
 import "./api/comparisonEndpoints";
 import "./api/credentialsEndpoints";
+import "./api/forecasterEndpoints";
 import "./api/groupsEndpoints";
 import "./api/vmsEndpoints";
 
