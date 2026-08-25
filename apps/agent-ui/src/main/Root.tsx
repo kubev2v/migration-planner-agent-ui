@@ -8,12 +8,15 @@ import {
 import { Spinner } from "@patternfly/react-core";
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { Provider as ReduxProvider } from "react-redux";
 import { RouterProvider } from "react-router-dom";
+import type { AgentApiClient } from "../api/agentApi.ts";
 import { createAgentApi } from "../api/agentApi.ts";
 import { AgentStatusProvider } from "../common/AgentStatusContext.tsx";
 import { AgentUIVersion } from "../common/AgentUIVersion.tsx";
 import { ReportsProvider } from "../common/report/ReportsContext.tsx";
 import { CredentialsProvider } from "../credentials/CredentialsContext.tsx";
+import { createStore } from "../store/index.ts";
 import { router } from "./Router.tsx";
 import { Symbols } from "./Symbols.ts";
 
@@ -49,20 +52,26 @@ function main(): void {
 
   root.style.height = "inherit";
   const container = getConfiguredContainer();
+  // Reuse the exact SDK client instance registered in the IoC container so the
+  // store's baseQuery and the `useInjection` consumers share one client.
+  const agentApi = container.get<AgentApiClient>(Symbols.AgentApi);
+  const store = createStore(agentApi);
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <DependencyInjectionProvider container={container}>
-        <AgentStatusProvider>
-          <CredentialsProvider>
-            <ReportsProvider>
-              <React.Suspense fallback={<Spinner />}>
-                <AgentUIVersion />
-                <RouterProvider router={router} />
-              </React.Suspense>
-            </ReportsProvider>
-          </CredentialsProvider>
-        </AgentStatusProvider>
-      </DependencyInjectionProvider>
+      <ReduxProvider store={store}>
+        <DependencyInjectionProvider container={container}>
+          <AgentStatusProvider>
+            <CredentialsProvider>
+              <ReportsProvider>
+                <React.Suspense fallback={<Spinner />}>
+                  <AgentUIVersion />
+                  <RouterProvider router={router} />
+                </React.Suspense>
+              </ReportsProvider>
+            </CredentialsProvider>
+          </AgentStatusProvider>
+        </DependencyInjectionProvider>
+      </ReduxProvider>
     </React.StrictMode>,
   );
 }

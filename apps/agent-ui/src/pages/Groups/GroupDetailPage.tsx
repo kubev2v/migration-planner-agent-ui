@@ -1,8 +1,3 @@
-import {
-  type Group,
-  ResponseError,
-  type VirtualMachine,
-} from "@openshift-migration-advisor/agent-sdk";
 import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
@@ -31,7 +26,7 @@ import {
 } from "@patternfly/react-core";
 import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -41,7 +36,16 @@ import {
 import type { DefaultApiInterface } from "../../api/agentApi";
 import { AppEmptyState } from "../../common/components";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
+import { useReportsContext } from "../../common/report/ReportsContext";
 import { Symbols } from "../../main/Symbols";
+import { agentApiSlice } from "../../store/api/agentApiSlice";
+import {
+  useDeleteGroupMutation,
+  useGetGroupQuery,
+  useGetGroupVMsQuery,
+  useUpdateGroupNameMutation,
+} from "../../store/api/groupsEndpoints";
+import { useAppDispatch } from "../../store/hooks";
 import {
   buildClusterViewModel,
   type ClusterOption,
@@ -62,9 +66,7 @@ import type { VMTableFilterOptions } from "../VirtualMachinesOverview/components
 import { Header } from "../VirtualMachinesOverview/Header";
 import {
   getInventoryAggregateView,
-  type InventoryPayload,
   inventoryFromGroupResponse,
-  type MigrationExcludedInventoryChange,
 } from "../VirtualMachinesOverview/inventoryParsing";
 import {
   buildApplicationsTabUrl,
@@ -76,35 +78,41 @@ import {
   resolveReportTab,
 } from "../VirtualMachinesOverview/reportTabNavigation";
 import { useApplicationsData } from "../VirtualMachinesOverview/useApplicationsData";
-import { useMigrationInventoryRefresh } from "../VirtualMachinesOverview/useMigrationInventoryRefresh";
 import { normalizeVirtualMachines } from "../VirtualMachinesOverview/virtualMachineParsing";
 import { DeleteGroupModal } from "./components/modals/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/modals/EditGroupNameModal";
-import { combineFilterExpressions } from "./utils/groupFilters";
+import { invalidateAllGroupsCache } from "./utils/groupList";
+
+/** Extract a human-readable message from an RTK Query / SDK error. */
+function getGroupErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const candidate = error as { status?: number; message?: string };
+    if (candidate.status === 404) {
+      return "Group not found.";
+    }
+    if (typeof candidate.message === "string") {
+      return candidate.message;
+    }
+  }
+  return "Failed to load group.";
+}
 
 export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [group, setGroup] = useState<Group | null>(null);
-  const [inventory, setInventory] = useState<InventoryPayload | null>(null);
-  const [vmsList, setVmsList] = useState<VirtualMachine[]>([]);
-  const [vmsLoading, setVmsLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  const [vmsTotalCount, setVmsTotalCount] = useState(0);
   const [vmsPage, setVmsPage] = useState(1);
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
-  const [inventoryRevision, setInventoryRevision] = useState(0);
   const [availableFilterOptions, setAvailableFilterOptions] =
     useState<VMTableFilterOptions>({
       clusters: [],
@@ -123,9 +131,6 @@ export const GroupDetailPage: React.FC = () => {
     [agentApi],
   );
 
-  const vmsRequestIdRef = useRef(0);
-  const vmsRefreshIdRef = useRef(0);
-
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
     [searchParams],
@@ -133,6 +138,57 @@ export const GroupDetailPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<string | number>(() =>
     resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
+  );
+
+  // --- Group (header source) ------------------------------------------------
+  // The GroupResponse carries `inventory`, `total` and `group`; the header VM
+  // count derives from this single cache entry.
+  const {
+    data: groupData,
+    isLoading: loading,
+    error: groupError,
+  } = useGetGroupQuery({ groupId: groupId ?? "" }, { skip: !groupId });
+
+  const group = groupData?.group ?? null;
+  const groupFilter = group?.filter;
+  const inventory = useMemo(
+    () => inventoryFromGroupResponse(groupData ?? {}),
+    [groupData],
+  );
+
+  // --- Group VMs (table source) --------------------------------------------
+  const byExpression = useMemo(
+    () => filtersToByExpression(withDefaultReportInclusion(initialVMFilters)),
+    [initialVMFilters],
+  );
+
+  const { data: vmsData, isFetching: vmsLoading } = useGetGroupVMsQuery(
+    {
+      groupId: groupId ?? "",
+      groupFilter,
+      byExpression,
+      sort: vmsSortFields,
+      page: vmsPage,
+      pageSize: vmsPageSize,
+    },
+    { skip: activeTab !== REPORT_TAB.vms || !groupId || !groupFilter },
+  );
+
+  const vmsList = useMemo(
+    () => normalizeVirtualMachines(vmsData?.virtualMachines ?? []),
+    [vmsData],
+  );
+  const vmsTotalCount = vmsData?.total ?? 0;
+
+  const {
+    applications: applicationsList,
+    loading: applicationsLoading,
+    error: applicationsError,
+    refreshApplications,
+  } = useApplicationsData(
+    agentApi,
+    activeTab === REPORT_TAB.applications,
+    groupFilter,
   );
 
   const handleNavigateToVMFilters = useCallback(
@@ -146,19 +202,6 @@ export const GroupDetailPage: React.FC = () => {
     [setSearchParams],
   );
 
-  const groupFilter = group?.filter;
-
-  const {
-    applications: applicationsList,
-    loading: applicationsLoading,
-    error: applicationsError,
-    refreshApplications,
-  } = useApplicationsData(
-    agentApi,
-    activeTab === REPORT_TAB.applications,
-    groupFilter,
-  );
-
   useEffect(() => {
     const nextTab = resolveReportTab(
       searchParams,
@@ -168,44 +211,6 @@ export const GroupDetailPage: React.FC = () => {
       setActiveTab(nextTab);
     }
   }, [searchParams, activeTab]);
-
-  useEffect(() => {
-    if (!groupId) {
-      setError("Group not found.");
-      setLoading(false);
-      return;
-    }
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await agentApi.getLatestGroup({
-          groupId,
-          page: 1,
-          pageSize: 1,
-        });
-
-        setGroup(response.group);
-        setVmsTotalCount(response.total ?? 0);
-        setInventory(inventoryFromGroupResponse(response));
-      } catch (err) {
-        console.error("Error loading group detail:", err);
-        if (err instanceof ResponseError && err.response?.status === 404) {
-          setError("Group not found.");
-        } else {
-          setError(
-            err instanceof Error ? err.message : "Failed to load group.",
-          );
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [agentApi, groupId]);
 
   useEffect(() => {
     if (activeTab !== REPORT_TAB.vms || filterOptionsFetched) {
@@ -225,141 +230,53 @@ export const GroupDetailPage: React.FC = () => {
     fetchFilterOptions();
   }, [activeTab, filterOptionsFetched, refreshFilterOptions]);
 
-  useEffect(() => {
-    if (activeTab !== REPORT_TAB.vms || !groupFilter) {
-      return;
-    }
-
-    const fetchVMs = async () => {
-      vmsRequestIdRef.current += 1;
-      const currentRequestId = vmsRequestIdRef.current;
-
-      try {
-        setVmsLoading(true);
-        const userExpression = filtersToByExpression(
-          withDefaultReportInclusion(initialVMFilters),
-        );
-        const byExpression = combineFilterExpressions(
-          groupFilter,
-          userExpression,
-        );
-
-        const response = await agentApi.listLatestVirtualMachines({
-          byExpression,
-          sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
-          page: vmsPage,
-          pageSize: vmsPageSize,
-        });
-
-        if (currentRequestId === vmsRequestIdRef.current) {
-          setVmsList(normalizeVirtualMachines(response.virtualMachines));
-          setVmsTotalCount(response.total || 0);
-        }
-      } catch (err) {
-        console.error("Error fetching group VMs:", err);
-        if (currentRequestId === vmsRequestIdRef.current) {
-          setVmsList([]);
-          setVmsTotalCount(0);
-        }
-      } finally {
-        if (currentRequestId === vmsRequestIdRef.current) {
-          setVmsLoading(false);
-        }
-      }
-    };
-
-    fetchVMs();
-  }, [
-    activeTab,
-    agentApi,
-    groupFilter,
-    initialVMFilters,
-    vmsPage,
-    vmsPageSize,
-    vmsSortFields,
-  ]);
-
-  const refreshVMs = useCallback(async () => {
-    if (!groupFilter) {
-      return;
-    }
-    const reqId = ++vmsRefreshIdRef.current;
-    try {
-      const userExpression = filtersToByExpression(
-        withDefaultReportInclusion(initialVMFilters),
-      );
-      const byExpression = combineFilterExpressions(
-        groupFilter,
-        userExpression,
-      );
-      const [response, labelsResponse] = await Promise.all([
-        agentApi.listLatestVirtualMachines({
-          byExpression,
-          sort: vmsSortFields.length > 0 ? vmsSortFields : undefined,
-          page: vmsPage,
-          pageSize: vmsPageSize,
-        }),
-        agentApi.getLatestVMLabels().catch(() => null),
-      ]);
-      if (vmsRefreshIdRef.current === reqId) {
-        setVmsList(normalizeVirtualMachines(response.virtualMachines));
-        setVmsTotalCount(response.total || 0);
-        setAvailableFilterOptions((prev) => ({
-          ...prev,
-          vmLabels: labelsResponse?.labels ?? prev.vmLabels,
-        }));
-      }
-    } catch (err) {
-      console.error("Error refreshing group VMs:", err);
-    }
-  }, [
-    agentApi,
-    groupFilter,
-    initialVMFilters,
-    vmsSortFields,
-    vmsPage,
-    vmsPageSize,
-  ]);
-
-  const bumpInventoryRevision = useCallback(() => {
-    setInventoryRevision((revision) => revision + 1);
-  }, []);
-
-  const { refreshInventory: refreshGroupInventoryBase } =
-    useMigrationInventoryRefresh({
-      agentApi,
-      groupId,
-      setInventory,
-      setVmsList,
-    });
-
-  const refreshGroupInventory = useCallback(
-    async (change: MigrationExcludedInventoryChange) => {
-      await refreshGroupInventoryBase(change);
-      bumpInventoryRevision();
-    },
-    [refreshGroupInventoryBase, bumpInventoryRevision],
-  );
-
-  const reloadGroupMembership = useCallback(async () => {
+  // --- Cache invalidation helpers ------------------------------------------
+  // Both the header (getGroup) and the table (getGroupVMs) refetch from the
+  // same invalidation, so their counts can never diverge.
+  const invalidateGroupData = useCallback(() => {
     if (!groupId) {
       return;
     }
+    dispatch(
+      agentApiSlice.util.invalidateTags([
+        { type: "Group", id: groupId },
+        { type: "GroupVms", id: groupId },
+        { type: "GroupInventory", id: groupId },
+      ]),
+    );
+  }, [dispatch, groupId]);
 
-    try {
-      const response = await agentApi.getLatestGroup({
-        groupId,
-        page: 1,
-        pageSize: 1,
-      });
-      setGroup(response.group);
-      setVmsTotalCount(response.total ?? 0);
-      setVmsPage(1);
-      bumpInventoryRevision();
-    } catch (err) {
-      console.error("Error reloading group after membership change:", err);
+  const refreshVMs = useCallback(() => {
+    if (!groupId) {
+      return;
     }
-  }, [agentApi, groupId, bumpInventoryRevision]);
+    dispatch(
+      agentApiSlice.util.invalidateTags([{ type: "GroupVms", id: groupId }]),
+    );
+  }, [dispatch, groupId]);
+
+  // Migration exclude/include change: refetch header (inventory) and table.
+  const refreshGroupInventory = useCallback(async () => {
+    invalidateGroupData();
+  }, [invalidateGroupData]);
+
+  const reloadGroupMembership = useCallback(async () => {
+    setVmsPage(1);
+    invalidateGroupData();
+  }, [invalidateGroupData]);
+
+  // Re-collection completion refreshes the group view.
+  const { onCompleted } = useReportsContext();
+  useEffect(
+    () =>
+      onCompleted(async () => {
+        invalidateGroupData();
+      }),
+    [onCompleted, invalidateGroupData],
+  );
+
+  const [updateGroupName] = useUpdateGroupNameMutation();
+  const [deleteGroup] = useDeleteGroupMutation();
 
   const handleTabSelect = (
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
@@ -424,18 +341,15 @@ export const GroupDetailPage: React.FC = () => {
     if (!group) {
       return;
     }
-    const updated = await agentApi.updateLatestGroup({
-      groupId: group.id,
-      updateGroupRequest: { name },
-    });
-    setGroup(updated);
+    await updateGroupName({ groupId: group.id, name }).unwrap();
   };
 
   const handleDeleteGroup = async () => {
     if (!group) {
       return;
     }
-    await agentApi.deleteLatestGroup({ groupId: group.id });
+    await deleteGroup({ groupId: group.id }).unwrap();
+    invalidateAllGroupsCache(agentApi);
     navigate("/report/groups");
   };
 
@@ -451,11 +365,14 @@ export const GroupDetailPage: React.FC = () => {
     );
   }
 
-  if (error || !group) {
+  if (!group) {
+    const message = groupId
+      ? getGroupErrorMessage(groupError)
+      : "Group not found.";
     return (
       <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
         <Alert variant="danger" title="Unable to load group">
-          {error || "Group not found."}
+          {message}
         </Alert>
         <Link to="/report/groups">Back to groups</Link>
       </PageSection>
@@ -596,7 +513,7 @@ export const GroupDetailPage: React.FC = () => {
                 {clusterView.viewInfra && clusterView.viewVms ? (
                   <div style={{ marginTop: "24px" }}>
                     <Dashboard
-                      key={`group-assessment-${inventoryRevision}-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
+                      key={`group-assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
                       infra={clusterView.viewInfra}
                       cpuCores={clusterView.cpuCores}
                       ramGB={clusterView.ramGB}
