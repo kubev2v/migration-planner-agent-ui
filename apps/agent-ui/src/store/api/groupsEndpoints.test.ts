@@ -81,6 +81,100 @@ describe("groupsEndpoints tag invalidation", () => {
     });
   });
 
+  test("creating then deleting a group refetches listGroups from one invalidation", async () => {
+    const groups = [
+      { id: "g1", name: "prod", filter: "id in ['a']" },
+      { id: "g2", name: "dev", filter: "id in ['b']" },
+    ];
+    const api = {
+      listLatestGroups: vi.fn(async () => ({
+        groups,
+        total: groups.length,
+        page: 1,
+        pageCount: 1,
+      })),
+      createLatestGroup: vi.fn(async () => ({
+        id: "g3",
+        name: "new",
+        filter: "id in ['c']",
+      })),
+      deleteLatestGroup: vi.fn(async () => undefined),
+    } as unknown as AgentApiClient;
+    const store = createStore(api);
+
+    await store.dispatch(
+      groupsEndpoints.endpoints.listGroups.initiate({ page: 1, pageSize: 20 }),
+    );
+    expect(api.listLatestGroups).toHaveBeenCalledTimes(1);
+
+    // Create invalidates Group:LIST -> the list refetches.
+    await store
+      .dispatch(
+        groupsEndpoints.endpoints.createGroup.initiate({
+          createGroupRequest: { name: "new", filter: "id in ['c']" },
+        }),
+      )
+      .unwrap();
+    await vi.waitFor(() => {
+      expect(api.listLatestGroups).toHaveBeenCalledTimes(2);
+    });
+
+    // Delete also invalidates Group:LIST -> the list refetches again.
+    await store
+      .dispatch(
+        groupsEndpoints.endpoints.deleteGroup.initiate({ groupId: "g1" }),
+      )
+      .unwrap();
+    await vi.waitFor(() => {
+      expect(api.listLatestGroups).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  test("changeGroupMembership refetches both the list and the group detail", async () => {
+    const counts = { total: 4 };
+    const api = makeFakeApi(counts) as unknown as {
+      listLatestGroups: unknown;
+      updateLatestGroup: unknown;
+    } & AgentApiClient;
+    api.listLatestGroups = vi.fn(async () => ({
+      groups: [{ id: "g1", name: "prod", filter: "id in ['a','b']" }],
+      total: 1,
+      page: 1,
+      pageCount: 1,
+    }));
+    api.updateLatestGroup = vi.fn(async () => ({
+      id: "g1",
+      name: "prod",
+      filter: "id in ['a']",
+    }));
+    const store = createStore(api);
+
+    await store.dispatch(
+      groupsEndpoints.endpoints.listGroups.initiate({ page: 1, pageSize: 20 }),
+    );
+    await store.dispatch(
+      groupsEndpoints.endpoints.getGroup.initiate({ groupId: "g1" }),
+    );
+    (api.listLatestGroups as ReturnType<typeof vi.fn>).mockClear();
+    (api.getLatestGroup as ReturnType<typeof vi.fn>).mockClear();
+
+    // Removing a VM from the group must refetch the list AND the group detail
+    // (header count) from the single membership invalidation.
+    await store
+      .dispatch(
+        groupsEndpoints.endpoints.changeGroupMembership.initiate({
+          groupId: "g1",
+          filter: "id in ['a']",
+        }),
+      )
+      .unwrap();
+
+    await vi.waitFor(() => {
+      expect(api.listLatestGroups).toHaveBeenCalled();
+      expect(api.getLatestGroup).toHaveBeenCalled();
+    });
+  });
+
   test("updateGroupName invalidates the Group tag", async () => {
     const counts = { total: 3 };
     const api = makeFakeApi(counts);

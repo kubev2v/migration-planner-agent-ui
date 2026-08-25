@@ -16,6 +16,24 @@ export interface SdkQueryError {
   message: string;
 }
 
+/**
+ * Extract a human-readable message from a rejected `.unwrap()` error. The
+ * baseQuery maps SDK errors to `{ status, message }`, so callers cannot rely on
+ * `err instanceof Error`.
+ */
+export function getSdkErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && "message" in error) {
+    const { message } = error as { message?: unknown };
+    if (typeof message === "string" && message.length > 0) {
+      return message;
+    }
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+}
+
 /** The SDK client injected into the store via thunk `extraArgument`. */
 export interface SdkExtra {
   agentApi: AgentApiClient;

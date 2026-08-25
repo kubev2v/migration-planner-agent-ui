@@ -81,7 +81,6 @@ import { useApplicationsData } from "../VirtualMachinesOverview/useApplicationsD
 import { normalizeVirtualMachines } from "../VirtualMachinesOverview/virtualMachineParsing";
 import { DeleteGroupModal } from "./components/modals/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/modals/EditGroupNameModal";
-import { invalidateAllGroupsCache } from "./utils/groupList";
 
 /** Extract a human-readable message from an RTK Query / SDK error. */
 function getGroupErrorMessage(error: unknown): string {
@@ -349,7 +348,6 @@ export const GroupDetailPage: React.FC = () => {
       return;
     }
     await deleteGroup({ groupId: group.id }).unwrap();
-    invalidateAllGroupsCache(agentApi);
     navigate("/report/groups");
   };
 

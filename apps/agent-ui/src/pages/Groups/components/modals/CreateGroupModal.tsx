@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { parseApiError } from "../../../../common/parseApiError";
 import { Symbols } from "../../../../main/Symbols";
+import { useCreateGroupMutation } from "../../../../store/api/groupsEndpoints";
 import { VMTable } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/VMTable";
 import { fetchVmTableFilterOptions } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilterOptions";
 import {
@@ -29,12 +30,16 @@ import {
 } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilters";
 import { fetchAllMatchingVmIds } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/vmSelection";
 import { vmIdsToFilterExpression } from "../../utils/groupFilters";
-import { invalidateAllGroupsCache } from "../../utils/groupList";
 
 interface CreateGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  /**
+   * Optional hook fired after a successful create. The groups list refetches
+   * automatically via `Group:LIST` invalidation, so this is only needed by
+   * callers that must react beyond the list (e.g. clearing a VM selection).
+   */
+  onCreated?: () => void;
 }
 
 export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
@@ -43,11 +48,11 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onCreated,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [name, setName] = useState("");
   const [vms, setVms] = useState<VirtualMachine[]>([]);
   const [totalVMs, setTotalVMs] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<VMFilters>({});
@@ -153,22 +158,18 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       setError("Group name is required.");
       return;
     }
-    setIsCreating(true);
     setError(null);
     try {
-      await agentApi.createLatestGroup({
+      await createGroup({
         createGroupRequest: {
           name: trimmed,
           filter: vmIdsToFilterExpression(Array.from(selectedVMs)),
         },
-      });
-      invalidateAllGroupsCache(agentApi);
-      onCreated();
+      }).unwrap();
+      onCreated?.();
       onClose();
     } catch (err) {
       setError(await parseApiError(err, "Failed to create group."));
-    } finally {
-      setIsCreating(false);
     }
   };
 

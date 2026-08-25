@@ -1,5 +1,7 @@
 import type {
+  CreateGroupRequest,
   Group,
+  GroupListResponse,
   GroupResponse,
   VirtualMachineListResponse,
 } from "@openshift-migration-advisor/agent-sdk";
@@ -8,6 +10,23 @@ import { agentApiSlice } from "./agentApiSlice";
 
 interface GetGroupArg {
   groupId: string;
+}
+
+interface ListGroupsArg {
+  /** Case-insensitive substring match on the group name. */
+  byName?: string;
+  page: number;
+  pageSize: number;
+}
+
+interface CreateGroupArg {
+  createGroupRequest: CreateGroupRequest;
+}
+
+interface ChangeGroupMembershipArg {
+  groupId: string;
+  /** New membership filter expression for the group. */
+  filter: string;
 }
 
 interface GetGroupVMsArg {
@@ -33,6 +52,22 @@ interface UpdateGroupNameArg {
  */
 export const groupsEndpoints = agentApiSlice.injectEndpoints({
   endpoints: (build) => ({
+    // The groups list. `Group:LIST` is invalidated by every group create,
+    // delete, rename and membership change, so the list can never go stale.
+    listGroups: build.query<GroupListResponse, ListGroupsArg>({
+      query:
+        ({ byName, page, pageSize }) =>
+        (sdk) =>
+          sdk.listLatestGroups({ byName, page, pageSize }),
+      providesTags: (result) => [
+        { type: "Group", id: "LIST" },
+        ...(result?.groups ?? []).map((group) => ({
+          type: "Group" as const,
+          id: group.id,
+        })),
+      ],
+    }),
+
     // Header source: GroupResponse carries `inventory`, `total` and `group`.
     getGroup: build.query<GroupResponse, GetGroupArg>({
       query:
@@ -61,6 +96,14 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
       ],
     }),
 
+    createGroup: build.mutation<Group, CreateGroupArg>({
+      query:
+        ({ createGroupRequest }) =>
+        (sdk) =>
+          sdk.createLatestGroup({ createGroupRequest }),
+      invalidatesTags: [{ type: "Group", id: "LIST" }],
+    }),
+
     updateGroupName: build.mutation<Group, UpdateGroupNameArg>({
       query:
         ({ groupId, name }) =>
@@ -70,7 +113,27 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
             updateGroupRequest: { name },
           }),
       invalidatesTags: (_result, _error, { groupId }) => [
+        { type: "Group", id: "LIST" },
         { type: "Group", id: groupId },
+      ],
+    }),
+
+    // Add/remove VMs by rewriting the group's membership filter. Invalidates the
+    // list plus the specific group's detail tags so an open GroupDetailPage
+    // (header count + VM table) refetches together and cannot diverge.
+    changeGroupMembership: build.mutation<Group, ChangeGroupMembershipArg>({
+      query:
+        ({ groupId, filter }) =>
+        (sdk) =>
+          sdk.updateLatestGroup({
+            groupId,
+            updateGroupRequest: { filter },
+          }),
+      invalidatesTags: (_result, _error, { groupId }) => [
+        { type: "Group", id: "LIST" },
+        { type: "Group", id: groupId },
+        { type: "GroupVms", id: groupId },
+        { type: "GroupInventory", id: groupId },
       ],
     }),
 
@@ -80,13 +143,20 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
         async (sdk) => {
           await sdk.deleteLatestGroup({ groupId });
         },
+      invalidatesTags: (_result, _error, { groupId }) => [
+        { type: "Group", id: "LIST" },
+        { type: "Group", id: groupId },
+      ],
     }),
   }),
 });
 
 export const {
+  useListGroupsQuery,
   useGetGroupQuery,
   useGetGroupVMsQuery,
+  useCreateGroupMutation,
   useUpdateGroupNameMutation,
+  useChangeGroupMembershipMutation,
   useDeleteGroupMutation,
 } = groupsEndpoints;

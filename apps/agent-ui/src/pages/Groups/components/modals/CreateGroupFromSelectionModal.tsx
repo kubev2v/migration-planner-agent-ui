@@ -1,4 +1,3 @@
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Button,
   Content,
@@ -12,11 +11,9 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useState } from "react";
-import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { parseApiError } from "../../../../common/parseApiError";
-import { Symbols } from "../../../../main/Symbols";
+import { useCreateGroupMutation } from "../../../../store/api/groupsEndpoints";
 import { vmIdsToFilterExpression } from "../../utils/groupFilters";
-import { invalidateAllGroupsCache } from "../../utils/groupList";
 
 interface CreateGroupFromSelectionModalProps {
   isOpen: boolean;
@@ -28,9 +25,8 @@ interface CreateGroupFromSelectionModalProps {
 export const CreateGroupFromSelectionModal: React.FC<
   CreateGroupFromSelectionModalProps
 > = ({ isOpen, vmIds, onClose, onCreated }) => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [name, setName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,22 +47,18 @@ export const CreateGroupFromSelectionModal: React.FC<
       return;
     }
 
-    setIsCreating(true);
     setError(null);
     try {
-      await agentApi.createLatestGroup({
+      await createGroup({
         createGroupRequest: {
           name: trimmed,
           filter: vmIdsToFilterExpression(vmIds),
         },
-      });
-      invalidateAllGroupsCache(agentApi);
+      }).unwrap();
       onCreated();
       onClose();
     } catch (err) {
       setError(await parseApiError(err, "Failed to create group."));
-    } finally {
-      setIsCreating(false);
     }
   };
 

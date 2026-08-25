@@ -23,11 +23,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import { Symbols } from "../../../../main/Symbols";
+import { useChangeGroupMembershipMutation } from "../../../../store/api/groupsEndpoints";
+import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import { addVmsToGroupFilter } from "../../utils/groupFilters";
-import {
-  fetchAllGroups,
-  invalidateAllGroupsCache,
-} from "../../utils/groupList";
+import { fetchAllGroups } from "../../utils/groupList";
 
 interface AddToGroupModalProps {
   isOpen: boolean;
@@ -43,11 +42,12 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
   onUpdated,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const [changeGroupMembership, { isLoading: isSaving }] =
+    useChangeGroupMembershipMutation();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [isGroupSelectOpen, setIsGroupSelectOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedGroup = useMemo(
@@ -105,24 +105,16 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
       return;
     }
 
-    setIsSaving(true);
     setError(null);
     try {
-      await agentApi.updateLatestGroup({
+      await changeGroupMembership({
         groupId: selectedGroup.id,
-        updateGroupRequest: {
-          filter: addVmsToGroupFilter(selectedGroup.filter, vmIds),
-        },
-      });
-      invalidateAllGroupsCache(agentApi);
+        filter: addVmsToGroupFilter(selectedGroup.filter, vmIds),
+      }).unwrap();
       onUpdated();
       onClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to add VMs to group.",
-      );
-    } finally {
-      setIsSaving(false);
+      setError(getSdkErrorMessage(err, "Failed to add VMs to group."));
     }
   };
 

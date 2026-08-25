@@ -22,11 +22,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import { Symbols } from "../../../../main/Symbols";
+import { useChangeGroupMembershipMutation } from "../../../../store/api/groupsEndpoints";
+import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import { buildGroupFilterAfterRemovingMembers } from "../../utils/groupFilters";
-import {
-  fetchAllGroups,
-  invalidateAllGroupsCache,
-} from "../../utils/groupList";
+import { fetchAllGroups } from "../../utils/groupList";
 
 interface GroupOption {
   id: string;
@@ -91,11 +90,12 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
   onUpdated,
 }) => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const [changeGroupMembership, { isLoading: isSaving }] =
+    useChangeGroupMembershipMutation();
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [isGroupSelectOpen, setIsGroupSelectOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const resolvedGroupId = fixedGroupId || selectedGroupId;
@@ -168,7 +168,6 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
       return;
     }
 
-    setIsSaving(true);
     setError(null);
     try {
       const currentMemberIds = await fetchAllGroupMemberIds(
@@ -191,23 +190,16 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
         vmIds,
       );
 
-      await agentApi.updateLatestGroup({
+      await changeGroupMembership({
         groupId: resolvedGroupId,
-        updateGroupRequest: {
-          filter: updatedFilter,
-        },
-      });
+        filter: updatedFilter,
+      }).unwrap();
 
-      invalidateAllGroupsCache(agentApi);
       onUpdated();
       onClose();
     } catch (err) {
       console.error("Failed to remove VMs from group:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to remove VMs from group.",
-      );
-    } finally {
-      setIsSaving(false);
+      setError(getSdkErrorMessage(err, "Failed to remove VMs from group."));
     }
   };
 

@@ -2,9 +2,14 @@ import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import { useInjection } from "@openshift-migration-advisor/ioc";
 import { PageSection } from "@patternfly/react-core";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DefaultApiInterface } from "../../api/agentApi";
 import { Symbols } from "../../main/Symbols";
+import {
+  useDeleteGroupMutation,
+  useListGroupsQuery,
+  useUpdateGroupNameMutation,
+} from "../../store/api/groupsEndpoints";
 import { getVmTags } from "../VirtualMachinesOverview/virtualMachineParsing";
 import type { GroupRow } from "./components/GroupsTable";
 import { GroupsTable } from "./components/GroupsTable";
@@ -12,9 +17,9 @@ import { GroupsTable } from "./components/GroupsTable";
 import { CreateGroupModal } from "./components/modals/CreateGroupModal";
 import { DeleteGroupModal } from "./components/modals/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/modals/EditGroupNameModal";
-import { fetchAllGroups, invalidateAllGroupsCache } from "./utils/groupList";
 
 const GROUP_VM_PAGE_SIZE = 100;
+const GROUP_LIST_PAGE_SIZE = 100;
 
 async function enrichGroup(
   agentApi: DefaultApiInterface,
@@ -55,11 +60,35 @@ async function enrichGroup(
   };
 }
 
+/** Fetches every group across all pages (used only for label filtering). */
+async function fetchAllGroupsPaged(
+  agentApi: DefaultApiInterface,
+  byName?: string,
+): Promise<Group[]> {
+  const allGroups: Group[] = [];
+  let page = 1;
+  let pageCount = 1;
+  while (page <= pageCount) {
+    const response = await agentApi.listLatestGroups({
+      byName,
+      page,
+      pageSize: GROUP_LIST_PAGE_SIZE,
+    });
+    allGroups.push(...(response.groups ?? []));
+    pageCount = response.pageCount ?? 1;
+    page++;
+  }
+  return allGroups;
+}
+
 export const GroupsPage: React.FC = () => {
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
-  const [groups, setGroups] = useState<GroupRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [updateGroupName] = useUpdateGroupNameMutation();
+  const [deleteGroup] = useDeleteGroupMutation();
+
+  const [enrichedGroups, setEnrichedGroups] = useState<GroupRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [enriching, setEnriching] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [nameFilter, setNameFilter] = useState("");
@@ -69,7 +98,8 @@ export const GroupsPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
-  const requestIdRef = useRef(0);
+
+  const usingLabelFilter = selectedLabels.length > 0;
 
   // Debounce search input so API calls use debouncedNameFilter, not nameFilter.
   useEffect(() => {
@@ -80,75 +110,77 @@ export const GroupsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [nameFilter]);
 
-  const fetchGroups = useCallback(async () => {
-    requestIdRef.current += 1;
-    const requestId = requestIdRef.current;
+  // Server-side page of the list. `Group:LIST` invalidation (create/delete/
+  // rename/membership) refetches this, which re-runs enrichment below — so the
+  // list can never go stale after a mutation. It also drives label-mode
+  // re-enrichment: a refetch changes `pageData`, re-triggering the effect.
+  const { data: pageData, isLoading: pageLoading } = useListGroupsQuery({
+    byName: debouncedNameFilter || undefined,
+    page,
+    pageSize,
+  });
 
-    try {
-      if (selectedLabels.length > 0) {
-        const allRaw = await fetchAllGroups(agentApi, {
-          byName: debouncedNameFilter || undefined,
-        });
-
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
-
-        const enriched = await Promise.all(
-          allRaw.map((group) => enrichGroup(agentApi, group)),
-        );
-
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
-
-        const labelFiltered = enriched.filter((group) =>
-          selectedLabels.every((label) => group.labels.includes(label)),
-        );
-
-        setGroups(labelFiltered);
-        setTotal(labelFiltered.length);
-        return;
-      }
-
-      const response = await agentApi.listLatestGroups({
-        byName: debouncedNameFilter || undefined,
-        page,
-        pageSize,
-      });
-
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-
-      const enriched = await Promise.all(
-        (response.groups || []).map((group) => enrichGroup(agentApi, group)),
-      );
-
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-
-      setGroups(enriched);
-      setTotal(response.total || 0);
-    } catch (err) {
-      console.error("Error fetching groups:", err);
-      if (requestId === requestIdRef.current) {
-        setGroups([]);
-        setTotal(0);
-      }
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [agentApi, debouncedNameFilter, page, pageSize, selectedLabels]);
-
-  // Refetch when debounced search, pagination, or label filters change — not on each keystroke.
-  // loading is only true on initial mount; refetches keep the current list visible until new data arrives.
+  // Enrich groups with per-group VM counts and labels. Two modes:
+  //  - no label filter: enrich the current server page.
+  //  - label filter: fetch all groups, enrich, then filter by label locally.
   useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
+    let cancelled = false;
+
+    const run = async () => {
+      setEnriching(true);
+      try {
+        if (usingLabelFilter) {
+          const allRaw = await fetchAllGroupsPaged(
+            agentApi,
+            debouncedNameFilter || undefined,
+          );
+          const enriched = await Promise.all(
+            allRaw.map((group) => enrichGroup(agentApi, group)),
+          );
+          if (cancelled) {
+            return;
+          }
+          const labelFiltered = enriched.filter((group) =>
+            selectedLabels.every((label) => group.labels.includes(label)),
+          );
+          setEnrichedGroups(labelFiltered);
+          setTotal(labelFiltered.length);
+          return;
+        }
+
+        const raw = pageData?.groups ?? [];
+        const enriched = await Promise.all(
+          raw.map((group) => enrichGroup(agentApi, group)),
+        );
+        if (cancelled) {
+          return;
+        }
+        setEnrichedGroups(enriched);
+        setTotal(pageData?.total ?? 0);
+      } catch (err) {
+        console.error("Error fetching groups:", err);
+        if (!cancelled) {
+          setEnrichedGroups([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) {
+          setEnriching(false);
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    agentApi,
+    usingLabelFilter,
+    debouncedNameFilter,
+    selectedLabels,
+    pageData,
+  ]);
 
   useEffect(() => {
     const fetchLabels = async () => {
@@ -165,32 +197,29 @@ export const GroupsPage: React.FC = () => {
   }, [agentApi]);
 
   const displayedGroups = useMemo(() => {
-    if (selectedLabels.length === 0) {
-      return groups;
+    if (!usingLabelFilter) {
+      return enrichedGroups;
     }
     const start = (page - 1) * pageSize;
-    return groups.slice(start, start + pageSize);
-  }, [groups, page, pageSize, selectedLabels.length]);
+    return enrichedGroups.slice(start, start + pageSize);
+  }, [enrichedGroups, page, pageSize, usingLabelFilter]);
+
+  // Keep the current list visible during refetches: only show the loading
+  // state when there is nothing to display yet.
+  const loading = (pageLoading || enriching) && enrichedGroups.length === 0;
 
   const handleUpdateGroupName = async (name: string) => {
     if (!editingGroup) {
       return;
     }
-    await agentApi.updateLatestGroup({
-      groupId: editingGroup.id,
-      updateGroupRequest: { name },
-    });
-    invalidateAllGroupsCache(agentApi);
-    await fetchGroups();
+    await updateGroupName({ groupId: editingGroup.id, name }).unwrap();
   };
 
   const handleDeleteGroup = async () => {
     if (!deletingGroup) {
       return;
     }
-    await agentApi.deleteLatestGroup({ groupId: deletingGroup.id });
-    invalidateAllGroupsCache(agentApi);
-    await fetchGroups();
+    await deleteGroup({ groupId: deletingGroup.id }).unwrap();
   };
 
   return (
@@ -221,7 +250,6 @@ export const GroupsPage: React.FC = () => {
       <CreateGroupModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={fetchGroups}
       />
 
       <EditGroupNameModal
