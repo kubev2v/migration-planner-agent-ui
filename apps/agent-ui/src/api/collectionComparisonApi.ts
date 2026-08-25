@@ -84,3 +84,44 @@ export async function fetchAllCollectionComparisonDiff(
     },
   };
 }
+
+/** Minimal VM detail surfaced in the comparison drill-down drawer. */
+export interface ComparisonDiffVm {
+  id: string;
+  name: string;
+  labels: string[];
+}
+
+/**
+ * Resolves VM details for a set of diff VM ids. Individual lookups can fail
+ * (e.g. a VM was pruned); those are dropped and counted rather than failing the
+ * whole batch, so the caller can warn while still showing the totals.
+ */
+export async function loadComparisonDiffVms(
+  agentApi: DefaultApiInterface,
+  vmIds: string[],
+  collectionId: string,
+): Promise<{ rows: ComparisonDiffVm[]; failedCount: number }> {
+  const results = await Promise.allSettled(
+    vmIds.map(async (vmId) => {
+      const vm = await agentApi.getVirtualMachine({ id: collectionId, vmId });
+      return { id: vm.id, name: vm.name, labels: vm.labels ?? [] };
+    }),
+  );
+
+  let failedCount = 0;
+  const rows = results.flatMap((result, index) => {
+    if (result.status === "fulfilled") {
+      return [result.value];
+    }
+    failedCount += 1;
+    console.warn(
+      "Failed to load virtual machine details for comparison drawer:",
+      vmIds[index],
+      result.reason,
+    );
+    return [];
+  });
+
+  return { rows, failedCount };
+}

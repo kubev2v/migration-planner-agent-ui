@@ -1,5 +1,3 @@
-import type { CollectionComparisonSummary } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   AlertActionCloseButton,
@@ -10,11 +8,15 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { DefaultApiInterface } from "../../api/agentApi";
-import { listCollectionsNewestFirst } from "../../api/collectionApi";
-import { fetchCollectionComparison } from "../../api/collectionComparisonApi";
 import { useReportsContext } from "../../common/report/ReportsContext";
-import { Symbols } from "../../main/Symbols";
+import { agentApiSlice } from "../../store/api/agentApiSlice";
+import {
+  useCompareCollectionsQuery,
+  useExportCollectionMutation,
+  useListCollectionsQuery,
+} from "../../store/api/comparisonEndpoints";
+import { getSdkErrorMessage } from "../../store/baseQuery";
+import { useAppDispatch } from "../../store/hooks";
 import { downloadExportBlob } from "../VirtualMachinesOverview/components/Export/downloadExportBlob";
 import { pickDefaultComparisonIds } from "./comparisonSelection";
 import { ReportComparisonEmptyState } from "./ReportComparisonEmptyState";
@@ -22,123 +24,74 @@ import { ReportComparisonHeader } from "./ReportComparisonHeader";
 import { ReportComparisonView } from "./ReportComparisonView";
 
 export const ReportComparisonPage: React.FC = () => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
+  const dispatch = useAppDispatch();
   const { onCompleted } = useReportsContext();
-  const [collections, setCollections] = useState<
-    Awaited<ReturnType<typeof listCollectionsNewestFirst>>
-  >([]);
-  const [comparison, setComparison] =
-    useState<CollectionComparisonSummary | null>(null);
   const [fromId, setFromId] = useState<string>("");
   const [toId, setToId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [comparisonLoading, setComparisonLoading] = useState(false);
-  const [collectionError, setCollectionError] = useState<string | null>(null);
-  const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [defaultsAppliedFor, setDefaultsAppliedFor] = useState<string | null>(
+    null,
+  );
   const [exportError, setExportError] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+
+  // --- Server data (RTK Query) ---------------------------------------------
+  const {
+    data: collections = [],
+    isLoading: loading,
+    error: collectionQueryError,
+  } = useListCollectionsQuery();
+  const collectionError = collectionQueryError
+    ? getSdkErrorMessage(
+        collectionQueryError,
+        "Failed to load report collections.",
+      )
+    : null;
 
   const canCompare = collections.length >= 2;
+  const newestCollectionId = collections[0]?.id;
 
-  const reloadCollections = useCallback(async () => {
-    const nextCollections = await listCollectionsNewestFirst(agentApi);
-    setCollections(nextCollections);
-    return nextCollections;
-  }, [agentApi]);
-
-  const handleReportRefreshCompleted = useCallback(async () => {
-    const nextCollections = await reloadCollections();
-    if (nextCollections.length >= 2) {
-      const defaults = pickDefaultComparisonIds(nextCollections);
-      if (defaults) {
-        setFromId(defaults.fromId);
-        setToId(defaults.toId);
-      }
+  // Apply the default from/to selection on first load and whenever a newer
+  // collection appears (a completed report), matching the previous behaviour of
+  // resetting to the newest pair — without any imperative reload.
+  useEffect(() => {
+    if (!canCompare || !newestCollectionId) {
+      return;
     }
-  }, [reloadCollections]);
+    if (defaultsAppliedFor === newestCollectionId) {
+      return;
+    }
+    const defaults = pickDefaultComparisonIds(collections);
+    if (defaults) {
+      setFromId(defaults.fromId);
+      setToId(defaults.toId);
+    }
+    setDefaultsAppliedFor(newestCollectionId);
+  }, [canCompare, collections, defaultsAppliedFor, newestCollectionId]);
+
+  const comparisonReady =
+    canCompare && Boolean(fromId) && Boolean(toId) && fromId !== toId;
+  const {
+    data: comparison,
+    isFetching: comparisonLoading,
+    error: comparisonQueryError,
+  } = useCompareCollectionsQuery(
+    { aId: fromId, bId: toId },
+    { skip: !comparisonReady },
+  );
+  const comparisonError = comparisonQueryError
+    ? getSdkErrorMessage(
+        comparisonQueryError,
+        "Failed to load report comparison.",
+      )
+    : null;
+
+  // A completed report refreshes the collection list and every comparison entry.
+  const handleReportRefreshCompleted = useCallback(async () => {
+    dispatch(agentApiSlice.util.invalidateTags(["Collections"]));
+  }, [dispatch]);
 
   useEffect(() => {
     return onCompleted(handleReportRefreshCompleted);
   }, [onCompleted, handleReportRefreshCompleted]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadCollections = async () => {
-      setLoading(true);
-      setCollectionError(null);
-      try {
-        const nextCollections = await reloadCollections();
-        if (cancelled) {
-          return;
-        }
-        if (nextCollections.length >= 2) {
-          const defaults = pickDefaultComparisonIds(nextCollections);
-          if (defaults) {
-            setFromId(defaults.fromId);
-            setToId(defaults.toId);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading collections:", err);
-        if (!cancelled) {
-          setCollectionError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load report collections.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadCollections();
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadCollections]);
-
-  useEffect(() => {
-    if (!canCompare || !fromId || !toId || fromId === toId) {
-      setComparison(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadComparison = async () => {
-      setComparisonLoading(true);
-      setComparisonError(null);
-      try {
-        const summary = await fetchCollectionComparison(agentApi, fromId, toId);
-        if (!cancelled) {
-          setComparison(summary);
-        }
-      } catch (err) {
-        console.error("Error loading report comparison:", err);
-        if (!cancelled) {
-          setComparison(null);
-          setComparisonError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load report comparison.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setComparisonLoading(false);
-        }
-      }
-    };
-
-    void loadComparison();
-    return () => {
-      cancelled = true;
-    };
-  }, [agentApi, canCompare, fromId, toId]);
 
   const headerDescription = useMemo(() => {
     if (!canCompare) {
@@ -153,30 +106,31 @@ export const ReportComparisonPage: React.FC = () => {
     );
   }, [canCompare]);
 
+  const [exportCollection, { isLoading: isExporting }] =
+    useExportCollectionMutation();
+
   const handleExportComparison = useCallback(async () => {
     if (!toId) {
       return;
     }
 
-    setIsExporting(true);
     setExportError(null);
     try {
-      const blob = await agentApi.exportCollection({
+      const blob = await exportCollection({
         id: toId,
         scope: "overview",
-      });
+      }).unwrap();
       downloadExportBlob(blob, `report-comparison-${toId}.zip`);
     } catch (err) {
       console.error("Error exporting comparison:", err);
       setExportError(
-        err instanceof Error
-          ? err.message
-          : "Failed to export comparison. Please try again.",
+        getSdkErrorMessage(
+          err,
+          "Failed to export comparison. Please try again.",
+        ),
       );
-    } finally {
-      setIsExporting(false);
     }
-  }, [agentApi, toId]);
+  }, [exportCollection, toId]);
 
   if (loading) {
     return (

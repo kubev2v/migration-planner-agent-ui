@@ -10,6 +10,7 @@ export const AGENT_API_TAGS = [
   "Inventory",
   "VmLabels",
   "Credentials",
+  "Collections",
 ] as const;
 
 /**

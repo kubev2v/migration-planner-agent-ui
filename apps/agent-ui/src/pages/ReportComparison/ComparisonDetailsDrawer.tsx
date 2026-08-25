@@ -1,6 +1,4 @@
 import { css } from "@emotion/css";
-import type { CollectionComparisonDiff } from "@openshift-migration-advisor/agent-sdk";
-import { useInjection } from "@openshift-migration-advisor/ioc";
 import {
   Alert,
   Badge,
@@ -19,18 +17,15 @@ import {
 import { AngleDownIcon, AngleRightIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
-import { useEffect, useState } from "react";
-import type { DefaultApiInterface } from "../../api/agentApi";
-import { fetchAllCollectionComparisonDiff } from "../../api/collectionComparisonApi";
+import { useState } from "react";
 import { AppEmptyState } from "../../common/components";
-import { Symbols } from "../../main/Symbols";
+import { useGetComparisonDiffQuery } from "../../store/api/comparisonEndpoints";
+import { getSdkErrorMessage } from "../../store/baseQuery";
 import { formatDelta, formatReportRunShortDate } from "./comparisonFormatting";
 import {
   COMPARISON_METRICS,
   type ComparisonMetricKey,
 } from "./comparisonMetrics";
-
-const DIFF_PAGE_SIZE = 50;
 
 const drawerPanelStyle = css`
   min-width: 720px;
@@ -107,120 +102,41 @@ function renderChangeValue(value: string, highlight = false) {
   return value;
 }
 
-async function loadVmRows(
-  agentApi: DefaultApiInterface,
-  vmIds: string[],
-  collectionId: string,
-  collectionDate: Date,
-  side: VmDrawerRow["side"],
-): Promise<{ rows: VmDrawerRow[]; failedCount: number }> {
-  const results = await Promise.allSettled(
-    vmIds.map(async (vmId) => {
-      const vm = await agentApi.getVirtualMachine({ id: collectionId, vmId });
-      return {
-        id: vm.id,
-        name: vm.name,
-        labels: vm.labels ?? [],
-        collectionDate,
-        side,
-      };
-    }),
-  );
-
-  let failedCount = 0;
-  const rows = results.flatMap((result, index) => {
-    if (result.status === "fulfilled") {
-      return [result.value];
-    }
-
-    failedCount += 1;
-    console.warn(
-      "Failed to load virtual machine details for comparison drawer:",
-      vmIds[index],
-      result.reason,
-    );
-    return [];
-  });
-
-  return { rows, failedCount };
-}
-
 export const ComparisonDetailsDrawer: React.FC<
   ComparisonDetailsDrawerProps
 > = ({ aId, bId, aDate, bDate, metricKey, delta, onClose }) => {
-  const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const metric = COMPARISON_METRICS.find((item) => item.key === metricKey);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [diff, setDiff] = useState<CollectionComparisonDiff | null>(null);
-  const [vmRows, setVmRows] = useState<VmDrawerRow[]>([]);
-  const [failedLookupCount, setFailedLookupCount] = useState(0);
+  const dimension = metric?.dimension;
   const [expandedSection, setExpandedSection] = useState<DrawerSection | null>(
     null,
   );
 
-  useEffect(() => {
-    const dimension = metric?.dimension;
-    if (!dimension) {
-      setLoading(false);
-      return;
-    }
+  // The diff and its resolved VM rows come from a single cache entry; the drawer
+  // itself keeps no server state.
+  const {
+    data,
+    isFetching: loading,
+    error: queryError,
+  } = useGetComparisonDiffQuery(
+    { aId, bId, dimension: dimension ?? "total" },
+    { skip: !dimension },
+  );
+  const error = queryError
+    ? getSdkErrorMessage(queryError, "Failed to load comparison details.")
+    : null;
+  const diff = data?.diff ?? null;
+  const failedLookupCount = data?.failedCount ?? 0;
 
-    let cancelled = false;
-
-    const loadDiff = async () => {
-      setLoading(true);
-      setError(null);
-      setFailedLookupCount(0);
-
-      try {
-        const response = await fetchAllCollectionComparisonDiff(
-          agentApi,
-          aId,
-          bId,
-          dimension,
-          DIFF_PAGE_SIZE,
-        );
-        if (cancelled) {
-          return;
-        }
-        setDiff(response);
-
-        const [onlyInBResult, onlyInAResult] = await Promise.all([
-          loadVmRows(agentApi, response.onlyInB.vmIds, bId, bDate, "onlyInB"),
-          loadVmRows(agentApi, response.onlyInA.vmIds, aId, aDate, "onlyInA"),
-        ]);
-
-        if (!cancelled) {
-          setVmRows([...onlyInBResult.rows, ...onlyInAResult.rows]);
-          setFailedLookupCount(
-            onlyInBResult.failedCount + onlyInAResult.failedCount,
-          );
-        }
-      } catch (err) {
-        console.error("Error loading comparison diff:", err);
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load comparison details.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadDiff();
-    return () => {
-      cancelled = true;
-    };
-  }, [aDate, aId, agentApi, bDate, bId, metric?.dimension]);
-
-  const onlyInBRows = vmRows.filter((row) => row.side === "onlyInB");
-  const onlyInARows = vmRows.filter((row) => row.side === "onlyInA");
+  const onlyInBRows: VmDrawerRow[] = (data?.onlyInB ?? []).map((vm) => ({
+    ...vm,
+    collectionDate: bDate,
+    side: "onlyInB",
+  }));
+  const onlyInARows: VmDrawerRow[] = (data?.onlyInA ?? []).map((vm) => ({
+    ...vm,
+    collectionDate: aDate,
+    side: "onlyInA",
+  }));
 
   const toggleSection = (section: DrawerSection) => {
     setExpandedSection((current) => (current === section ? null : section));
