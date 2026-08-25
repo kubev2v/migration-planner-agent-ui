@@ -13,12 +13,6 @@ const EMPTY_VM_TABLE_FILTER_OPTIONS: VMTableFilterOptions = {
   applications: [],
 };
 
-export const FILTER_OPTIONS_REFRESH_TTL_MS = 60_000;
-
-export type RefreshFilterOptionsFn = (options?: {
-  force?: boolean;
-}) => void | Promise<void>;
-
 /**
  * Merges group names from live VM membership into filter options.
  * Complements `fetchVmTableFilterOptions` when membership is already loaded
@@ -62,27 +56,5 @@ export async function fetchVmTableFilterOptions(
     vmLabels: labelsResponse.labels || [],
     groups: groupNames,
     applications: response.applications || [],
-  };
-}
-
-/** Returns a throttled refresh callback; pass `{ force: true }` after group mutations. */
-export function createRefreshVmTableFilterOptions(
-  agentApi: DefaultApiInterface,
-  setOptions: (options: VMTableFilterOptions) => void,
-): RefreshFilterOptionsFn {
-  let lastRefreshAt = 0;
-
-  return async ({ force = false } = {}) => {
-    const now = Date.now();
-    if (!force && now - lastRefreshAt < FILTER_OPTIONS_REFRESH_TTL_MS) {
-      return;
-    }
-
-    try {
-      setOptions(await fetchVmTableFilterOptions(agentApi));
-      lastRefreshAt = now;
-    } catch (err) {
-      console.error("Error refreshing filter options:", err);
-    }
   };
 }

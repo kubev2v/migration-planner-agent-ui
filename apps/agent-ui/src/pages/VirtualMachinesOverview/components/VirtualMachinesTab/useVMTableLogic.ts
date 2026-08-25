@@ -96,7 +96,6 @@ export function useVMTableLogic({
   selectedVMs = new Set<string>(),
   onSelectionChange,
   onFetchAllVmIds,
-  onRefreshFilterOptions,
   variant = "overview",
 }: UseVMTableLogicParams) {
   const isGroupRowActions = variant === "groups";
@@ -505,10 +504,6 @@ export function useVMTableLogic({
 
   const showGroupsFilter = VM_TABLE_VARIANT_UI[variant].showGroupsFilter;
 
-  const refreshFilterOptions = useCallback(() => {
-    void onRefreshFilterOptions?.();
-  }, [onRefreshFilterOptions]);
-
   const filterAttributes = useMemo(
     () =>
       buildVmTableFilterAttributes({
@@ -604,7 +599,6 @@ export function useVMTableLogic({
         availableGroups,
         availableApplications,
         showGroupsFilter,
-        onCheckboxValueOpen: refreshFilterOptions,
       }),
     [
       applyFilterChange,
@@ -622,7 +616,6 @@ export function useVMTableLogic({
       memoryRangeFilter,
       noIssuesFilter,
       ramUsageRangeFilter,
-      refreshFilterOptions,
       searchValue,
       selectedClusters,
       selectedConcernCategories,

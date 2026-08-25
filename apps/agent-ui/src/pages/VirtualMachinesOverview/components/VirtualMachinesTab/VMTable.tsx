@@ -24,7 +24,6 @@ export const VMTable: React.FC<VMTableProps> = ({
   selectedVMs = new Set<string>(),
   onSelectionChange,
   onFetchAllVmIds,
-  onRefreshFilterOptions,
   onRunDeepInspection,
   onExcludeFromReports,
   onIncludeInReports,
@@ -58,7 +57,6 @@ export const VMTable: React.FC<VMTableProps> = ({
     selectedVMs,
     onSelectionChange,
     onFetchAllVmIds,
-    onRefreshFilterOptions,
     variant,
   });
 

@@ -1,6 +1,5 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type { ThProps } from "@patternfly/react-table";
-import type { RefreshFilterOptionsFn } from "./vmFilterOptions";
 import type { VMFilters } from "./vmFilters";
 import type { ColumnKey, VMTableVariant } from "./vmTableShared";
 
@@ -30,7 +29,6 @@ export interface VMTableProps {
   selectedVMs?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
   onFetchAllVmIds?: (filters: VMFilters) => Promise<string[]>;
-  onRefreshFilterOptions?: RefreshFilterOptionsFn;
   onRunDeepInspection?: (includeVmId?: string) => void;
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
@@ -70,7 +68,6 @@ export type UseVMTableLogicParams = Pick<
   | "selectedVMs"
   | "onSelectionChange"
   | "onFetchAllVmIds"
-  | "onRefreshFilterOptions"
   | "variant"
 >;
 

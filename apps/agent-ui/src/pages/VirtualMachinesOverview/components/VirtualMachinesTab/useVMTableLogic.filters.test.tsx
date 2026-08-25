@@ -46,28 +46,6 @@ describe("useVMTableLogic filters", () => {
     });
   });
 
-  it("refreshes filter options when a checkbox value control opens", () => {
-    const onRefreshFilterOptions = vi.fn();
-
-    const { result } = renderHook(() =>
-      useVMTableLogic({
-        vms: EMPTY_VMS,
-        onRefreshFilterOptions,
-      }),
-    );
-
-    const statusAttribute = getCheckboxAttribute(
-      result.current.filterAttributes,
-      "status",
-    );
-
-    act(() => {
-      statusAttribute.onOpen?.();
-    });
-
-    expect(onRefreshFilterOptions).toHaveBeenCalledTimes(1);
-  });
-
   it("resets page when a checkbox filter changes", () => {
     const onPageChange = vi.fn();
 

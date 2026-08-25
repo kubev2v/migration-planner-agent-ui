@@ -32,6 +32,12 @@ import {
   attributeValueFilterToolbarStyle,
 } from "../../../../common/components/attribute-value-filter";
 import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
+import { agentApiSlice } from "../../../../store/api/agentApiSlice";
+import {
+  useGetVMLabelsQuery,
+  useUpdateVMLabelsMutation,
+} from "../../../../store/api/vmsEndpoints";
+import { useAppDispatch } from "../../../../store/hooks";
 import { AddLabelsModal } from "../../../Groups/components/modals/AddLabelsModal";
 import { AddToGroupModal } from "../../../Groups/components/modals/AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals/CreateGroupFromSelectionModal";
@@ -69,8 +75,6 @@ interface ApplicationsViewProps {
   onClearSelectedApplication?: () => void;
   onNavigateToVm?: (vmId: string) => void;
   onViewInVmList?: (applicationName: string) => void;
-  onRefreshApplications?: () => void | Promise<void>;
-  onRefreshFilterOptions?: () => void | Promise<void>;
 }
 
 export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
@@ -82,9 +86,8 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   onClearSelectedApplication,
   onNavigateToVm,
   onViewInVmList,
-  onRefreshApplications,
-  onRefreshFilterOptions,
 }) => {
+  const dispatch = useAppDispatch();
   const [nameSearch, setNameSearch] = useState("");
   const [selectedVmIds, setSelectedVmIds] = useState<string[]>([]);
   const [selectedCertificationStatuses, setSelectedCertificationStatuses] =
@@ -98,8 +101,11 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
   const [actionVmIds, setActionVmIds] = useState<string[]>([]);
-  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { data: availableLabels = [] } = useGetVMLabelsQuery(undefined, {
+    skip: !agentApi,
+  });
+  const [updateVMLabels] = useUpdateVMLabelsMutation();
 
   const allVms = useMemo(() => getUniqueVms(applications), [applications]);
 
@@ -118,44 +124,27 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
     [filteredApplications, page, pageSize],
   );
 
-  const fetchAvailableLabels = useCallback(async () => {
-    if (!agentApi) {
-      return;
-    }
-    try {
-      const data = await agentApi.getLatestVMLabels();
-      setAvailableLabels(data.labels ?? []);
-    } catch (err) {
-      console.error("Error fetching labels:", err);
-    }
-  }, [agentApi]);
-
-  useEffect(() => {
-    void fetchAvailableLabels();
-  }, [fetchAvailableLabels]);
-
-  const refreshDrawerData = useCallback(async () => {
+  // Applications, filter options and the label set are cache entries kept fresh
+  // by tag invalidation; refetch them by invalidating the tags they provide.
+  const refreshDrawerData = useCallback(() => {
     setDrawerRefreshKey((key) => key + 1);
-    await onRefreshApplications?.();
-  }, [onRefreshApplications]);
+    dispatch(
+      agentApiSlice.util.invalidateTags([{ type: "Group", id: "LIST" }]),
+    );
+  }, [dispatch]);
 
-  const handleGroupsChanged = useCallback(async () => {
+  const handleGroupsChanged = useCallback(() => {
     if (agentApi) {
       invalidateAllGroupsCache(agentApi);
     }
-    await onRefreshFilterOptions?.();
-    await refreshDrawerData();
-  }, [agentApi, onRefreshFilterOptions, refreshDrawerData]);
+    refreshDrawerData();
+  }, [agentApi, refreshDrawerData]);
 
-  const handleAddLabels = useCallback(
-    (vmIds: string[]) => {
-      setActionError(null);
-      setActionVmIds(vmIds);
-      void fetchAvailableLabels();
-      setIsAddLabelsModalOpen(true);
-    },
-    [fetchAvailableLabels],
-  );
+  const handleAddLabels = useCallback((vmIds: string[]) => {
+    setActionError(null);
+    setActionVmIds(vmIds);
+    setIsAddLabelsModalOpen(true);
+  }, []);
 
   const handleCreateGroup = useCallback((vmIds: string[]) => {
     setActionVmIds(vmIds);
@@ -176,10 +165,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
       setActionError(null);
       const results = await Promise.allSettled(
         labelsToAdd.map((label) =>
-          agentApi.updateLatestLabelVMs({
-            label,
-            updateLabelVMsRequest: { add: actionVmIds },
-          }),
+          updateVMLabels({ label, add: actionVmIds }).unwrap(),
         ),
       );
 
@@ -187,8 +173,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
         (result) => result.status === "rejected",
       ).length;
 
-      await fetchAvailableLabels();
-      await refreshDrawerData();
+      refreshDrawerData();
 
       if (failedCount > 0) {
         const message = `Failed to apply ${failedCount} of ${labelsToAdd.length} label(s).`;
@@ -196,7 +181,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
         throw new Error(message);
       }
     },
-    [actionVmIds, agentApi, fetchAvailableLabels, refreshDrawerData],
+    [actionVmIds, agentApi, refreshDrawerData, updateVMLabels],
   );
 
   const resetPage = useCallback(() => setPage(1), []);

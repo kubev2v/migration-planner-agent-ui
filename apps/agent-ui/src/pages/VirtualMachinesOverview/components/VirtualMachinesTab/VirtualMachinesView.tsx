@@ -3,8 +3,14 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
-import { getLatestCollectionId } from "../../../../api/collectionApi";
-import { useReportsContext } from "../../../../common/report/ReportsContext";
+import { agentApiSlice } from "../../../../store/api/agentApiSlice";
+import {
+  useGetApplicationsQuery,
+  useGetVMLabelsQuery,
+  useSetVMExclusionMutation,
+  useUpdateVMLabelsMutation,
+} from "../../../../store/api/vmsEndpoints";
+import { useAppDispatch } from "../../../../store/hooks";
 import { AddLabelsModal } from "../../../Groups/components/modals/AddLabelsModal";
 import { AddToGroupModal } from "../../../Groups/components/modals/AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals/CreateGroupFromSelectionModal";
@@ -17,7 +23,6 @@ import {
   mergeVmGroupItems,
   type VmGroupMembershipData,
 } from "../../../Groups/utils/vmGroupMembership";
-import type { MigrationExcludedInventoryChange } from "../../inventoryParsing";
 import { buildVmDetailUrl } from "../../reportTabNavigation";
 import type { VirtualMachineWithExclusion } from "../../virtualMachineParsing";
 import { getVmTags } from "../../virtualMachineParsing";
@@ -28,10 +33,7 @@ import {
 import { DeepInspectionModal } from "./DeepInspectionModal";
 import { VMDetailsPage } from "./VMDetailsPage";
 import { VMTable } from "./VMTable";
-import {
-  mergeGroupNamesIntoFilterOptions,
-  type RefreshFilterOptionsFn,
-} from "./vmFilterOptions";
+import { mergeGroupNamesIntoFilterOptions } from "./vmFilterOptions";
 import {
   filtersToByExpression,
   type VMFilters,
@@ -42,92 +44,6 @@ import {
   getDeepInspectionEnablement,
 } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds, fetchVmsByIds } from "./vmSelection";
-
-async function updateVmMigrationExcluded(
-  agentApi: DefaultApiInterface,
-  vmIds: string[],
-  migrationExcluded: boolean,
-  knownVms: VirtualMachine[],
-  onRefreshVMs?: () => void | Promise<void>,
-  onRefreshInventory?: (
-    change: MigrationExcludedInventoryChange,
-  ) => void | Promise<void>,
-): Promise<void> {
-  if (vmIds.length === 0) {
-    return;
-  }
-
-  let successfulIds: string[];
-  const failedIds: string[] = [];
-
-  if (vmIds.length > 1) {
-    try {
-      await agentApi.batchUpdateLatestVMExclusion({
-        batchUpdateExclusionRequest: { vmIds, migrationExcluded },
-      });
-      successfulIds = vmIds;
-    } catch (err) {
-      console.error("Error batch updating VM exclusion:", err);
-      await onRefreshVMs?.();
-      throw err;
-    }
-  } else {
-    const results = await Promise.allSettled(
-      vmIds.map((id) =>
-        agentApi.updateLatestVirtualMachine({
-          vmId: id,
-          virtualMachineUpdateRequest: { migrationExcluded },
-        }),
-      ),
-    );
-
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      if (result.status === "rejected") {
-        failedIds.push(vmIds[i]);
-        console.error(`Error updating VM ${vmIds[i]}:`, result.reason);
-      }
-    }
-
-    successfulIds = vmIds.filter((id) => !failedIds.includes(id));
-  }
-
-  // Use pre-change exclusion state so bulk exclude/include stays accurate even if
-  // the table list has not refreshed yet from a prior operation.
-  const affectedVms = successfulIds.map((id) => {
-    const vm = knownVms.find((candidate) => candidate.id === id);
-    return {
-      ...(vm ?? {
-        id,
-        name: id,
-        vCenterID: "",
-        vCenterState: "",
-        cluster: "",
-        datacenter: "",
-        diskSize: 0,
-        memory: 0,
-        issueCount: 0,
-        migratable: false,
-      }),
-      migrationExcluded: !migrationExcluded,
-    } as VirtualMachineWithExclusion;
-  });
-
-  if (successfulIds.length > 0) {
-    await onRefreshInventory?.({
-      vmIds: successfulIds,
-      excluded: migrationExcluded,
-      affectedVms,
-    });
-  }
-  await onRefreshVMs?.();
-
-  if (failedIds.length > 0) {
-    throw new Error(
-      `Failed to update ${failedIds.length} of ${vmIds.length} VM(s): ${failedIds.join(", ")}`,
-    );
-  }
-}
 
 interface VirtualMachinesViewProps {
   vms: VirtualMachine[];
@@ -149,22 +65,26 @@ interface VirtualMachinesViewProps {
     applications: string[];
   };
   agentApi?: DefaultApiInterface;
-  onRefreshVMs?: () => void;
-  /** Refresh assessment report inventory after exclude/include from migration. */
-  onRefreshInventory?: (
-    change: MigrationExcludedInventoryChange,
-  ) => void | Promise<void>;
-  /** Reload group metadata/filter after add/remove (group detail page). */
-  onGroupMembershipChanged?: () => void | Promise<void>;
-  /** Refresh filter dropdown options (e.g. after groups or labels change). */
-  onRefreshFilterOptions?: RefreshFilterOptionsFn;
   /** When set, VMs are shown inside this group's detail page */
   groupContext?: { id: string; name: string };
   /** Base filter applied before table filters (e.g. group membership). */
   scopedFilterExpression?: string;
   sortFields?: string[];
-  /** Bumps when inventory/collection data is reloaded so lookups refresh. */
 }
+
+/** Fallback VM shape when a selected id is not present in the current table. */
+const EMPTY_VM: VirtualMachine = {
+  id: "",
+  name: "",
+  vCenterID: "",
+  vCenterState: "",
+  cluster: "",
+  datacenter: "",
+  diskSize: 0,
+  memory: 0,
+  issueCount: 0,
+  migratable: false,
+};
 
 export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   vms,
@@ -178,15 +98,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   onSortChange,
   availableFilterOptions,
   agentApi,
-  onRefreshVMs,
-  onRefreshInventory,
-  onGroupMembershipChanged,
-  onRefreshFilterOptions,
   groupContext,
   scopedFilterExpression,
   sortFields = [],
 }) => {
-  const { latestCollectionId } = useReportsContext();
+  const dispatch = useAppDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const variant = groupContext ? "groups" : "overview";
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
@@ -194,7 +110,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
   const [inspectionActive, setInspectionActive] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const onRefreshVMsRef = useRef(onRefreshVMs);
   // Tracks whether the current run has been observed in running/pending state
   // at least once. Guards against stopping the poll too early when VMs still
   // carry a terminal inspectionStatus from a previous run at the moment the
@@ -217,9 +132,47 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     () => new Set<string>(),
   );
 
-  useEffect(() => {
-    onRefreshVMsRef.current = onRefreshVMs;
-  }, [onRefreshVMs]);
+  // --- Cache invalidation helpers ------------------------------------------
+  // The VM list (and, for exclusion, the inventory) this view shows lives in
+  // one cache entry, refetched by tag invalidation. Which tag depends on the
+  // page: the group detail page reads GroupVms, the overview page reads Vms.
+  const refreshVmList = useCallback(() => {
+    dispatch(
+      agentApiSlice.util.invalidateTags(
+        groupContext
+          ? [{ type: "GroupVms", id: groupContext.id }]
+          : [{ type: "Vms", id: "LIST" }],
+      ),
+    );
+  }, [dispatch, groupContext]);
+
+  // A group membership change affects the groups dropdown (Group:LIST), the
+  // group's own detail (when scoped), and the VM rows' group chips.
+  const refreshAfterGroupChange = useCallback(() => {
+    dispatch(
+      agentApiSlice.util.invalidateTags(
+        groupContext
+          ? [
+              { type: "Group", id: "LIST" },
+              { type: "Group", id: groupContext.id },
+              { type: "GroupVms", id: groupContext.id },
+              { type: "GroupInventory", id: groupContext.id },
+            ]
+          : [
+              { type: "Group", id: "LIST" },
+              { type: "Vms", id: "LIST" },
+            ],
+      ),
+    );
+  }, [dispatch, groupContext]);
+
+  const refreshLabels = useCallback(() => {
+    dispatch(agentApiSlice.util.invalidateTags(["VmLabels"]));
+    refreshVmList();
+  }, [dispatch, refreshVmList]);
+
+  const [setVMExclusion] = useSetVMExclusionMutation();
+  const [updateVMLabels] = useUpdateVMLabelsMutation();
 
   const vmIdParam = searchParams.get("vmId");
   const vmSectionParam = searchParams.get("vmSection");
@@ -235,7 +188,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [addLabelsMode, setAddLabelsMode] = useState<"add" | "edit">("add");
   const [isManageLabelsModalOpen, setIsManageLabelsModalOpen] = useState(false);
   const [addLabelsVMIds, setAddLabelsVMIds] = useState<string[]>([]);
-  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
+  const { data: availableLabels = [] } = useGetVMLabelsQuery(undefined, {
+    skip: !agentApi,
+  });
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
   const [isRemoveFromGroupModalOpen, setIsRemoveFromGroupModalOpen] =
@@ -246,14 +201,22 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       vmIdToGroups: {},
       groupsByName: {},
     });
-  const [vmApplicationsMap, setVmApplicationsMap] = useState<
-    Map<string, string[]>
-  >(new Map());
   const [offPageSelectedVms, setOffPageSelectedVms] = useState<
     VirtualMachine[]
   >([]);
   const [offPageSelectionLoadFailed, setOffPageSelectionLoadFailed] =
     useState(false);
+
+  // Application names per VM (for the table's Applications column) come from the
+  // shared applications cache entry.
+  const { data: applicationsData } = useGetApplicationsQuery(
+    {},
+    { skip: !agentApi },
+  );
+  const vmApplicationsMap = useMemo(
+    () => buildVmApplicationsMap(applicationsData ?? []),
+    [applicationsData],
+  );
 
   const loadVmGroupMembership = useCallback(async () => {
     if (!agentApi) {
@@ -270,44 +233,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   useEffect(() => {
     void loadVmGroupMembership();
   }, [loadVmGroupMembership]);
-
-  useEffect(() => {
-    if (!agentApi) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadVmApplications = async () => {
-      try {
-        const collectionId =
-          latestCollectionId ?? (await getLatestCollectionId(agentApi));
-        if (!collectionId) {
-          if (!cancelled) {
-            setVmApplicationsMap(new Map());
-          }
-          return;
-        }
-        const response = await agentApi.listApplications({ id: collectionId });
-        if (!cancelled) {
-          setVmApplicationsMap(
-            buildVmApplicationsMap(response.applications ?? []),
-          );
-        }
-      } catch (err) {
-        console.warn("Error fetching applications for VM table:", err);
-        if (!cancelled) {
-          setVmApplicationsMap(new Map());
-        }
-      }
-    };
-
-    void loadVmApplications();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agentApi, latestCollectionId]);
 
   const vmsForTable = useMemo(
     () =>
@@ -402,28 +327,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     return [...selectedVMs].some((id) => !visibleVmIds.has(id));
   }, [offPageSelectionLoadFailed, selectedVMs, visibleVmIds]);
 
-  const fetchAvailableLabels = useCallback(async () => {
-    if (!agentApi) {
-      return;
-    }
-    try {
-      const data = await agentApi.getLatestVMLabels();
-      setAvailableLabels(data.labels ?? []);
-    } catch (err) {
-      console.error("Error fetching labels:", err);
-    }
-  }, [agentApi]);
-
-  useEffect(() => {
-    void fetchAvailableLabels();
-  }, [fetchAvailableLabels]);
-
-  useEffect(() => {
-    if (isAddLabelsModalOpen) {
-      void fetchAvailableLabels();
-    }
-  }, [isAddLabelsModalOpen, fetchAvailableLabels]);
-
   const currentVMLabels = useMemo(() => {
     if (addLabelsVMIds.length === 0) return [];
     const labelSet = new Set<string>();
@@ -444,25 +347,17 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     return vm?.name;
   }, [addLabelsVMIds, vmsForTable]);
 
-  const handleAddLabels = useCallback(
-    (vmIds: string[]) => {
-      setAddLabelsVMIds(vmIds);
-      setAddLabelsMode("add");
-      void fetchAvailableLabels();
-      setIsAddLabelsModalOpen(true);
-    },
-    [fetchAvailableLabels],
-  );
+  const handleAddLabels = useCallback((vmIds: string[]) => {
+    setAddLabelsVMIds(vmIds);
+    setAddLabelsMode("add");
+    setIsAddLabelsModalOpen(true);
+  }, []);
 
-  const handleEditLabels = useCallback(
-    (vmIds: string[]) => {
-      setAddLabelsVMIds(vmIds);
-      setAddLabelsMode("edit");
-      void fetchAvailableLabels();
-      setIsAddLabelsModalOpen(true);
-    },
-    [fetchAvailableLabels],
-  );
+  const handleEditLabels = useCallback((vmIds: string[]) => {
+    setAddLabelsVMIds(vmIds);
+    setAddLabelsMode("edit");
+    setIsAddLabelsModalOpen(true);
+  }, []);
 
   const handleManageLabels = useCallback(() => {
     setIsManageLabelsModalOpen(true);
@@ -509,21 +404,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     if (agentApi) {
       invalidateAllGroupsCache(agentApi);
     }
-    await onRefreshFilterOptions?.({ force: true });
-    if (onGroupMembershipChanged) {
-      await onGroupMembershipChanged();
-      await loadVmGroupMembership();
-      return;
-    }
+    refreshAfterGroupChange();
     await loadVmGroupMembership();
-    onRefreshVMs?.();
-  }, [
-    agentApi,
-    loadVmGroupMembership,
-    onGroupMembershipChanged,
-    onRefreshFilterOptions,
-    onRefreshVMs,
-  ]);
+  }, [agentApi, loadVmGroupMembership, refreshAfterGroupChange]);
 
   const handleGroupActionComplete = useCallback(async () => {
     await handleGroupsChanged();
@@ -550,11 +433,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     [agentApi, scopedFilterExpression, sortFields],
   );
 
-  const refreshLabels = useCallback(async () => {
-    await fetchAvailableLabels();
-    onRefreshVMs?.();
-  }, [fetchAvailableLabels, onRefreshVMs]);
-
   const handleSubmitLabels = useCallback(
     async (labelsToAdd: string[], labelsToRemove: string[]) => {
       if (!agentApi) {
@@ -562,25 +440,25 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       }
       const vmIds = addLabelsVMIds;
 
-      const addPromises = labelsToAdd.map((label) =>
-        agentApi.updateLatestLabelVMs({
-          label,
-          updateLabelVMsRequest: { add: vmIds },
-        }),
-      );
-
-      const removePromises = labelsToRemove.map((label) =>
-        agentApi.updateLatestLabelVMs({
-          label,
-          updateLabelVMsRequest: { remove: vmIds },
-        }),
-      );
-
-      await Promise.all([...addPromises, ...removePromises]);
-      await refreshLabels();
+      await Promise.all([
+        ...labelsToAdd.map((label) =>
+          updateVMLabels({
+            label,
+            add: vmIds,
+            groupId: groupContext?.id,
+          }).unwrap(),
+        ),
+        ...labelsToRemove.map((label) =>
+          updateVMLabels({
+            label,
+            remove: vmIds,
+            groupId: groupContext?.id,
+          }).unwrap(),
+        ),
+      ]);
       setSelectedVMs(new Set());
     },
-    [addLabelsVMIds, agentApi, refreshLabels],
+    [addLabelsVMIds, agentApi, groupContext, updateVMLabels],
   );
 
   const handleVMClick = (vmId: string) => {
@@ -659,11 +537,11 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     stopPolling();
     pollingRef.current = setInterval(() => {
       pollTicksRef.current += 1;
-      onRefreshVMsRef.current?.();
+      refreshVmList();
     }, pollIntervalMs);
 
     return () => stopPolling();
-  }, [shouldPoll, pollIntervalMs, stopPolling]);
+  }, [shouldPoll, pollIntervalMs, stopPolling, refreshVmList]);
 
   const handleCancelInspection = useCallback(
     async (vmId: string) => {
@@ -672,7 +550,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
       setCancelingInspectionVmIds((prev) => new Set(prev).add(vmId));
       try {
         await cancelVmInspection(agentApi, vmId);
-        await onRefreshVMs?.();
+        refreshVmList();
       } catch (err) {
         setCancelingInspectionVmIds((prev) => {
           const next = new Set(prev);
@@ -682,37 +560,39 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         throw err;
       }
     },
-    [agentApi, onRefreshVMs],
+    [agentApi, refreshVmList],
+  );
+
+  const runExclusionChange = useCallback(
+    async (vmIds: string[], migrationExcluded: boolean) => {
+      if (!agentApi || vmIds.length === 0) return;
+      // Pre-change exclusion state so the optimistic inventory adjustment stays
+      // accurate even if the table has not refreshed from a prior operation.
+      const affectedVms = vmIds.map((id) => {
+        const vm = vmsForTable.find((candidate) => candidate.id === id);
+        return {
+          ...(vm ?? { ...EMPTY_VM, id, name: id }),
+          migrationExcluded: !migrationExcluded,
+        } as VirtualMachineWithExclusion;
+      });
+      await setVMExclusion({
+        vmIds,
+        migrationExcluded,
+        affectedVms,
+        groupId: groupContext?.id,
+      }).unwrap();
+    },
+    [agentApi, groupContext, setVMExclusion, vmsForTable],
   );
 
   const handleExcludeFromReports = useCallback(
-    async (vmIds: string[]) => {
-      if (!agentApi) return;
-      await updateVmMigrationExcluded(
-        agentApi,
-        vmIds,
-        true,
-        vmsForTable,
-        onRefreshVMs,
-        onRefreshInventory,
-      );
-    },
-    [agentApi, onRefreshVMs, onRefreshInventory, vmsForTable],
+    (vmIds: string[]) => runExclusionChange(vmIds, true),
+    [runExclusionChange],
   );
 
   const handleIncludeInReports = useCallback(
-    async (vmIds: string[]) => {
-      if (!agentApi) return;
-      await updateVmMigrationExcluded(
-        agentApi,
-        vmIds,
-        false,
-        vmsForTable,
-        onRefreshVMs,
-        onRefreshInventory,
-      );
-    },
-    [agentApi, onRefreshVMs, onRefreshInventory, vmsForTable],
+    (vmIds: string[]) => runExclusionChange(vmIds, false),
+    [runExclusionChange],
   );
 
   const handleResetInspection = useCallback(async () => {
@@ -720,20 +600,20 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     try {
       await agentApi.stopInspection();
       setInspectionActive(false);
-      onRefreshVMs?.();
+      refreshVmList();
     } catch (err) {
       console.error("Error stopping inspection for reset:", err);
     }
     setIsInspectionModalOpen(true);
-  }, [agentApi, onRefreshVMs]);
+  }, [agentApi, refreshVmList]);
 
   const handleInspectionStarted = useCallback(() => {
     seenRunningRef.current = false;
     pollTicksRef.current = 0;
     setInspectionActive(true);
     setSelectedVMs(new Set());
-    onRefreshVMsRef.current?.();
-  }, []);
+    refreshVmList();
+  }, [refreshVmList]);
 
   useEffect(() => {
     if (!inspectionActive) return;
@@ -822,7 +702,6 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         selectedVMs={selectedVMs}
         onSelectionChange={setSelectedVMs}
         onFetchAllVmIds={agentApi ? handleFetchAllVmIds : undefined}
-        onRefreshFilterOptions={onRefreshFilterOptions}
         onRunDeepInspection={handleRunDeepInspection}
         onExcludeFromReports={handleExcludeFromReports}
         onIncludeInReports={handleIncludeInReports}
@@ -852,7 +731,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
           knownVmsForInspection={inspectionContextVms}
           agentApi={agentApi}
           onInspectionStarted={handleInspectionStarted}
-          onInspectionQueueChanged={onRefreshVMs}
+          onInspectionQueueChanged={refreshVmList}
         />
       )}
       <AddLabelsModal

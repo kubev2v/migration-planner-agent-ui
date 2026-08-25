@@ -9,6 +9,7 @@ import { credentialsUiReducer } from "./slices/credentialsUiSlice";
 // Attach endpoint definitions to the api slice (side-effect imports).
 import "./api/credentialsEndpoints";
 import "./api/groupsEndpoints";
+import "./api/vmsEndpoints";
 
 /**
  * Build the Redux store around the composed SDK client. The client is passed as

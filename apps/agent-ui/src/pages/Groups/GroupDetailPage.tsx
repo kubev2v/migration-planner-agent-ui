@@ -45,6 +45,11 @@ import {
   useGetGroupVMsQuery,
   useUpdateGroupNameMutation,
 } from "../../store/api/groupsEndpoints";
+import {
+  useGetApplicationsQuery,
+  useGetVMFilterOptionsQuery,
+} from "../../store/api/vmsEndpoints";
+import { getSdkErrorMessage } from "../../store/baseQuery";
 import { useAppDispatch } from "../../store/hooks";
 import {
   buildClusterViewModel,
@@ -53,7 +58,6 @@ import {
 import { ApplicationsView } from "../VirtualMachinesOverview/components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "../VirtualMachinesOverview/components/Dashboard/Dashboard";
 import { VirtualMachinesView } from "../VirtualMachinesOverview/components/VirtualMachinesTab/VirtualMachinesView";
-import { createRefreshVmTableFilterOptions } from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilterOptions";
 import {
   filtersToByExpression,
   filtersToSearchParams,
@@ -77,10 +81,19 @@ import {
   REPORT_TAB,
   resolveReportTab,
 } from "../VirtualMachinesOverview/reportTabNavigation";
-import { useApplicationsData } from "../VirtualMachinesOverview/useApplicationsData";
 import { normalizeVirtualMachines } from "../VirtualMachinesOverview/virtualMachineParsing";
 import { DeleteGroupModal } from "./components/modals/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/modals/EditGroupNameModal";
+
+const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
+  clusters: [],
+  datacenters: [],
+  concernLabels: [],
+  concernCategories: [],
+  vmLabels: [],
+  groups: [],
+  applications: [],
+};
 
 /** Extract a human-readable message from an RTK Query / SDK error. */
 function getGroupErrorMessage(error: unknown): string {
@@ -112,23 +125,6 @@ export const GroupDetailPage: React.FC = () => {
   const [vmsPage, setVmsPage] = useState(1);
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
-  const [availableFilterOptions, setAvailableFilterOptions] =
-    useState<VMTableFilterOptions>({
-      clusters: [],
-      datacenters: [],
-      concernLabels: [],
-      concernCategories: [],
-      vmLabels: [],
-      groups: [],
-      applications: [],
-    });
-  const [filterOptionsFetched, setFilterOptionsFetched] = useState(false);
-
-  const refreshFilterOptions = useMemo(
-    () =>
-      createRefreshVmTableFilterOptions(agentApi, setAvailableFilterOptions),
-    [agentApi],
-  );
 
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
@@ -179,16 +175,25 @@ export const GroupDetailPage: React.FC = () => {
   );
   const vmsTotalCount = vmsData?.total ?? 0;
 
+  // Filter dropdowns are the global option set (shared with the overview page).
+  const { data: filterOptionsData } = useGetVMFilterOptionsQuery(undefined, {
+    skip: activeTab !== REPORT_TAB.vms,
+  });
+  const availableFilterOptions = filterOptionsData ?? EMPTY_FILTER_OPTIONS;
+
+  // Applications, scoped to this group's membership filter.
   const {
-    applications: applicationsList,
-    loading: applicationsLoading,
-    error: applicationsError,
-    refreshApplications,
-  } = useApplicationsData(
-    agentApi,
-    activeTab === REPORT_TAB.applications,
-    groupFilter,
+    data: applicationsData,
+    isFetching: applicationsLoading,
+    error: applicationsQueryError,
+  } = useGetApplicationsQuery(
+    { scopeExpression: groupFilter },
+    { skip: activeTab !== REPORT_TAB.applications || !groupFilter },
   );
+  const applicationsList = applicationsData ?? [];
+  const applicationsError = applicationsQueryError
+    ? getSdkErrorMessage(applicationsQueryError, "Failed to load applications.")
+    : null;
 
   const handleNavigateToVMFilters = useCallback(
     (filters: VMFilters) => {
@@ -211,24 +216,6 @@ export const GroupDetailPage: React.FC = () => {
     }
   }, [searchParams, activeTab]);
 
-  useEffect(() => {
-    if (activeTab !== REPORT_TAB.vms || filterOptionsFetched) {
-      return;
-    }
-
-    const fetchFilterOptions = async () => {
-      try {
-        await refreshFilterOptions();
-        setFilterOptionsFetched(true);
-      } catch (err) {
-        console.error("Error fetching filter options:", err);
-        setFilterOptionsFetched(true);
-      }
-    };
-
-    fetchFilterOptions();
-  }, [activeTab, filterOptionsFetched, refreshFilterOptions]);
-
   // --- Cache invalidation helpers ------------------------------------------
   // Both the header (getGroup) and the table (getGroupVMs) refetch from the
   // same invalidation, so their counts can never diverge.
@@ -244,25 +231,6 @@ export const GroupDetailPage: React.FC = () => {
       ]),
     );
   }, [dispatch, groupId]);
-
-  const refreshVMs = useCallback(() => {
-    if (!groupId) {
-      return;
-    }
-    dispatch(
-      agentApiSlice.util.invalidateTags([{ type: "GroupVms", id: groupId }]),
-    );
-  }, [dispatch, groupId]);
-
-  // Migration exclude/include change: refetch header (inventory) and table.
-  const refreshGroupInventory = useCallback(async () => {
-    invalidateGroupData();
-  }, [invalidateGroupData]);
-
-  const reloadGroupMembership = useCallback(async () => {
-    setVmsPage(1);
-    invalidateGroupData();
-  }, [invalidateGroupData]);
 
   // Re-collection completion refreshes the group view.
   const { onCompleted } = useReportsContext();
@@ -553,10 +521,6 @@ export const GroupDetailPage: React.FC = () => {
                   onSortChange={setVmsSortFields}
                   availableFilterOptions={availableFilterOptions}
                   agentApi={agentApi}
-                  onRefreshVMs={refreshVMs}
-                  onRefreshInventory={refreshGroupInventory}
-                  onGroupMembershipChanged={reloadGroupMembership}
-                  onRefreshFilterOptions={refreshFilterOptions}
                   groupContext={{ id: group.id, name: group.name }}
                   scopedFilterExpression={group.filter}
                   sortFields={vmsSortFields}
@@ -577,8 +541,6 @@ export const GroupDetailPage: React.FC = () => {
                   onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
                   onViewInVmList={handleViewApplicationInVmList}
-                  onRefreshApplications={refreshApplications}
-                  onRefreshFilterOptions={refreshFilterOptions}
                 />
               </div>
             </Tab>
