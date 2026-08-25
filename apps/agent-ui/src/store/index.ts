@@ -4,8 +4,10 @@ import type { AgentApiClient } from "../api/agentApi";
 import { agentApiSlice } from "./api/agentApiSlice";
 import type { SdkExtra } from "./baseQuery";
 import { appModeReducer } from "./slices/appModeSlice";
+import { credentialsUiReducer } from "./slices/credentialsUiSlice";
 
 // Attach endpoint definitions to the api slice (side-effect imports).
+import "./api/credentialsEndpoints";
 import "./api/groupsEndpoints";
 
 /**
@@ -19,6 +21,7 @@ export function createStore(agentApi: AgentApiClient) {
     reducer: {
       [agentApiSlice.reducerPath]: agentApiSlice.reducer,
       appMode: appModeReducer,
+      credentialsUi: credentialsUiReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({ thunk: { extraArgument: extra } }).concat(

@@ -34,7 +34,7 @@ import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { AppEmptyState } from "../../../common/components";
 import useLocalStorage from "../../../common/hooks/useLocalStorage";
-import { useCapability } from "../../../credentials/CredentialsContext";
+import { useCapability } from "../../../credentials/useCapability";
 import type {
   ForecasterStatus,
   ForecastRun,

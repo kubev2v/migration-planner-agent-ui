@@ -11,7 +11,7 @@ import { newAbortSignal } from "../common/AbortSignal";
 import type { ApiError } from "../common/components/index";
 import { parseApiError } from "../common/parseApiError";
 import { Symbols } from "../main/Symbols";
-import { useCredentials } from "./CredentialsContext";
+import { usePutCredentialsMutation } from "../store/api/credentialsEndpoints";
 
 // Maximum consecutive polling failures before reporting error to user
 const MAX_POLL_FAILURES = 5;
@@ -35,7 +35,7 @@ interface UseLoginViewModelProps {
 export const useLoginViewModel = (
   props?: UseLoginViewModelProps,
 ): LoginViewModelInterface => {
-  const { updateCredential } = useCredentials();
+  const [putCredentials] = usePutCredentialsMutation();
   const agentApi = useInjection<DefaultApiInterface>(Symbols.AgentApi);
   const navigate = useNavigate();
   const refetchAgentStatus = props?.refetchAgentStatus;
@@ -170,11 +170,13 @@ export const useLoginViewModel = (
           }
         }
 
-        await updateCredential({
-          url: credentials.url,
-          username: credentials.username,
-          password: credentials.password,
-        });
+        await putCredentials({
+          vcenterCredentials: {
+            url: credentials.url,
+            username: credentials.username,
+            password: credentials.password,
+          },
+        }).unwrap();
 
         const signal = newAbortSignal(
           "The server didn't respond in a timely fashion.",
@@ -203,7 +205,7 @@ export const useLoginViewModel = (
         console.error("Error during collection start:", err);
       }
     },
-    [agentApi, updateCredential, refetchAgentStatus],
+    [agentApi, putCredentials, refetchAgentStatus],
   );
 
   const onCancel = useCallback(async () => {

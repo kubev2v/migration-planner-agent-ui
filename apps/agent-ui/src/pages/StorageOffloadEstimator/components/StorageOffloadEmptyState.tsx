@@ -8,7 +8,7 @@ import {
 } from "@patternfly/react-core";
 import { SearchIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useCapability } from "../../../credentials/CredentialsContext";
+import { useCapability } from "../../../credentials/useCapability";
 
 export interface StorageOffloadEmptyStateProps {
   onGetStarted: () => void;

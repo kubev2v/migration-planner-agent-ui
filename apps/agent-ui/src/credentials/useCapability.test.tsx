@@ -3,7 +3,7 @@ import type {
   CredentialStatus,
 } from "@openshift-migration-advisor/agent-sdk";
 import { describe, expect, test } from "vitest";
-import { buildCapabilityUIState } from "./CredentialsContext";
+import { buildCapabilityUIState } from "./useCapability";
 
 describe("buildCapabilityUIState", () => {
   test("Should build state when 404 is returned for both credentials and capabilities", () => {

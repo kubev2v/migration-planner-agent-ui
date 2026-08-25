@@ -15,7 +15,6 @@ import { createAgentApi } from "../api/agentApi.ts";
 import { AgentStatusProvider } from "../common/AgentStatusContext.tsx";
 import { AgentUIVersion } from "../common/AgentUIVersion.tsx";
 import { ReportsProvider } from "../common/report/ReportsContext.tsx";
-import { CredentialsProvider } from "../credentials/CredentialsContext.tsx";
 import { createStore } from "../store/index.ts";
 import { router } from "./Router.tsx";
 import { Symbols } from "./Symbols.ts";
@@ -61,14 +60,12 @@ function main(): void {
       <ReduxProvider store={store}>
         <DependencyInjectionProvider container={container}>
           <AgentStatusProvider>
-            <CredentialsProvider>
-              <ReportsProvider>
-                <React.Suspense fallback={<Spinner />}>
-                  <AgentUIVersion />
-                  <RouterProvider router={router} />
-                </React.Suspense>
-              </ReportsProvider>
-            </CredentialsProvider>
+            <ReportsProvider>
+              <React.Suspense fallback={<Spinner />}>
+                <AgentUIVersion />
+                <RouterProvider router={router} />
+              </React.Suspense>
+            </ReportsProvider>
           </AgentStatusProvider>
         </DependencyInjectionProvider>
       </ReduxProvider>

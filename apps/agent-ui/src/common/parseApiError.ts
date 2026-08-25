@@ -19,5 +19,18 @@ export async function parseApiError(
     } catch {}
   }
 
-  return err instanceof Error ? err.message : fallbackMessage;
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+
+  // RTK Query rejects `.unwrap()` with the baseQuery-mapped `{ status, message }`
+  // object (not an Error), so read the message off that shape too.
+  if (err && typeof err === "object" && "message" in err) {
+    const { message } = err as { message?: unknown };
+    if (typeof message === "string" && message) {
+      return message;
+    }
+  }
+
+  return fallbackMessage;
 }

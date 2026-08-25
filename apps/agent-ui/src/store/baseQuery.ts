@@ -1,6 +1,7 @@
 import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
 import type { BaseQueryFn } from "@reduxjs/toolkit/query";
 import type { AgentApiClient } from "../api/agentApi";
+import { parseApiError } from "../common/parseApiError";
 
 /**
  * A baseQuery arg is a callback that performs the request using the composed
@@ -54,8 +55,13 @@ export const sdkBaseQuery =
       return { data };
     } catch (err) {
       if (err instanceof ResponseError) {
+        // Reuse `parseApiError` so RTK Query consumers get the same detailed
+        // server-body message the direct-SDK code paths surface.
         return {
-          error: { status: err.response?.status, message: err.message },
+          error: {
+            status: err.response?.status,
+            message: await parseApiError(err),
+          },
         };
       }
       return {
