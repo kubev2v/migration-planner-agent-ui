@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useAgentApi } from "../api/agentApiClient";
+import { getAgentApiClient } from "../api/agentApiClient";
 import { getLatestCollectionId } from "../api/collectionApi";
 import { getCollectorStatus } from "../api/collectorApi";
 import { newAbortSignal } from "../common/AbortSignal";
@@ -14,7 +14,7 @@ import { PageLayout } from "./PageLayout";
  * progress, or at least one collection already exists.
  */
 export const ProtectedRoute: React.FC = () => {
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const [isChecking, setIsChecking] = useState(true);
   const [hasCollectedData, setHasCollectedData] = useState(false);
 

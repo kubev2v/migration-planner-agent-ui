@@ -16,7 +16,7 @@ import {
 } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAgentApi } from "../../../../api/agentApiClient";
+import { getAgentApiClient } from "../../../../api/agentApiClient";
 import { parseApiError } from "../../../../common/parseApiError";
 import { useCreateGroupMutation } from "../../../../store/api/groupsEndpoints";
 import { VMTable } from "../../../VirtualMachinesOverview/components/VirtualMachinesTab/VMTable";
@@ -45,7 +45,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   onClose,
   onCreated,
 }) => {
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const [createGroup, { isLoading: isCreating }] = useCreateGroupMutation();
   const [name, setName] = useState("");
   const [vms, setVms] = useState<VirtualMachine[]>([]);

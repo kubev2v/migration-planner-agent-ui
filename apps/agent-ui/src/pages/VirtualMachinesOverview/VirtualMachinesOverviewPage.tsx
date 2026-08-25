@@ -1,4 +1,3 @@
-import type { RightsizingClusterUtilization } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
   Content,
@@ -18,13 +17,13 @@ import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useAgentApi } from "../../api/agentApiClient";
-import { getLatestCollectionId } from "../../api/collectionApi";
+import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components/index";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
   useGetApplicationsQuery,
+  useGetClusterUtilizationQuery,
   useGetInventoryQuery,
   useGetVMFilterOptionsQuery,
   useGetVMsQuery,
@@ -71,15 +70,13 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
 };
 
 export const ReportContainer: React.FC = () => {
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const { data: collections } = useListCollectionsQuery();
   const hasCollectionData = (collections?.length ?? 0) > 0;
   const newestCollectionId = collections?.[0]?.id;
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
-  const [utilizationMetrics, setUtilizationMetrics] =
-    useState<RightsizingClusterUtilization | null>(null);
 
   // VM pagination state (client-only; the query keys on these values)
   const [vmsPage, setVmsPage] = useState(1);
@@ -177,49 +174,13 @@ export const ReportContainer: React.FC = () => {
     ? getSdkErrorMessage(applicationsQueryError, "Failed to load applications.")
     : null;
 
-  // Fetch cluster utilization metrics
-  useEffect(() => {
-    // Only fetch metrics when a specific cluster is selected
-    if (selectedClusterId === "all") {
-      setUtilizationMetrics(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchUtilizationMetrics = async () => {
-      try {
-        const collectionId = await getLatestCollectionId(agentApi);
-        if (!collectionId) {
-          if (!cancelled) {
-            setUtilizationMetrics(null);
-          }
-          return;
-        }
-
-        const response = await agentApi.getClusterUtilization({
-          id: collectionId,
-          clusterId: selectedClusterId,
-        });
-
-        // Only update state if the effect hasn't been cleaned up
-        if (!cancelled) {
-          setUtilizationMetrics(response.cluster);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.warn("Failed to fetch utilization metrics:", err);
-          setUtilizationMetrics(null);
-        }
-      }
-    };
-
-    void fetchUtilizationMetrics();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agentApi, selectedClusterId]);
+  // Cluster usage statistics — only fetched when a specific cluster is
+  // selected. The query keys on clusterId, so switching clusters refetches and
+  // switching back to "all" (skip) hides the metrics.
+  const { data: utilizationMetrics } = useGetClusterUtilizationQuery(
+    selectedClusterId,
+    { skip: selectedClusterId === "all" },
+  );
 
   // A completed report invalidates the inventory/VM caches through the shared
   // report-completion tags (see `ReportsContext`), so the queries above refetch

@@ -19,7 +19,7 @@ import { DesktopIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
-import { useAgentApi } from "../../../../api/agentApiClient";
+import { getAgentApiClient } from "../../../../api/agentApiClient";
 import { AppEmptyState } from "../../../../common/components";
 import { useChangeGroupMembershipMutation } from "../../../../store/api/groupsEndpoints";
 import { getSdkErrorMessage } from "../../../../store/baseQuery";
@@ -88,7 +88,7 @@ export const RemoveFromGroupModal: React.FC<RemoveFromGroupModalProps> = ({
   onClose,
   onUpdated,
 }) => {
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const [changeGroupMembership, { isLoading: isSaving }] =
     useChangeGroupMembershipMutation();
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);

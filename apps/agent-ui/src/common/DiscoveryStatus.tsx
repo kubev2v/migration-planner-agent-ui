@@ -13,7 +13,7 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-import { useAgentApi } from "../api/agentApiClient";
+import { getAgentApiClient } from "../api/agentApiClient";
 import { unwrapInventoryPayload } from "../pages/VirtualMachinesOverview/inventoryParsing";
 import { DataSharingAlert } from "./components/DataSharingAlert";
 import { DataSharingModal } from "./components/DataSharingModal";
@@ -28,7 +28,7 @@ const successIconStyle = css`
 `;
 
 export const DiscoveryStatus: React.FC = () => {
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const {
     discoverySharingStatus,
     discoverySharingError,

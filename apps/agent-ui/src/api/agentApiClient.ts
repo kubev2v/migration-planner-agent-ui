@@ -7,10 +7,10 @@ import { type AgentApiClient, createAgentApi } from "./agentApi";
  * The IoC container (`packages/ioc`) is gone: the store's thunk `extraArgument`
  * is the primary consumer of this client (every RTK Query endpoint reaches it
  * via its baseQuery). The few imperative one-off SDK calls that are not modeled
- * as endpoints — exports, blob downloads, utilization metrics, credential
- * validation, the `ProtectedRoute` auth probe — read the same singleton through
- * the trivial `useAgentApi()` hook below, so there is still exactly one client
- * instance shared across the whole app.
+ * as endpoints — exports, blob downloads, credential validation, the
+ * `ProtectedRoute` auth probe, the collector lifecycle and the paged group
+ * enrichment loops — call `getAgentApiClient()` directly, so there is still
+ * exactly one client instance shared across the whole app.
  */
 
 export const getConfigurationBasePath = (): string => {
@@ -36,12 +36,4 @@ export function getAgentApiClient(): AgentApiClient {
     client = createAgentApi(configuration);
   }
   return client;
-}
-
-/**
- * Trivial replacement for the former `useInjection(Symbols.AgentApi)`. Returns
- * the same shared client the store uses — no context, no container.
- */
-export function useAgentApi(): AgentApiClient {
-  return getAgentApiClient();
 }

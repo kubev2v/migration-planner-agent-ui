@@ -95,6 +95,56 @@ describe("vmsEndpoints tag invalidation", () => {
     });
   });
 
+  test("getVMDetail merges the VM record with its utilization", async () => {
+    const api = {
+      getLatestVirtualMachine: vi.fn(async () => ({ id: "vm1", name: "web" })),
+      getLatestVMUtilization: vi.fn(async () => ({ cpu_avg: 42 })),
+    } as unknown as AgentApiClient;
+    const store = createStore(api);
+
+    const result = await store
+      .dispatch(vmsEndpoints.endpoints.getVMDetail.initiate("vm1"))
+      .unwrap();
+
+    expect(result).toMatchObject({
+      id: "vm1",
+      name: "web",
+      utilization: { cpu_avg: 42 },
+    });
+    expect(api.getLatestVirtualMachine).toHaveBeenCalledWith({ vmId: "vm1" });
+  });
+
+  test("getVMDetail still resolves when utilization is unavailable", async () => {
+    const api = {
+      getLatestVirtualMachine: vi.fn(async () => ({ id: "vm1", name: "web" })),
+      getLatestVMUtilization: vi.fn(async () => {
+        throw new Error("no metrics");
+      }),
+    } as unknown as AgentApiClient;
+    const store = createStore(api);
+
+    const result = await store
+      .dispatch(vmsEndpoints.endpoints.getVMDetail.initiate("vm1"))
+      .unwrap();
+
+    expect(result).toMatchObject({ id: "vm1", utilization: undefined });
+  });
+
+  test("getClusterUtilization returns null when no collection exists", async () => {
+    const api = {
+      listCollections: vi.fn(async () => ({ collections: [] })),
+      getClusterUtilization: vi.fn(),
+    } as unknown as AgentApiClient;
+    const store = createStore(api);
+
+    const result = await store
+      .dispatch(vmsEndpoints.endpoints.getClusterUtilization.initiate("c1"))
+      .unwrap();
+
+    expect(result).toBeNull();
+    expect(api.getClusterUtilization).not.toHaveBeenCalled();
+  });
+
   test("updateVMLabels invalidates VmLabels so getVMLabels refetches", async () => {
     const counts = { total: 3 };
     stubInventoryFetch(counts);

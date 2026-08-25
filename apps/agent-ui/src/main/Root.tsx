@@ -20,8 +20,7 @@ function main(): void {
   }
 
   root.style.height = "inherit";
-  // The store's `extraArgument` is now the single source of the SDK client.
-  // Imperative one-off callers read the same instance via `useAgentApi()`.
+
   const store = createStore(getAgentApiClient());
   ReactDOM.createRoot(root).render(
     <React.StrictMode>

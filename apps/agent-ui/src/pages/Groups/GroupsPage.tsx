@@ -3,12 +3,13 @@ import { PageSection } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { DefaultApiInterface } from "../../api/agentApi";
-import { useAgentApi } from "../../api/agentApiClient";
+import { getAgentApiClient } from "../../api/agentApiClient";
 import {
   useDeleteGroupMutation,
   useListGroupsQuery,
   useUpdateGroupNameMutation,
 } from "../../store/api/groupsEndpoints";
+import { useGetVMLabelsQuery } from "../../store/api/vmsEndpoints";
 import { getVmTags } from "../VirtualMachinesOverview/virtualMachineParsing";
 import type { GroupRow } from "./components/GroupsTable";
 import { GroupsTable } from "./components/GroupsTable";
@@ -81,7 +82,7 @@ async function fetchAllGroupsPaged(
 }
 
 export const GroupsPage: React.FC = () => {
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const [updateGroupName] = useUpdateGroupNameMutation();
   const [deleteGroup] = useDeleteGroupMutation();
 
@@ -93,7 +94,6 @@ export const GroupsPage: React.FC = () => {
   const [nameFilter, setNameFilter] = useState("");
   const [debouncedNameFilter, setDebouncedNameFilter] = useState("");
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
-  const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
@@ -181,19 +181,9 @@ export const GroupsPage: React.FC = () => {
     pageData,
   ]);
 
-  useEffect(() => {
-    const fetchLabels = async () => {
-      try {
-        const response = await agentApi.getLatestVMLabels();
-        setAvailableLabels(response.labels || []);
-      } catch (err) {
-        console.error("Error fetching VM labels:", err);
-        setAvailableLabels([]);
-      }
-    };
-
-    fetchLabels();
-  }, [agentApi]);
+  // Available label filter values, shared with the VM overview via the
+  // `VmLabels` cache entry (invalidated by label/report changes).
+  const { data: availableLabels = [] } = useGetVMLabelsQuery();
 
   const displayedGroups = useMemo(() => {
     if (!usingLabelFilter) {

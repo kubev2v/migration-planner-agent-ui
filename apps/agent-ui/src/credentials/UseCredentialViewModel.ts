@@ -4,7 +4,7 @@ import type {
 } from "@openshift-migration-advisor/agent-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAgentApi } from "../api/agentApiClient";
+import { getAgentApiClient } from "../api/agentApiClient";
 import { getCollectorStatus } from "../api/collectorApi";
 import { newAbortSignal } from "../common/AbortSignal";
 import type { ApiError } from "../common/components/index";
@@ -34,7 +34,7 @@ export const useLoginViewModel = (
   props?: UseLoginViewModelProps,
 ): LoginViewModelInterface => {
   const [putCredentials] = usePutCredentialsMutation();
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const navigate = useNavigate();
   const refetchAgentStatus = props?.refetchAgentStatus;
   const [version, setVersion] = useState<string | undefined>(undefined);

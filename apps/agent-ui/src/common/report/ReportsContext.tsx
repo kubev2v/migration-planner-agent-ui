@@ -1,7 +1,7 @@
 import type { CollectorStatus } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
 import { createContext, useCallback, useContext } from "react";
-import { useAgentApi } from "../../api/agentApiClient";
+import { getAgentApiClient } from "../../api/agentApiClient";
 import { agentApiSlice } from "../../store/api/agentApiSlice";
 import { useAppDispatch } from "../../store/hooks";
 import { RunNewReportModal } from "./RunNewReportModal";
@@ -42,7 +42,7 @@ const ReportsContext = createContext<ReportsContextValue | undefined>(
 export const ReportsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const dispatch = useAppDispatch();
 
   const handleCompleted = useCallback(async () => {

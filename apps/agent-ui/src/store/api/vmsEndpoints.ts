@@ -1,10 +1,13 @@
 import type {
   BatchUpdateExclusionRequest,
   DeleteLabelGloballyResponse,
+  RightsizingClusterUtilization,
   UpdateLabelVMsRequest,
+  VirtualMachineDetail,
   VirtualMachineListResponse,
   VirtualMachineUpdateRequest,
   VMLabelsResponse,
+  VmUtilizationDetails,
 } from "@openshift-migration-advisor/agent-sdk";
 import { getAgentApiBasePath } from "../../api/agentApiConfig";
 import { getLatestCollectionId } from "../../api/collectionApi";
@@ -31,6 +34,12 @@ interface GetVMsArg {
 interface GetApplicationsArg {
   /** Restrict applications to VMs matching this filter (e.g. group membership). */
   scopeExpression?: string;
+}
+
+/** A single VM's detail record with its (optional) rightsizing utilization. */
+export interface VirtualMachineDetailWithUtilization
+  extends VirtualMachineDetail {
+  utilization?: VmUtilizationDetails;
 }
 
 interface SetVMExclusionArg {
@@ -126,6 +135,44 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
         return response.labels ?? [];
       },
       providesTags: ["VmLabels"],
+    }),
+
+    // Single VM detail (general/compute/network/storage/issues) plus its
+    // rightsizing utilization. Utilization is optional: a VM detail still
+    // renders when the metrics endpoint has no data, so it is fetched
+    // best-effort and swallowed on failure.
+    getVMDetail: build.query<VirtualMachineDetailWithUtilization, string>({
+      query: (vmId) => async (sdk) => {
+        const vmData = await sdk.getLatestVirtualMachine({ vmId });
+        let utilization: VmUtilizationDetails | undefined;
+        try {
+          utilization = await sdk.getLatestVMUtilization({ vmId });
+        } catch (err) {
+          console.warn("Error fetching VM utilization:", err);
+        }
+        return { ...vmData, utilization };
+      },
+      providesTags: (_result, _error, vmId) => [{ type: "Vms", id: vmId }],
+    }),
+
+    // Per-cluster usage statistics for the latest collection. Keyed by
+    // clusterId; consumers skip the query when no specific cluster is selected.
+    getClusterUtilization: build.query<
+      RightsizingClusterUtilization | null,
+      string
+    >({
+      query: (clusterId) => async (sdk) => {
+        const collectionId = await getLatestCollectionId(sdk);
+        if (!collectionId) {
+          return null;
+        }
+        const response = await sdk.getClusterUtilization({
+          id: collectionId,
+          clusterId,
+        });
+        return response.cluster;
+      },
+      providesTags: ["Inventory"],
     }),
 
     // Applications detected in the latest collection, optionally scoped to a
@@ -266,6 +313,8 @@ export const {
   useGetInventoryQuery,
   useGetVMFilterOptionsQuery,
   useGetVMLabelsQuery,
+  useGetVMDetailQuery,
+  useGetClusterUtilizationQuery,
   useGetApplicationsQuery,
   useSetVMExclusionMutation,
   useUpdateVirtualMachineMutation,

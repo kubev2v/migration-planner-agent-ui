@@ -32,7 +32,7 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { useAgentApi } from "../../api/agentApiClient";
+import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 import {
@@ -107,7 +107,7 @@ function getGroupErrorMessage(error: unknown): string {
 export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
-  const agentApi = useAgentApi();
+  const agentApi = getAgentApiClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
