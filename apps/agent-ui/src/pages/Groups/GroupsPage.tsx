@@ -6,6 +6,7 @@ import type { DefaultApiInterface } from "../../api/agentApi";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import {
   useDeleteGroupMutation,
+  useGetAllGroupsQuery,
   useListGroupsQuery,
   useUpdateGroupNameMutation,
 } from "../../store/api/groupsEndpoints";
@@ -19,7 +20,6 @@ import { DeleteGroupModal } from "./components/modals/DeleteGroupModal";
 import { EditGroupNameModal } from "./components/modals/EditGroupNameModal";
 
 const GROUP_VM_PAGE_SIZE = 100;
-const GROUP_LIST_PAGE_SIZE = 100;
 
 async function enrichGroup(
   agentApi: DefaultApiInterface,
@@ -60,27 +60,6 @@ async function enrichGroup(
   };
 }
 
-/** Fetches every group across all pages (used only for label filtering). */
-async function fetchAllGroupsPaged(
-  agentApi: DefaultApiInterface,
-  byName?: string,
-): Promise<Group[]> {
-  const allGroups: Group[] = [];
-  let page = 1;
-  let pageCount = 1;
-  while (page <= pageCount) {
-    const response = await agentApi.listLatestGroups({
-      byName,
-      page,
-      pageSize: GROUP_LIST_PAGE_SIZE,
-    });
-    allGroups.push(...(response.groups ?? []));
-    pageCount = response.pageCount ?? 1;
-    page++;
-  }
-  return allGroups;
-}
-
 export const GroupsPage: React.FC = () => {
   const agentApi = getAgentApiClient();
   const [updateGroupName] = useUpdateGroupNameMutation();
@@ -119,6 +98,14 @@ export const GroupsPage: React.FC = () => {
     pageSize,
   });
 
+  // Label-filter mode needs every group (not just the current page) to filter
+  // locally by label. Shares the `Group:LIST` cache entry so it stays fresh
+  // after any mutation; skipped unless a label filter is active.
+  const { data: allGroupsForLabels = [] } = useGetAllGroupsQuery(
+    { byName: debouncedNameFilter || undefined },
+    { skip: !usingLabelFilter },
+  );
+
   // Enrich groups with per-group VM counts and labels. Two modes:
   //  - no label filter: enrich the current server page.
   //  - label filter: fetch all groups, enrich, then filter by label locally.
@@ -129,12 +116,8 @@ export const GroupsPage: React.FC = () => {
       setEnriching(true);
       try {
         if (usingLabelFilter) {
-          const allRaw = await fetchAllGroupsPaged(
-            agentApi,
-            debouncedNameFilter || undefined,
-          );
           const enriched = await Promise.all(
-            allRaw.map((group) => enrichGroup(agentApi, group)),
+            allGroupsForLabels.map((group) => enrichGroup(agentApi, group)),
           );
           if (cancelled) {
             return;
@@ -176,7 +159,7 @@ export const GroupsPage: React.FC = () => {
   }, [
     agentApi,
     usingLabelFilter,
-    debouncedNameFilter,
+    allGroupsForLabels,
     selectedLabels,
     pageData,
   ]);

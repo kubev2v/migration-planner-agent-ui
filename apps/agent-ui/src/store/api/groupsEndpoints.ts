@@ -6,6 +6,7 @@ import type {
   VirtualMachineListResponse,
 } from "@openshift-migration-advisor/agent-sdk";
 import { combineFilterExpressions } from "../../pages/Groups/utils/groupFilters";
+import { fetchAllGroupsPages } from "../../pages/Groups/utils/groupList";
 import { agentApiSlice } from "./agentApiSlice";
 
 interface GetGroupArg {
@@ -62,6 +63,22 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
       providesTags: (result) => [
         { type: "Group", id: "LIST" },
         ...(result?.groups ?? []).map((group) => ({
+          type: "Group" as const,
+          id: group.id,
+        })),
+      ],
+    }),
+
+    // All groups across every page as one cache entry. Reuses the SDK paging
+    // loop; RTK Query supplies the caching + in-flight dedup the old hand-rolled
+    // cache did. Provides `Group:LIST`, so every group create/delete/rename/
+    // membership mutation already invalidates it — no extra wiring needed.
+    getAllGroups: build.query<Group[], { byName?: string } | undefined>({
+      query: (arg) => (sdk) =>
+        fetchAllGroupsPages(sdk, { byName: arg?.byName }),
+      providesTags: (result) => [
+        { type: "Group", id: "LIST" },
+        ...(result ?? []).map((group) => ({
           type: "Group" as const,
           id: group.id,
         })),
@@ -153,6 +170,7 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
 
 export const {
   useListGroupsQuery,
+  useGetAllGroupsQuery,
   useGetGroupQuery,
   useGetGroupVMsQuery,
   useCreateGroupMutation,

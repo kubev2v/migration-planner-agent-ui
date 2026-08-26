@@ -1,4 +1,3 @@
-import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import {
   Button,
   Content,
@@ -19,12 +18,13 @@ import {
 import { DesktopIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { getAgentApiClient } from "../../../../api/agentApiClient";
 import { AppEmptyState } from "../../../../common/components";
-import { useChangeGroupMembershipMutation } from "../../../../store/api/groupsEndpoints";
+import {
+  useChangeGroupMembershipMutation,
+  useGetAllGroupsQuery,
+} from "../../../../store/api/groupsEndpoints";
 import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import { addVmsToGroupFilter } from "../../utils/groupFilters";
-import { fetchAllGroups } from "../../utils/groupList";
 
 interface AddToGroupModalProps {
   isOpen: boolean;
@@ -39,11 +39,13 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
   onClose,
   onUpdated,
 }) => {
-  const agentApi = getAgentApiClient();
   const [changeGroupMembership, { isLoading: isSaving }] =
     useChangeGroupMembershipMutation();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    data: groups = [],
+    isFetching: loading,
+    isError: loadFailed,
+  } = useGetAllGroupsQuery(undefined, { skip: !isOpen });
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [isGroupSelectOpen, setIsGroupSelectOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,39 +55,29 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
     [groups, selectedGroupId],
   );
 
+  const displayError = error ?? (loadFailed ? "Failed to load groups." : null);
+
   const vmCountLabel =
     vmIds.length === 1
       ? "1 selected virtual machine"
       : `${vmIds.length} selected virtual machines`;
 
+  // Reset transient selection state whenever the modal opens.
   useEffect(() => {
     if (!isOpen) {
       return;
     }
-
     setSelectedGroupId("");
     setIsGroupSelectOpen(false);
     setError(null);
+  }, [isOpen]);
 
-    const fetchGroups = async () => {
-      setLoading(true);
-      try {
-        const loadedGroups = await fetchAllGroups(agentApi);
-        setGroups(loadedGroups);
-        if (loadedGroups.length === 1) {
-          setSelectedGroupId(loadedGroups[0].id);
-        }
-      } catch (err) {
-        console.error("Error fetching groups:", err);
-        setGroups([]);
-        setError("Failed to load groups.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGroups();
-  }, [isOpen, agentApi]);
+  // Auto-select when there is exactly one group to choose from.
+  useEffect(() => {
+    if (isOpen && groups.length === 1) {
+      setSelectedGroupId(groups[0].id);
+    }
+  }, [isOpen, groups]);
 
   const handleGroupSelect = (
     _event: React.MouseEvent<Element, MouseEvent> | undefined,
@@ -175,7 +167,7 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
           </Form>
         )}
 
-        {error && (
+        {displayError && (
           <Content
             component="p"
             style={{
@@ -184,7 +176,7 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
               marginTop: "16px",
             }}
           >
-            {error}
+            {displayError}
           </Content>
         )}
       </ModalBody>

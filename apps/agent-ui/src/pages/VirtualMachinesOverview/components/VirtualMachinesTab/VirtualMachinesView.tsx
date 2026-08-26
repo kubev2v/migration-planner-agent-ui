@@ -21,7 +21,6 @@ import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals
 import { ManageLabelsModal } from "../../../Groups/components/modals/ManageLabelsModal";
 import { RemoveFromGroupModal } from "../../../Groups/components/modals/RemoveFromGroupModal";
 import { combineFilterExpressions } from "../../../Groups/utils/groupFilters";
-import { invalidateAllGroupsCache } from "../../../Groups/utils/groupList";
 import {
   buildVmGroupMembership,
   mergeVmGroupItems,
@@ -405,12 +404,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   }, []);
 
   const handleGroupsChanged = useCallback(async () => {
-    if (agentApi) {
-      invalidateAllGroupsCache(agentApi);
-    }
     refreshAfterGroupChange();
     await loadVmGroupMembership();
-  }, [agentApi, loadVmGroupMembership, refreshAfterGroupChange]);
+  }, [loadVmGroupMembership, refreshAfterGroupChange]);
 
   const handleGroupActionComplete = useCallback(async () => {
     await handleGroupsChanged();

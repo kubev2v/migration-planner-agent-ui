@@ -130,6 +130,51 @@ describe("groupsEndpoints tag invalidation", () => {
     });
   });
 
+  test("getAllGroups provides Group:LIST and refetches after a create", async () => {
+    const groups = [{ id: "g1", name: "prod", filter: "id in ['a']" }];
+    const api = {
+      listLatestGroups: vi.fn(async () => ({
+        groups,
+        total: groups.length,
+        page: 1,
+        pageCount: 1,
+      })),
+      createLatestGroup: vi.fn(async () => ({
+        id: "g2",
+        name: "new",
+        filter: "id in ['b']",
+      })),
+    } as unknown as AgentApiClient;
+    const store = createStore(api);
+
+    await store.dispatch(
+      groupsEndpoints.endpoints.getAllGroups.initiate(undefined),
+    );
+    expect(api.listLatestGroups).toHaveBeenCalledTimes(1);
+
+    const allGroupIds = () =>
+      groupsEndpoints.endpoints.getAllGroups
+        .select(undefined)(store.getState())
+        .data?.map((group) => group.id);
+    expect(allGroupIds()).toEqual(["g1"]);
+
+    // Creating a group invalidates Group:LIST, so the all-groups cache entry
+    // refetches and picks up the new group — no separate cache to go stale.
+    groups.push({ id: "g2", name: "new", filter: "id in ['b']" });
+    await store
+      .dispatch(
+        groupsEndpoints.endpoints.createGroup.initiate({
+          createGroupRequest: { name: "new", filter: "id in ['b']" },
+        }),
+      )
+      .unwrap();
+
+    await vi.waitFor(() => {
+      expect(api.listLatestGroups).toHaveBeenCalledTimes(2);
+      expect(allGroupIds()).toEqual(["g1", "g2"]);
+    });
+  });
+
   test("changeGroupMembership refetches both the list and the group detail", async () => {
     const counts = { total: 4 };
     const api = makeFakeApi(counts) as unknown as {

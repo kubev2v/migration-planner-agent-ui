@@ -41,7 +41,6 @@ import { useAppDispatch } from "../../../../store/hooks";
 import { AddLabelsModal } from "../../../Groups/components/modals/AddLabelsModal";
 import { AddToGroupModal } from "../../../Groups/components/modals/AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals/CreateGroupFromSelectionModal";
-import { invalidateAllGroupsCache } from "../../../Groups/utils/groupList";
 import { ApplicationVmsDrawer } from "./ApplicationVmsDrawer";
 import {
   type ApplicationCertificationStatus,
@@ -134,11 +133,8 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   }, [dispatch]);
 
   const handleGroupsChanged = useCallback(() => {
-    if (agentApi) {
-      invalidateAllGroupsCache(agentApi);
-    }
     refreshDrawerData();
-  }, [agentApi, refreshDrawerData]);
+  }, [refreshDrawerData]);
 
   const handleAddLabels = useCallback((vmIds: string[]) => {
     setActionError(null);

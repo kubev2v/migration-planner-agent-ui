@@ -2,7 +2,7 @@ import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
 import type { DefaultApiInterface } from "../../../api/agentApi";
 import { fetchAllMatchingVmIds } from "../../VirtualMachinesOverview/components/VirtualMachinesTab/vmSelection";
 import { parseIdsFromFilter } from "./groupFilters";
-import { fetchAllGroups } from "./groupList";
+import { fetchAllGroupsPages } from "./groupList";
 
 export type GroupListItem = {
   id: string;
@@ -37,7 +37,7 @@ export async function buildVmGroupMembership(
   const vmIdToGroups = Object.create(null) as Record<string, GroupListItem[]>;
   const groupsByName = Object.create(null) as Record<string, GroupListItem>;
 
-  const allGroups = await fetchAllGroups(agentApi);
+  const allGroups = await fetchAllGroupsPages(agentApi);
 
   for (const group of allGroups) {
     const groupItem = { id: group.id, name: group.name };
