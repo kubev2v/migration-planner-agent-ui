@@ -25,13 +25,14 @@ import {
 import { SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { AppEmptyState } from "../../../../common/components";
+import { useGetApplicationDrawerVmsQuery } from "../../../../store/api/vmsEndpoints";
+import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { VirtualMachineWithGroupItems } from "../../../Groups/utils/vmGroupMembership";
 import { getVmTags } from "../../virtualMachineParsing";
-import { fetchApplicationDrawerVms } from "./applicationDrawerVms";
 import { filterVmsBySearch } from "./applicationFilters";
 import type { ApplicationOverview } from "./applicationsApi";
 
@@ -68,65 +69,42 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
   const [vmSearch, setVmSearch] = useState("");
   const [selectedVmIds, setSelectedVmIds] = useState<Set<string>>(new Set());
   const [isActionsOpen, setIsActionsOpen] = useState(false);
-  const [drawerVms, setDrawerVms] = useState<VirtualMachineWithGroupItems[]>(
-    [],
+
+  // Without an agent, group membership can't be resolved — fall back to the
+  // bare VM records the application already carries.
+  const noAgentVms = useMemo<VirtualMachineWithGroupItems[]>(
+    () =>
+      application.vms.map((vm) => ({
+        id: vm.id,
+        name: vm.name,
+        vCenterID: "",
+        vCenterState: "",
+        cluster: "",
+        datacenter: "",
+        diskSize: 0,
+        memory: 0,
+        issueCount: 0,
+        migratable: false,
+        groupItems: [],
+      })),
+    [application.vms],
   );
-  const [loadingVms, setLoadingVms] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!agentApi) {
-      setDrawerVms(
-        application.vms.map((vm) => ({
-          id: vm.id,
-          name: vm.name,
-          vCenterID: "",
-          vCenterState: "",
-          cluster: "",
-          datacenter: "",
-          diskSize: 0,
-          memory: 0,
-          issueCount: 0,
-          migratable: false,
-          groupItems: [],
-        })),
-      );
-      return;
-    }
+  // The drawer's VMs are a cache entry tagged Vms:LIST / VmLabels / Group:LIST,
+  // so a label or group change refetches it automatically — no remount hack.
+  const {
+    data: fetchedVms,
+    isLoading: loadingVms,
+    error: queryError,
+  } = useGetApplicationDrawerVmsQuery(
+    { applicationName: application.name },
+    { skip: !agentApi },
+  );
 
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        setLoadingVms(true);
-        setLoadError(null);
-        const vms = await fetchApplicationDrawerVms(agentApi, application.name);
-        if (!cancelled) {
-          setDrawerVms(vms);
-        }
-      } catch (err) {
-        console.error("Error loading application VMs:", err);
-        if (!cancelled) {
-          setDrawerVms([]);
-          setLoadError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load virtual machines.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingVms(false);
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agentApi, application.name, application.vms]);
+  const drawerVms = agentApi ? (fetchedVms ?? []) : noAgentVms;
+  const loadError = queryError
+    ? getSdkErrorMessage(queryError, "Failed to load virtual machines.")
+    : null;
 
   const filteredVms = useMemo(
     () => filterVmsBySearch(drawerVms, vmSearch),

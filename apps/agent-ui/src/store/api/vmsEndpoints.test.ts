@@ -28,6 +28,7 @@ function makeFakeApi(counts: { total: number }): AgentApiClient {
     batchUpdateLatestVMExclusion: vi.fn(async () => undefined),
     updateLatestLabelVMs: vi.fn(async () => undefined),
     getLatestVMLabels: vi.fn(async () => ({ labels: ["prod"] })),
+    listLatestGroups: vi.fn(async () => ({ groups: [], pageCount: 1 })),
   } as unknown as AgentApiClient;
 }
 
@@ -143,6 +144,48 @@ describe("vmsEndpoints tag invalidation", () => {
 
     expect(result).toBeNull();
     expect(api.getClusterUtilization).not.toHaveBeenCalled();
+  });
+
+  test("getApplicationDrawerVms refetches when a label change invalidates its tags", async () => {
+    const counts = { total: 2 };
+    stubInventoryFetch(counts);
+    const api = makeFakeApi(counts);
+    const store = createStore(api);
+
+    // Keep an active subscription so the query refetches on invalidation.
+    store.dispatch(
+      vmsEndpoints.endpoints.getApplicationDrawerVms.initiate({
+        applicationName: "web",
+      }),
+    );
+
+    const drawerVms = () =>
+      vmsEndpoints.endpoints.getApplicationDrawerVms.select({
+        applicationName: "web",
+      })(store.getState()).data;
+
+    await vi.waitFor(() => {
+      expect(drawerVms()).toEqual([
+        expect.objectContaining({ id: "vm1", groupItems: [] }),
+        expect.objectContaining({ id: "vm2", groupItems: [] }),
+      ]);
+    });
+    expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(1);
+
+    // A label change invalidates VmLabels + Vms:LIST, both provided by the
+    // drawer query, so it refetches without a remount.
+    await store
+      .dispatch(
+        vmsEndpoints.endpoints.updateVMLabels.initiate({
+          label: "prod",
+          add: ["vm1"],
+        }),
+      )
+      .unwrap();
+
+    await vi.waitFor(() => {
+      expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(2);
+    });
   });
 
   test("updateVMLabels invalidates VmLabels so getVMLabels refetches", async () => {

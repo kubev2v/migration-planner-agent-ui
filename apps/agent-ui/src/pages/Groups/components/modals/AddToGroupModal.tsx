@@ -30,7 +30,7 @@ interface AddToGroupModalProps {
   isOpen: boolean;
   vmIds: string[];
   onClose: () => void;
-  onUpdated: () => void;
+  onUpdated?: () => void;
 }
 
 export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
@@ -101,7 +101,7 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
         groupId: selectedGroup.id,
         filter: addVmsToGroupFilter(selectedGroup.filter, vmIds),
       }).unwrap();
-      onUpdated();
+      onUpdated?.();
       onClose();
     } catch (err) {
       setError(getSdkErrorMessage(err, "Failed to add VMs to group."));

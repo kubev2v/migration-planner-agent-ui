@@ -32,12 +32,10 @@ import {
   attributeValueFilterToolbarStyle,
 } from "../../../../common/components/attribute-value-filter";
 import { TechnologyPreviewBadge } from "../../../../common/components/TechnologyPreviewBadge";
-import { agentApiSlice } from "../../../../store/api/agentApiSlice";
 import {
   useGetVMLabelsQuery,
   useUpdateVMLabelsMutation,
 } from "../../../../store/api/vmsEndpoints";
-import { useAppDispatch } from "../../../../store/hooks";
 import { AddLabelsModal } from "../../../Groups/components/modals/AddLabelsModal";
 import { AddToGroupModal } from "../../../Groups/components/modals/AddToGroupModal";
 import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals/CreateGroupFromSelectionModal";
@@ -86,7 +84,6 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   onNavigateToVm,
   onViewInVmList,
 }) => {
-  const dispatch = useAppDispatch();
   const [nameSearch, setNameSearch] = useState("");
   const [selectedVmIds, setSelectedVmIds] = useState<string[]>([]);
   const [selectedCertificationStatuses, setSelectedCertificationStatuses] =
@@ -95,7 +92,6 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   const [pageSize, setPageSize] = useState(20);
   const [drawerApplication, setDrawerApplication] =
     useState<ApplicationOverview | null>(null);
-  const [drawerRefreshKey, setDrawerRefreshKey] = useState(0);
   const [isAddLabelsModalOpen, setIsAddLabelsModalOpen] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
@@ -122,19 +118,6 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
     () => paginateItems(filteredApplications, page, pageSize),
     [filteredApplications, page, pageSize],
   );
-
-  // Applications, filter options and the label set are cache entries kept fresh
-  // by tag invalidation; refetch them by invalidating the tags they provide.
-  const refreshDrawerData = useCallback(() => {
-    setDrawerRefreshKey((key) => key + 1);
-    dispatch(
-      agentApiSlice.util.invalidateTags([{ type: "Group", id: "LIST" }]),
-    );
-  }, [dispatch]);
-
-  const handleGroupsChanged = useCallback(() => {
-    refreshDrawerData();
-  }, [refreshDrawerData]);
 
   const handleAddLabels = useCallback((vmIds: string[]) => {
     setActionError(null);
@@ -169,15 +152,13 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
         (result) => result.status === "rejected",
       ).length;
 
-      refreshDrawerData();
-
       if (failedCount > 0) {
         const message = `Failed to apply ${failedCount} of ${labelsToAdd.length} label(s).`;
         setActionError(message);
         throw new Error(message);
       }
     },
-    [actionVmIds, agentApi, refreshDrawerData, updateVMLabels],
+    [actionVmIds, agentApi, updateVMLabels],
   );
 
   const resetPage = useCallback(() => setPage(1), []);
@@ -274,7 +255,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
 
   const panelContent = drawerApplication ? (
     <ApplicationVmsDrawer
-      key={`${drawerApplication.name}:${drawerRefreshKey}`}
+      key={drawerApplication.name}
       application={drawerApplication}
       agentApi={agentApi}
       onClose={closeDrawer}
@@ -455,13 +436,11 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
             isOpen={isCreateGroupModalOpen}
             vmIds={actionVmIds}
             onClose={() => setIsCreateGroupModalOpen(false)}
-            onCreated={handleGroupsChanged}
           />
           <AddToGroupModal
             isOpen={isAddToGroupModalOpen}
             vmIds={actionVmIds}
             onClose={() => setIsAddToGroupModalOpen(false)}
-            onUpdated={handleGroupsChanged}
           />
         </>
       )}

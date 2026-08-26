@@ -19,7 +19,7 @@ interface CreateGroupFromSelectionModalProps {
   isOpen: boolean;
   vmIds: string[];
   onClose: () => void;
-  onCreated: () => void;
+  onCreated?: () => void;
 }
 
 export const CreateGroupFromSelectionModal: React.FC<
@@ -55,7 +55,7 @@ export const CreateGroupFromSelectionModal: React.FC<
           filter: vmIdsToFilterExpression(vmIds),
         },
       }).unwrap();
-      onCreated();
+      onCreated?.();
       onClose();
     } catch (err) {
       setError(await parseApiError(err, "Failed to create group."));

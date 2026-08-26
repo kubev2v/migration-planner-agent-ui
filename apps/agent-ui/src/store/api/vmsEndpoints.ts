@@ -11,6 +11,8 @@ import type {
 } from "@openshift-migration-advisor/agent-sdk";
 import { getAgentApiBasePath } from "../../api/agentApiConfig";
 import { getLatestCollectionId } from "../../api/collectionApi";
+import type { VirtualMachineWithGroupItems } from "../../pages/Groups/utils/vmGroupMembership";
+import { fetchApplicationDrawerVms } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationDrawerVms";
 import type { ApplicationOverview } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationsApi";
 import { scopeApplicationsToVms } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationsApi";
 import { fetchVmTableFilterOptions } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmFilterOptions";
@@ -35,6 +37,10 @@ interface GetVMsArg {
 interface GetApplicationsArg {
   /** Restrict applications to VMs matching this filter (e.g. group membership). */
   scopeExpression?: string;
+}
+
+interface GetApplicationDrawerVmsArg {
+  applicationName: string;
 }
 
 /** A single VM's detail record with its (optional) rightsizing utilization. */
@@ -184,6 +190,25 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       providesTags: [{ type: "Group", id: "LIST" }],
     }),
 
+    // VMs running a given application, enriched with each VM's group membership,
+    // for the applications drawer. Depends on the VM list, the label set and
+    // group membership, so it provides all three LIST tags — a label or group
+    // change refetches it automatically, no remount required.
+    getApplicationDrawerVms: build.query<
+      VirtualMachineWithGroupItems[],
+      GetApplicationDrawerVmsArg
+    >({
+      query:
+        ({ applicationName }) =>
+        (sdk) =>
+          fetchApplicationDrawerVms(sdk, applicationName),
+      providesTags: [
+        { type: "Vms", id: "LIST" },
+        "VmLabels",
+        { type: "Group", id: "LIST" },
+      ],
+    }),
+
     // Bulk exclude/include from reports. Invalidates the VM list and inventory
     // (plus the group's tags when scoped) so table and counts refetch together.
     setVMExclusion: build.mutation<void, SetVMExclusionArg>({
@@ -301,6 +326,7 @@ export const {
   useGetVMDetailQuery,
   useGetClusterUtilizationQuery,
   useGetApplicationsQuery,
+  useGetApplicationDrawerVmsQuery,
   useSetVMExclusionMutation,
   useUpdateVirtualMachineMutation,
   useUpdateVMLabelsMutation,
