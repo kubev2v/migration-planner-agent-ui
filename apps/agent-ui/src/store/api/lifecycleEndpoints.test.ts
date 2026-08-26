@@ -92,7 +92,8 @@ describe("lifecycleEndpoints tag invalidation", () => {
 
     // A completed collection is now owned by the VMs-side invalidation listener
     // (see `store/listeners/vmsInvalidationListeners.ts`), which invalidates only
-    // Vms / VmLabels / Inventory / Collections — deliberately NOT AgentStatus.
+    // Vms / VmLabels / Inventory / Applications / Collections — deliberately NOT
+    // AgentStatus.
     store.dispatch(collectionSucceeded());
 
     await vi.waitFor(() => {

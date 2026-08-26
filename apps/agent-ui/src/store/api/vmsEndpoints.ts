@@ -168,7 +168,9 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
 
     // Applications detected in the latest collection, optionally scoped to a
     // VM filter (group membership). Scoping resolves the matching VM ids first.
-    // Group membership changes re-scope the list, so it shares `Group:LIST`.
+    // `Applications` is invalidated when a new report completes so the list
+    // reflects the new collection; `Group:LIST` re-scopes it on membership
+    // changes.
     getApplications: build.query<ApplicationOverview[], GetApplicationsArg>({
       query:
         ({ scopeExpression }) =>
@@ -187,7 +189,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
           });
           return scopeApplicationsToVms(applications, new Set(vmIds));
         },
-      providesTags: [{ type: "Group", id: "LIST" }],
+      providesTags: ["Applications", { type: "Group", id: "LIST" }],
     }),
 
     // VMs running a given application, enriched with each VM's group membership,

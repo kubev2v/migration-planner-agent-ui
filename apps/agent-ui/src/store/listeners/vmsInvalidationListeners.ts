@@ -4,9 +4,9 @@ import { collectionSucceeded } from "../slices/collectionLifecycleSlice";
 
 /**
  * Caches the VMs domain refetches when a report run completes. A new collection
- * changes the VM list, labels and the fleet inventory; `Collections` is included
- * so the Report comparison page (the other page that can start a run) shows the
- * new entry.
+ * changes the VM list, labels, the fleet inventory and the detected applications;
+ * `Collections` is included so the Report comparison page (the other page that
+ * can start a run) shows the new entry.
  *
  * This replaces the former central `REPORT_COMPLETED_TAGS` list in
  * `ReportsContext`, which coupled the collection lifecycle to every domain's
@@ -19,6 +19,7 @@ const COLLECTION_COMPLETED_TAGS = [
   "Vms",
   "VmLabels",
   "Inventory",
+  "Applications",
   "Collections",
 ] as const;
 
