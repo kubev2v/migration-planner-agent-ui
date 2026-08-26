@@ -35,7 +35,8 @@
     "clean": "rm -rf node_modules dist .tmp",
     "check": "yarn run -T biome check .",
     "check:fix": "yarn run -T biome check --write .",
-    "test": "echo 'No tests configured for this package'",
+    "test": "yarn run -T vitest run",
+    "test:watch": "yarn run -T vitest",
     "typecheck": "yarn run -T tsc -b --noEmit"
   },
   "files": [

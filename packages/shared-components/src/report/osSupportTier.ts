@@ -1,12 +1,14 @@
 import type { LabelProps } from "@patternfly/react-core";
-import { t_color_blue_20 } from "@patternfly/react-tokens/dist/esm/t_color_blue_20";
-import { t_color_blue_60 } from "@patternfly/react-tokens/dist/esm/t_color_blue_60";
-import { t_color_green_20 } from "@patternfly/react-tokens/dist/esm/t_color_green_20";
-import { t_color_green_60 } from "@patternfly/react-tokens/dist/esm/t_color_green_60";
-import { t_color_orange_20 } from "@patternfly/react-tokens/dist/esm/t_color_orange_20";
-import { t_color_orange_60 } from "@patternfly/react-tokens/dist/esm/t_color_orange_60";
-import { t_color_yellow_20 } from "@patternfly/react-tokens/dist/esm/t_color_yellow_20";
-import { t_color_yellow_60 } from "@patternfly/react-tokens/dist/esm/t_color_yellow_60";
+import {
+  t_color_blue_20,
+  t_color_blue_60,
+  t_color_green_20,
+  t_color_green_60,
+  t_color_orange_20,
+  t_color_orange_60,
+  t_color_yellow_20,
+  t_color_yellow_60,
+} from "@patternfly/react-tokens";
 
 /**
  * Guest OS support tiers (matches agent-sdk / planner-sdk `OsInfoSupportTierEnum` values).

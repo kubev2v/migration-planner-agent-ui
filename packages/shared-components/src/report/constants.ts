@@ -1,5 +1,7 @@
-import { chart_color_blue_300 } from "@patternfly/react-tokens/dist/esm/chart_color_blue_300";
-import { chart_color_yellow_300 } from "@patternfly/react-tokens/dist/esm/chart_color_yellow_300";
+import {
+  chart_color_blue_300,
+  chart_color_yellow_300,
+} from "@patternfly/react-tokens";
 
 /**
  * PatternFly chart color semantics (https://www.patternfly.org/charts/colors-for-charts/design-guidelines/#best-practices):
