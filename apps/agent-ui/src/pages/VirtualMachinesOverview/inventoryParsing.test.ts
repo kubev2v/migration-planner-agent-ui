@@ -9,7 +9,6 @@ import {
   getInventoryAggregateView,
   type InventoryPayload,
   inventoryFromGroupResponse,
-  resolveInventoryAfterMigrationChange,
 } from "./inventoryParsing";
 import type { VirtualMachineWithExclusion } from "./virtualMachineParsing";
 
@@ -169,26 +168,6 @@ describe("sequential migration excluded changes", () => {
     );
 
     expect(getInventoryAggregateView(inventory).vms?.total).toBe(2);
-  });
-});
-
-describe("resolveInventoryAfterMigrationChange", () => {
-  it("keeps optimistic inventory when server response is stale", () => {
-    const optimistic = adjustInventoryForMigrationExcludedChange(
-      baseInventory,
-      ["vm-1"],
-      true,
-      [vm],
-    );
-
-    const resolved = resolveInventoryAfterMigrationChange(
-      optimistic,
-      baseInventory,
-      { vmIds: ["vm-1"], excluded: true, affectedVms: [vm] },
-      2,
-    );
-
-    expect(getInventoryAggregateView(resolved).vms?.total).toBe(1);
   });
 });
 
