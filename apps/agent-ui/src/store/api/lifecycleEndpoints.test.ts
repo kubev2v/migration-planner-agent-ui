@@ -1,29 +1,16 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgentApiClient } from "../../api/agentApi";
 import { createStore } from "../index";
-import { agentApiSlice } from "./agentApiSlice";
+import { collectionSucceeded } from "../slices/collectionLifecycleSlice";
 import { comparisonEndpoints } from "./comparisonEndpoints";
 import { lifecycleEndpoints } from "./lifecycleEndpoints";
 
 /**
  * The lifecycle mutations replace the former `AgentStatusContext` refetch and
- * the `ReportsContext` pub/sub bus: instead of callbacks re-syncing state, each
- * mutation invalidates a shared tag and every dependent query refetches from the
- * single cache. These tests lock that wiring.
+ * the former `ReportsContext` pub/sub bus: instead of callbacks re-syncing state,
+ * each mutation invalidates a shared tag and every dependent query refetches from
+ * the single cache. These tests lock that wiring.
  */
-
-// Mirrors `REPORT_COMPLETED_TAGS` in `common/report/ReportsContext.tsx`. A
-// completed collection run dispatches exactly this union.
-const REPORT_COMPLETED_TAGS = [
-  "AgentStatus",
-  "Collections",
-  "Inventory",
-  "Vms",
-  "VmLabels",
-  "Group",
-  "GroupVms",
-  "GroupInventory",
-] as const;
 
 function makeFakeApi(): AgentApiClient {
   return {
@@ -40,6 +27,8 @@ function makeFakeApi(): AgentApiClient {
     getInspectorStatus: vi.fn(async () => ({ state: "ready" })),
     startInspection: vi.fn(async () => ({ state: "running" })),
     stopInspection: vi.fn(async () => ({ state: "ready" })),
+    // Not in progress, so the `appInitialized` resume listener is a no-op.
+    getCollectorStatus: vi.fn(async () => ({ status: "ready" })),
     listCollections: vi.fn(async () => ({
       collections: [{ id: "c1", createdAt: new Date("2026-01-01T00:00:00Z") }],
     })),
@@ -87,7 +76,7 @@ describe("lifecycleEndpoints tag invalidation", () => {
     });
   });
 
-  test("report-completion tags refetch agent status and collections together", async () => {
+  test("collectionSucceeded refetches collections but leaves agent status alone", async () => {
     const api = makeFakeApi();
     const store = createStore(api);
 
@@ -101,14 +90,15 @@ describe("lifecycleEndpoints tag invalidation", () => {
     expect(api.getAgentStatus).toHaveBeenCalledTimes(1);
     expect(api.listCollections).toHaveBeenCalledTimes(1);
 
-    // A completed report dispatches the union of tags (see ReportsContext).
-    store.dispatch(
-      agentApiSlice.util.invalidateTags([...REPORT_COMPLETED_TAGS]),
-    );
+    // A completed collection is now owned by the VMs-side invalidation listener
+    // (see `store/listeners/vmsInvalidationListeners.ts`), which invalidates only
+    // Vms / VmLabels / Inventory / Collections — deliberately NOT AgentStatus.
+    store.dispatch(collectionSucceeded());
 
     await vi.waitFor(() => {
-      expect(api.getAgentStatus).toHaveBeenCalledTimes(2);
       expect(api.listCollections).toHaveBeenCalledTimes(2);
     });
+    // AgentStatus is not part of the completion tag set anymore.
+    expect(api.getAgentStatus).toHaveBeenCalledTimes(1);
   });
 });

@@ -3,10 +3,15 @@ import { SyncAltIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { formatReportRunDate } from "../../pages/ReportComparison/comparisonFormatting";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
-import { useReportsContext } from "./ReportsContext";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import {
+  openModal,
+  selectIsCollecting,
+} from "../../store/slices/collectionLifecycleSlice";
 
 export const RunNewReportButton: React.FC = () => {
-  const { isCollecting, openModal } = useReportsContext();
+  const dispatch = useAppDispatch();
+  const isCollecting = useAppSelector(selectIsCollecting);
   const { data: collections } = useListCollectionsQuery();
 
   const latestCollection = collections?.[0];
@@ -23,7 +28,7 @@ export const RunNewReportButton: React.FC = () => {
       <FlexItem>
         <Button
           variant="secondary"
-          onClick={openModal}
+          onClick={() => dispatch(openModal())}
           icon={<SyncAltIcon />}
           isDisabled={isCollecting}
         >

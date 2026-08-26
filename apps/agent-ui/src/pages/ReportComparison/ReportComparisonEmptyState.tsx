@@ -8,7 +8,11 @@ import {
 } from "@patternfly/react-core";
 import { HistoryIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useReportsContext } from "../../common/report/ReportsContext";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import {
+  openModal,
+  selectIsCollecting,
+} from "../../store/slices/collectionLifecycleSlice";
 
 interface ReportComparisonEmptyStateProps {
   reportCount: number;
@@ -17,7 +21,8 @@ interface ReportComparisonEmptyStateProps {
 export const ReportComparisonEmptyState: React.FC<
   ReportComparisonEmptyStateProps
 > = ({ reportCount }) => {
-  const { openModal, isCollecting } = useReportsContext();
+  const dispatch = useAppDispatch();
+  const isCollecting = useAppSelector(selectIsCollecting);
 
   return (
     <EmptyState
@@ -44,7 +49,7 @@ export const ReportComparisonEmptyState: React.FC<
         <EmptyStateActions>
           <Button
             variant="primary"
-            onClick={openModal}
+            onClick={() => dispatch(openModal())}
             isDisabled={isCollecting}
           >
             Run new report

@@ -33,8 +33,20 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import RedHatOpenShiftLogo from "../assets/RedHatOpenShiftLogo.png";
 import { getCollectionProgressInfo } from "../common/collectionProgress";
 import { CollectionProgress } from "../common/components";
-import { useReportsContext } from "../common/report/ReportsContext";
+import { RunNewReportModal } from "../common/report/RunNewReportModal";
 import VCenterCredentialsDropdownMenu from "../credentials/VCenterCredentialsDropdownMenu";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  closeModal,
+  dismissCollectError,
+  dismissReadyAlert,
+  selectCollectError,
+  selectCollectorStatus,
+  selectIsCollecting,
+  selectIsModalOpen,
+  selectShowReadyAlert,
+} from "../store/slices/collectionLifecycleSlice";
+import { startCollection } from "../store/thunks/startCollection";
 
 interface ReportNavItem {
   path: string;
@@ -95,14 +107,11 @@ const navItemStyle = css`
 `;
 
 const RunNewReportAlerts: React.FC = () => {
-  const {
-    isCollecting,
-    collectorStatus,
-    showReadyAlert,
-    collectError,
-    dismissReadyAlert,
-    dismissCollectError,
-  } = useReportsContext();
+  const dispatch = useAppDispatch();
+  const isCollecting = useAppSelector(selectIsCollecting);
+  const collectorStatus = useAppSelector(selectCollectorStatus);
+  const showReadyAlert = useAppSelector(selectShowReadyAlert);
+  const collectError = useAppSelector(selectCollectError);
 
   const collectionProgress = getCollectionProgressInfo(
     collectorStatus,
@@ -144,7 +153,9 @@ const RunNewReportAlerts: React.FC = () => {
               isInline
               title="New report ready"
               actionClose={
-                <AlertActionCloseButton onClose={dismissReadyAlert} />
+                <AlertActionCloseButton
+                  onClose={() => dispatch(dismissReadyAlert())}
+                />
               }
             >
               Your migration report now reflects the latest infrastructure
@@ -160,7 +171,9 @@ const RunNewReportAlerts: React.FC = () => {
               isInline
               title="New report failed"
               actionClose={
-                <AlertActionCloseButton onClose={dismissCollectError} />
+                <AlertActionCloseButton
+                  onClose={() => dispatch(dismissCollectError())}
+                />
               }
             >
               {collectError}
@@ -169,6 +182,24 @@ const RunNewReportAlerts: React.FC = () => {
         )}
       </Stack>
     </PageSection>
+  );
+};
+
+const RunNewReportModalContainer: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const isOpen = useAppSelector(selectIsModalOpen);
+
+  return (
+    <RunNewReportModal
+      isOpen={isOpen}
+      onConfirm={async () => {
+        // `.unwrap()` rejects with { message } on start failure, which the modal
+        // surfaces inline (spinner + "Retry"). The listener middleware takes over
+        // once the run has started.
+        await dispatch(startCollection()).unwrap();
+      }}
+      onCancel={() => dispatch(closeModal())}
+    />
   );
 };
 
@@ -262,6 +293,7 @@ export const PageLayout: React.FC = () => {
     >
       <RunNewReportAlerts />
       <Outlet />
+      <RunNewReportModalContainer />
     </Page>
   );
 };

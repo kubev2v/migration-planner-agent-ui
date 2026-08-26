@@ -16,14 +16,16 @@ interface GetInspectorStatusArg {
 /**
  * Collection / inspection lifecycle + agent-status endpoints.
  *
- * These replace the hand-rolled `AgentStatusContext` and the `ReportsContext`
- * pub/sub bus: agent status, collector status and inspector status are now cache
- * entries, and the lifecycle mutations invalidate the shared tags so every
- * dependent query refetches together instead of being re-synced by callbacks.
+ * These replace the hand-rolled `AgentStatusContext` and the former
+ * `ReportsContext` pub/sub bus: agent status, collector status and inspector
+ * status are now cache entries, and the lifecycle mutations invalidate the shared
+ * tags so every dependent query refetches together instead of being re-synced by
+ * callbacks.
  *
  * `listCollections` already lives in `comparisonEndpoints` (the `Collections`
  * tag), so it is not redefined here — a completed report invalidates that tag
- * (see `ReportsContext.handleCompleted`) rather than owning a second copy.
+ * via the collection-completion listener (see
+ * `store/listeners/vmsInvalidationListeners.ts`) rather than owning a second copy.
  */
 export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
   endpoints: (build) => ({

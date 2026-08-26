@@ -6,7 +6,6 @@ import ReactDOM from "react-dom/client";
 import { Provider as ReduxProvider } from "react-redux";
 import { RouterProvider } from "react-router-dom";
 import { getAgentApiClient } from "../api/agentApiClient.ts";
-import { ReportsProvider } from "../common/report/ReportsContext.tsx";
 import { createStore } from "../store/index.ts";
 import { router } from "./Router.tsx";
 
@@ -24,11 +23,9 @@ function main(): void {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <ReduxProvider store={store}>
-        <ReportsProvider>
-          <React.Suspense fallback={<Spinner />}>
-            <RouterProvider router={router} />
-          </React.Suspense>
-        </ReportsProvider>
+        <React.Suspense fallback={<Spinner />}>
+          <RouterProvider router={router} />
+        </React.Suspense>
       </ReduxProvider>
     </React.StrictMode>,
   );

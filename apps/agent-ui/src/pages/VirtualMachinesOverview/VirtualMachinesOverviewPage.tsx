@@ -182,8 +182,9 @@ export const ReportContainer: React.FC = () => {
     { skip: selectedClusterId === "all" },
   );
 
-  // A completed report invalidates the inventory/VM caches through the shared
-  // report-completion tags (see `ReportsContext`), so the queries above refetch
+  // A completed report invalidates the inventory/VM caches through the
+  // collection-completion listener (see
+  // `store/listeners/vmsInvalidationListeners.ts`), so the queries above refetch
   // on their own. The page only needs to reset its client-side pagination back
   // to the first page when a newer collection replaces the current one.
   const [pagedCollectionId, setPagedCollectionId] = useState<
