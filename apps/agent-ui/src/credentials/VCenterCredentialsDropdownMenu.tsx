@@ -142,8 +142,11 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
     deleteCredentials,
     { isLoading: isRemoving, error: deleteError, reset: resetDelete },
   ] = useDeleteCredentialsMutation();
-  const { isEditModalOpen, openEditModal, closeEditModal } =
-    useCredentialsModal();
+  const {
+    isCredentialsModalOpen: isEditModalOpen,
+    openCredentialsModal: openEditModal,
+    closeCredentialModal: closeEditModal,
+  } = useCredentialsModal();
 
   const updateErrorMessage = updateError
     ? getSdkErrorMessage(updateError, "Failed to update credentials.")

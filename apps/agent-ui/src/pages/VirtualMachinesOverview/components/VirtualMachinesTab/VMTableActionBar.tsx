@@ -16,6 +16,7 @@ import {
 } from "@patternfly/react-core";
 import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useCredentialsModal } from "../../../../credentials/CredentialsModalController";
 import { useCapability } from "../../../../credentials/useCapability";
 import {
   getDeepInspectionDisabledTooltip,
@@ -69,12 +70,10 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   inspectionContextVms,
   selectionContextLoadFailed = false,
 }) => {
-  const {
-    shouldShowTooltip,
-    shouldRequestCredentials,
-    errorTooltipContent,
-    openEditModal,
-  } = useCapability("inspector");
+  const { shouldShowTooltip, shouldRequestCredentials, errorTooltipContent } =
+    useCapability("inspector");
+  const { openCredentialsModal } = useCredentialsModal();
+
   const {
     page,
     pageSize,
@@ -203,7 +202,7 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                   isAriaDisabled={!deepInspectionEnablement.enabled}
                   onClick={() => {
                     if (shouldRequestCredentials) {
-                      openEditModal(() => onRunDeepInspection?.());
+                      openCredentialsModal(() => onRunDeepInspection?.());
                     } else {
                       onRunDeepInspection?.();
                     }

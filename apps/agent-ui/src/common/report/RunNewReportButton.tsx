@@ -1,6 +1,8 @@
 import { Button, Content, Flex, FlexItem } from "@patternfly/react-core";
 import { SyncAltIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useCredentialsModal } from "../../credentials/CredentialsModalController";
+import { useCapability } from "../../credentials/useCapability";
 import { formatReportRunDate } from "../../pages/ReportComparison/comparisonFormatting";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -13,6 +15,8 @@ export const RunNewReportButton: React.FC = () => {
   const dispatch = useAppDispatch();
   const isCollecting = useAppSelector(selectIsCollecting);
   const { data: collections } = useListCollectionsQuery();
+  const { shouldRequestCredentials } = useCapability("collector");
+  const { openCredentialsModal } = useCredentialsModal();
 
   const latestCollection = collections?.[0];
   if (!latestCollection) return null;
@@ -28,7 +32,13 @@ export const RunNewReportButton: React.FC = () => {
       <FlexItem>
         <Button
           variant="secondary"
-          onClick={() => dispatch(openModal())}
+          onClick={() => {
+            if (shouldRequestCredentials) {
+              openCredentialsModal(() => dispatch(openModal()));
+            } else {
+              dispatch(openModal());
+            }
+          }}
           icon={<SyncAltIcon />}
           isDisabled={isCollecting}
         >

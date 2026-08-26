@@ -20,11 +20,11 @@ import {
  * inside the React tree.
  */
 export interface CredentialsModalControls {
-  isEditModalOpen: boolean;
-  /** Open the edit modal, optionally running `onSuccess` after a connect. */
-  openEditModal: (onSuccess?: () => void) => void;
+  isCredentialsModalOpen: boolean;
+  /** Open the credentials modal, optionally running `onSuccess` after a connect. */
+  openCredentialsModal: (onSuccess?: () => void) => void;
   /** Close the modal; when `triggerSuccessCallback`, run the pending action. */
-  closeEditModal: (triggerSuccessCallback?: boolean) => void;
+  closeCredentialModal: (triggerSuccessCallback?: boolean) => void;
 }
 
 const CredentialsModalContext = createContext<CredentialsModalControls | null>(
@@ -52,7 +52,11 @@ export const CredentialsModalProvider: React.FC<PropsWithChildren> = ({
   }, []);
 
   const value = useMemo<CredentialsModalControls>(
-    () => ({ isEditModalOpen, openEditModal, closeEditModal }),
+    () => ({
+      isCredentialsModalOpen: isEditModalOpen,
+      openCredentialsModal: openEditModal,
+      closeCredentialModal: closeEditModal,
+    }),
     [isEditModalOpen, openEditModal, closeEditModal],
   );
 

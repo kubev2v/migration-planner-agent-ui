@@ -8,6 +8,7 @@ import {
 } from "@patternfly/react-core";
 import { SearchIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useCredentialsModal } from "../../../credentials/CredentialsModalController";
 import { useCapability } from "../../../credentials/useCapability";
 
 export interface StorageOffloadEmptyStateProps {
@@ -17,12 +18,9 @@ export interface StorageOffloadEmptyStateProps {
 export const StorageOffloadEmptyState: React.FC<
   StorageOffloadEmptyStateProps
 > = ({ onGetStarted }) => {
-  const {
-    shouldShowTooltip,
-    shouldRequestCredentials,
-    errorTooltipContent,
-    openEditModal,
-  } = useCapability("forecaster");
+  const { shouldShowTooltip, shouldRequestCredentials, errorTooltipContent } =
+    useCapability("forecaster");
+  const { openCredentialsModal } = useCredentialsModal();
 
   return (
     <Bullseye style={{ minHeight: "400px" }}>
@@ -47,7 +45,7 @@ export const StorageOffloadEmptyState: React.FC<
               variant="primary"
               onClick={() => {
                 if (shouldRequestCredentials) {
-                  openEditModal(() => onGetStarted());
+                  openCredentialsModal(() => onGetStarted());
                 } else {
                   onGetStarted();
                 }

@@ -17,13 +17,13 @@ describe("CredentialsModalController", () => {
   it("opens the modal and closed by default", () => {
     const { result } = renderModalHook();
 
-    expect(result.current.isEditModalOpen).toBe(false);
+    expect(result.current.isCredentialsModalOpen).toBe(false);
 
     act(() => {
-      result.current.openEditModal();
+      result.current.openCredentialsModal();
     });
 
-    expect(result.current.isEditModalOpen).toBe(true);
+    expect(result.current.isCredentialsModalOpen).toBe(true);
   });
 
   it("runs the success callback exactly once when closed with the trigger", () => {
@@ -31,18 +31,18 @@ describe("CredentialsModalController", () => {
     const { result } = renderModalHook();
 
     act(() => {
-      result.current.openEditModal(onSuccess);
+      result.current.openCredentialsModal(onSuccess);
     });
     act(() => {
-      result.current.closeEditModal(true);
+      result.current.closeCredentialModal(true);
     });
 
-    expect(result.current.isEditModalOpen).toBe(false);
+    expect(result.current.isCredentialsModalOpen).toBe(false);
     expect(onSuccess).toHaveBeenCalledTimes(1);
 
     // Closing again must not re-run the (now cleared) callback.
     act(() => {
-      result.current.closeEditModal(true);
+      result.current.closeCredentialModal(true);
     });
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
@@ -52,13 +52,13 @@ describe("CredentialsModalController", () => {
     const { result } = renderModalHook();
 
     act(() => {
-      result.current.openEditModal(onSuccess);
+      result.current.openCredentialsModal(onSuccess);
     });
     act(() => {
-      result.current.closeEditModal(false);
+      result.current.closeCredentialModal(false);
     });
 
-    expect(result.current.isEditModalOpen).toBe(false);
+    expect(result.current.isCredentialsModalOpen).toBe(false);
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
@@ -67,14 +67,14 @@ describe("CredentialsModalController", () => {
     const { result } = renderModalHook();
 
     act(() => {
-      result.current.openEditModal(firstCallback);
+      result.current.openCredentialsModal(firstCallback);
     });
     // Reopen without a callback before the first ever fires.
     act(() => {
-      result.current.openEditModal();
+      result.current.openCredentialsModal();
     });
     act(() => {
-      result.current.closeEditModal(true);
+      result.current.closeCredentialModal(true);
     });
 
     expect(firstCallback).not.toHaveBeenCalled();

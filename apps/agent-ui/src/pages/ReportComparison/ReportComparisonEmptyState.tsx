@@ -8,6 +8,8 @@ import {
 } from "@patternfly/react-core";
 import { HistoryIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useCredentialsModal } from "../../credentials/CredentialsModalController";
+import { useCapability } from "../../credentials/useCapability";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   openModal,
@@ -23,6 +25,8 @@ export const ReportComparisonEmptyState: React.FC<
 > = ({ reportCount }) => {
   const dispatch = useAppDispatch();
   const isCollecting = useAppSelector(selectIsCollecting);
+  const { shouldRequestCredentials } = useCapability("collector");
+  const { openCredentialsModal } = useCredentialsModal();
 
   return (
     <EmptyState
@@ -49,7 +53,13 @@ export const ReportComparisonEmptyState: React.FC<
         <EmptyStateActions>
           <Button
             variant="primary"
-            onClick={() => dispatch(openModal())}
+            onClick={() => {
+              if (shouldRequestCredentials) {
+                openCredentialsModal(() => dispatch(openModal()));
+              } else {
+                dispatch(openModal());
+              }
+            }}
             isDisabled={isCollecting}
           >
             Run new report

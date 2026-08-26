@@ -8,7 +8,6 @@ import {
   useGetCredentialCapabilitiesQuery,
   useGetCredentialsQuery,
 } from "../store/api/credentialsEndpoints";
-import { useCredentialsModal } from "./CredentialsModalController";
 
 export function buildCapabilityUIState(
   capability: keyof CapabilityStatusCapabilities,
@@ -33,7 +32,6 @@ export interface CapabilityStatus {
   shouldShowTooltip: boolean;
   shouldRequestCredentials: boolean;
   errorTooltipContent?: React.ReactNode;
-  openEditModal: (onSuccess?: () => void) => void;
 }
 
 const tooltipListStyles = css`
@@ -46,7 +44,6 @@ export const useCapability = (
 ): CapabilityStatus => {
   const { data: credentialStatus = null } = useGetCredentialsQuery();
   const { data: capabilities = null } = useGetCredentialCapabilitiesQuery();
-  const { openEditModal } = useCredentialsModal();
 
   const uiState = buildCapabilityUIState(
     capability,
@@ -72,6 +69,5 @@ export const useCapability = (
   return {
     ...uiState,
     errorTooltipContent,
-    openEditModal,
   };
 };

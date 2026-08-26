@@ -34,6 +34,7 @@ import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { AppEmptyState } from "../../../common/components";
 import useLocalStorage from "../../../common/hooks/useLocalStorage";
+import { useCredentialsModal } from "../../../credentials/CredentialsModalController";
 import { useCapability } from "../../../credentials/useCapability";
 import type {
   ForecasterStatus,
@@ -109,12 +110,9 @@ export const StorageOffloadResultsView: React.FC<
   runLoading = false,
   onDismissCancelError,
 }) => {
-  const {
-    shouldShowTooltip,
-    shouldRequestCredentials,
-    errorTooltipContent,
-    openEditModal,
-  } = useCapability("forecaster");
+  const { shouldShowTooltip, shouldRequestCredentials, errorTooltipContent } =
+    useCapability("forecaster");
+  const { openCredentialsModal } = useCredentialsModal();
 
   const [filter, setFilter] = useState("");
   const [drawerPair, setDrawerPair] = useState<SelectedPair | null>(null);
@@ -358,7 +356,7 @@ export const StorageOffloadResultsView: React.FC<
                           variant="primary"
                           onClick={() => {
                             if (shouldRequestCredentials) {
-                              openEditModal(() => onAddPair());
+                              openCredentialsModal(() => onAddPair());
                             } else {
                               onAddPair();
                             }
