@@ -23,6 +23,7 @@ import {
   type MigrationExcludedInventoryChange,
 } from "../../pages/VirtualMachinesOverview/inventoryParsing";
 import { agentApiSlice } from "./agentApiSlice";
+import { groupChangeTags } from "./groupTags";
 
 interface GetVMsArg {
   byExpression?: string;
@@ -67,22 +68,6 @@ interface UpdateVMLabelsArg {
 interface DeleteLabelGloballyArg {
   label: string;
   groupId?: string;
-}
-
-/**
- * Tags refetched when a VM mutation happens inside a group detail page, so an
- * open GroupDetailPage (header count + VM table + assessment inventory) stays in
- * sync alongside the global VM list.
- */
-function groupInvalidationTags(groupId?: string) {
-  if (!groupId) {
-    return [] as const;
-  }
-  return [
-    { type: "Group", id: groupId },
-    { type: "GroupVms", id: groupId },
-    { type: "GroupInventory", id: groupId },
-  ] as const;
 }
 
 /**
@@ -249,7 +234,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       invalidatesTags: (_result, _error, { groupId }) => [
         { type: "Vms", id: "LIST" },
         "Inventory",
-        ...groupInvalidationTags(groupId),
+        ...groupChangeTags(groupId),
       ],
     }),
 
@@ -266,7 +251,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       invalidatesTags: (_result, _error, { groupId }) => [
         { type: "Vms", id: "LIST" },
         "Inventory",
-        ...groupInvalidationTags(groupId),
+        ...groupChangeTags(groupId),
       ],
     }),
 
@@ -286,7 +271,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       invalidatesTags: (_result, _error, { groupId }) => [
         "VmLabels",
         { type: "Vms", id: "LIST" },
-        ...groupInvalidationTags(groupId),
+        ...groupChangeTags(groupId),
       ],
     }),
 
@@ -302,7 +287,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       invalidatesTags: (_result, _error, { groupId }) => [
         "VmLabels",
         { type: "Vms", id: "LIST" },
-        ...groupInvalidationTags(groupId),
+        ...groupChangeTags(groupId),
       ],
     }),
   }),

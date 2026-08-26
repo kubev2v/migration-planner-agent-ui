@@ -8,6 +8,7 @@ import type {
 import { combineFilterExpressions } from "../../pages/Groups/utils/groupFilters";
 import { fetchAllGroupsPages } from "../../pages/Groups/utils/groupList";
 import { agentApiSlice } from "./agentApiSlice";
+import { groupChangeTags } from "./groupTags";
 
 interface GetGroupArg {
   groupId: string;
@@ -148,9 +149,7 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
           }),
       invalidatesTags: (_result, _error, { groupId }) => [
         { type: "Group", id: "LIST" },
-        { type: "Group", id: groupId },
-        { type: "GroupVms", id: groupId },
-        { type: "GroupInventory", id: groupId },
+        ...groupChangeTags(groupId),
       ],
     }),
 

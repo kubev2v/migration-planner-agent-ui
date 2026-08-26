@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { agentApiSlice } from "../../../../store/api/agentApiSlice";
+import { groupChangeTags } from "../../../../store/api/groupTags";
 import {
   useCancelVirtualMachineInspectionMutation,
   useStopInspectionMutation,
@@ -155,12 +156,7 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     dispatch(
       agentApiSlice.util.invalidateTags(
         groupContext
-          ? [
-              { type: "Group", id: "LIST" },
-              { type: "Group", id: groupContext.id },
-              { type: "GroupVms", id: groupContext.id },
-              { type: "GroupInventory", id: groupContext.id },
-            ]
+          ? [{ type: "Group", id: "LIST" }, ...groupChangeTags(groupContext.id)]
           : [
               { type: "Group", id: "LIST" },
               { type: "Vms", id: "LIST" },
