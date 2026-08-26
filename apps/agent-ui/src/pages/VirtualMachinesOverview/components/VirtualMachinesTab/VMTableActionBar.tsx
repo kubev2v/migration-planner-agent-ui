@@ -70,8 +70,12 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   inspectionContextVms,
   selectionContextLoadFailed = false,
 }) => {
-  const { shouldShowTooltip, shouldRequestCredentials, errorTooltipContent } =
-    useCapability("inspector");
+  const {
+    shouldShowTooltip,
+    shouldRequestCredentials,
+    errorTooltipContent,
+    isPending,
+  } = useCapability("inspector");
   const { openCredentialsModal } = useCredentialsModal();
 
   const {
@@ -199,7 +203,9 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                 <Button
                   variant="primary"
                   icon={<MagicIcon />}
-                  isAriaDisabled={!deepInspectionEnablement.enabled}
+                  isAriaDisabled={
+                    !deepInspectionEnablement.enabled || isPending
+                  }
                   onClick={() => {
                     if (shouldRequestCredentials) {
                       openCredentialsModal(() => onRunDeepInspection?.());

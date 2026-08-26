@@ -18,8 +18,12 @@ export interface StorageOffloadEmptyStateProps {
 export const StorageOffloadEmptyState: React.FC<
   StorageOffloadEmptyStateProps
 > = ({ onGetStarted }) => {
-  const { shouldShowTooltip, shouldRequestCredentials, errorTooltipContent } =
-    useCapability("forecaster");
+  const {
+    shouldShowTooltip,
+    shouldRequestCredentials,
+    errorTooltipContent,
+    isPending,
+  } = useCapability("forecaster");
   const { openCredentialsModal } = useCredentialsModal();
 
   return (
@@ -43,6 +47,7 @@ export const StorageOffloadEmptyState: React.FC<
           ) : (
             <Button
               variant="primary"
+              isDisabled={isPending}
               onClick={() => {
                 if (shouldRequestCredentials) {
                   openCredentialsModal(() => onGetStarted());

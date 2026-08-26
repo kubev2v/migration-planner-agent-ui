@@ -25,7 +25,7 @@ export const ReportComparisonEmptyState: React.FC<
 > = ({ reportCount }) => {
   const dispatch = useAppDispatch();
   const isCollecting = useAppSelector(selectIsCollecting);
-  const { shouldRequestCredentials } = useCapability("collector");
+  const { shouldRequestCredentials, isPending } = useCapability("collector");
   const { openCredentialsModal } = useCredentialsModal();
 
   return (
@@ -60,7 +60,7 @@ export const ReportComparisonEmptyState: React.FC<
                 dispatch(openModal());
               }
             }}
-            isDisabled={isCollecting}
+            isDisabled={isCollecting || isPending}
           >
             Run new report
           </Button>

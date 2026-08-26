@@ -68,6 +68,12 @@ describe("buildCapabilityUIState", () => {
     expect(state.shouldShowTooltip).toBe(false);
     expect(state.shouldRequestCredentials).toBe(false);
   });
+  test("Should defer while queries are pending, even without credentials yet", () => {
+    const state = buildCapabilityUIState("forecaster", null, null, true);
+    expect(state.isPending).toBe(true);
+    expect(state.shouldShowTooltip).toBe(false);
+    expect(state.shouldRequestCredentials).toBe(false);
+  });
   test("Should ask for credentials if returned but invalid", () => {
     const credentialStatus: CredentialStatus = {
       url: "https://vcenter.example.com/sdk",

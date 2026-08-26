@@ -13,22 +13,30 @@ export function buildCapabilityUIState(
   capability: keyof CapabilityStatusCapabilities,
   credentialStatus: CredentialStatus | null,
   capabilities: CapabilityStatusCapabilities | null,
+  isPending = false,
 ) {
   const hasValidCredentials = credentialStatus?.valid === true;
   const operationCapability = capabilities?.[capability];
   const isAvailable = operationCapability?.enabled ?? false;
   const missingPrivileges = operationCapability?.missingPrivileges ?? [];
 
-  const shouldShowTooltip = !isAvailable && missingPrivileges.length > 0;
-  const shouldRequestCredentials = !hasValidCredentials;
+  // While the credential/capability queries are still resolving, `null` data is
+  // indistinguishable from a confirmed no-credentials (404) response. Defer any
+  // protected action until we have a real answer so we don't pop the
+  // credentials modal for users whose valid credentials just haven't loaded.
+  const shouldShowTooltip =
+    !isPending && !isAvailable && missingPrivileges.length > 0;
+  const shouldRequestCredentials = !isPending && !hasValidCredentials;
 
   return {
+    isPending,
     shouldShowTooltip,
     shouldRequestCredentials,
   };
 }
 
 export interface CapabilityStatus {
+  isPending: boolean;
   shouldShowTooltip: boolean;
   shouldRequestCredentials: boolean;
   errorTooltipContent?: React.ReactNode;
@@ -42,13 +50,18 @@ const tooltipListStyles = css`
 export const useCapability = (
   capability: keyof CapabilityStatusCapabilities,
 ): CapabilityStatus => {
-  const { data: credentialStatus = null } = useGetCredentialsQuery();
-  const { data: capabilities = null } = useGetCredentialCapabilitiesQuery();
+  const { data: credentialStatus = null, isLoading: isCredentialsLoading } =
+    useGetCredentialsQuery();
+  const { data: capabilities = null, isLoading: isCapabilitiesLoading } =
+    useGetCredentialCapabilitiesQuery();
+
+  const isPending = isCredentialsLoading || isCapabilitiesLoading;
 
   const uiState = buildCapabilityUIState(
     capability,
     credentialStatus,
     capabilities,
+    isPending,
   );
   const operationCapability = capabilities?.[capability];
   const missingPrivileges = operationCapability?.missingPrivileges ?? [];

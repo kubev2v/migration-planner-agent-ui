@@ -15,7 +15,7 @@ export const RunNewReportButton: React.FC = () => {
   const dispatch = useAppDispatch();
   const isCollecting = useAppSelector(selectIsCollecting);
   const { data: collections } = useListCollectionsQuery();
-  const { shouldRequestCredentials } = useCapability("collector");
+  const { shouldRequestCredentials, isPending } = useCapability("collector");
   const { openCredentialsModal } = useCredentialsModal();
 
   const latestCollection = collections?.[0];
@@ -40,7 +40,7 @@ export const RunNewReportButton: React.FC = () => {
             }
           }}
           icon={<SyncAltIcon />}
-          isDisabled={isCollecting}
+          isDisabled={isCollecting || isPending}
         >
           Run new report
         </Button>

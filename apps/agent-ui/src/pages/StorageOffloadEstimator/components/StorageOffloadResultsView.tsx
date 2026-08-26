@@ -110,8 +110,12 @@ export const StorageOffloadResultsView: React.FC<
   runLoading = false,
   onDismissCancelError,
 }) => {
-  const { shouldShowTooltip, shouldRequestCredentials, errorTooltipContent } =
-    useCapability("forecaster");
+  const {
+    shouldShowTooltip,
+    shouldRequestCredentials,
+    errorTooltipContent,
+    isPending,
+  } = useCapability("forecaster");
   const { openCredentialsModal } = useCredentialsModal();
 
   const [filter, setFilter] = useState("");
@@ -354,6 +358,7 @@ export const StorageOffloadResultsView: React.FC<
                       ) : (
                         <Button
                           variant="primary"
+                          isDisabled={isPending}
                           onClick={() => {
                             if (shouldRequestCredentials) {
                               openCredentialsModal(() => onAddPair());
