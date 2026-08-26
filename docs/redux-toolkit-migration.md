@@ -16,9 +16,14 @@ group cache, `invalidateAllGroupsCache`, `key`-remount hacks, and
 `useMigrationInventoryRefresh`) and onto **one RTK Query cache** with
 **tag-based invalidation**, plus **slices** for pure client state.
 
-The end state removes the `packages/ioc` package, `useInjection`, and `Symbols`
-entirely: the store's `extraArgument` becomes the single source of the SDK
-client.
+The end state stops agent-ui from using the IoC container (`useInjection`,
+`Symbols`): the SDK client becomes a **module singleton** (`getAgentApiClient()`
+in `api/agentApiClient.ts`) with two access paths — the store's `extraArgument`
+(the primary path; every RTK Query endpoint reaches the client via its
+baseQuery) and ~8 direct `getAgentApiClient()` imports for imperative one-offs
+(inventory/blob exports, the auth probe, the forecaster base path, the paged
+group loops, and the credential/collector lifecycle). The store is **one
+consumer** of the singleton, not its sole owner.
 
 **Why:** every count/list currently derives from its own `useState`, kept in
 sync by hand. When one path forgets to update, values diverge (the motivating
@@ -41,16 +46,17 @@ apps/agent-ui/src/store/
     agentApiSlice.ts       # createApi({ reducerPath, baseQuery, tagTypes, endpoints:()=>({}) })
     groupsEndpoints.ts     # getGroup, getGroupVMs, updateGroupName, deleteGroup
     groupsEndpoints.test.ts
-  slices/
-    appModeSlice.ts        # AppMode = connected | disconnected | rvtool
-    appModeSlice.test.ts
-  useSeedAppMode.ts        # seeds appMode from AgentStatus
+  slices/                  # client-only state (created per-domain as needed)
 ```
 
+> Note: no `appModeSlice` was built. App mode is read directly from the cached
+> `getAgentStatus` response via `useAgentStatus` (`agentStatus.mode`), so there
+> is no separate slice or `useSeedAppMode` to keep in sync.
+
 - `Root.tsx` wraps the tree in `<ReduxProvider store={store}>` (outermost, inside
-  `StrictMode`, outside `DependencyInjectionProvider`). The store is built from
-  the **same** SDK instance the IoC container holds:
-  `createStore(container.get<AgentApiClient>(Symbols.AgentApi))`.
+  `StrictMode`). The store is built from the shared SDK singleton:
+  `createStore(getAgentApiClient())` — the same instance the direct imperative
+  callers import, so there is no divergence.
 - **`GroupDetailPage` is fully migrated** — use it as the reference
   implementation for every subsequent page.
 - Everything else still uses the old mechanisms and **coexists** — the migration
@@ -215,7 +221,10 @@ once no `useInjection` remains.
 
 - 3 Contexts holding server/derived state: `ReportsContext` (135 LOC),
   `AgentStatusContext` (96), `CredentialsContext` (264).
-- 18 files use `useInjection<DefaultApiInterface>` (direct SDK access).
+- 18 files used `useInjection<DefaultApiInterface>` (direct SDK access) at the
+  start. `useInjection`/`Symbols.AgentApi` are now gone from agent-ui: the SDK
+  client is a module singleton reached via the store `extraArgument` (RTK Query
+  endpoints) plus ~8 direct `getAgentApiClient()` imports for imperative one-offs.
 - ~110 callback-prop occurrences: `onCompleted` ×34, `onRefreshFilterOptions`
   ×24, `onRefreshVMs` ×23, `onRefreshInventory` ×10, `onRefreshApplications` ×6, …
 - ~40 distinct SDK methods to model as endpoints.
@@ -318,29 +327,35 @@ Each package is independently shippable and leaves the app working. Complete
   `pollingInterval` where the pub/sub currently polls); `startCollector`,
   `stopCollector`, `setAgentMode`, `startInspection`, `stopInspection`,
   `cancelVirtualMachineInspection`, `putInspectorVddk` (mutations).
-- **Slice:** finish the `appMode` story — drive nav modes
-  (`connected`/`disconnected`/`rvtool`) from the slice; `useSeedAppMode` already
-  seeds it from `getAgentStatus`.
+- **App mode:** no `appModeSlice` — nav modes
+  (`connected`/`disconnected`/`rvtool`) are read directly from the cached
+  `getAgentStatus` response via `useAgentStatus` (`agentStatus.mode`). All
+  callers share the one cache entry, so mode cannot diverge; a separate slice
+  would just be a second copy to keep in sync.
 - **Replace:** the `ReportsContext` listener `Set`/pub/sub with tag
   invalidation; any migrated page bridging via `util.invalidateTags` now reads
   the cache directly. Retire `AgentStatusContext` once nothing consumes it.
 - **Acceptance:** collection completion, mode changes, and inspection lifecycle
-  propagate through the cache; no pub/sub bus; nav modes read from `appMode`.
+  propagate through the cache; no pub/sub bus; nav modes read from the cached
+  `getAgentStatus` response (`agentStatus.mode`).
 - **Risk note:** verify polling cadence and terminal-state transitions carefully;
   add tests for start → in-progress → complete driving a dependent query
   refetch.
 
 ### WP-7 — Final cleanup (kill the old machinery)  ·  size M · risk medium
 > Only when **no** `useInjection` remains and every domain reads from the store.
-- **Remove:** `packages/ioc` package, `useInjection`, `Symbols.AgentApi`, the
-  `DependencyInjectionProvider` from `Root.tsx`. The store's `extraArgument` is
-  now the single source of the SDK client.
+- **Remove from agent-ui:** `useInjection`, `Symbols.AgentApi`, and the
+  `DependencyInjectionProvider` from `Root.tsx`. The SDK client becomes the
+  `getAgentApiClient()` module singleton, reached via the store `extraArgument`
+  (RTK Query) plus a handful of direct imports for imperative one-offs. (Leave
+  `packages/ioc` in the monorepo — other projects still depend on it; this
+  cleanup only stops **agent-ui** from using it.)
 - **Remove:** any remaining `onRefresh*`/`onCompleted` props, `key`-remount
   hacks, and dead helpers.
-- **If any imperative one-off SDK call survives** (not modeled as an endpoint),
-  expose the client via a trivial module export or tiny context — **not** a
-  revived IoC package.
-- **Acceptance:** `grep -r "useInjection\|Symbols.AgentApi\|packages/ioc"` in
+- **Imperative one-off SDK calls that survive** (not modeled as an endpoint)
+  import the `getAgentApiClient()` singleton directly — **not** a revived IoC
+  package.
+- **Acceptance:** `grep -r "useInjection\|Symbols.AgentApi"` in
   `apps/agent-ui/src` returns nothing; app builds and all tests pass.
 
 ---
@@ -367,8 +382,9 @@ yarn workspace @openshift-migration-advisor/agent-ui run build    # tsc -b + vit
 1. **One `createApi` / one cache.** Never add a second.
 2. **Never break the app between packages.** Old and new coexist; migrate a
    domain fully or not at all.
-3. **Reuse the SDK client via `extraArgument`.** No new `fetch`, no
-   `fetchBaseQuery`, no module-singleton client.
+3. **Reuse the shared SDK client** — via `extraArgument` in RTK Query, or the
+   `getAgentApiClient()` singleton for imperative one-offs. No new `fetch`, no
+   `fetchBaseQuery`, no **second** client.
 4. **Server data → RTK Query. Client-only data → a slice.** Never store server
    responses in a slice or in `useState`.
 5. **Every derived count/list reads from a cache entry.** If two values can

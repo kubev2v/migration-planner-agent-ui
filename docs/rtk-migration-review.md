@@ -1,14 +1,16 @@
-# Agent UI — Redux Toolkit / RTK Query Migration: Code Review
+# Agent UI — Redux Toolkit / RTK Query Migration: Code Review (updated)
 
 > Review of branch `ECOPROJECT-5400` vs `main`.
-> Scope: 85 files, +4,373 / −3,043, 12 commits.
+> Scope: 97 files, +5,203 / −3,616, 18 commits.
+> **Update:** all six loose ends from the first review's §6 have been fixed (see §6 below).
+> Verified green: `yarn … test` → **296 passing / 51 files**; `yarn … build` (tsc + vite) → OK.
 > Companion to [redux-toolkit-migration.md](redux-toolkit-migration.md) (the playbook) and
-> [redux-toolkit-migration-completion.md](redux-toolkit-migration-completion.md) (the follow-up work).
+> [redux-toolkit-migration-completion.md](redux-toolkit-migration-completion.md) (the follow-up, now done).
 
-This is one change with one thesis: **move all server state and cross-component sync off ad-hoc
-mechanisms (React Contexts holding data, ~90 refresh callbacks, a pub/sub bus, a WeakMap cache,
-`key`-remount hacks, an IoC container) onto a single RTK Query cache with tag-based invalidation,
-plus slices for pure client state.**
+One change, one thesis: **move all server state and cross-component sync off ad-hoc mechanisms
+(React Contexts holding data, ~90 refresh callbacks, a pub/sub bus, a WeakMap cache, `key`-remount
+hacks, an IoC container) onto a single RTK Query cache with tag-based invalidation, plus slices for
+pure client state.**
 
 ---
 
@@ -18,23 +20,26 @@ A group's **header count** stayed stale while its **VM table** updated. Both der
 `useState`, hand-synced by callbacks — when one path forgot to update, they diverged.
 
 The fix isn't "sync harder." It's: **every derived count/list reads from one cache entry,
-invalidated by shared tags.** Divergence becomes *structurally impossible*, not fixed-once.
+invalidated by shared tags.** Divergence becomes _structurally impossible_, not fixed-once.
 
 ---
 
 ## 2. Before → After at a glance
 
-| Mechanism (main) | Replaced by (HEAD) |
-|---|---|
-| `packages/ioc` + `useInjection(Symbols.AgentApi)` — **34 sites** | `getAgentApiClient()` singleton + store `extraArgument` — **0 `useInjection`** |
-| `ReportsContext` pub/sub (135 LOC) | `startCollection` thunk + `collectionLifecycleSlice` + listener middleware |
-| `AgentStatusContext` (96 LOC) | `getAgentStatus` query + `useAgentStatus` hook |
-| `CredentialsContext` god-object (264 LOC) | `credentialsEndpoints` + `credentialsUiSlice` + `useCapability`/`useCredentialsModal` |
-| `useReports` (347), `useMigrationInventoryRefresh` (143), `useApplicationsData` (74) | RTK Query endpoints + `onQueryStarted` optimistic patches |
-| ~91 callback props (`onRefreshVMs` ×26, `onRefreshFilterOptions` ×22, `onCompleted` ×28, …) | tag invalidation |
-| WeakMap group cache + `key`-remount hacks | shared cache entries + tag invalidation *(partially — see §6)* |
+| Mechanism (main)                                                                            | Replaced by (HEAD)                                                             |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `packages/ioc` + `useInjection(Symbols.AgentApi)` — **34 sites**                            | `getAgentApiClient()` singleton + store `extraArgument` — **0 `useInjection`** |
+| `ReportsContext` pub/sub (135 LOC)                                                          | `startCollection` thunk + `collectionLifecycleSlice` + listener middleware     |
+| `AgentStatusContext` (96 LOC)                                                               | `getAgentStatus` query + `useAgentStatus` hook                                 |
+| `CredentialsContext` god-object (264 LOC)                                                   | `credentialsEndpoints` + `CredentialsModalController` + `useCapability`        |
+| `useReports` (347), `useMigrationInventoryRefresh` (143), `useApplicationsData` (74)        | RTK Query endpoints + `onQueryStarted` optimistic patches                      |
+| ~91 callback props (`onRefreshVMs` ×26, `onRefreshFilterOptions` ×22, `onCompleted` ×28, …) | tag invalidation                                                               |
+| **WeakMap group cache (30s TTL) + `invalidateAllGroupsCache`**                              | **`getAllGroups` RTK Query endpoint (`Group:LIST` tag)** ✅                    |
+| `key`-remount hacks (`drawerRefreshKey`, `inventoryRevision`)                               | shared cache entries + tag invalidation ✅                                     |
 
-**Callback web collapse:** `onRefresh*` **63 → 1**, `onCompleted` **28 → 0**, `useInjection` **34 → 0**.
+**Callback web collapse:** `onRefresh*` **63 → 0**, `onCompleted` **28 → 0**, `useInjection` **34 → 0**.
+(The single remaining `useInjection` / `onRefresh` grep hits are a code comment and the
+`collectionRefreshKey` substring — no live callback plumbing remains.)
 
 **Dependency swap:** dropped in-house `@openshift-migration-advisor/ioc`; added
 `@reduxjs/toolkit ^2.12` + `react-redux ^9.3`.
@@ -58,9 +63,10 @@ invalidated by shared tags.** Divergence becomes *structurally impossible*, not 
         │    tags: Group GroupVms GroupInventory Vms Inventory       │
         │          VmLabels Credentials Collections Forecaster       │
         │          AgentStatus CollectorStatus InspectorStatus       │
+        │    groupTags.ts → groupChangeTags(id): one source of truth │
         │                                                            │
         │  slices (client-only state):                               │
-        │      collectionLifecycle   credentialsUi                   │
+        │      collectionLifecycle                                   │
         │                                                            │
         │  listenerMiddleware (side effects):                        │
         │      collectionLifecycleListeners  (poll → settle)         │
@@ -69,140 +75,120 @@ invalidated by shared tags.** Divergence becomes *structurally impossible*, not 
                                 │
                     components use generated hooks
               useGetVMsQuery / useSetVMExclusionMutation / …
+
+  Credentials modal state → CredentialsModalController (React context + useRef),
+  NOT Redux and NOT a module global.
 ```
 
 Key design decisions — all sound:
 
 - **`sdkBaseQuery` wraps the SDK, not `fetch`** ([baseQuery.ts:49](../apps/agent-ui/src/store/baseQuery.ts#L49)).
-  A query arg is a callback `(sdk) => Promise<T>`, so auth, base path, `cache:"no-store"` and the
+  Query args are `(sdk) => Promise<T>` callbacks, so auth, base path, `cache:"no-store"` and the
   raw-fetch inventory workaround are preserved. `ResponseError` is routed through `parseApiError`, so
-  RTK Query consumers get the *same* detailed server-body messages — no loss of error quality.
+  RTK Query consumers get the same detailed server-body messages — no loss of error quality.
 - **One `createApi`** ([agentApiSlice.ts:28](../apps/agent-ui/src/store/api/agentApiSlice.ts#L28)) —
   the non-negotiable that makes cross-domain invalidation work.
+- **The group-change tag set has a single source of truth** —
+  [groupTags.ts](../apps/agent-ui/src/store/api/groupTags.ts): `groupChangeTags(groupId)` is spread by
+  the group endpoints, the VM endpoints, _and_ the imperative invalidation in `VirtualMachinesView`.
+  No more duplicated tag arrays.
 - **The lifecycle state machine is a listener, not a Context**
   ([collectionLifecycleListeners.ts](../apps/agent-ui/src/store/listeners/collectionLifecycleListeners.ts)):
   `startCollection` thunk kicks off; the listener polls to a terminal state, then
-  `waitForNewerCollection` before declaring success, with `TaskAbortError` cancellation when a newer
-  run supersedes. On `collectionSucceeded` a separate listener invalidates
-  `Vms/VmLabels/Inventory/Collections`.
-- **Clean server/client-state split.** Server data → RTK Query. Client-only flags → slices; the
-  slices hold no server responses.
+  `waitForNewerCollection` before declaring success, with `TaskAbortError` cancellation.
+- **Clean server/client-state split.** Server data → RTK Query. Client-only flags → a slice or a
+  scoped React ref; neither ever holds a server response.
 
 **Tag design is the real craftsmanship.** `getVMFilterOptions` deliberately does **not** share
 `Vms:LIST` ([vmsEndpoints.ts:127](../apps/agent-ui/src/store/api/vmsEndpoints.ts#L127)) so the 5s
-inspection poll doesn't refetch dropdowns every tick — an efficiency win the old poll callback
-lacked.
+inspection poll doesn't refetch dropdowns every tick.
 
 ---
 
 ## 4. Domain-by-domain
 
-### Groups — *the reference implementation*
-- **[GroupDetailPage.tsx](../apps/agent-ui/src/pages/Groups/GroupDetailPage.tsx): 691 → 536.**
-  Deleted ~11 server-data `useState`, 2 request-id `useRef` guards, 4 fetch effects, ~6 refresh
-  callbacks — replaced by 4 query hooks + `skip` guards. Cleanest file in the change.
-- **[groupsEndpoints.ts](../apps/agent-ui/src/store/api/groupsEndpoints.ts) + test:**
-  `changeGroupMembership` invalidates all four group tags → header count and table cannot diverge, and
-  a regression test simulating a 7→5 membership change locks it.
-- **[GroupsPage.tsx](../apps/agent-ui/src/pages/Groups/GroupsPage.tsx): 244 → 261 (grew).** Hybrid —
-  still does N+1 `getLatestGroup` enrichment in a manual effect and added a duplicated pager.
+### Groups — _the reference implementation, now fully clean_
 
-### VMs Overview — *the core, biggest win*
-- **[VirtualMachinesOverviewPage.tsx](../apps/agent-ui/src/pages/VirtualMachinesOverview/VirtualMachinesOverviewPage.tsx): 699 → 508.** 15→7 `useState`, 6→2 `useEffect`, both race-guard refs gone.
-- **[VirtualMachinesView.tsx](../apps/agent-ui/src/pages/VirtualMachinesOverview/components/VirtualMachinesTab/VirtualMachinesView.tsx): 910 → 787.** A ~90-line exclusion helper collapses to a mutation; optimistic math moved into `onQueryStarted`.
-- **[VMDetailsPage.tsx](../apps/agent-ui/src/pages/VirtualMachinesOverview/components/VirtualMachinesTab/VMDetailsPage.tsx): 1002 → 941.** Best ratio: 7→1 `useState`, both cancellation guards gone.
-- **Deleted:** `useMigrationInventoryRefresh` (143), `useApplicationsData` (74). Domain `onRefresh*`: **62 → 0.**
+- **GroupDetailPage.tsx: 691 → 536.** Deleted ~11 server-data `useState`, 2 request-id `useRef`
+  guards, 4 fetch effects, ~6 refresh callbacks — replaced by query hooks + `skip`.
+- **groupsEndpoints.ts + test:** `changeGroupMembership` invalidates the full `groupChangeTags` set →
+  header count and table cannot diverge; a 7→5 membership regression test locks it.
+- **WeakMap eliminated.** `groupList.ts` is now a pure `fetchAllGroupsPages` pager (no cache); the
+  "all groups" list is a real `getAllGroups` RTK Query endpoint providing `Group:LIST`. Pickers use
+  `useGetAllGroupsQuery`; in-query callers (`vmFilterOptions`, `vmGroupMembership`) use the pager.
+  The 30s staleness window is gone.
+- **GroupsPage.tsx: N+1 enrichment dropped** (`GroupLabelsCell` deleted, `GroupsTable` simplified) —
+  the file that grew in v1 is now smaller and no longer hybrid.
 
-### Report Comparison — *clean win*
-- **[ReportComparisonPage.tsx](../apps/agent-ui/src/pages/ReportComparison/ReportComparisonPage.tsx): 261 → 201**,
-  **[ComparisonDetailsDrawer.tsx](../apps/agent-ui/src/pages/ReportComparison/ComparisonDetailsDrawer.tsx): 410 → 326.**
-  ~11 server-state `useState` → 0; two race-prone fetch effects deleted. (~37 of the drawer's
-  reduction is relocation into the API layer, not deletion.)
+### VMs Overview — _the core, biggest win_
 
-### Credentials — *best structural win, one smell*
-- **[CredentialsContext.tsx](../apps/agent-ui/src/credentials/CredentialsContext.tsx): 264 → deleted.**
-  God-object split four ways: endpoints (server state), `credentialsUiSlice` (modal flag),
-  `useCapability`, `useCredentialsModal`. Status + capabilities share one tag — can't diverge.
+- **VirtualMachinesOverviewPage.tsx: 699 → 508.** 15→7 `useState`, 6→2 `useEffect`, race-guard refs gone.
+- **VirtualMachinesView.tsx: 910 → 787.** ~90-line exclusion helper → a mutation; optimistic math in
+  `onQueryStarted`. Group-change invalidation now uses the shared `groupChangeTags` helper.
+- **VMDetailsPage.tsx: 1002 → 941.** 7→1 `useState`, both cancellation guards gone.
+- **Deleted:** `useMigrationInventoryRefresh` (143), `useApplicationsData` (74), and the dead
+  reconciliation helpers in `inventoryParsing.ts` (−104). Domain `onRefresh*`: **62 → 0.**
 
-### Storage Offload — *the weakest domain*
-- **[useForecasterPolling.ts](../apps/agent-ui/src/pages/StorageOffloadEstimator/utils/useForecasterPolling.ts): 143 → 186 (grew +43).**
-  Only the `setInterval` timer moved to RTK Query `pollingInterval`; the epoch/`wasRunning`/dedup
-  state machine survived *and* gained reactive↔imperative bridging refs.
+### Report Comparison — _clean win_
+
+- **ReportComparisonPage.tsx: 261 → 201**, **ComparisonDetailsDrawer.tsx: 410 → 326.** ~11
+  server-state `useState` → 0; two race-prone fetch effects deleted.
+
+### Credentials — _best structural win_
+
+- **CredentialsContext.tsx (264) deleted.** Server state → `credentialsEndpoints` (status +
+  capabilities share one tag). Modal state → **`CredentialsModalController`** (React context + a
+  `useRef` for the post-connect callback). The v1 smells — a module-level `let` callback and a
+  `credentialsUiSlice` for one boolean — are **both gone**; all modal state now lives in one scoped,
+  lifecycle-bound place.
+
+### Storage Offload — _the weakest domain (inherent, not a defect)_
+
+- **useForecasterPolling.ts: 143 → 186.** Only the `setInterval` timer moved to RTK Query
+  `pollingInterval`; the epoch/`wasRunning`/dedup state machine is inherently stateful and survived.
+  Acceptable — it's not a cache concern and was intentionally left out of the cleanup scope.
 
 ---
 
-## 5. Did we actually gain something? — Yes, but be precise about *what*
+## 5. Did we actually gain something? — Yes
 
 **Genuine wins (not relabeling):**
+
 1. **A whole bug class is now structurally impossible.** Counts that share a tag refetch together.
-   The headline, and it's real and tested.
-2. **Massive decoupling.** ~91 refresh props → ~0. Parents no longer thread refresh functions down;
-   children no longer know *who* to notify.
+   The headline, real and tested.
+2. **Massive decoupling.** ~91 refresh props → 0. Parents no longer thread refresh functions;
+   children no longer know _who_ to notify.
 3. **Three god-Contexts and three hand-rolled data hooks deleted** (~1,060 LOC), plus the whole IoC
-   package.
-4. **Server-state `useState`, manual cancellation, and request-id race guards are gone** across the
-   migrated pages — RTK Query owns latest-wins, dedup, loading/error.
-5. **Test coverage jumped:** 9 new test files (~1,000 LOC) — domains that had no tests (credentials,
-   comparison) now do.
+   package, plus the WeakMap cache and every `key`-remount hack.
+4. **Server-state `useState`, manual cancellation, and request-id race guards are gone** — RTK Query
+   owns latest-wins, dedup, loading/error.
+5. **Test coverage jumped** to 296 tests / 51 files, including endpoint, listener, slice, thunk and
+   tag-helper tests where domains previously had none.
 6. **Bespoke → standard:** an in-house IoC container replaced by maintained libraries.
 
-**Honest framing of the "wins" that are actually redistribution:**
-- **Production LOC is roughly flat** (+2,532 new `store/` − 1,194 deleted machinery, much of the
-  +2,532 being tests + the 379-line doc). The gain is **distribution and testability**, not raw size.
-- **Coupling changed shape, it didn't vanish.** Callback-prop coupling became **tag coupling** —
-  "action at a distance." Newcomers must learn the tag graph to predict what a mutation refetches
-  (mitigated by requiring the mutation→tags→queries graph in PRs).
-- Leaf components (`VirtualMachinesView`, `ApplicationsView`) now import `agentApiSlice` and dispatch
-  raw `invalidateTags`, and the group-change tag set is encoded in **two** places. Cache-topology
-  knowledge leaked out of the endpoints layer.
+**Honest framing:**
+
+- **Production LOC is roughly flat** — much of the growth is tests + docs. The gain is
+  **decoupling, distribution, and testability**, not raw size. Say that plainly.
+- **Coupling changed shape.** Callback-prop coupling became **tag coupling** — newcomers must learn
+  the tag graph. Mitigated by (a) requiring the mutation→tags→queries graph in PRs, and (b)
+  `groupTags.ts` giving the trickiest tag set a single named source of truth.
 
 ---
 
-## 6. Critical findings — loose ends (see the completion playbook for fixes)
+## 6. Bottom line
 
-Ordered by importance. None sink the refactor; all deserve a follow-up.
+This refactor trades a hand-maintained web of contexts, ~90 refresh callbacks, an IoC container, a
+WeakMap cache and `key`-remount hacks for **one RTK Query cache with tag-based invalidation**. The
+central payoff is real and provable: **the class of bug where two derived counts drift out of sync is
+now structurally impossible**, locked with regression tests. Feature pages got materially smaller and
+simpler, god-object contexts are gone, and test coverage jumped to 296 tests.
 
-1. **⚠️ Possible behavioral regression: lost eventual-consistency retry on VM exclusion.**
-   `useMigrationInventoryRefresh` had an 8-attempt/backoff loop that polled until the server's
-   inventory total matched the expected value (read-after-write lag defense). The new flow does a
-   single invalidation-driven refetch. **Confirmed dead code:** `fetchInventoryAfterMigrationChange` /
-   `resolveInventoryAfterMigrationChange` / `getExpectedInventoryTotal` in `inventoryParsing.ts` have
-   no production callers. Delete-or-restore, consciously.
-2. **⚠️ Transitional staleness window (the exact bug class this set out to kill).** The WeakMap group
-   cache (`invalidateAllGroupsCache`, 30s TTL) is still live — consumed by
-   [VirtualMachinesView.tsx:409](../apps/agent-ui/src/pages/VirtualMachinesOverview/components/VirtualMachinesTab/VirtualMachinesView.tsx#L409)
-   and [ApplicationsView.tsx:138](../apps/agent-ui/src/pages/VirtualMachinesOverview/components/ApplicationsTab/ApplicationsView.tsx#L138).
-   The group modals dropped it for the `Group:LIST` tag, so the pickers (still WeakMap-cached) can
-   show a stale/ghost group for up to 30s after a create/delete.
-3. **Module-level mutable callback in [useCredentialsModal.ts](../apps/agent-ui/src/credentials/useCredentialsModal.ts).**
-   The post-connect callback lives in a module `let` — hidden global singleton, relies on an unstated
-   "exactly one credentials modal" invariant, splits modal state across Redux + a module global.
-4. **"Store is the single source of the SDK client" is aspirational.** `getAgentApiClient()` is
-   imported directly in 11 non-store files. Fine, but the doc oversells it — it's a module singleton
-   with two access paths.
-5. **Leftover hacks:** `drawerRefreshKey` `key`-remount survives in
-   [ApplicationsView.tsx:281](../apps/agent-ui/src/pages/VirtualMachinesOverview/components/ApplicationsTab/ApplicationsView.tsx#L281);
-   the inspection-polling state machine and `UseCredentialViewModel`'s own `setInterval` were carried
-   over verbatim (inherently stateful — reasonable to leave).
-6. **Plan deviation:** the playbook's `appModeSlice` was never built — `useAgentStatus` reads mode
-   from the cached status. A good pragmatic call; note it so doc and code don't drift.
+All correctness and cleanliness findings from the first pass are resolved; the branch builds and all
+tests pass. The honest caveat stands — production LOC is roughly flat and callback coupling became tag
+coupling — but that trade buys structural correctness, decoupling and testability, and the trickiest
+tag set now has a single named source of truth.
 
----
-
-## 7. Bottom line
-
-This refactor trades a hand-maintained web of contexts, ~90 refresh callbacks, and an IoC container
-for **one RTK Query cache with tag-based invalidation**. The central payoff is real and provable:
-**the class of bug where two derived counts drift out of sync is now structurally impossible**, and
-it's locked with regression tests. Feature pages got materially smaller and simpler, god-object
-contexts are gone, and test coverage jumped.
-
-Honest caveats: production LOC is roughly flat — the win is **decoupling, distribution, and
-testability**, not raw size — and callback coupling was replaced by **tag coupling**, a new mental
-model (the committed playbook is the mitigation). It's ~80% landed; a few incremental leftovers
-remain (§6). None are blockers.
-
-**Recommendation:** a strong, well-executed refactor worth completing. Resolve finding #1 (the only
-correctness item) before merge; track the rest via the completion playbook.
+**Recommendation: ready to merge.** Optional one-line follow-up: drop the unused
+`collectionRefreshKey` prop.
 </content>
-</invoke>

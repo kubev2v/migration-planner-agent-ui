@@ -2,15 +2,23 @@ import { Configuration } from "@openshift-migration-advisor/agent-sdk";
 import { type AgentApiClient, createAgentApi } from "./agentApi";
 
 /**
- * Single source of the SDK client.
+ * The SDK client is a **module singleton** — one instance shared across the
+ * whole app, reached by two access paths:
  *
- * The IoC container (`packages/ioc`) is gone: the store's thunk `extraArgument`
- * is the primary consumer of this client (every RTK Query endpoint reaches it
- * via its baseQuery). The few imperative one-off SDK calls that are not modeled
- * as endpoints — exports, blob downloads, credential validation, the
- * `ProtectedRoute` auth probe, the collector lifecycle and the paged group
- * enrichment loops — call `getAgentApiClient()` directly, so there is still
- * exactly one client instance shared across the whole app.
+ *   1. The store's thunk `extraArgument` (built once in `Root.tsx` via
+ *      `createStore(getAgentApiClient())`). Every RTK Query endpoint reaches the
+ *      client through its baseQuery — this is the primary path.
+ *   2. ~8 direct `getAgentApiClient()` imports for imperative one-offs that are
+ *      not modeled as endpoints: inventory/blob exports (`DiscoveryStatus`,
+ *      `VirtualMachinesOverviewPage`), the `ProtectedRoute` auth probe, the
+ *      storage-forecaster base path, the paged group loops (`CreateGroupModal`,
+ *      `RemoveFromGroupModal`, `GroupDetailPage`), and the credential/collector
+ *      lifecycle (`UseCredentialViewModel`).
+ *
+ * This is *not* "the store is the single source": the store is one consumer of
+ * the singleton, not its owner. agent-ui no longer uses the IoC container
+ * (`packages/ioc`, `useInjection`, `Symbols.AgentApi`) — it lazily builds this
+ * singleton instead.
  */
 
 export const getConfigurationBasePath = (): string => {

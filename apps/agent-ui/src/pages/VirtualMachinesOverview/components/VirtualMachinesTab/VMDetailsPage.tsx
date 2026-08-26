@@ -62,7 +62,6 @@ interface VMDetailsPageProps {
   onBack: () => void;
   scrollToSection?: string | null;
   onScrollToSectionComplete?: () => void;
-  collectionRefreshKey?: number;
 }
 
 export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({

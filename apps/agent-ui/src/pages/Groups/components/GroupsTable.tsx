@@ -33,12 +33,6 @@ import {
   type AttributeValueFilterAttribute,
   attributeValueFilterToolbarStyle,
 } from "../../../common/components/attribute-value-filter";
-import { GroupLabelsCell } from "./GroupLabelsCell";
-
-export interface GroupRow extends Group {
-  vmCount: number;
-  labels: string[];
-}
 
 const styles = {
   toolbar: css`
@@ -61,16 +55,13 @@ function formatCreatedDate(date?: Date): string {
 }
 
 interface GroupsTableProps {
-  groups: GroupRow[];
+  groups: Group[];
   loading: boolean;
   total: number;
   page: number;
   pageSize: number;
   nameFilter: string;
-  selectedLabels: string[];
-  availableLabels: string[];
   onNameFilterChange: (value: string) => void;
-  onLabelsFilterChange: (labels: string[]) => void;
   onPageChange: (page: number, pageSize: number) => void;
   onCreateGroup: () => void;
   onEditGroupName: (group: Group) => void;
@@ -84,10 +75,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
   page,
   pageSize,
   nameFilter,
-  selectedLabels,
-  availableLabels,
   onNameFilterChange,
-  onLabelsFilterChange,
   onPageChange,
   onCreateGroup,
   onEditGroupName,
@@ -97,7 +85,6 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
 
   const clearAllFilters = () => {
     onNameFilterChange("");
-    onLabelsFilterChange([]);
   };
 
   const filterAttributes = useMemo(
@@ -111,29 +98,11 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
         placeholder: "Filter by name",
         ariaLabel: "Filter by name",
       },
-      {
-        id: "labels",
-        label: "Labels",
-        type: "checkbox",
-        options: availableLabels.map((label) => ({
-          value: label,
-          label,
-        })),
-        selections: selectedLabels,
-        onSelectionsChange: onLabelsFilterChange,
-      },
     ],
-    [
-      availableLabels,
-      nameFilter,
-      onLabelsFilterChange,
-      onNameFilterChange,
-      selectedLabels,
-    ],
+    [nameFilter, onNameFilterChange],
   );
 
-  const hasActiveFilters =
-    nameFilter.trim().length > 0 || selectedLabels.length > 0;
+  const hasActiveFilters = nameFilter.trim().length > 0;
   const showWelcomeEmpty =
     !loading && total === 0 && groups.length === 0 && !hasActiveFilters;
 
@@ -176,8 +145,6 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
         <Thead>
           <Tr>
             <Th>Group name</Th>
-            <Th>Virtual machines</Th>
-            <Th>Labels</Th>
             <Th>Created on</Th>
             <Th screenReaderText="Actions" />
           </Tr>
@@ -185,7 +152,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
         <Tbody>
           {loading ? (
             <Tr>
-              <Td colSpan={5}>
+              <Td colSpan={3}>
                 <AppEmptyState
                   titleText="Loading groups"
                   icon={Spinner}
@@ -195,7 +162,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
             </Tr>
           ) : showWelcomeEmpty ? (
             <Tr>
-              <Td colSpan={5}>
+              <Td colSpan={3}>
                 <AppEmptyState
                   headingLevel="h2"
                   titleText="No virtual machine groups yet"
@@ -214,7 +181,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
             </Tr>
           ) : groups.length === 0 ? (
             <Tr>
-              <Td colSpan={5}>
+              <Td colSpan={3}>
                 <AppEmptyState
                   titleText="No groups match the current filters"
                   body="Try adjusting your filters or clear all filters."
@@ -232,10 +199,6 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
                   >
                     {group.name}
                   </Link>
-                </Td>
-                <Td dataLabel="Virtual machines">{group.vmCount}</Td>
-                <Td dataLabel="Labels">
-                  <GroupLabelsCell labels={group.labels} />
                 </Td>
                 <Td dataLabel="Created on">
                   {formatCreatedDate(group.createdAt)}
