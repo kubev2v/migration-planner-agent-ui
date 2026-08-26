@@ -11,7 +11,6 @@ import {
 import { setupCollectionLifecycleListeners } from "./listeners/collectionLifecycleListeners";
 import { setupVmsInvalidationListeners } from "./listeners/vmsInvalidationListeners";
 import { collectionLifecycleReducer } from "./slices/collectionLifecycleSlice";
-import { credentialsUiReducer } from "./slices/credentialsUiSlice";
 
 // Attach endpoint definitions to the api slice (side-effect imports).
 import "./api/comparisonEndpoints";
@@ -39,7 +38,6 @@ export function createStore(agentApi: AgentApiClient) {
     reducer: {
       [agentApiSlice.reducerPath]: agentApiSlice.reducer,
       collectionLifecycle: collectionLifecycleReducer,
-      credentialsUi: credentialsUiReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({ thunk: { extraArgument: extra } })

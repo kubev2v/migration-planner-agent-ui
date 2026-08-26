@@ -32,8 +32,8 @@ import {
   usePutCredentialsMutation,
 } from "../store/api/credentialsEndpoints";
 import { getSdkErrorMessage } from "../store/baseQuery";
+import { useCredentialsModal } from "./CredentialsModalController";
 import { RemoveVCenterConnectionModal } from "./RemoveVCenterConnectionModal";
-import { useCredentialsModal } from "./useCredentialsModal";
 import { VCenterCredentialsModal } from "./VCenterCredentialsModal";
 
 type CredentialStatusType =

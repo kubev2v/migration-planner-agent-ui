@@ -8,7 +8,7 @@ import {
   useGetCredentialCapabilitiesQuery,
   useGetCredentialsQuery,
 } from "../store/api/credentialsEndpoints";
-import { useCredentialsModal } from "./useCredentialsModal";
+import { useCredentialsModal } from "./CredentialsModalController";
 
 export function buildCapabilityUIState(
   capability: keyof CapabilityStatusCapabilities,

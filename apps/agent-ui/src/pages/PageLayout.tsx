@@ -34,6 +34,7 @@ import RedHatOpenShiftLogo from "../assets/RedHatOpenShiftLogo.png";
 import { getCollectionProgressInfo } from "../common/collectionProgress";
 import { CollectionProgress } from "../common/components";
 import { RunNewReportModal } from "../common/report/RunNewReportModal";
+import { CredentialsModalProvider } from "../credentials/CredentialsModalController";
 import VCenterCredentialsDropdownMenu from "../credentials/VCenterCredentialsDropdownMenu";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
@@ -222,79 +223,81 @@ export const PageLayout: React.FC = () => {
   }, [activeItem]);
 
   return (
-    <Page
-      isManagedSidebar
-      masthead={
-        <Masthead>
-          <MastheadMain>
-            <MastheadToggle>
-              <PageToggleButton
-                isHamburgerButton
-                aria-label="Global navigation"
-              />
-            </MastheadToggle>
-            <MastheadBrand>
-              <MastheadLogo>
-                <Brand
-                  src={RedHatOpenShiftLogo}
-                  alt="Red Hat OpenShift Logo"
-                  heights={{ default: "36px" }}
+    <CredentialsModalProvider>
+      <Page
+        isManagedSidebar
+        masthead={
+          <Masthead>
+            <MastheadMain>
+              <MastheadToggle>
+                <PageToggleButton
+                  isHamburgerButton
+                  aria-label="Global navigation"
                 />
-              </MastheadLogo>
-            </MastheadBrand>
-          </MastheadMain>
-          <MastheadContent>
-            <Toolbar isFullHeight>
-              <ToolbarContent>
-                <ToolbarGroup align={{ default: "alignEnd" }}>
-                  <ToolbarItem>
-                    <VCenterCredentialsDropdownMenu />
-                  </ToolbarItem>
-                </ToolbarGroup>
-              </ToolbarContent>
-            </Toolbar>
-          </MastheadContent>
-        </Masthead>
-      }
-      sidebar={
-        <PageSidebar>
-          <PageSidebarBody>
-            <Title headingLevel="h1" size="lg" className={appTitleStyle}>
-              Migration Advisor
-            </Title>
-            <Nav aria-label="Main navigation">
-              <NavList>
-                {NAV_SECTIONS.map((section) => (
-                  <NavGroup
-                    key={section.title}
-                    title={section.title}
-                    className={navGroupStyle}
-                  >
-                    {section.items.map((item) => {
-                      const isActive = activeItem?.path === item.path;
-                      return (
-                        <NavItem
-                          key={item.path}
-                          isActive={isActive}
-                          className={`${navItemStyle}${isActive ? " report-nav-item-active" : ""}`}
-                          onClick={() => navigate(item.path)}
-                        >
-                          {item.label}
-                        </NavItem>
-                      );
-                    })}
-                  </NavGroup>
-                ))}
-              </NavList>
-            </Nav>
-          </PageSidebarBody>
-        </PageSidebar>
-      }
-    >
-      <RunNewReportAlerts />
-      <Outlet />
-      <RunNewReportModalContainer />
-    </Page>
+              </MastheadToggle>
+              <MastheadBrand>
+                <MastheadLogo>
+                  <Brand
+                    src={RedHatOpenShiftLogo}
+                    alt="Red Hat OpenShift Logo"
+                    heights={{ default: "36px" }}
+                  />
+                </MastheadLogo>
+              </MastheadBrand>
+            </MastheadMain>
+            <MastheadContent>
+              <Toolbar isFullHeight>
+                <ToolbarContent>
+                  <ToolbarGroup align={{ default: "alignEnd" }}>
+                    <ToolbarItem>
+                      <VCenterCredentialsDropdownMenu />
+                    </ToolbarItem>
+                  </ToolbarGroup>
+                </ToolbarContent>
+              </Toolbar>
+            </MastheadContent>
+          </Masthead>
+        }
+        sidebar={
+          <PageSidebar>
+            <PageSidebarBody>
+              <Title headingLevel="h1" size="lg" className={appTitleStyle}>
+                Migration Advisor
+              </Title>
+              <Nav aria-label="Main navigation">
+                <NavList>
+                  {NAV_SECTIONS.map((section) => (
+                    <NavGroup
+                      key={section.title}
+                      title={section.title}
+                      className={navGroupStyle}
+                    >
+                      {section.items.map((item) => {
+                        const isActive = activeItem?.path === item.path;
+                        return (
+                          <NavItem
+                            key={item.path}
+                            isActive={isActive}
+                            className={`${navItemStyle}${isActive ? " report-nav-item-active" : ""}`}
+                            onClick={() => navigate(item.path)}
+                          >
+                            {item.label}
+                          </NavItem>
+                        );
+                      })}
+                    </NavGroup>
+                  ))}
+                </NavList>
+              </Nav>
+            </PageSidebarBody>
+          </PageSidebar>
+        }
+      >
+        <RunNewReportAlerts />
+        <Outlet />
+        <RunNewReportModalContainer />
+      </Page>
+    </CredentialsModalProvider>
   );
 };
 

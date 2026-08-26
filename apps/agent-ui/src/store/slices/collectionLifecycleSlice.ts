@@ -7,8 +7,8 @@ export type CollectorStatusValue = CollectorStatus["status"];
  * Client-only UI state for the app-wide "Run a new report" flow. The collection
  * run itself (start, polling, completion detection) is driven by the listener
  * middleware in `store/listeners/collectionLifecycleListeners.ts`; this slice
- * only holds the UI state that components render, following the same split as
- * `credentialsUiSlice` (server data stays in RTK Query, UI flags live here).
+ * only holds the UI state that components render (server data stays in RTK
+ * Query, client-only UI flags live in a slice).
  */
 export interface CollectionLifecycleState {
   /** The "Run a new report" confirmation modal is open. */
