@@ -1,5 +1,14 @@
 import { css } from "@emotion/css";
-import { ChartDonut, ChartLabel } from "@patternfly/react-charts/victory";
+// Workaround
+// Shared-components ships as strict ESM ("type": "module"), so webpack
+// enforces fully-specified imports in consuming apps. The documented
+// "@patternfly/react-charts/victory" subpath has no exports map entry and
+// resolves to a directory, which webpack refuses under fully-specified —
+// breaking the ui-app federated build.
+import {
+  ChartDonut,
+  ChartLabel,
+} from "@patternfly/react-charts/dist/esm/victory/index.js";
 import {
   EmptyState,
   EmptyStateVariant,
