@@ -63,6 +63,7 @@ const OsSupportTiersHelpBody: FC = () => (
       ))}
     </ul>
     <a
+      aria-label="Learn more about operating system support tiers"
       className={learnMoreLinkStyle}
       href={SUPPORT_TIER_LEARN_MORE_URL}
       target="_blank"

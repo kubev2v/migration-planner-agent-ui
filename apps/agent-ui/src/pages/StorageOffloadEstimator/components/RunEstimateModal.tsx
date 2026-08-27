@@ -124,6 +124,7 @@ export const RunEstimateModal: React.FC<RunEstimateModalProps> = ({
                     I understand temporary resources will be created in my
                     vCenter environment.{" "}
                     <a
+                      aria-label="Learn more about storage copy offload"
                       href="https://docs.redhat.com/en/documentation/migration_toolkit_for_virtualization/2.10/html-single/planning_your_migration_to_red_hat_openshift_virtualization/index#about-storage-copy-offload_vmware"
                       target="_blank"
                       rel="noopener noreferrer"

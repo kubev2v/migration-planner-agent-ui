@@ -357,6 +357,7 @@ export const SelectPairsForm: React.FC<SelectPairsFormProps> = ({
             Select one or more source/target pairs to run a storage offload
             estimate on.{" "}
             <a
+              aria-label="Learn more about storage copy offload"
               href="https://docs.redhat.com/en/documentation/migration_toolkit_for_virtualization/2.10/html-single/planning_your_migration_to_red_hat_openshift_virtualization/index#about-storage-copy-offload_vmware"
               target="_blank"
               rel="noopener noreferrer"

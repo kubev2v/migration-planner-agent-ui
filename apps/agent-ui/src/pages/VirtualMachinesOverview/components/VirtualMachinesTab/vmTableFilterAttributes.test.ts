@@ -91,7 +91,7 @@ describe("buildVmTableFilterAttributes", () => {
     );
     expect(diskSize?.type).toBe("checkbox");
 
-    if (!diskSize || diskSize.type !== "checkbox") {
+    if (diskSize?.type !== "checkbox") {
       throw new Error("Expected disk-size checkbox attribute");
     }
 
@@ -118,7 +118,7 @@ describe("buildVmTableFilterAttributes", () => {
       (attribute) => attribute.id === "disk-size",
     );
 
-    if (!diskSize || diskSize.type !== "checkbox") {
+    if (diskSize?.type !== "checkbox") {
       throw new Error("Expected disk-size checkbox attribute");
     }
 

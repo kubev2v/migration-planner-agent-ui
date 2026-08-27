@@ -18,6 +18,7 @@ export const TechnologyPreviewBadge: React.FC<TechnologyPreviewBadgeProps> = ({
           innovations, enabling you to test functionality and provide feedback
           during the development process.{" "}
           <a
+            aria-label="Learn more about technology preview features"
             href="https://access.redhat.com/support/offerings/techpreview"
             target="_blank"
             rel="noopener noreferrer"

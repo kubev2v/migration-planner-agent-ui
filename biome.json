@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
   "root": true,
   "vcs": {
     "enabled": true,
@@ -9,12 +9,12 @@
   "files": {
     "includes": [
       "**",
-      "!**/dist/**",
-      "!**/node_modules/**",
-      "!**/.tmp/**",
-      "!**/.cache/**",
-      "!**/out/**",
-      "!./packages/api-client/**"
+      "!**/dist",
+      "!**/node_modules",
+      "!**/.tmp",
+      "!**/.cache",
+      "!**/out",
+      "!packages/api-client"
     ]
   },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
@@ -29,12 +29,12 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "preset": "recommended"
     }
   },
   "overrides": [
     {
-      "includes": ["./packages/ioc/**", "./packages/shared-components/**"],
+      "includes": ["packages/ioc/**", "packages/shared-components/**"],
       "linter": { "domains": { "react": "recommended" } }
     }
   ]

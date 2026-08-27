@@ -27,6 +27,7 @@ export const DataSharingCheckbox: React.FC<DataSharingCheckboxProps> = ({
                 <span>
                   Share aggregated environment data with Red Hat.{" "}
                   <a
+                    aria-label="Learn more about the aggregated data report"
                     href="https://kubev2v.github.io/openshift-migration-advisor-docs/docs/aggregated-data-report/"
                     target="_blank"
                     rel="noopener noreferrer"

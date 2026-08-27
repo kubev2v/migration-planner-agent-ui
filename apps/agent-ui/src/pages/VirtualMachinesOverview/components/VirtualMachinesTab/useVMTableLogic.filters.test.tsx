@@ -31,7 +31,7 @@ function getCheckboxAttribute(
   id: string,
 ) {
   const attribute = filterAttributes.find((candidate) => candidate.id === id);
-  if (!attribute || attribute.type !== "checkbox") {
+  if (attribute?.type !== "checkbox") {
     throw new Error(`Expected checkbox attribute "${id}"`);
   }
   return attribute;
@@ -237,7 +237,7 @@ describe("useVMTableLogic filters", () => {
     const nameAttribute = result.current.filterAttributes.find(
       (attribute) => attribute.id === "name",
     );
-    if (!nameAttribute || nameAttribute.type !== "text") {
+    if (nameAttribute?.type !== "text") {
       throw new Error('Expected text attribute "name"');
     }
 

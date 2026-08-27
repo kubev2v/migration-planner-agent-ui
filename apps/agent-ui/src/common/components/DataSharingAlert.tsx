@@ -31,6 +31,7 @@ export const DataSharingAlert: React.FC<DataSharingAlertProps> = ({
           </Button>
         )}
         <a
+          aria-label="Learn more about the Red Hat privacy policy"
           href="https://www.redhat.com/en/about/privacy-policy"
           target="_blank"
           rel="noopener noreferrer"
