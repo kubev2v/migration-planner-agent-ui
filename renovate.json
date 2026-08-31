@@ -2,5 +2,11 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Renovate configuration for migration-planner-agent-ui - runs dependency updates weekly on Saturday mornings",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
-  "schedule": ["on Saturday"]
+  "packageRules": [
+    {
+      "description": "Automerge non-major updates",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    }
+  ]
 }
