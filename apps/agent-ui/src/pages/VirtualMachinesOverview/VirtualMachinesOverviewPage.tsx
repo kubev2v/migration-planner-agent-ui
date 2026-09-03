@@ -55,6 +55,7 @@ import {
   buildVmsTabUrl,
   clearVmFilterParams,
   REPORT_TAB,
+  reportTabToParam,
   resolveReportTab,
 } from "./reportTabNavigation";
 import { normalizeVirtualMachines } from "./virtualMachineParsing";
@@ -90,7 +91,6 @@ export const ReportContainer: React.FC = () => {
 
   const handleNavigateToVMFilters = useCallback(
     (filters: VMFilters) => {
-      setActiveTab(1);
       setVmsPage(1);
       const newParams = filtersToSearchParams(filters);
       newParams.set("tab", "vms");
@@ -112,20 +112,10 @@ export const ReportContainer: React.FC = () => {
 
   const selectedApplicationName = searchParams.get("application");
 
-  // Determine initial tab based on URL params (only on mount)
-  const [activeTab, setActiveTab] = useState<string | number>(() =>
-    resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
+  const activeTab: string | number = resolveReportTab(
+    searchParams,
+    hasActiveFilters(initialVMFilters),
   );
-
-  useEffect(() => {
-    const nextTab = resolveReportTab(
-      searchParams,
-      hasActiveFilters(searchParamsToFilters(searchParams)),
-    );
-    if (nextTab !== activeTab) {
-      setActiveTab(nextTab);
-    }
-  }, [searchParams, activeTab]);
 
   // --- Server data (RTK Query) ---------------------------------------------
   // The assessment inventory drives the dashboard, the header counts and the
@@ -291,9 +281,8 @@ export const ReportContainer: React.FC = () => {
   ): void => {
     if (typeof value === "string") {
       setSelectedClusterId(value);
-      setActiveTab(REPORT_TAB.overview);
       const newParams = new URLSearchParams(searchParams);
-      newParams.delete("tab");
+      newParams.set("tab", reportTabToParam(activeTab));
       newParams.delete("vmId");
       clearVmFilterParams(newParams);
       setSearchParams(newParams, { replace: true });
@@ -305,7 +294,6 @@ export const ReportContainer: React.FC = () => {
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
     tabIndex: string | number,
   ) => {
-    setActiveTab(tabIndex);
     let newParams: URLSearchParams;
     if (tabIndex === REPORT_TAB.vms) {
       newParams = buildVmsTabUrl(searchParams);
@@ -319,7 +307,6 @@ export const ReportContainer: React.FC = () => {
   };
 
   const handleNavigateToVm = (vmId: string) => {
-    setActiveTab(REPORT_TAB.vms);
     setSearchParams(buildVmDetailUrl(searchParams, vmId), { replace: true });
     setVmsPage(1);
   };
@@ -340,7 +327,6 @@ export const ReportContainer: React.FC = () => {
   };
 
   const handleConcernClick = (concernLabel: string) => {
-    setActiveTab(REPORT_TAB.vms);
     const newParams = filtersToSearchParams({
       concernLabels: [concernLabel],
     });
