@@ -24,6 +24,7 @@ import {
 } from "./vmInspectionUtils";
 import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
+import { useAgentStatus } from "../../../../common/useAgentStatus";
 
 export interface VMTableActionBarProps {
   logic: VMTableLogic;
@@ -77,6 +78,7 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
     isPending,
   } = useCapability("inspector");
   const { openCredentialsModal } = useCredentialsModal();
+  const { isRvtoolsMode } = useAgentStatus();
 
   const {
     page,
@@ -180,19 +182,21 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                 >
                   Remove from group
                 </DropdownItem>
-                <DropdownItem
-                  key="reset-deep-inspection"
-                  isDisabled={selectedVMs.size === 0}
-                  onClick={() => onResetInspection?.()}
-                >
-                  Reset deep inspection
-                </DropdownItem>
+                {!isRvtoolsMode && (
+                  <DropdownItem
+                    key="reset-deep-inspection"
+                    isDisabled={selectedVMs.size === 0}
+                    onClick={() => onResetInspection?.()}
+                  >
+                    Reset deep inspection
+                  </DropdownItem>
+                )}
               </DropdownList>
             </Dropdown>
           </ToolbarItem>
 
           <ToolbarItem>
-            {shouldShowTooltip ? (
+            {isRvtoolsMode ? null : shouldShowTooltip ? (
               <Tooltip content={errorTooltipContent}>
                 <Button variant="primary" icon={<MagicIcon />} isAriaDisabled>
                   Run deep inspection
