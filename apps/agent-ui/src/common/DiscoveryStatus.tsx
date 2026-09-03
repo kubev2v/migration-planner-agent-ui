@@ -12,7 +12,7 @@ import {
   TimesIcon,
 } from "@patternfly/react-icons";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { getAgentApiClient } from "../api/agentApiClient";
 import { unwrapInventoryPayload } from "../pages/VirtualMachinesOverview/inventoryParsing";
 import { DataSharingAlert } from "./components/DataSharingAlert";
@@ -34,12 +34,7 @@ export const DiscoveryStatus: React.FC = () => {
     discoverySharingError,
     isDataShared,
     enableSharing,
-    fetchStatus,
   } = useAgentStatus();
-
-  useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
 
   const handleDownloadInventory = useCallback(async () => {
     try {

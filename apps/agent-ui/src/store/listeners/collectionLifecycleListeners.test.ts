@@ -17,8 +17,8 @@ const NEWER_COLLECTION = {
 };
 
 /**
- * A fake SDK client. `getCollectorStatus` defaults to "ready" so the
- * `appInitialized` resume listener is a no-op; individual tests override it.
+ * A fake SDK client. `getCollectorStatus` defaults to "ready"; individual tests
+ * override it.
  */
 function makeFakeApi(): AgentApiClient {
   return {
@@ -58,8 +58,8 @@ describe("collection lifecycle listeners", () => {
 
   test("polling to a collected status ends the run and shows the ready alert", async () => {
     const api = makeFakeApi();
-    // Not in progress at startup (resume no-op); the poll immediately observes
-    // "collected", then a newer collection settles the run.
+    // The poll immediately observes "collected", then a newer collection
+    // settles the run.
     vi.mocked(api.getCollectorStatus).mockResolvedValue({
       status: "collected",
     });
@@ -94,28 +94,9 @@ describe("collection lifecycle listeners", () => {
     const state = store.getState().collectionLifecycle;
     expect(state.isCollecting).toBe(false);
     expect(state.collectError).toBe("collector unreachable");
-    // The poll makes exactly MAX_COLLECTOR_POLL_FAILURES attempts; the extra
-    // call is the `appInitialized` resume check that runs when the store builds.
+    // The poll makes exactly MAX_COLLECTOR_POLL_FAILURES attempts.
     expect(api.getCollectorStatus).toHaveBeenCalledTimes(
-      MAX_COLLECTOR_POLL_FAILURES + 1,
+      MAX_COLLECTOR_POLL_FAILURES,
     );
-  });
-
-  test("resumes an in-progress run detected at app startup", async () => {
-    const api = makeFakeApi();
-    vi.mocked(api.getCollectorStatus)
-      // appInitialized sees a run already in progress...
-      .mockResolvedValueOnce({ status: "collecting" })
-      // ...then the resumed poll observes a terminal error.
-      .mockResolvedValue({ status: "error", error: "resumed run failed" });
-
-    const store = createStore(api);
-
-    await vi.waitFor(() => {
-      expect(store.getState().collectionLifecycle.collectError).toBe(
-        "resumed run failed",
-      );
-    });
-    expect(store.getState().collectionLifecycle.isCollecting).toBe(false);
   });
 });

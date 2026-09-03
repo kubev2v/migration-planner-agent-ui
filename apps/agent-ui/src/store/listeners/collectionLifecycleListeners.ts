@@ -1,9 +1,6 @@
 import type { Collection } from "@openshift-migration-advisor/agent-sdk";
 import { type ListenerEffectAPI, TaskAbortError } from "@reduxjs/toolkit";
-import {
-  getLatestCollection,
-  waitForNewerCollection,
-} from "../../api/collectionApi";
+import { waitForNewerCollection } from "../../api/collectionApi";
 import { getCollectorStatus } from "../../api/collectorApi";
 import { isCollectorInProgress } from "../../common/collectorStatus";
 import { parseApiError } from "../../common/parseApiError";
@@ -14,7 +11,6 @@ import {
   MAX_COLLECTOR_POLL_FAILURES,
   unexpectedCollectorStatusMessage,
 } from "../../common/report/collectorMessages";
-import { appInitialized } from "../appActions";
 import type { SdkExtra } from "../baseQuery";
 import type { AppDispatch, RootState } from "../index";
 import type { AppStartListening } from "../listenerMiddleware";
@@ -137,9 +133,8 @@ async function runCollectionToCompletion(
 }
 
 /**
- * Wire up the collection-run lifecycle:
- *  - a user-triggered start (`startCollection.fulfilled`) drives polling to completion;
- *  - on app start (`appInitialized`) a run already in progress is resumed.
+ * Wire up the collection-run lifecycle: a user-triggered start
+ * (`startCollection.fulfilled`) drives polling to completion.
  */
 export function setupCollectionLifecycleListeners(
   startAppListening: AppStartListening,
@@ -177,33 +172,6 @@ export function setupCollectionLifecycleListeners(
           return;
         }
         throw err;
-      }
-    },
-  });
-
-  startAppListening({
-    actionCreator: appInitialized,
-    effect: async (_action, listenerApi) => {
-      const { agentApi } = listenerApi.extra;
-      try {
-        const status = await getCollectorStatus(agentApi);
-        if (!isCollectorInProgress(status.status)) {
-          return;
-        }
-
-        listenerApi.cancelActiveListeners();
-        const latest = await getLatestCollection(agentApi);
-        const previous: PreviousCollection = latest
-          ? { id: latest.id, createdAt: latest.createdAt }
-          : null;
-
-        listenerApi.dispatch(collectingStarted(status.status));
-        await runCollectionToCompletion(listenerApi, previous, false);
-      } catch (err) {
-        if (err instanceof TaskAbortError) {
-          return;
-        }
-        console.error("Error checking collector status:", err);
       }
     },
   });

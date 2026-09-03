@@ -2,7 +2,6 @@ import { configureStore } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
 import type { AgentApiClient } from "../api/agentApi";
 import { agentApiSlice } from "./api/agentApiSlice";
-import { appInitialized } from "./appActions";
 import type { SdkExtra } from "./baseQuery";
 import {
   type AppStartListening,
@@ -45,7 +44,6 @@ export function createStore(agentApi: AgentApiClient) {
         .concat(agentApiSlice.middleware),
   });
   setupListeners(store.dispatch);
-  store.dispatch(appInitialized());
   return store;
 }
 

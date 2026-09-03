@@ -1,60 +1,30 @@
+import { Bullseye, Spinner } from "@patternfly/react-core";
 import type React from "react";
-import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { getAgentApiClient } from "../api/agentApiClient";
-import { getLatestCollectionId } from "../api/collectionApi";
-import { getCollectorStatus } from "../api/collectorApi";
-import { newAbortSignal } from "../common/AbortSignal";
-import { isCollectorInProgress } from "../common/collectorStatus";
+import { useListCollectionsQuery } from "../store/api/comparisonEndpoints";
 import { PageLayout } from "./PageLayout";
 
 /**
  * Protected route wrapper for the application.
- * Allows access when collector status is "collected", a refresh is in
- * progress, or at least one collection already exists.
+ * Allows access when at least one collection already exists; otherwise the user
+ * is redirected to the login.
  */
 export const ProtectedRoute: React.FC = () => {
-  const agentApi = getAgentApiClient();
-  const [isChecking, setIsChecking] = useState(true);
-  const [hasCollectedData, setHasCollectedData] = useState(false);
+  const { data: collections, isFetching } = useListCollectionsQuery();
 
-  useEffect(() => {
-    const checkCollectorStatus = async () => {
-      const signal = newAbortSignal("Collector status request timed out.");
-
-      try {
-        const collectorStatus = await getCollectorStatus(agentApi, { signal });
-
-        if (
-          collectorStatus.status === "collected" ||
-          isCollectorInProgress(collectorStatus.status)
-        ) {
-          setHasCollectedData(true);
-          return;
-        }
-
-        const collectionId = await getLatestCollectionId(agentApi);
-        setHasCollectedData(Boolean(collectionId));
-      } catch (err) {
-        console.error("Error checking collector status:", err);
-        setHasCollectedData(false);
-      } finally {
-        setIsChecking(false);
-      }
-    };
-
-    void checkCollectorStatus();
-  }, [agentApi]);
-
-  if (isChecking) {
-    return null;
+  if (collections && collections.length > 0) {
+    return <PageLayout />;
   }
 
-  if (!hasCollectedData) {
-    return <Navigate to="/login" replace />;
+  if (isFetching) {
+    return (
+      <Bullseye style={{ height: "100vh" }}>
+        <Spinner aria-label="Loading report" />
+      </Bullseye>
+    );
   }
 
-  return <PageLayout />;
+  return <Navigate to="/login" replace />;
 };
 
 ProtectedRoute.displayName = "ProtectedRoute";

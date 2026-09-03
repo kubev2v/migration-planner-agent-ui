@@ -34,7 +34,6 @@ import {
 } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components";
-import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 import {
   useDeleteGroupMutation,
   useGetGroupQuery,
@@ -373,10 +372,6 @@ export const GroupDetailPage: React.FC = () => {
               </Dropdown>
             </FlexItem>
           </Flex>
-        </StackItem>
-
-        <StackItem>
-          <DiscoveryStatus />
         </StackItem>
 
         <StackItem>

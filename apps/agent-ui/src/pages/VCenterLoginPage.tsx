@@ -6,7 +6,7 @@ import { useAgentStatus } from "../common/useAgentStatus";
 import { MainVCenterCredentialsModal } from "../credentials/MainVCenterCredentialsModal";
 import { useLoginViewModel } from "../credentials/UseCredentialViewModel";
 
-const AgentLoginPage: React.FC = () => {
+const VCenterLoginPage: React.FC = () => {
   const { agentStatus, fetchStatus: refetchAgentStatus } = useAgentStatus();
   const vm = useLoginViewModel({ refetchAgentStatus });
 
@@ -34,6 +34,6 @@ const AgentLoginPage: React.FC = () => {
   );
 };
 
-AgentLoginPage.displayName = "AgentLoginPage";
+VCenterLoginPage.displayName = "VCenterLoginPage";
 
-export default AgentLoginPage;
+export default VCenterLoginPage;

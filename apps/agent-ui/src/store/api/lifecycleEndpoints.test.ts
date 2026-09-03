@@ -27,7 +27,6 @@ function makeFakeApi(): AgentApiClient {
     getInspectorStatus: vi.fn(async () => ({ state: "ready" })),
     startInspection: vi.fn(async () => ({ state: "running" })),
     stopInspection: vi.fn(async () => ({ state: "ready" })),
-    // Not in progress, so the `appInitialized` resume listener is a no-op.
     getCollectorStatus: vi.fn(async () => ({ status: "ready" })),
     listCollections: vi.fn(async () => ({
       collections: [{ id: "c1", createdAt: new Date("2026-01-01T00:00:00Z") }],

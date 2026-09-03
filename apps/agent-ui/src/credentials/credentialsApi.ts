@@ -25,6 +25,23 @@ export async function getCapabilities(
     const capabilityStatus = await agentApi.getCredentialCapabilities();
     return capabilityStatus.capabilities;
   } catch (err) {
+    if (err instanceof ResponseError && err.response?.status === 501) {
+      return {
+        collector: {
+          enabled: false,
+          missingPrivileges: [],
+        },
+        inspector: {
+          enabled: false,
+          missingPrivileges: [],
+        },
+        forecaster: {
+          enabled: false,
+          missingPrivileges: [],
+        },
+      };
+    }
+
     if (err instanceof ResponseError && err.response?.status === 404) {
       return null;
     }

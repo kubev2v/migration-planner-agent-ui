@@ -5,17 +5,17 @@ export const router = createBrowserRouter(
     {
       path: "/",
       index: true,
-      element: <Navigate to="/login" />,
+      element: <Navigate to="/report" replace />,
     },
     {
       path: "/login",
       lazy: async () => {
-        const { default: AgentLoginPage } = await import(
-          "../pages/AgentLoginPage.tsx"
+        const { default: VCenterLoginPage } = await import(
+          "../pages/VCenterLoginPage.tsx"
         );
 
         return {
-          Component: AgentLoginPage,
+          Component: VCenterLoginPage,
         };
       },
     },
