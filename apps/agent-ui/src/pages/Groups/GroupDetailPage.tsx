@@ -25,7 +25,7 @@ import {
 } from "@patternfly/react-core";
 import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -74,6 +74,7 @@ import {
   buildVmsTabUrl,
   clearVmFilterParams,
   REPORT_TAB,
+  reportTabToParam,
   resolveReportTab,
 } from "../VirtualMachinesOverview/reportTabNavigation";
 import { normalizeVirtualMachines } from "../VirtualMachinesOverview/virtualMachineParsing";
@@ -125,8 +126,9 @@ export const GroupDetailPage: React.FC = () => {
     [searchParams],
   );
 
-  const [activeTab, setActiveTab] = useState<string | number>(() =>
-    resolveReportTab(searchParams, hasActiveFilters(initialVMFilters)),
+  const activeTab: string | number = resolveReportTab(
+    searchParams,
+    hasActiveFilters(initialVMFilters),
   );
 
   // --- Group (header source) ------------------------------------------------
@@ -191,7 +193,6 @@ export const GroupDetailPage: React.FC = () => {
 
   const handleNavigateToVMFilters = useCallback(
     (filters: VMFilters) => {
-      setActiveTab(REPORT_TAB.vms);
       setVmsPage(1);
       const newParams = filtersToSearchParams(filters);
       newParams.set("tab", "vms");
@@ -200,16 +201,6 @@ export const GroupDetailPage: React.FC = () => {
     [setSearchParams],
   );
 
-  useEffect(() => {
-    const nextTab = resolveReportTab(
-      searchParams,
-      hasActiveFilters(searchParamsToFilters(searchParams)),
-    );
-    if (nextTab !== activeTab) {
-      setActiveTab(nextTab);
-    }
-  }, [searchParams, activeTab]);
-
   const [updateGroupName] = useUpdateGroupNameMutation();
   const [deleteGroup] = useDeleteGroupMutation();
 
@@ -217,7 +208,6 @@ export const GroupDetailPage: React.FC = () => {
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
     tabIndex: string | number,
   ) => {
-    setActiveTab(tabIndex);
     let newParams: URLSearchParams;
     if (tabIndex === REPORT_TAB.vms) {
       newParams = buildVmsTabUrl(searchParams);
@@ -231,7 +221,6 @@ export const GroupDetailPage: React.FC = () => {
   };
 
   const handleNavigateToVm = (vmId: string) => {
-    setActiveTab(REPORT_TAB.vms);
     setSearchParams(buildVmDetailUrl(searchParams, vmId), { replace: true });
     setVmsPage(1);
   };
@@ -262,9 +251,8 @@ export const GroupDetailPage: React.FC = () => {
   ): void => {
     if (typeof value === "string") {
       setSelectedClusterId(value);
-      setActiveTab(REPORT_TAB.overview);
       const newParams = new URLSearchParams(searchParams);
-      newParams.delete("tab");
+      newParams.set("tab", reportTabToParam(activeTab));
       newParams.delete("vmId");
       clearVmFilterParams(newParams);
       setSearchParams(newParams, { replace: true });
