@@ -1,17 +1,40 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Renovate configuration for migration-planner-agent-ui - runs dependency updates weekly on Saturday mornings",
+  "description": "Renovate configuration for migration-planner-agent-ui",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "semanticCommits": "enabled",
+  "minimumReleaseAge": "7 days",
+  "tekton": {
+    "schedule": ["at any time"]
+  },
   "packageRules": [
     {
-      "description": "Automerge non-major updates",
+      "description": "Use bump strategy for npm dependencies",
+      "matchManagers": ["npm"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Group npm minor and patch updates into a single PR",
+      "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm minor and patch dependencies",
       "automerge": true
+    },
+    {
+      "description": "Disable major updates to avoid breaking changes",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     },
     {
       "description": "Ignore @openshift-migration-advisor packages; versions are pinned manually in package.json",
       "matchPackageNames": ["@openshift-migration-advisor/**"],
       "enabled": false
+    },
+    {
+      "description": "Use chore commit type for all npm updates",
+      "matchManagers": ["npm"],
+      "semanticCommitType": "chore"
     }
   ]
 }
