@@ -20,6 +20,7 @@ import { useSearchParams } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components/index";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
+import { useAgentStatus } from "../../common/useAgentStatus";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
   useGetApplicationsQuery,
@@ -71,6 +72,7 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
 };
 
 export const ReportContainer: React.FC = () => {
+  const { isRvtoolsMode } = useAgentStatus();
   const agentApi = getAgentApiClient();
   const { data: collections } = useListCollectionsQuery();
   const hasCollectionData = (collections?.length ?? 0) > 0;
@@ -406,7 +408,7 @@ export const ReportContainer: React.FC = () => {
               eventKey={REPORT_TAB.overview}
               title={<TabTitleText>Assessment report</TabTitleText>}
             >
-              <div style={{ marginTop: "24px" }}>
+              <div style={{ marginTop: "8px" }}>
                 {clusterView.viewInfra && clusterView.viewVms ? (
                   <Dashboard
                     key={`assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
@@ -459,23 +461,25 @@ export const ReportContainer: React.FC = () => {
                 />
               </div>
             </Tab>
-            <Tab
-              eventKey={REPORT_TAB.applications}
-              title={<TabTitleText>Applications</TabTitleText>}
-            >
-              <div style={{ marginTop: "24px" }}>
-                <ApplicationsView
-                  applications={applicationsList}
-                  loading={applicationsFetching}
-                  error={applicationsError}
-                  agentApi={agentApi}
-                  selectedApplicationName={selectedApplicationName}
-                  onClearSelectedApplication={handleClearSelectedApplication}
-                  onNavigateToVm={handleNavigateToVm}
-                  onViewInVmList={handleViewApplicationInVmList}
-                />
-              </div>
-            </Tab>
+            {!isRvtoolsMode && (
+              <Tab
+                eventKey={REPORT_TAB.applications}
+                title={<TabTitleText>Applications</TabTitleText>}
+              >
+                <div style={{ marginTop: "24px" }}>
+                  <ApplicationsView
+                    applications={applicationsList}
+                    loading={applicationsFetching}
+                    error={applicationsError}
+                    agentApi={agentApi}
+                    selectedApplicationName={selectedApplicationName}
+                    onClearSelectedApplication={handleClearSelectedApplication}
+                    onNavigateToVm={handleNavigateToVm}
+                    onViewInVmList={handleViewApplicationInVmList}
+                  />
+                </div>
+              </Tab>
+            )}
           </Tabs>
         </StackItem>
       </Stack>

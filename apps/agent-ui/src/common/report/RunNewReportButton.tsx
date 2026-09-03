@@ -10,6 +10,7 @@ import {
   openModal,
   selectIsCollecting,
 } from "../../store/slices/collectionLifecycleSlice";
+import { useAgentStatus } from "../useAgentStatus";
 
 export const RunNewReportButton: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -17,9 +18,10 @@ export const RunNewReportButton: React.FC = () => {
   const { data: collections } = useListCollectionsQuery();
   const { shouldRequestCredentials, isPending } = useCapability("collector");
   const { openCredentialsModal } = useCredentialsModal();
+  const { isRvtoolsMode } = useAgentStatus();
 
   const latestCollection = collections?.[0];
-  if (!latestCollection) return null;
+  if (!latestCollection || isRvtoolsMode) return null;
   return (
     <Flex alignItems={{ default: "alignItemsCenter" }}>
       {latestCollection.createdAt && (

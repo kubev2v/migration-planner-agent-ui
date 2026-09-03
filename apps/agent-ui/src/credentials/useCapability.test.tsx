@@ -2,101 +2,113 @@ import type {
   CapabilityStatusCapabilities,
   CredentialStatus,
 } from "@openshift-migration-advisor/agent-sdk";
-import { describe, expect, test } from "vitest";
-import { buildCapabilityUIState } from "./useCapability";
+import { renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { useAgentStatus } from "../common/useAgentStatus";
+import {
+  useGetCredentialCapabilitiesQuery,
+  useGetCredentialsQuery,
+} from "../store/api/credentialsEndpoints";
+import { useCapability } from "./useCapability";
 
-describe("buildCapabilityUIState", () => {
-  test("Should build state when 404 is returned for both credentials and capabilities", () => {
-    const credentialStatus = null;
-    const capabilities = null;
-    const state = buildCapabilityUIState(
-      "forecaster",
-      credentialStatus,
-      capabilities,
-    );
-    expect(state.shouldShowTooltip).toBe(false);
-    expect(state.shouldRequestCredentials).toBe(true);
+vi.mock("../common/useAgentStatus", () => ({
+  useAgentStatus: vi.fn(),
+}));
+
+vi.mock("../store/api/credentialsEndpoints", () => ({
+  useGetCredentialsQuery: vi.fn(),
+  useGetCredentialCapabilitiesQuery: vi.fn(),
+}));
+
+const validCredentials: CredentialStatus = {
+  url: "https://vcenter.example.com/sdk",
+  username: "admin@vsphere.local",
+  valid: true,
+};
+
+function mockHooks({
+  credentials,
+  isCredentialsLoading = false,
+  capabilities,
+  isCapabilitiesLoading = false,
+  isRvtoolsMode = false,
+}: {
+  credentials?: CredentialStatus | null;
+  isCredentialsLoading?: boolean;
+  capabilities?: CapabilityStatusCapabilities | null;
+  isCapabilitiesLoading?: boolean;
+  isRvtoolsMode?: boolean;
+}) {
+  vi.mocked(useGetCredentialsQuery).mockReturnValue({
+    data: credentials ?? null,
+    isLoading: isCredentialsLoading,
+  } as unknown as ReturnType<typeof useGetCredentialsQuery>);
+  vi.mocked(useGetCredentialCapabilitiesQuery).mockReturnValue({
+    data: capabilities ?? null,
+    isLoading: isCapabilitiesLoading,
+  } as unknown as ReturnType<typeof useGetCredentialCapabilitiesQuery>);
+  vi.mocked(useAgentStatus).mockReturnValue({
+    isRvtoolsMode,
+  } as ReturnType<typeof useAgentStatus>);
+}
+
+describe("useCapability", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
-  test("Should display the tooltip if credentials are valid but not enough permissions", () => {
-    const credentialStatus: CredentialStatus = {
-      url: "https://vcenter.example.com/sdk",
-      username: "admin@vsphere.local",
-      valid: true,
-    };
-    const capabilities: CapabilityStatusCapabilities = {
-      collector: {
-        enabled: true,
-      },
-      inspector: {
-        enabled: true,
-      },
-      forecaster: {
-        enabled: false,
-        missingPrivileges: ["p1", "p2"],
-      },
-    };
-    const state = buildCapabilityUIState(
-      "forecaster",
-      credentialStatus,
-      capabilities,
-    );
-    expect(state.shouldShowTooltip).toBe(true);
-    expect(state.shouldRequestCredentials).toBe(false);
+
+  test("Should be pending while queries are still loading", () => {
+    mockHooks({ isCredentialsLoading: true });
+    const { result } = renderHook(() => useCapability("forecaster"));
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.shouldShowTooltip).toBe(false);
+    expect(result.current.shouldRequestCredentials).toBe(false);
   });
-  test("Should not display the tooltip if credentials are valid and enough permissions", () => {
-    const credentialStatus: CredentialStatus = {
-      url: "https://vcenter.example.com/sdk",
-      username: "admin@vsphere.local",
-      valid: true,
-    };
-    const capabilities: CapabilityStatusCapabilities = {
-      collector: {
-        enabled: true,
-      },
-      inspector: {
-        enabled: true,
-      },
-      forecaster: {
-        enabled: true,
-      },
-    };
-    const state = buildCapabilityUIState(
-      "forecaster",
-      credentialStatus,
-      capabilities,
-    );
-    expect(state.shouldShowTooltip).toBe(false);
-    expect(state.shouldRequestCredentials).toBe(false);
+
+  test("Should show the RVTools tooltip in RVTools mode", () => {
+    mockHooks({ isRvtoolsMode: true });
+    const { result } = renderHook(() => useCapability("forecaster"));
+    expect(result.current.isPending).toBe(false);
+    expect(result.current.shouldShowTooltip).toBe(true);
+    expect(result.current.shouldRequestCredentials).toBe(false);
+    expect(result.current.errorTooltipContent).toBeDefined();
   });
-  test("Should defer while queries are pending, even without credentials yet", () => {
-    const state = buildCapabilityUIState("forecaster", null, null, true);
-    expect(state.isPending).toBe(true);
-    expect(state.shouldShowTooltip).toBe(false);
-    expect(state.shouldRequestCredentials).toBe(false);
+
+  test("Should show the tooltip when credentials are valid but privileges are missing", () => {
+    mockHooks({
+      credentials: validCredentials,
+      capabilities: {
+        collector: { enabled: true },
+        inspector: { enabled: true },
+        forecaster: { enabled: false, missingPrivileges: ["p1", "p2"] },
+      },
+    });
+    const { result } = renderHook(() => useCapability("forecaster"));
+    expect(result.current.isPending).toBe(false);
+    expect(result.current.shouldShowTooltip).toBe(true);
+    expect(result.current.shouldRequestCredentials).toBe(false);
   });
-  test("Should ask for credentials if returned but invalid", () => {
-    const credentialStatus: CredentialStatus = {
-      url: "https://vcenter.example.com/sdk",
-      username: "admin@vsphere.local",
-      valid: false,
-    };
-    const capabilities: CapabilityStatusCapabilities = {
-      collector: {
-        enabled: true,
+
+  test("Should request credentials when credentials return a 404 (no data)", () => {
+    mockHooks({ credentials: null, capabilities: null });
+    const { result } = renderHook(() => useCapability("forecaster"));
+    expect(result.current.isPending).toBe(false);
+    expect(result.current.shouldShowTooltip).toBe(false);
+    expect(result.current.shouldRequestCredentials).toBe(true);
+  });
+
+  test("Should not show anything when credentials are valid and privileges are enough", () => {
+    mockHooks({
+      credentials: validCredentials,
+      capabilities: {
+        collector: { enabled: true },
+        inspector: { enabled: true },
+        forecaster: { enabled: true },
       },
-      inspector: {
-        enabled: true,
-      },
-      forecaster: {
-        enabled: true,
-      },
-    };
-    const state = buildCapabilityUIState(
-      "forecaster",
-      credentialStatus,
-      capabilities,
-    );
-    expect(state.shouldShowTooltip).toBe(false);
-    expect(state.shouldRequestCredentials).toBe(true);
+    });
+    const { result } = renderHook(() => useCapability("forecaster"));
+    expect(result.current.isPending).toBe(false);
+    expect(result.current.shouldShowTooltip).toBe(false);
+    expect(result.current.shouldRequestCredentials).toBe(false);
   });
 });

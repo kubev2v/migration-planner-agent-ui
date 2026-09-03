@@ -26,6 +26,7 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useState } from "react";
+import { useAgentStatus } from "../common/useAgentStatus";
 import {
   useDeleteCredentialsMutation,
   useGetCredentialsQuery,
@@ -129,6 +130,7 @@ function renderStatusLabel(
 }
 
 const VCenterCredentialsDropdownMenu: React.FC = () => {
+  const { isRvtoolsMode } = useAgentStatus();
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
 
@@ -174,6 +176,10 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
     setIsDropdownMenuOpen(false);
     setIsRemoveModalOpen(true);
   };
+
+  if (isRvtoolsMode) {
+    return null;
+  }
 
   return (
     <>

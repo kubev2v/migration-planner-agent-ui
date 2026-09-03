@@ -1,6 +1,7 @@
 import { Bullseye, Spinner } from "@patternfly/react-core";
 import type React from "react";
 import { Navigate } from "react-router-dom";
+import { useAgentStatus } from "../common/useAgentStatus";
 import { useListCollectionsQuery } from "../store/api/comparisonEndpoints";
 import { PageLayout } from "./PageLayout";
 
@@ -10,6 +11,7 @@ import { PageLayout } from "./PageLayout";
  * is redirected to the login.
  */
 export const ProtectedRoute: React.FC = () => {
+  const { isRvtoolsMode } = useAgentStatus();
   const { data: collections, isFetching } = useListCollectionsQuery();
 
   if (collections && collections.length > 0) {
@@ -24,7 +26,7 @@ export const ProtectedRoute: React.FC = () => {
     );
   }
 
-  return <Navigate to="/login" replace />;
+  return <Navigate to={isRvtoolsMode ? "/rvtools-upload" : "/login"} replace />;
 };
 
 ProtectedRoute.displayName = "ProtectedRoute";

@@ -9,7 +9,9 @@ import { getCollectorStatus } from "../api/collectorApi";
 import { newAbortSignal } from "../common/AbortSignal";
 import type { ApiError } from "../common/components/index";
 import { parseApiError } from "../common/parseApiError";
+import { agentApiSlice } from "../store/api/agentApiSlice";
 import { usePutCredentialsMutation } from "../store/api/credentialsEndpoints";
+import { useAppDispatch } from "../store/hooks";
 
 // Maximum consecutive polling failures before reporting error to user
 const MAX_POLL_FAILURES = 5;
@@ -36,7 +38,12 @@ export const useLoginViewModel = (
   const [putCredentials] = usePutCredentialsMutation();
   const agentApi = getAgentApiClient();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const refetchAgentStatus = props?.refetchAgentStatus;
+  const goToReport = useCallback((): void => {
+    dispatch(agentApiSlice.util.invalidateTags(["Collections"]));
+    navigate("/report");
+  }, [dispatch, navigate]);
   const [version, setVersion] = useState<string | undefined>(undefined);
   const [isCollecting, setIsCollecting] = useState<boolean>(false);
   const [shouldPollCollector, setShouldPollCollector] = useState(false);
@@ -67,7 +74,7 @@ export const useLoginViewModel = (
         const collectorStatus = await getCollectorStatus(agentApi);
 
         if (collectorStatus.status === "collected") {
-          navigate("/report");
+          goToReport();
         }
       } catch (err) {
         console.warn("Failed to check initial collector status:", err);
@@ -75,7 +82,7 @@ export const useLoginViewModel = (
     };
 
     checkInitialStatus();
-  }, [agentApi, navigate]);
+  }, [agentApi, goToReport]);
 
   // Poll collector status after the new collector run has started.
   useEffect(() => {
@@ -94,7 +101,7 @@ export const useLoginViewModel = (
         setStatus(collectorStatus.status);
 
         if (collectorStatus.status === "collected") {
-          navigate("/report");
+          goToReport();
         } else if (collectorStatus.status === "error") {
           setShouldPollCollector(false);
           setIsCollecting(false);
@@ -135,7 +142,7 @@ export const useLoginViewModel = (
       clearInterval(interval);
       pollFailuresRef.current = 0;
     };
-  }, [shouldPollCollector, agentApi, navigate]);
+  }, [shouldPollCollector, agentApi, goToReport]);
 
   const onCollect = useCallback(
     async (credentials: VcenterCredentials, isDataShared: boolean) => {

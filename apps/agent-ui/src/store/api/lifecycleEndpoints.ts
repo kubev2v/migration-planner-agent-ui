@@ -61,6 +61,14 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
       invalidatesTags: ["CollectorStatus"],
     }),
 
+    startRvtoolsCollector: build.mutation<CollectorStatus, { files: File[] }>({
+      query:
+        ({ files }) =>
+        (sdk) =>
+          sdk.startRvtoolsCollector({ files }),
+      invalidatesTags: ["CollectorStatus"],
+    }),
+
     stopCollector: build.mutation<void, void>({
       query: () => (sdk) => sdk.stopCollector(),
       invalidatesTags: ["CollectorStatus"],
@@ -101,6 +109,7 @@ export const {
   useLazyGetInspectorStatusQuery,
   useSetAgentModeMutation,
   useStartCollectorMutation,
+  useStartRvtoolsCollectorMutation,
   useStopCollectorMutation,
   usePutInspectorVddkMutation,
   useStartInspectionMutation,

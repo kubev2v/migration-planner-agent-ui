@@ -34,6 +34,7 @@ import {
 } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components";
+import { useAgentStatus } from "../../common/useAgentStatus";
 import {
   useDeleteGroupMutation,
   useGetGroupQuery,
@@ -105,6 +106,7 @@ function getGroupErrorMessage(error: unknown): string {
 }
 
 export const GroupDetailPage: React.FC = () => {
+  const { isRvtoolsMode } = useAgentStatus();
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const agentApi = getAgentApiClient();
@@ -478,23 +480,25 @@ export const GroupDetailPage: React.FC = () => {
                 />
               </div>
             </Tab>
-            <Tab
-              eventKey={REPORT_TAB.applications}
-              title={<TabTitleText>Applications</TabTitleText>}
-            >
-              <div style={{ marginTop: "24px" }}>
-                <ApplicationsView
-                  applications={applicationsList}
-                  loading={applicationsLoading}
-                  error={applicationsError}
-                  agentApi={agentApi}
-                  selectedApplicationName={selectedApplicationName}
-                  onClearSelectedApplication={handleClearSelectedApplication}
-                  onNavigateToVm={handleNavigateToVm}
-                  onViewInVmList={handleViewApplicationInVmList}
-                />
-              </div>
-            </Tab>
+            {!isRvtoolsMode && (
+              <Tab
+                eventKey={REPORT_TAB.applications}
+                title={<TabTitleText>Applications</TabTitleText>}
+              >
+                <div style={{ marginTop: "24px" }}>
+                  <ApplicationsView
+                    applications={applicationsList}
+                    loading={applicationsLoading}
+                    error={applicationsError}
+                    agentApi={agentApi}
+                    selectedApplicationName={selectedApplicationName}
+                    onClearSelectedApplication={handleClearSelectedApplication}
+                    onNavigateToVm={handleNavigateToVm}
+                    onViewInVmList={handleViewApplicationInVmList}
+                  />
+                </div>
+              </Tab>
+            )}
           </Tabs>
         </StackItem>
       </Stack>

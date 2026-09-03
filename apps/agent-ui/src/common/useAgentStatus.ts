@@ -15,6 +15,7 @@ export interface AgentStatusValue {
   discoverySharingStatus: DiscoverySharingStatus;
   discoverySharingError: string | undefined;
   isDataShared: boolean;
+  isRvtoolsMode: boolean;
   loading: boolean;
   error: string | null;
   fetchStatus: () => Promise<void>;
@@ -75,6 +76,7 @@ export function useAgentStatus(): AgentStatusValue {
     discoverySharingStatus: getDiscoverySharingStatus(agentStatus),
     discoverySharingError: agentStatus?.consoleConnection.error,
     isDataShared: agentStatus?.mode === "connected",
+    isRvtoolsMode: agentStatus?.rvtoolsModeEnabled === true,
     loading: isLoading,
     error: queryError
       ? getSdkErrorMessage(queryError, "Failed to fetch status")
