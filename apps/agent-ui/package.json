@@ -27,18 +27,18 @@
     "@reduxjs/toolkit": "^2.12.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-hook-form": "^7.85.0",
+    "react-hook-form": "^7.86.0",
     "react-redux": "^9.3.0",
-    "react-router-dom": "^6.30.6",
+    "react-router-dom": "^7.18.2",
     "victory": "^37.3.6",
     "victory-core": "^37.3.6",
     "yup": "^1.7.1"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.5"
+    "@testing-library/user-event": "^14.6.6"
   },
   "files": [
     "dist"
