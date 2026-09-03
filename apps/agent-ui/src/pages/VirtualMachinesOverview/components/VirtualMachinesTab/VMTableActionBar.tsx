@@ -16,6 +16,7 @@ import {
 } from "@patternfly/react-core";
 import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useAgentStatus } from "../../../../common/useAgentStatus";
 import { useCredentialsModal } from "../../../../credentials/CredentialsModalController";
 import { useCapability } from "../../../../credentials/useCapability";
 import {
@@ -24,7 +25,6 @@ import {
 } from "./vmInspectionUtils";
 import type { VMTableVariantUI } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
-import { useAgentStatus } from "../../../../common/useAgentStatus";
 
 export interface VMTableActionBarProps {
   logic: VMTableLogic;
