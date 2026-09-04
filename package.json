@@ -16,11 +16,11 @@
     "knip": "knip --workspace apps/agent-ui"
   },
   "devDependencies": {
-    "@biomejs/biome": "~2.5.10",
+    "@biomejs/biome": "~2.5.11",
     "@types/node": "^26.4.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^6.1.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^30.0.1",
     "knip": "^6.32.3",
     "typescript": "^6.0.3",
@@ -29,7 +29,7 @@
   },
   "resolutions": {
     "glob": "^13.0.6",
-    "minimatch": "^10.2.2"
+    "minimatch": "^10.2.6"
   },
-  "packageManager": "yarn@4.14.1"
+  "packageManager": "yarn@4.18.0"
 }
