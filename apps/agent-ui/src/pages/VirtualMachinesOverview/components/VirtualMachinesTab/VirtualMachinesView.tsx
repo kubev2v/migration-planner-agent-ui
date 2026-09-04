@@ -45,6 +45,7 @@ import {
 } from "./vmFilters";
 import { getDeepInspectionEnablement } from "./vmInspectionUtils";
 import { fetchAllMatchingVmIds, fetchVmsByIds } from "./vmSelection";
+import { vmTableStyles } from "./vmTableShared";
 
 interface VirtualMachinesViewProps {
   vms: VirtualMachine[];
@@ -677,57 +678,59 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     return () => stopPolling();
   }, [stopPolling]);
 
-  if (selectedVMId) {
-    return (
-      <VMDetailsPage
-        vmId={selectedVMId}
-        onBack={handleBack}
-        scrollToSection={vmSectionParam}
-        onScrollToSectionComplete={handleScrollToSectionComplete}
-      />
-    );
-  }
-
   return (
     <>
-      <VMTable
-        vms={visibleVms}
-        loading={loading}
-        onVMClick={handleVMClick}
-        onVMApplicationsClick={handleVMApplicationsClick}
-        onVMIssuesClick={handleVMIssuesClick}
-        initialFilters={initialFilters}
-        totalVMs={totalVMs}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        onFiltersChange={onFiltersChange}
-        onPageChange={onPageChange}
-        onSortChange={onSortChange}
-        availableFilterOptions={mergedFilterOptions}
-        selectedVMs={selectedVMs}
-        onSelectionChange={setSelectedVMs}
-        onFetchAllVmIds={agentApi ? handleFetchAllVmIds : undefined}
-        onRunDeepInspection={handleRunDeepInspection}
-        onExcludeFromReports={handleExcludeFromReports}
-        onIncludeInReports={handleIncludeInReports}
-        onAddLabels={handleAddLabels}
-        onEditLabels={handleEditLabels}
-        onManageLabels={handleManageLabels}
-        onCreateGroup={
-          agentApi && variant === "overview" ? handleCreateGroup : undefined
-        }
-        onAddToGroup={
-          agentApi && variant === "overview" ? handleAddToGroup : undefined
-        }
-        onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
-        variant={variant}
-        inspectionActive={inspectionActive}
-        inspectionContextVms={inspectionContextVms}
-        selectionContextLoadFailed={selectionContextLoadFailed}
-        cancelingInspectionVmIds={cancelingInspectionVmIds}
-        onCancelInspection={handleCancelInspection}
-        onResetInspection={handleResetInspection}
-      />
+      {selectedVMId ? (
+        <div className={vmTableStyles.viewScroll}>
+          <VMDetailsPage
+            vmId={selectedVMId}
+            onBack={handleBack}
+            scrollToSection={vmSectionParam}
+            onScrollToSectionComplete={handleScrollToSectionComplete}
+          />
+        </div>
+      ) : (
+        <div className={vmTableStyles.viewFill}>
+          <VMTable
+            vms={visibleVms}
+            loading={loading}
+            onVMClick={handleVMClick}
+            onVMApplicationsClick={handleVMApplicationsClick}
+            onVMIssuesClick={handleVMIssuesClick}
+            initialFilters={initialFilters}
+            totalVMs={totalVMs}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onFiltersChange={onFiltersChange}
+            onPageChange={onPageChange}
+            onSortChange={onSortChange}
+            availableFilterOptions={mergedFilterOptions}
+            selectedVMs={selectedVMs}
+            onSelectionChange={setSelectedVMs}
+            onFetchAllVmIds={agentApi ? handleFetchAllVmIds : undefined}
+            onRunDeepInspection={handleRunDeepInspection}
+            onExcludeFromReports={handleExcludeFromReports}
+            onIncludeInReports={handleIncludeInReports}
+            onAddLabels={handleAddLabels}
+            onEditLabels={handleEditLabels}
+            onManageLabels={handleManageLabels}
+            onCreateGroup={
+              agentApi && variant === "overview" ? handleCreateGroup : undefined
+            }
+            onAddToGroup={
+              agentApi && variant === "overview" ? handleAddToGroup : undefined
+            }
+            onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
+            variant={variant}
+            inspectionActive={inspectionActive}
+            inspectionContextVms={inspectionContextVms}
+            selectionContextLoadFailed={selectionContextLoadFailed}
+            cancelingInspectionVmIds={cancelingInspectionVmIds}
+            onCancelInspection={handleCancelInspection}
+            onResetInspection={handleResetInspection}
+          />
+        </div>
+      )}
       {agentApi && (
         <DeepInspectionModal
           isOpen={isInspectionModalOpen}

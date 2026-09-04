@@ -30,6 +30,7 @@ import {
   formatMemorySize,
   getColumnModifier,
   type VMTableVariantUI,
+  vmTableStyles,
 } from "./vmTableShared";
 import type { VMTableLogic } from "./vmTableTypes";
 
@@ -109,6 +110,8 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
       variant="compact"
       borders={false}
       isStickyHeader
+      gridBreakPoint=""
+      className={vmTableStyles.gridTable}
     >
       <Thead>
         <Tr>

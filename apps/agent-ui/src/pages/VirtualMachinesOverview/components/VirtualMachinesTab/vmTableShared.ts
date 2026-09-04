@@ -371,17 +371,67 @@ export const filterStyles = {
 
 export const vmTableStyles = {
   vmTable: css`
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+
     th button {
       display: flex;
       align-items: center;
-      width: 100%;
+      width: max-content;
+      min-width: 100%;
       text-align: left;
       justify-content: space-between;
       gap: 0.5rem;
     }
   `,
-  gridScrollContainer: css`
-    overflow-x: auto;
+  viewFill: css`
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  `,
+  viewScroll: css`
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  `,
+  gridFill: css`
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  `,
+  gridInnerScroll: css`
+    && {
+      display: block !important;
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: scroll !important;
+      overflow-y: auto !important;
+    }
+  `,
+  gridTableWrap: css`
+    display: block;
+    width: max-content;
+  `,
+  gridTable: css`
+    &.pf-v6-c-table {
+      width: max-content !important;
+      min-width: 100%;
+    }
+
+    /* PatternFly nowrap uses min-width: 0, so columns shrink and clip instead of overflowing. */
+    .pf-m-nowrap {
+      --pf-v6-c-table--cell--MinWidth: max-content;
+    }
   `,
 };
 

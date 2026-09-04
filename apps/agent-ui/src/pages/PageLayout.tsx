@@ -80,6 +80,15 @@ const NAV_SECTIONS: ReportNavSection[] = [
   },
 ];
 
+const filledPageStyle = css`
+  min-height: 0;
+
+  > .pf-v6-c-page__main-container,
+  .pf-v6-c-page__main {
+    min-height: 0;
+  }
+`;
+
 const appTitleStyle = css`
   padding: var(--pf-t--global--spacer--md);
   margin-bottom: var(--pf-t--global--spacer--sm);
@@ -235,6 +244,8 @@ export const PageLayout: React.FC = () => {
   return (
     <CredentialsModalProvider>
       <Page
+        className={filledPageStyle}
+        isContentFilled
         isManagedSidebar
         masthead={
           <Masthead>

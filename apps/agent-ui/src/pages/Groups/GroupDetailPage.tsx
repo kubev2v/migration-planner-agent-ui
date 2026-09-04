@@ -67,6 +67,7 @@ import {
   getInventoryAggregateView,
   inventoryFromGroupResponse,
 } from "../VirtualMachinesOverview/inventoryParsing";
+import { reportPageFillStyles } from "../VirtualMachinesOverview/reportPageFill";
 import {
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
@@ -278,7 +279,7 @@ export const GroupDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
+      <PageSection hasBodyWrapper={false} isFilled>
         <AppEmptyState
           titleText="Loading group"
           icon={Spinner}
@@ -293,7 +294,7 @@ export const GroupDetailPage: React.FC = () => {
       ? getGroupErrorMessage(groupError)
       : "Group not found.";
     return (
-      <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
+      <PageSection hasBodyWrapper={false} isFilled>
         <Alert variant="danger" title="Unable to load group">
           {message}
         </Alert>
@@ -315,8 +316,12 @@ export const GroupDetailPage: React.FC = () => {
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
   return (
-    <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
-      <Stack hasGutter>
+    <PageSection
+      hasBodyWrapper={false}
+      isFilled
+      className={reportPageFillStyles.pageSection}
+    >
+      <Stack hasGutter className={reportPageFillStyles.stack}>
         <StackItem>
           <Breadcrumb>
             <BreadcrumbItem>
@@ -415,13 +420,13 @@ export const GroupDetailPage: React.FC = () => {
           <Header totalVMs={totalVMs} totalClusters={totalClusters} />
         </StackItem>
 
-        <StackItem>
+        <StackItem isFilled className={reportPageFillStyles.tabsHost}>
           <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
             <Tab
               eventKey={REPORT_TAB.overview}
               title={<TabTitleText>Assessment report</TabTitleText>}
             >
-              <div style={{ marginTop: "24px" }}>
+              <div className={reportPageFillStyles.tabBodyScroll}>
                 <Title headingLevel="h2" size="lg">
                   Report for {group.name} group
                 </Title>
@@ -458,7 +463,7 @@ export const GroupDetailPage: React.FC = () => {
               eventKey={REPORT_TAB.vms}
               title={<TabTitleText>Virtual machines</TabTitleText>}
             >
-              <div style={{ marginTop: "24px" }}>
+              <div className={reportPageFillStyles.tabBodyFill}>
                 <VirtualMachinesView
                   vms={vmsList}
                   loading={vmsLoading}
@@ -485,7 +490,7 @@ export const GroupDetailPage: React.FC = () => {
                 eventKey={REPORT_TAB.applications}
                 title={<TabTitleText>Applications</TabTitleText>}
               >
-                <div style={{ marginTop: "24px" }}>
+                <div className={reportPageFillStyles.tabBodyScroll}>
                   <ApplicationsView
                     applications={applicationsList}
                     loading={applicationsLoading}

@@ -49,6 +49,7 @@ import type { VMTableFilterOptions } from "./components/VirtualMachinesTab/vmTab
 import { Header } from "./Header";
 import { getInventoryAggregateView } from "./inventoryParsing";
 import { ReportPageHeader } from "./ReportPageHeader";
+import { reportPageFillStyles } from "./reportPageFill";
 import {
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
@@ -204,7 +205,11 @@ export const ReportContainer: React.FC = () => {
 
   if (inventoryLoading) {
     return (
-      <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
+      <PageSection
+        hasBodyWrapper={false}
+        isFilled
+        className={reportPageFillStyles.pageSection}
+      >
         <Stack hasGutter>
           <StackItem>
             <ReportPageHeader />
@@ -223,7 +228,11 @@ export const ReportContainer: React.FC = () => {
 
   if (inventoryError) {
     return (
-      <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
+      <PageSection
+        hasBodyWrapper={false}
+        isFilled
+        className={reportPageFillStyles.pageSection}
+      >
         <Stack hasGutter>
           <StackItem>
             <ReportPageHeader />
@@ -244,7 +253,11 @@ export const ReportContainer: React.FC = () => {
 
   if (!inventory) {
     return (
-      <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
+      <PageSection
+        hasBodyWrapper={false}
+        isFilled
+        className={reportPageFillStyles.pageSection}
+      >
         <Stack hasGutter>
           <StackItem>
             <ReportPageHeader />
@@ -338,8 +351,12 @@ export const ReportContainer: React.FC = () => {
   };
 
   return (
-    <PageSection hasBodyWrapper={false} isFilled style={{ padding: "24px" }}>
-      <Stack hasGutter>
+    <PageSection
+      hasBodyWrapper={false}
+      isFilled
+      className={reportPageFillStyles.pageSection}
+    >
+      <Stack hasGutter className={reportPageFillStyles.stack}>
         <StackItem>
           <ReportPageHeader
             showExport={showExport}
@@ -402,13 +419,13 @@ export const ReportContainer: React.FC = () => {
         )}
 
         {/* Tabs */}
-        <StackItem>
+        <StackItem isFilled className={reportPageFillStyles.tabsHost}>
           <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
             <Tab
               eventKey={REPORT_TAB.overview}
               title={<TabTitleText>Assessment report</TabTitleText>}
             >
-              <div style={{ marginTop: "8px" }}>
+              <div className={reportPageFillStyles.tabBodyScroll}>
                 {clusterView.viewInfra && clusterView.viewVms ? (
                   <Dashboard
                     key={`assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
@@ -444,7 +461,7 @@ export const ReportContainer: React.FC = () => {
               eventKey={REPORT_TAB.vms}
               title={<TabTitleText>Virtual Machines</TabTitleText>}
             >
-              <div style={{ marginTop: "24px" }}>
+              <div className={reportPageFillStyles.tabBodyFill}>
                 <VirtualMachinesView
                   vms={vmsList}
                   loading={vmsFetching}
@@ -466,7 +483,7 @@ export const ReportContainer: React.FC = () => {
                 eventKey={REPORT_TAB.applications}
                 title={<TabTitleText>Applications</TabTitleText>}
               >
-                <div style={{ marginTop: "24px" }}>
+                <div className={reportPageFillStyles.tabBodyScroll}>
                   <ApplicationsView
                     applications={applicationsList}
                     loading={applicationsFetching}
