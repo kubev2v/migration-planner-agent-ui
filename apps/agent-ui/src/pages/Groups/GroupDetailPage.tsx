@@ -19,13 +19,15 @@ import {
   Stack,
   StackItem,
   Tab,
+  TabContent,
+  TabContentBody,
   Tabs,
   TabTitleText,
   Title,
 } from "@patternfly/react-core";
 import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -61,6 +63,11 @@ import {
   type VMFilters,
   withDefaultReportInclusion,
 } from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilters";
+import {
+  vmsTabContentBodyStyle,
+  vmsTabContentStyle,
+  vmsTabsStackItemStyle,
+} from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmTableShared";
 import type { VMTableFilterOptions } from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmTableTypes";
 import { Header } from "../VirtualMachinesOverview/Header";
 import {
@@ -121,6 +128,10 @@ export const GroupDetailPage: React.FC = () => {
   const [vmsPage, setVmsPage] = useState(1);
   const [vmsPageSize, setVmsPageSize] = useState(20);
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
+
+  const overviewTabRef = useRef<HTMLElement>(null);
+  const vmsTabRef = useRef<HTMLElement>(null);
+  const applicationsTabRef = useRef<HTMLElement>(null);
 
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
@@ -415,91 +426,120 @@ export const GroupDetailPage: React.FC = () => {
           <Header totalVMs={totalVMs} totalClusters={totalClusters} />
         </StackItem>
 
-        <StackItem>
+        <StackItem isFilled className={vmsTabsStackItemStyle}>
           <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
             <Tab
               eventKey={REPORT_TAB.overview}
               title={<TabTitleText>Assessment report</TabTitleText>}
-            >
-              <div style={{ marginTop: "24px" }}>
-                <Title headingLevel="h2" size="lg">
-                  Report for {group.name} group
-                </Title>
-                <Content component="p" style={{ marginTop: "8px" }}>
-                  This report is based on all the virtual machines inside this
-                  group, except those marked as excluded from reports.
-                </Content>
-                {clusterView.viewInfra && clusterView.viewVms ? (
-                  <div style={{ marginTop: "24px" }}>
-                    <Dashboard
-                      key={`group-assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
-                      infra={clusterView.viewInfra}
-                      cpuCores={clusterView.cpuCores}
-                      ramGB={clusterView.ramGB}
-                      vms={clusterView.viewVms}
-                      clusters={clusterView.viewClusters}
-                      isAggregateView={clusterView.isAggregateView}
-                      clusterFound={clusterView.clusterFound}
-                      onConcernClick={handleConcernClick}
-                      onNavigateToVMFilters={handleNavigateToVMFilters}
-                    />
-                  </div>
-                ) : (
-                  <AppEmptyState
-                    titleText="No assessment data is available for this group yet"
-                    body="Assessment data will appear here once virtual machines in this group have been inventoried."
-                    icon={InboxIcon}
-                    bullseyeStyle={{ minHeight: "240px", marginTop: "16px" }}
-                  />
-                )}
-              </div>
-            </Tab>
+              tabContentId="group-tab-overview"
+              tabContentRef={overviewTabRef}
+            />
             <Tab
               eventKey={REPORT_TAB.vms}
               title={<TabTitleText>Virtual machines</TabTitleText>}
-            >
-              <div style={{ marginTop: "24px" }}>
-                <VirtualMachinesView
-                  vms={vmsList}
-                  loading={vmsLoading}
-                  initialFilters={initialVMFilters}
-                  totalVMs={vmsTotalCount}
-                  currentPage={vmsPage}
-                  pageSize={vmsPageSize}
-                  onFiltersChange={() => setVmsPage(1)}
-                  onPageChange={(page, pageSize) => {
-                    setVmsPage(page);
-                    setVmsPageSize(pageSize);
-                  }}
-                  onSortChange={setVmsSortFields}
-                  availableFilterOptions={availableFilterOptions}
-                  agentApi={agentApi}
-                  groupContext={{ id: group.id, name: group.name }}
-                  scopedFilterExpression={group.filter}
-                  sortFields={vmsSortFields}
-                />
-              </div>
-            </Tab>
+              tabContentId="group-tab-vms"
+              tabContentRef={vmsTabRef}
+            />
             {!isRvtoolsMode && (
               <Tab
                 eventKey={REPORT_TAB.applications}
                 title={<TabTitleText>Applications</TabTitleText>}
-              >
-                <div style={{ marginTop: "24px" }}>
-                  <ApplicationsView
-                    applications={applicationsList}
-                    loading={applicationsLoading}
-                    error={applicationsError}
-                    agentApi={agentApi}
-                    selectedApplicationName={selectedApplicationName}
-                    onClearSelectedApplication={handleClearSelectedApplication}
-                    onNavigateToVm={handleNavigateToVm}
-                    onViewInVmList={handleViewApplicationInVmList}
-                  />
-                </div>
-              </Tab>
+                tabContentId="group-tab-applications"
+                tabContentRef={applicationsTabRef}
+              />
             )}
           </Tabs>
+
+          {/* TabsContent */}
+          <TabContent
+            eventKey={REPORT_TAB.overview}
+            id="group-tab-overview"
+            ref={overviewTabRef}
+            hidden={activeTab !== REPORT_TAB.overview}
+          >
+            <TabContentBody hasPadding>
+              <Title headingLevel="h2" size="lg">
+                Report for {group.name} group
+              </Title>
+              <Content component="p">
+                This report is based on all the virtual machines inside this
+                group, except those marked as excluded from reports.
+              </Content>
+              {clusterView.viewInfra && clusterView.viewVms ? (
+                <Dashboard
+                  key={`group-assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
+                  infra={clusterView.viewInfra}
+                  cpuCores={clusterView.cpuCores}
+                  ramGB={clusterView.ramGB}
+                  vms={clusterView.viewVms}
+                  clusters={clusterView.viewClusters}
+                  isAggregateView={clusterView.isAggregateView}
+                  clusterFound={clusterView.clusterFound}
+                  onConcernClick={handleConcernClick}
+                  onNavigateToVMFilters={handleNavigateToVMFilters}
+                />
+              ) : (
+                <AppEmptyState
+                  titleText="No assessment data is available for this group yet"
+                  body="Assessment data will appear here once virtual machines in this group have been inventoried."
+                  icon={InboxIcon}
+                  bullseyeStyle={{ minHeight: "240px", marginTop: "16px" }}
+                />
+              )}
+            </TabContentBody>
+          </TabContent>
+
+          <TabContent
+            eventKey={REPORT_TAB.vms}
+            id="group-tab-vms"
+            ref={vmsTabRef}
+            hidden={activeTab !== REPORT_TAB.vms}
+            className={vmsTabContentStyle}
+          >
+            <TabContentBody hasPadding className={vmsTabContentBodyStyle}>
+              <VirtualMachinesView
+                vms={vmsList}
+                loading={vmsLoading}
+                initialFilters={initialVMFilters}
+                totalVMs={vmsTotalCount}
+                currentPage={vmsPage}
+                pageSize={vmsPageSize}
+                onFiltersChange={() => setVmsPage(1)}
+                onPageChange={(page, pageSize) => {
+                  setVmsPage(page);
+                  setVmsPageSize(pageSize);
+                }}
+                onSortChange={setVmsSortFields}
+                availableFilterOptions={availableFilterOptions}
+                agentApi={agentApi}
+                groupContext={{ id: group.id, name: group.name }}
+                scopedFilterExpression={group.filter}
+                sortFields={vmsSortFields}
+              />
+            </TabContentBody>
+          </TabContent>
+
+          {!isRvtoolsMode && (
+            <TabContent
+              eventKey={REPORT_TAB.applications}
+              id="group-tab-applications"
+              ref={applicationsTabRef}
+              hidden={activeTab !== REPORT_TAB.applications}
+            >
+              <TabContentBody hasPadding>
+                <ApplicationsView
+                  applications={applicationsList}
+                  loading={applicationsLoading}
+                  error={applicationsError}
+                  agentApi={agentApi}
+                  selectedApplicationName={selectedApplicationName}
+                  onClearSelectedApplication={handleClearSelectedApplication}
+                  onNavigateToVm={handleNavigateToVm}
+                  onViewInVmList={handleViewApplicationInVmList}
+                />
+              </TabContentBody>
+            </TabContent>
+          )}
         </StackItem>
       </Stack>
 

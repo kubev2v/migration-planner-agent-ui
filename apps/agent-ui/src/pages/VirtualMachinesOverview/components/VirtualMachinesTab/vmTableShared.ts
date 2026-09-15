@@ -438,3 +438,17 @@ export function resolveVisibleColumns({
 
   return baseColumns;
 }
+
+export const vmsTabsStackItemStyle = css`
+  display: flex;
+  flex-direction: column;
+`;
+
+export const vmsTabContentStyle = css`
+  flex: 1;
+  min-height: 0;
+`;
+
+export const vmsTabContentBodyStyle = css`
+  height: 100%;
+`;
