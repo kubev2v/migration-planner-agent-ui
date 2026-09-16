@@ -39,7 +39,7 @@ export const DiscoveryStatus: React.FC = () => {
 
   const handleDownloadInventory = useCallback(async () => {
     try {
-      const response = await agentApi.getLatestInventory();
+      const response = await agentApi.getLatestInventory({});
       const payload = unwrapInventoryPayload(response);
       const downloadData = payload
         ? {

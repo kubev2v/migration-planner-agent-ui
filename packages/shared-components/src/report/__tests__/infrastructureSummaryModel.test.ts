@@ -12,7 +12,7 @@ import {
   type InventoryInfra,
   visibleNetworks,
   vsanStatus,
-} from "../infrastructureSummary.js";
+} from "../infrastructureSummaryModel.js";
 
 const createInfra = (
   overrides: Partial<InventoryInfra> = {},

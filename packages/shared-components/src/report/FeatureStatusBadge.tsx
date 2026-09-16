@@ -1,7 +1,7 @@
 import { Label } from "@patternfly/react-core";
 import { CheckCircleIcon, TimesCircleIcon } from "@patternfly/react-icons";
 import type { FC } from "react";
-import type { FeatureStatus } from "./infrastructureSummary.js";
+import type { FeatureStatus } from "./infrastructureSummaryModel.js";
 
 export interface FeatureStatusBadgeProps {
   status: FeatureStatus;

@@ -20,7 +20,7 @@ import type {
   ClusterDetailRow,
   ClusterDetailsModel,
   FeatureStatus,
-} from "./infrastructureSummary.js";
+} from "./infrastructureSummaryModel.js";
 
 export interface VCenterClusterDetailsProps {
   isAggregateView: boolean;

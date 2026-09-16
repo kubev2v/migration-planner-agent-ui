@@ -8,7 +8,7 @@ import {
   DescriptionListTerm,
 } from "@patternfly/react-core";
 import type { FC } from "react";
-import type { InfrastructureSummaryModel } from "./infrastructureSummary.js";
+import type { InfrastructureSummaryModel } from "./infrastructureSummaryModel.js";
 
 export interface InfrastructureSummaryProps {
   summary: InfrastructureSummaryModel;

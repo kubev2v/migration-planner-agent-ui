@@ -42,7 +42,7 @@ export type {
   InventoryNetwork,
   InventoryVms,
   NetworkLabel,
-} from "./infrastructureSummary.js";
+} from "./infrastructureSummaryModel.js";
 export {
   booleanToFeatureStatus,
   buildClusterDetailRows,
@@ -53,7 +53,7 @@ export {
   hostCapabilityStatus,
   visibleNetworks,
   vsanStatus,
-} from "./infrastructureSummary.js";
+} from "./infrastructureSummaryModel.js";
 export { OSBarChart, OSDistribution } from "./OSDistribution.js";
 export { OsSupportTiersHelpPopover } from "./OsSupportTiersHelpPopover.js";
 export { OsUpgradeNotice } from "./OsUpgradeNotice.js";
