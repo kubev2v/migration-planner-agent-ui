@@ -99,6 +99,23 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
         (sdk) =>
           sdk.cancelVirtualMachineInspection({ vmId }),
     }),
+
+    deleteCollectedData: build.mutation<void, void>({
+      query: () => (sdk) => sdk.deleteCollections(),
+      invalidatesTags: [
+        "Collections",
+        "Vms",
+        "Inventory",
+        "Applications",
+        "Group",
+        "GroupVms",
+        "GroupInventory",
+        "VmLabels",
+        "Forecaster",
+        "CollectorStatus",
+        "InspectorStatus",
+      ],
+    }),
   }),
 });
 
@@ -115,4 +132,5 @@ export const {
   useStartInspectionMutation,
   useStopInspectionMutation,
   useCancelVirtualMachineInspectionMutation,
+  useDeleteCollectedDataMutation,
 } = lifecycleEndpoints;

@@ -1,12 +1,14 @@
 import {
-  Button,
   Content,
   ContentVariants,
   Flex,
   FlexItem,
+  InputGroup,
+  InputGroupItem,
 } from "@patternfly/react-core";
-import { ExportIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { DeleteCollectedDataButton } from "../../common/report/DeleteCollectedDataButton";
+import { ExportButton } from "../../common/report/ExportButton";
 import { RunNewReportButton } from "../../common/report/RunNewReportButton";
 
 interface ReportPageHeaderProps {
@@ -29,17 +31,18 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
       </FlexItem>
       <Flex alignItems={{ default: "alignItemsCenter" }}>
         <RunNewReportButton />
-        {canExport && (
-          <FlexItem>
-            <Button
-              variant="link"
-              onClick={onExportClick}
-              icon={<ExportIcon />}
-            >
-              Export
-            </Button>
-          </FlexItem>
-        )}
+        <FlexItem>
+          <InputGroup>
+            {canExport && (
+              <InputGroupItem>
+                <ExportButton onClick={onExportClick} />
+              </InputGroupItem>
+            )}
+            <InputGroupItem>
+              <DeleteCollectedDataButton />
+            </InputGroupItem>
+          </InputGroup>
+        </FlexItem>
       </Flex>
     </Flex>
   );

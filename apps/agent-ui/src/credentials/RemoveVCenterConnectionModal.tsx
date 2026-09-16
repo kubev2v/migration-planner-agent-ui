@@ -1,6 +1,7 @@
 import {
   Alert,
   Button,
+  Checkbox,
   Content,
   Flex,
   FlexItem,
@@ -8,21 +9,32 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
+  Stack,
+  StackItem,
 } from "@patternfly/react-core";
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";
+import { useEffect, useState } from "react";
 
 interface RemoveVCenterConnectionModalProps {
   isOpen: boolean;
   isRemoving: boolean;
   error?: string;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (deleteCollectedData: boolean) => void;
 }
 
 export const RemoveVCenterConnectionModal: React.FC<
   RemoveVCenterConnectionModalProps
 > = ({ isOpen, isRemoving, error, onClose, onConfirm }) => {
+  const [deleteCollectedData, setDeleteCollectedData] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDeleteCollectedData(false);
+    }
+  }, [isOpen]);
+
   return (
     <Modal
       isOpen={isOpen}
@@ -50,23 +62,41 @@ export const RemoveVCenterConnectionModal: React.FC<
         labelId="remove-vcenter-connection-title"
       />
       <ModalBody>
-        <Content component="p">
-          This will remove your vCenter credentials saved locally. You will need
-          to reconnect to perform assessments, deep inspections, and storage
-          offload estimations.
-        </Content>
-        <Content component="p">
-          The assessment report already created will remain available and
-          viewable.
-        </Content>
-        {error && (
-          <Alert variant="danger" title={error} aria-live="polite" isInline />
-        )}
+        <Stack hasGutter>
+          <StackItem>
+            <Content component="p">
+              This will remove your vCenter credentials saved locally. You will
+              need to reconnect to perform assessments, deep inspections, and
+              storage offload estimations.
+              <br />
+              Collected data on this appliance stays available after disconnect.
+              To remove it later, use the delete button next to Export.
+            </Content>
+            <Checkbox
+              id="remove-vcenter-delete-collected-data"
+              label="Also delete all collected data"
+              description="Permanently removes the assessment report, virtual machine inventory, and any other collected data from this appliance. This cannot be undone."
+              isChecked={deleteCollectedData}
+              onChange={(_event, checked) => setDeleteCollectedData(checked)}
+              isDisabled={isRemoving}
+            />
+          </StackItem>
+          {error && (
+            <StackItem>
+              <Alert
+                variant="danger"
+                title={error}
+                aria-live="polite"
+                isInline
+              />
+            </StackItem>
+          )}
+        </Stack>
       </ModalBody>
       <ModalFooter>
         <Button
           variant="danger"
-          onClick={onConfirm}
+          onClick={() => onConfirm(deleteCollectedData)}
           isLoading={isRemoving}
           isDisabled={isRemoving}
         >

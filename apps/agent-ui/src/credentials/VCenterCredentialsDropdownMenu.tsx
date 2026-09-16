@@ -32,6 +32,7 @@ import {
   useGetCredentialsQuery,
   usePutCredentialsMutation,
 } from "../store/api/credentialsEndpoints";
+import { useDeleteCollectedDataMutation } from "../store/api/lifecycleEndpoints";
 import { getSdkErrorMessage } from "../store/baseQuery";
 import { useCredentialsModal } from "./CredentialsModalController";
 import { RemoveVCenterConnectionModal } from "./RemoveVCenterConnectionModal";
@@ -144,6 +145,14 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
     deleteCredentials,
     { isLoading: isRemoving, error: deleteError, reset: resetDelete },
   ] = useDeleteCredentialsMutation();
+  const [
+    deleteCollectedData,
+    {
+      isLoading: isDeletingCollectedData,
+      error: deleteCollectedDataError,
+      reset: resetDeleteCollectedData,
+    },
+  ] = useDeleteCollectedDataMutation();
   const {
     isCredentialsModalOpen: isEditModalOpen,
     openCredentialsModal: openEditModal,
@@ -155,9 +164,16 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
     : null;
   const removeErrorMessage = deleteError
     ? getSdkErrorMessage(deleteError, "Failed to disconnect.")
-    : null;
+    : deleteCollectedDataError
+      ? getSdkErrorMessage(
+          deleteCollectedDataError,
+          "Failed to delete collected data.",
+        )
+      : null;
   const error = updateErrorMessage ?? removeErrorMessage;
-  const isBusy = isLoadingCredentials || isUpdating || isRemoving;
+  const isRemovingConnection = isRemoving || isDeletingCollectedData;
+  const isBusy =
+    isLoadingCredentials || isUpdating || isRemoving || isDeletingCollectedData;
   const credentialStatusType = deriveCredentialStatusType(
     isEditModalOpen,
     error !== null,
@@ -173,6 +189,7 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
 
   const openRemoveVCenterConnectionModal = () => {
     resetDelete();
+    resetDeleteCollectedData();
     setIsDropdownMenuOpen(false);
     setIsRemoveModalOpen(true);
   };
@@ -273,12 +290,14 @@ const VCenterCredentialsDropdownMenu: React.FC = () => {
       />
       <RemoveVCenterConnectionModal
         isOpen={isRemoveModalOpen}
-        isRemoving={isRemoving}
+        isRemoving={isRemovingConnection}
         error={removeErrorMessage || ""}
         onClose={() => setIsRemoveModalOpen(false)}
-        onConfirm={() => {
-          deleteCredentials()
-            .unwrap()
+        onConfirm={(shouldDeleteCollectedData) => {
+          const removalRequests = shouldDeleteCollectedData
+            ? [deleteCredentials().unwrap(), deleteCollectedData().unwrap()]
+            : [deleteCredentials().unwrap()];
+          Promise.all(removalRequests)
             .then(() => {
               setIsRemoveModalOpen(false);
             })
