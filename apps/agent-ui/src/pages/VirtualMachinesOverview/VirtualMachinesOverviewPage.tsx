@@ -1,4 +1,3 @@
-import { css } from "@emotion/css";
 import {
   Alert,
   Content,
@@ -48,6 +47,11 @@ import {
   type VMFilters,
   withDefaultReportInclusion,
 } from "./components/VirtualMachinesTab/vmFilters";
+import {
+  vmsTabContentBodyStyle,
+  vmsTabContentStyle,
+  vmsTabsStackItemStyle,
+} from "./components/VirtualMachinesTab/vmTableShared";
 import type { VMTableFilterOptions } from "./components/VirtualMachinesTab/vmTableTypes";
 import { Header } from "./Header";
 import { getInventoryAggregateView } from "./inventoryParsing";
@@ -73,20 +77,6 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
   groups: [],
   applications: [],
 };
-
-const tabsStackItemStyle = css`
-  display: flex;
-  flex-direction: column;
-`;
-
-const vmsTabContentStyle = css`
-  flex: 1;
-  min-height: 0;
-`;
-
-const vmsTabContentBodyStyle = css`
-  height: 100%;
-`;
 
 export const ReportContainer: React.FC = () => {
   const { isRvtoolsMode } = useAgentStatus();
@@ -423,7 +413,7 @@ export const ReportContainer: React.FC = () => {
         )}
 
         {/* Tabs */}
-        <StackItem isFilled className={tabsStackItemStyle}>
+        <StackItem isFilled className={vmsTabsStackItemStyle}>
           <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
             <Tab
               eventKey={REPORT_TAB.overview}
