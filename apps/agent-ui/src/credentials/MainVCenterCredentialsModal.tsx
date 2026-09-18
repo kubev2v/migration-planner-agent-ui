@@ -150,6 +150,7 @@ export const MainVCenterCredentialsModal: React.FC<
           type="submit"
           form="vcenter-credentials-form"
           isLoading={isCollecting}
+          isDisabled={isCollecting}
         >
           Create assessment report
         </Button>
