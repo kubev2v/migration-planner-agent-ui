@@ -48,6 +48,7 @@ import {
   selectIsModalOpen,
   selectShowReadyAlert,
 } from "../store/slices/collectionLifecycleSlice";
+import { resumeCollection } from "../store/thunks/resumeCollection";
 import { startCollection } from "../store/thunks/startCollection";
 
 interface ReportNavItem {
@@ -114,6 +115,10 @@ const RunNewReportAlerts: React.FC = () => {
   const collectorStatus = useAppSelector(selectCollectorStatus);
   const showReadyAlert = useAppSelector(selectShowReadyAlert);
   const collectError = useAppSelector(selectCollectError);
+
+  useEffect(() => {
+    dispatch(resumeCollection());
+  }, [dispatch]);
 
   const collectionProgress = getCollectionProgressInfo(
     collectorStatus,
@@ -195,9 +200,6 @@ const RunNewReportModalContainer: React.FC = () => {
     <RunNewReportModal
       isOpen={isOpen}
       onConfirm={async () => {
-        // `.unwrap()` rejects with { message } on start failure, which the modal
-        // surfaces inline (spinner + "Retry"). The listener middleware takes over
-        // once the run has started.
         await dispatch(startCollection()).unwrap();
       }}
       onCancel={() => dispatch(closeModal())}

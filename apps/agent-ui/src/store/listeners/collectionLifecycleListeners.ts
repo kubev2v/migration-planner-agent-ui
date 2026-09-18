@@ -19,8 +19,13 @@ import {
   collectionErrored,
   collectionSucceeded,
   collectorStatusChanged,
+  selectIsCollecting,
 } from "../slices/collectionLifecycleSlice";
-import { startCollection } from "../thunks/startCollection";
+import { resumeCollection } from "../thunks/resumeCollection";
+import {
+  type StartCollectionResult,
+  startCollection,
+} from "../thunks/startCollection";
 
 type PreviousCollection = Pick<Collection, "id" | "createdAt"> | null;
 type AppListenerApi = ListenerEffectAPI<RootState, AppDispatch, SdkExtra>;
@@ -133,46 +138,65 @@ async function runCollectionToCompletion(
 }
 
 /**
- * Wire up the collection-run lifecycle: a user-triggered start
- * (`startCollection.fulfilled`) drives polling to completion.
+ * Drive a run from start (or resume) through polling to completion. Cancels any
+ * run already driving the lifecycle so only one is active at a time.
+ */
+async function driveLifecycle(
+  payload: StartCollectionResult,
+  listenerApi: AppListenerApi,
+): Promise<void> {
+  // Only one run may drive the lifecycle at a time.
+  listenerApi.cancelActiveListeners();
+
+  const {
+    previousCollectionId,
+    previousCollectionCreatedAt,
+    status,
+    immediateCollected,
+  } = payload;
+  const previous: PreviousCollection =
+    previousCollectionId != null && previousCollectionCreatedAt != null
+      ? {
+          id: previousCollectionId,
+          createdAt: new Date(previousCollectionCreatedAt),
+        }
+      : null;
+
+  listenerApi.dispatch(collectingStarted(status));
+
+  try {
+    await runCollectionToCompletion(listenerApi, previous, immediateCollected);
+  } catch (err) {
+    if (err instanceof TaskAbortError) {
+      return;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Wire up the collection-run lifecycle. A user-triggered start
+ * (`startCollection.fulfilled`) drives polling to completion; a startup-detected
+ * in-progress run (`resumeCollection.fulfilled`) resumes the same polling so the
+ * caches still invalidate on completion when the page was reloaded mid-run.
  */
 export function setupCollectionLifecycleListeners(
   startAppListening: AppStartListening,
 ): void {
   startAppListening({
     actionCreator: startCollection.fulfilled,
-    effect: async (action, listenerApi) => {
-      // Only one run may drive the lifecycle at a time.
-      listenerApi.cancelActiveListeners();
+    effect: (action, listenerApi) =>
+      driveLifecycle(action.payload, listenerApi),
+  });
 
-      const {
-        previousCollectionId,
-        previousCollectionCreatedAt,
-        status,
-        immediateCollected,
-      } = action.payload;
-      const previous: PreviousCollection =
-        previousCollectionId != null && previousCollectionCreatedAt != null
-          ? {
-              id: previousCollectionId,
-              createdAt: new Date(previousCollectionCreatedAt),
-            }
-          : null;
-
-      listenerApi.dispatch(collectingStarted(status));
-
-      try {
-        await runCollectionToCompletion(
-          listenerApi,
-          previous,
-          immediateCollected,
-        );
-      } catch (err) {
-        if (err instanceof TaskAbortError) {
-          return;
-        }
-        throw err;
+  startAppListening({
+    actionCreator: resumeCollection.fulfilled,
+    effect: (action, listenerApi) => {
+      // Nothing in progress, or an in-session run already owns the lifecycle.
+      if (!action.payload || selectIsCollecting(listenerApi.getState())) {
+        return;
       }
+      return driveLifecycle(action.payload, listenerApi);
     },
   });
 }

@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { getAgentApiClient } from "../api/agentApiClient";
 import { getCollectorStatus } from "../api/collectorApi";
 import { newAbortSignal } from "../common/AbortSignal";
+import { isCollectorInProgress } from "../common/collectorStatus";
 import type { ApiError } from "../common/components/index";
 import { parseApiError } from "../common/parseApiError";
 import { agentApiSlice } from "../store/api/agentApiSlice";
@@ -67,7 +68,8 @@ export const useLoginViewModel = (
     fetchVersion();
   }, [agentApi]);
 
-  // Check collector status on mount to redirect if already collected
+  // Check collector status on mount to redirect if already collected, or to
+  // resume a run already in progress (e.g. the page was reloaded mid-collection).
   useEffect(() => {
     const checkInitialStatus = async () => {
       try {
@@ -75,6 +77,10 @@ export const useLoginViewModel = (
 
         if (collectorStatus.status === "collected") {
           goToReport();
+        } else if (isCollectorInProgress(collectorStatus.status)) {
+          setIsCollecting(true);
+          setStatus(collectorStatus.status);
+          setShouldPollCollector(true);
         }
       } catch (err) {
         console.warn("Failed to check initial collector status:", err);
