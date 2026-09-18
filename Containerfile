@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/nodejs-24-minimal@sha256:4aed2d3e35a013b7ccc113b91eb4aef5a05daae470fd8253d867e0d21851b0ee AS builder
+FROM registry.access.redhat.com/ubi9/nodejs-24-minimal@sha256:d0adaa87e9c71479064b9455a1bd778a26e36ccb53be9e6bc73eae98e2be3bf6 AS builder
 USER 1001
 WORKDIR ${APP_ROOT}/repo
 COPY --chown=1001:0 . .
