@@ -181,7 +181,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     data: allApplications = [],
     isLoading: applicationsLoading,
     error: applicationsQueryError,
-  } = useGetApplicationsQuery({});
+  } = useGetApplicationsQuery();
 
   const vmApplications = useMemo(
     () => getApplicationsForVm(allApplications, vmId),

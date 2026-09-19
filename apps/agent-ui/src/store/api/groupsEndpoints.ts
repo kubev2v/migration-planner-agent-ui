@@ -1,4 +1,5 @@
 import type {
+  ApplicationOverview,
   CreateGroupRequest,
   Group,
   GroupListResponse,
@@ -48,9 +49,10 @@ interface UpdateGroupNameArg {
 }
 
 /**
- * Group + group-scoped VM endpoints. The header count (inventory + total) and
- * the table count (VM list total) are two separate queries invalidated by the
- * same tags, so a membership change refetches both — they cannot diverge.
+ * Group + group-scoped VM/application endpoints. The header count (inventory +
+ * total), the table count (VM list total) and the applications list are
+ * separate queries invalidated by the same tags, so a membership change
+ * refetches them together — they cannot diverge.
  */
 export const groupsEndpoints = agentApiSlice.injectEndpoints({
   endpoints: (build) => ({
@@ -114,6 +116,22 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
       ],
     }),
 
+    // Applications detected on this group's VMs only (GET /groups/:id/applications).
+    // `Applications` refreshes the list when a new report completes; `Group:id`
+    // re-scopes it when membership of this group changes.
+    getGroupApplications: build.query<ApplicationOverview[], GetGroupArg>({
+      query:
+        ({ groupId }) =>
+        async (sdk) => {
+          const response = await sdk.listGroupApplications({ groupId });
+          return response.applications ?? [];
+        },
+      providesTags: (_result, _error, { groupId }) => [
+        "Applications",
+        { type: "Group", id: groupId },
+      ],
+    }),
+
     createGroup: build.mutation<Group, CreateGroupArg>({
       query:
         ({ createGroupRequest }) =>
@@ -172,6 +190,7 @@ export const {
   useGetAllGroupsQuery,
   useGetGroupQuery,
   useGetGroupVMsQuery,
+  useGetGroupApplicationsQuery,
   useCreateGroupMutation,
   useUpdateGroupNameMutation,
   useChangeGroupMembershipMutation,

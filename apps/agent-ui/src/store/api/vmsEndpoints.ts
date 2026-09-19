@@ -14,9 +14,7 @@ import { getLatestCollectionId } from "../../api/collectionApi";
 import type { VirtualMachineWithGroupItems } from "../../pages/Groups/utils/vmGroupMembership";
 import { fetchApplicationDrawerVms } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationDrawerVms";
 import type { ApplicationOverview } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationsApi";
-import { scopeApplicationsToVms } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationsApi";
 import { fetchVmTableFilterOptions } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmFilterOptions";
-import { fetchAllMatchingVmIds } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmSelection";
 import type { VMTableFilterOptions } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmTableTypes";
 import {
   adjustInventoryForMigrationExcludedChange,
@@ -34,13 +32,10 @@ interface GetVMsArg {
   pageSize: number;
 }
 
-interface GetApplicationsArg {
-  /** Restrict applications to VMs matching this filter (e.g. group membership). */
-  scopeExpression?: string;
-}
-
 interface GetApplicationDrawerVmsArg {
   applicationName: string;
+  /** Optional VM membership filter (e.g. a group's `filter`). Omitted in the fleet view. */
+  scopeExpression?: string;
 }
 
 /** A single VM's detail record with its (optional) rightsizing utilization. */
@@ -166,30 +161,20 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       providesTags: ["Inventory"],
     }),
 
-    // Applications detected in the latest collection, optionally scoped to a
-    // VM filter (group membership). Scoping resolves the matching VM ids first.
-    // `Applications` is invalidated when a new report completes so the list
-    // reflects the new collection; `Group:LIST` re-scopes it on membership
-    // changes.
-    getApplications: build.query<ApplicationOverview[], GetApplicationsArg>({
-      query:
-        ({ scopeExpression }) =>
-        async (sdk) => {
-          const collectionId = await getLatestCollectionId(sdk);
-          if (!collectionId) {
-            return [];
-          }
-          const response = await sdk.listApplications({ id: collectionId });
-          const applications = response.applications ?? [];
-          if (!scopeExpression) {
-            return applications;
-          }
-          const vmIds = await fetchAllMatchingVmIds(sdk, {
-            byExpression: scopeExpression,
-          });
-          return scopeApplicationsToVms(applications, new Set(vmIds));
-        },
-      providesTags: ["Applications", { type: "Group", id: "LIST" }],
+    // Applications detected in the latest collection. Group-scoped lists use
+    // `getGroupApplications` instead of client-side filtering. `Applications`
+    // is invalidated when a new report completes so the list reflects the new
+    // collection.
+    getApplications: build.query<ApplicationOverview[], void>({
+      query: () => async (sdk) => {
+        const collectionId = await getLatestCollectionId(sdk);
+        if (!collectionId) {
+          return [];
+        }
+        const response = await sdk.listApplications({ id: collectionId });
+        return response.applications ?? [];
+      },
+      providesTags: ["Applications"],
     }),
 
     // VMs running a given application, enriched with each VM's group membership,
@@ -201,9 +186,9 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       GetApplicationDrawerVmsArg
     >({
       query:
-        ({ applicationName }) =>
+        ({ applicationName, scopeExpression }) =>
         (sdk) =>
-          fetchApplicationDrawerVms(sdk, applicationName),
+          fetchApplicationDrawerVms(sdk, applicationName, scopeExpression),
       providesTags: [
         { type: "Vms", id: "LIST" },
         "VmLabels",

@@ -48,6 +48,8 @@ const styles = {
 interface ApplicationVmsDrawerProps {
   application: ApplicationOverview;
   agentApi?: DefaultApiInterface;
+  /** When set (group view), restrict drawer VMs to this membership filter. */
+  scopeExpression?: string;
   onClose: () => void;
   onNavigateToVm?: (vmId: string) => void;
   onViewInVmList?: (applicationName: string) => void;
@@ -59,6 +61,7 @@ interface ApplicationVmsDrawerProps {
 export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
   application,
   agentApi,
+  scopeExpression,
   onClose,
   onNavigateToVm,
   onViewInVmList,
@@ -97,7 +100,9 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
     isLoading: loadingVms,
     error: queryError,
   } = useGetApplicationDrawerVmsQuery(
-    { applicationName: application.name },
+    scopeExpression
+      ? { applicationName: application.name, scopeExpression }
+      : { applicationName: application.name },
     { skip: !agentApi },
   );
 

@@ -168,10 +168,9 @@ export const ReportContainer: React.FC = () => {
     data: applicationsData,
     isFetching: applicationsFetching,
     error: applicationsQueryError,
-  } = useGetApplicationsQuery(
-    {},
-    { skip: activeTab !== REPORT_TAB.applications },
-  );
+  } = useGetApplicationsQuery(undefined, {
+    skip: activeTab !== REPORT_TAB.applications,
+  });
   const applicationsList = applicationsData ?? [];
   const applicationsError = applicationsQueryError
     ? getSdkErrorMessage(applicationsQueryError, "Failed to load applications.")

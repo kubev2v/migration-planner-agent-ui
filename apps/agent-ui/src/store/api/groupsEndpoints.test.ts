@@ -26,6 +26,16 @@ function makeFakeApi(counts: { total: number }): AgentApiClient {
       virtualMachines: [],
       total: counts.total,
     })),
+    listGroupApplications: vi.fn(async () => ({
+      applications: [
+        {
+          name: "Nginx",
+          description: "Web server",
+          vmCount: counts.total,
+          vms: [],
+        },
+      ],
+    })),
   } as unknown as AgentApiClient;
 }
 
@@ -78,6 +88,36 @@ describe("groupsEndpoints tag invalidation", () => {
     await vi.waitFor(() => {
       expect(groupTotal()).toBe(5);
       expect(vmsTotal()).toBe(5);
+    });
+  });
+
+  test("getGroupApplications refetches after group tags are invalidated", async () => {
+    const counts = { total: 7 };
+    const api = makeFakeApi(counts);
+    const store = createStore(api);
+
+    await store.dispatch(
+      groupsEndpoints.endpoints.getGroupApplications.initiate({
+        groupId: "g1",
+      }),
+    );
+
+    const applicationVmCount = () =>
+      groupsEndpoints.endpoints.getGroupApplications.select({
+        groupId: "g1",
+      })(store.getState()).data?.[0]?.vmCount;
+
+    expect(api.listGroupApplications).toHaveBeenCalledTimes(1);
+    expect(applicationVmCount()).toBe(7);
+
+    counts.total = 5;
+    store.dispatch(
+      agentApiSlice.util.invalidateTags([{ type: "Group", id: "g1" }]),
+    );
+
+    await vi.waitFor(() => {
+      expect(api.listGroupApplications).toHaveBeenCalledTimes(2);
+      expect(applicationVmCount()).toBe(5);
     });
   });
 

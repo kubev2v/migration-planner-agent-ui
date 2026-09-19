@@ -61,6 +61,8 @@ interface ApplicationsViewProps {
   loading?: boolean;
   error?: string | null;
   agentApi?: DefaultApiInterface;
+  /** Group membership filter; omitted on the fleet applications tab. */
+  vmScopeExpression?: string;
   selectedApplicationName?: string | null;
   onClearSelectedApplication?: () => void;
   onNavigateToVm?: (vmId: string) => void;
@@ -72,6 +74,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
   loading = false,
   error = null,
   agentApi,
+  vmScopeExpression,
   selectedApplicationName = null,
   onClearSelectedApplication,
   onNavigateToVm,
@@ -251,6 +254,7 @@ export const ApplicationsView: React.FC<ApplicationsViewProps> = ({
       key={drawerApplication.name}
       application={drawerApplication}
       agentApi={agentApi}
+      scopeExpression={vmScopeExpression}
       onClose={closeDrawer}
       onNavigateToVm={onNavigateToVm}
       onViewInVmList={onViewInVmList}

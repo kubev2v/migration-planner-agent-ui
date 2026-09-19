@@ -39,14 +39,12 @@ import { AppEmptyState } from "../../common/components";
 import { useAgentStatus } from "../../common/useAgentStatus";
 import {
   useDeleteGroupMutation,
+  useGetGroupApplicationsQuery,
   useGetGroupQuery,
   useGetGroupVMsQuery,
   useUpdateGroupNameMutation,
 } from "../../store/api/groupsEndpoints";
-import {
-  useGetApplicationsQuery,
-  useGetVMFilterOptionsQuery,
-} from "../../store/api/vmsEndpoints";
+import { useGetVMFilterOptionsQuery } from "../../store/api/vmsEndpoints";
 import { getSdkErrorMessage } from "../../store/baseQuery";
 import {
   buildClusterViewModel,
@@ -189,14 +187,14 @@ export const GroupDetailPage: React.FC = () => {
   });
   const availableFilterOptions = filterOptionsData ?? EMPTY_FILTER_OPTIONS;
 
-  // Applications, scoped to this group's membership filter.
+  // Applications detected on this group's VMs (GET /groups/:id/applications).
   const {
     data: applicationsData,
     isFetching: applicationsLoading,
     error: applicationsQueryError,
-  } = useGetApplicationsQuery(
-    { scopeExpression: groupFilter },
-    { skip: activeTab !== REPORT_TAB.applications || !groupFilter },
+  } = useGetGroupApplicationsQuery(
+    { groupId: groupId ?? "" },
+    { skip: activeTab !== REPORT_TAB.applications || !groupId },
   );
   const applicationsList = applicationsData ?? [];
   const applicationsError = applicationsQueryError
@@ -534,6 +532,7 @@ export const GroupDetailPage: React.FC = () => {
                   loading={applicationsLoading}
                   error={applicationsError}
                   agentApi={agentApi}
+                  vmScopeExpression={groupFilter}
                   selectedApplicationName={selectedApplicationName}
                   onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}

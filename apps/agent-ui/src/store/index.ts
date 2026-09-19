@@ -1,4 +1,4 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, isPlain } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
 import type { AgentApiClient } from "../api/agentApi";
 import { agentApiSlice } from "./api/agentApiSlice";
@@ -20,6 +20,15 @@ import "./api/lifecycleEndpoints";
 import "./api/vmsEndpoints";
 
 /**
+ * The agent SDK parses OpenAPI `date-time` fields as `Date` (collection and
+ * group `createdAt`). Those values live in the RTK Query cache, so the default
+ * JSON-only serializable check has to treat `Date` as allowed.
+ */
+function isSerializable(value: unknown): boolean {
+  return isPlain(value) || value instanceof Date;
+}
+
+/**
  * Build the Redux store around the composed SDK client. The client is passed as
  * the thunk `extraArgument` (and the listener middleware `extra`) so the custom
  * baseQuery, thunks and listener effects all reuse the exact same SDK instance.
@@ -39,7 +48,10 @@ export function createStore(agentApi: AgentApiClient) {
       collectionLifecycle: collectionLifecycleReducer,
     },
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({ thunk: { extraArgument: extra } })
+      getDefaultMiddleware({
+        thunk: { extraArgument: extra },
+        serializableCheck: { isSerializable },
+      })
         .prepend(listenerMiddleware.middleware)
         .concat(agentApiSlice.middleware),
   });

@@ -208,10 +208,9 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   // Application names per VM (for the table's Applications column) come from the
   // shared applications cache entry.
-  const { data: applicationsData } = useGetApplicationsQuery(
-    {},
-    { skip: !agentApi },
-  );
+  const { data: applicationsData } = useGetApplicationsQuery(undefined, {
+    skip: !agentApi,
+  });
   const vmApplicationsMap = useMemo(
     () => buildVmApplicationsMap(applicationsData ?? []),
     [applicationsData],
