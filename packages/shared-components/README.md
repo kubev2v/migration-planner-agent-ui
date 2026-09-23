@@ -7,6 +7,7 @@ Includes:
 - PatternFly form field wrappers (`react-hook-form`)
 - Guest OS support-tier helpers and badges
 - Report chart primitives (`MigrationDonutChart`)
+- Report export menu (PDF, PNG, HTML, plus app-specific formats)
 - Operating Systems distribution card
 - Infrastructure summary, vCenter cluster details, and host/VM power-state cards
 
@@ -25,16 +26,36 @@ npm install @openshift-migration-advisor/shared-components
 ```tsx
 import {
   buildInfrastructureSummary,
+  ExportReportButton,
   HostPowerStates,
   InfrastructureSummary,
   MigrationDonutChart,
   OSDistribution,
+  standardReportExportOptions,
   SupportTierBadge,
   TextInputFormGroup,
   VCenterClusterDetails,
   VmPowerStates,
 } from "@openshift-migration-advisor/shared-components";
+
+<ExportReportButton
+  onExportPdf={exportPdf}
+  onExportPng={exportPng}
+  onExportHtml={isAggregateView ? exportHtml : undefined}
+  extraOptions={[
+    {
+      key: "inventory",
+      label: "Spreadsheet",
+      description: "Download inventory as XLSX or ZIP",
+      onSelect: openInventoryExport,
+    },
+  ]}
+  isLoading={isExporting}
+  loadingLabel={loadingLabel}
+/>
 ```
+
+`ReportExportMenu` accepts a fully custom `options` list. `standardReportExportOptions()` builds the PDF / HTML / PNG entries; omit a handler to hide that format.
 
 Components are SDK-agnostic: pass already-shaped props (for example `OSDistributionEntry` maps). Map `agent-sdk` / `planner-sdk` models at the app boundary.
 

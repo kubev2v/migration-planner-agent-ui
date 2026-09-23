@@ -5,12 +5,18 @@ import {
   CardBody,
   CardTitle,
   EmptyStateVariant,
+  Flex,
+  FlexItem,
   Icon,
 } from "@patternfly/react-core";
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
 import { ReportTable } from "../../../Groups/components/ReportTable";
+import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
 
 interface WarningsTableProps {
   warnings: MigrationIssue[];
@@ -37,10 +43,28 @@ export const WarningsTable: React.FC<WarningsTableProps> = ({
       id="warnings-table"
     >
       <CardTitle>
-        <Icon status="warning">
-          <ExclamationTriangleIcon />
-        </Icon>{" "}
-        Warnings
+        <Flex
+          justifyContent={{ default: "justifyContentSpaceBetween" }}
+          alignItems={{ default: "alignItemsCenter" }}
+        >
+          <FlexItem>
+            <Icon status="warning">
+              <ExclamationTriangleIcon />
+            </Icon>{" "}
+            Warnings
+          </FlexItem>
+          {!isExportMode && (
+            <ChartHeaderActions>
+              <ChartDownloadButton
+                chartId="warnings"
+                title="Warnings"
+                getNode={() => (
+                  <WarningsTable warnings={warnings} isExportMode />
+                )}
+              />
+            </ChartHeaderActions>
+          )}
+        </Flex>
       </CardTitle>
       <CardBody className={dashboardStyles.cardBodyScrollable}>
         {warnings.length === 0 ? (

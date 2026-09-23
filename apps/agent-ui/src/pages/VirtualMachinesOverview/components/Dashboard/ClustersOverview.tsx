@@ -22,16 +22,24 @@ import type React from "react";
 import { useMemo, useState } from "react";
 
 import { AppEmptyState } from "../../../../common/components";
+import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
 
 interface ClustersOverviewProps {
   clustersPerDatacenter: number[];
   isExportMode?: boolean;
+  viewMode?: ClustersViewMode;
   clusters?: { [key: string]: InventoryData };
 }
 
-type ViewMode = "dataCenterDistribution" | "vmByCluster" | "cpuOverCommitment";
+export type ClustersViewMode =
+  | "dataCenterDistribution"
+  | "vmByCluster"
+  | "cpuOverCommitment";
 
-const VIEW_MODE_LABELS: Record<ViewMode, string> = {
+const VIEW_MODE_LABELS: Record<ClustersViewMode, string> = {
   dataCenterDistribution: "Cluster distribution by data center",
   vmByCluster: "VM distribution by cluster",
   cpuOverCommitment: "Cluster CPU over commitment",
@@ -151,9 +159,12 @@ const colorPalette = [
 export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
   clustersPerDatacenter,
   isExportMode = false,
+  viewMode: viewModeProp,
   clusters,
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>("vmByCluster");
+  const [internalViewMode, setViewMode] =
+    useState<ClustersViewMode>("vmByCluster");
+  const viewMode = viewModeProp ?? internalViewMode;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const { chartData, legend, title, subTitle } = useMemo(() => {
@@ -345,7 +356,7 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
             </div>
           </FlexItem>
           {!isExportMode && (
-            <FlexItem>
+            <ChartHeaderActions>
               <Dropdown
                 isOpen={isDropdownOpen}
                 onSelect={onSelect}
@@ -379,7 +390,19 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
-            </FlexItem>
+              <ChartDownloadButton
+                chartId={`clusters-${viewMode}`}
+                title={`Clusters — ${VIEW_MODE_LABELS[viewMode]}`}
+                getNode={() => (
+                  <ClustersOverview
+                    clustersPerDatacenter={clustersPerDatacenter}
+                    clusters={clusters}
+                    isExportMode
+                    viewMode={viewMode}
+                  />
+                )}
+              />
+            </ChartHeaderActions>
           )}
         </Flex>
       </CardTitle>

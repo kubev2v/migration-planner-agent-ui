@@ -1,5 +1,6 @@
 import {
   Alert,
+  AlertActionCloseButton,
   Content,
   MenuToggle,
   type MenuToggleElement,
@@ -35,8 +36,12 @@ import { getSdkErrorMessage } from "../../store/baseQuery";
 import { buildClusterViewModel, type ClusterOption } from "./clusterView";
 import { ApplicationsView } from "./components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "./components/Dashboard/Dashboard";
+import { ChartDownloadProvider } from "./components/Export/ChartDownloadButton";
+import { ChartPrintHost } from "./components/Export/ChartPrintHost";
 import { ExportCsvModal } from "./components/Export/ExportCsvModal";
+import { buildExportChartSpecs } from "./components/Export/exportChartSpecs";
 import { useExportInventory } from "./components/Export/useExportInventory";
+import { useReportChartExport } from "./components/Export/useReportChartExport";
 import { VirtualMachinesView } from "./components/VirtualMachinesTab/VirtualMachinesView";
 import { VMUtilizationMetrics } from "./components/VirtualMachinesTab/VMUtilizationMetrics";
 import {
@@ -56,6 +61,7 @@ import type { VMTableFilterOptions } from "./components/VirtualMachinesTab/vmTab
 import { Header } from "./Header";
 import { getInventoryAggregateView } from "./inventoryParsing";
 import { ReportPageHeader } from "./ReportPageHeader";
+import { buildOverviewExportOptions } from "./reportExportOptions";
 import {
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
@@ -211,6 +217,18 @@ export const ReportContainer: React.FC = () => {
     hasCollectionData,
     hasInventory: Boolean(inventory),
   });
+  const {
+    printHostRef,
+    isExporting: isChartExporting,
+    exportLoadingLabel,
+    exportError: chartExportError,
+    exportPdf,
+    exportPng,
+    exportHtml,
+    exportSinglePng,
+    downloadingChartId,
+    clearExportError: clearChartExportError,
+  } = useReportChartExport();
 
   if (inventoryLoading) {
     return (
@@ -347,15 +365,58 @@ export const ReportContainer: React.FC = () => {
     setVmsPage(1);
   };
 
+  const chartExportTitle = `Virtual machines overview - ${clusterView.selectionLabel}`;
+  const chartSpecs =
+    clusterView.viewInfra && clusterView.viewVms
+      ? buildExportChartSpecs({
+          infra: clusterView.viewInfra,
+          cpuCores: clusterView.cpuCores,
+          ramGB: clusterView.ramGB,
+          vms: clusterView.viewVms,
+          clusters: clusterView.viewClusters,
+          vcenterVersion: inventory?.vcenter_version,
+          vcenterId: inventory?.vcenter_id,
+          isAggregateView: clusterView.isAggregateView,
+        })
+      : [];
+  const exportOptions = buildOverviewExportOptions({
+    onExportPdf: () => {
+      void exportPdf(chartExportTitle, chartSpecs);
+    },
+    onExportPng: () => {
+      void exportPng(chartSpecs);
+    },
+    onExportHtml: clusterView.isAggregateView
+      ? () => {
+          void exportHtml(chartExportTitle, chartSpecs);
+        }
+      : undefined,
+    onExportInventory: openExportModal,
+  });
+
   return (
     <PageSection hasBodyWrapper={false} isFilled>
       <Stack hasGutter>
         <StackItem>
           <ReportPageHeader
             showExport={showExport}
-            onExportClick={openExportModal}
+            exportOptions={exportOptions}
+            isExporting={isChartExporting}
+            exportLoadingLabel={exportLoadingLabel}
           />
           <DiscoveryStatus />
+          {chartExportError ? (
+            <Alert
+              variant="danger"
+              title="Export failed"
+              isInline
+              actionClose={
+                <AlertActionCloseButton onClose={clearChartExportError} />
+              }
+            >
+              {chartExportError}
+            </Alert>
+          ) : null}
         </StackItem>
 
         {/* Cluster Selector */}
@@ -445,20 +506,28 @@ export const ReportContainer: React.FC = () => {
           >
             <TabContentBody hasPadding>
               {clusterView.viewInfra && clusterView.viewVms ? (
-                <Dashboard
-                  key={`assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
-                  infra={clusterView.viewInfra}
-                  cpuCores={clusterView.cpuCores}
-                  ramGB={clusterView.ramGB}
-                  vms={clusterView.viewVms}
-                  clusters={clusterView.viewClusters}
-                  vcenterVersion={inventory?.vcenter_version}
-                  vcenterId={inventory?.vcenter_id}
-                  isAggregateView={clusterView.isAggregateView}
-                  clusterFound={clusterView.clusterFound}
-                  onConcernClick={handleConcernClick}
-                  onNavigateToVMFilters={handleNavigateToVMFilters}
-                />
+                <ChartDownloadProvider
+                  value={{
+                    downloadChart: exportSinglePng,
+                    downloadingChartId,
+                    isBusy: isChartExporting,
+                  }}
+                >
+                  <Dashboard
+                    key={`assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
+                    infra={clusterView.viewInfra}
+                    cpuCores={clusterView.cpuCores}
+                    ramGB={clusterView.ramGB}
+                    vms={clusterView.viewVms}
+                    clusters={clusterView.viewClusters}
+                    vcenterVersion={inventory?.vcenter_version}
+                    vcenterId={inventory?.vcenter_id}
+                    isAggregateView={clusterView.isAggregateView}
+                    clusterFound={clusterView.clusterFound}
+                    onConcernClick={handleConcernClick}
+                    onNavigateToVMFilters={handleNavigateToVMFilters}
+                  />
+                </ChartDownloadProvider>
               ) : (
                 <AppEmptyState
                   titleText={
@@ -526,6 +595,8 @@ export const ReportContainer: React.FC = () => {
           )}
         </StackItem>
       </Stack>
+
+      <ChartPrintHost ref={printHostRef} />
 
       <ExportCsvModal
         isOpen={isExportModalOpen}

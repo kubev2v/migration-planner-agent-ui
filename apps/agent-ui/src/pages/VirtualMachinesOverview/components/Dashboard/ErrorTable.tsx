@@ -5,12 +5,18 @@ import {
   CardBody,
   CardTitle,
   EmptyStateVariant,
+  Flex,
+  FlexItem,
   Icon,
 } from "@patternfly/react-core";
 import { ExclamationCircleIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
 import { ReportTable } from "../../../Groups/components/ReportTable";
+import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
 
 interface ErrorTableProps {
   errors: MigrationIssue[];
@@ -37,10 +43,26 @@ export const ErrorTable: React.FC<ErrorTableProps> = ({
       id="errors-table"
     >
       <CardTitle>
-        <Icon status="danger">
-          <ExclamationCircleIcon />
-        </Icon>{" "}
-        Errors
+        <Flex
+          justifyContent={{ default: "justifyContentSpaceBetween" }}
+          alignItems={{ default: "alignItemsCenter" }}
+        >
+          <FlexItem>
+            <Icon status="danger">
+              <ExclamationCircleIcon />
+            </Icon>{" "}
+            Errors
+          </FlexItem>
+          {!isExportMode && (
+            <ChartHeaderActions>
+              <ChartDownloadButton
+                chartId="errors"
+                title="Errors"
+                getNode={() => <ErrorTable errors={errors} isExportMode />}
+              />
+            </ChartHeaderActions>
+          )}
+        </Flex>
       </CardTitle>
       <CardBody className={dashboardStyles.cardBodyScrollable}>
         {errors.length === 0 ? (

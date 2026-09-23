@@ -11,7 +11,6 @@ import {
   HostPowerStates,
   InfrastructureSummary,
   OSDistribution,
-  type OSDistributionEntry,
   VCenterClusterDetails,
   VmPowerStates,
 } from "@openshift-migration-advisor/shared-components";
@@ -20,12 +19,17 @@ import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo } from "react";
 import { AppEmptyState } from "../../../../common/components";
+import {
+  ChartDownloadButton,
+  useChartDownload,
+} from "../Export/ChartDownloadButton";
 import type { NavigateToVMFilters } from "../VirtualMachinesTab/vmNavigation";
 import { ClustersOverview } from "./ClustersOverview";
 import { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
 import { ErrorTable } from "./ErrorTable";
 import { HostsOverview } from "./HostsOverview";
 import { NetworkOverview } from "./NetworkOverview";
+import { buildOsDistributionData } from "./osDistributionData";
 import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
 import { WarningsTable } from "./WarningsTable";
@@ -59,33 +63,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onConcernClick,
   onNavigateToVMFilters,
 }) => {
-  // Transform osInfo to include both count and supported fields
-  const osData = vms.osInfo
-    ? Object.entries(vms.osInfo).reduce(
-        (acc, [osName, osInfo]) => {
-          acc[osName] = {
-            count: osInfo.count,
-            supported: osInfo.supported,
-            supportTier: osInfo.supportTier as
-              | OSDistributionEntry["supportTier"]
-              | undefined,
-            upgradeRecommendation: osInfo.upgradeRecommendation || "",
-          };
-          return acc;
-        },
-        {} as Record<string, OSDistributionEntry>,
-      )
-    : Object.entries(vms.os || {}).reduce(
-        (acc, [osName, count]) => {
-          acc[osName] = {
-            count: count,
-            supported: true,
-            upgradeRecommendation: "",
-          };
-          return acc;
-        },
-        {} as Record<string, OSDistributionEntry>,
-      );
+  const chartDownload = useChartDownload();
+  const osData = useMemo(() => buildOsDistributionData(vms), [vms]);
 
   const infrastructureSummary = useMemo(
     () =>
@@ -110,6 +89,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return buildClusterDetails(Object.values(clusters)[0]);
   }, [clusters, isAggregateView]);
 
+  const pngButton = (
+    chartId: string,
+    title: string,
+    getNode: () => React.ReactNode,
+  ) =>
+    !isExportMode && chartDownload ? (
+      <ChartDownloadButton chartId={chartId} title={title} getNode={getNode} />
+    ) : undefined;
+
   if (!clusterFound && !isAggregateView) {
     return (
       <AppEmptyState
@@ -124,7 +112,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <Grid hasGutter>
       <GridItem data-export-block={isExportMode ? "1" : undefined}>
-        <InfrastructureSummary summary={infrastructureSummary} />
+        <InfrastructureSummary
+          summary={infrastructureSummary}
+          headerActions={pngButton(
+            "infrastructure-summary",
+            "Infrastructure summary",
+            () => <InfrastructureSummary summary={infrastructureSummary} />,
+          )}
+        />
       </GridItem>
 
       <GridItem data-export-block={isExportMode ? "1a" : undefined}>
@@ -133,6 +128,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
           rows={clusterRows}
           details={clusterDetails}
           isExportMode={isExportMode}
+          headerActions={pngButton(
+            "vcenter-cluster-details",
+            "vCenter cluster details",
+            () => (
+              <VCenterClusterDetails
+                isAggregateView={isAggregateView}
+                rows={clusterRows}
+                details={clusterDetails}
+                isExportMode
+              />
+            ),
+          )}
         />
       </GridItem>
 
@@ -142,12 +149,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <HostPowerStates
               hostPowerStates={infra.hostPowerStates}
               isExportMode={isExportMode}
+              headerActions={pngButton(
+                "host-power-states",
+                "ESXi host power states",
+                () => (
+                  <HostPowerStates
+                    hostPowerStates={infra.hostPowerStates}
+                    isExportMode
+                  />
+                ),
+              )}
             />
           </GalleryItem>
           <GalleryItem>
             <VmPowerStates
               powerStates={vms.powerStates}
               isExportMode={isExportMode}
+              headerActions={pngButton(
+                "vm-power-states",
+                "VM power states",
+                () => (
+                  <VmPowerStates powerStates={vms.powerStates} isExportMode />
+                ),
+              )}
             />
           </GalleryItem>
         </Gallery>
@@ -170,7 +194,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
             />
           </GalleryItem>
           <GalleryItem>
-            <OSDistribution osData={osData} isExportMode={isExportMode} />
+            <OSDistribution
+              osData={osData}
+              isExportMode={isExportMode}
+              headerActions={pngButton(
+                "os-distribution",
+                "Operating system distribution",
+                () => <OSDistribution osData={osData} isExportMode />,
+              )}
+            />
           </GalleryItem>
         </Gallery>
       </GridItem>

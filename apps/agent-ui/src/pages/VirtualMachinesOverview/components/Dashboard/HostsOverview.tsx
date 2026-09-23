@@ -16,6 +16,10 @@ import { InboxIcon, ServerIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo } from "react";
 import { AppEmptyState } from "../../../../common/components";
+import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
 
 const styles = {
   cardSubtitle: css`
@@ -110,6 +114,15 @@ export const HostsOverview: React.FC<HostsOverviewProps> = ({
               )}
             </div>
           </FlexItem>
+          {!isExportMode && (
+            <ChartHeaderActions>
+              <ChartDownloadButton
+                chartId="hosts-by-model"
+                title="Host distribution by model"
+                getNode={() => <HostsOverview hosts={hosts} isExportMode />}
+              />
+            </ChartHeaderActions>
+          )}
         </Flex>
       </CardTitle>
       <CardBody className={dashboardStyles.cardBodyScrollable}>

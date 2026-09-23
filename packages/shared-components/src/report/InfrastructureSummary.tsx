@@ -6,12 +6,15 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Flex,
+  FlexItem,
 } from "@patternfly/react-core";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import type { InfrastructureSummaryModel } from "./infrastructureSummaryModel.js";
 
 export interface InfrastructureSummaryProps {
   summary: InfrastructureSummaryModel;
+  headerActions?: ReactNode;
 }
 
 const formatCount = (value: number | undefined): string =>
@@ -19,9 +22,22 @@ const formatCount = (value: number | undefined): string =>
 
 export const InfrastructureSummary: FC<InfrastructureSummaryProps> = ({
   summary,
+  headerActions,
 }) => (
   <Card isFullHeight id="infrastructure-summary">
-    <CardTitle>Infrastructure summary</CardTitle>
+    <CardTitle>
+      {headerActions ? (
+        <Flex
+          justifyContent={{ default: "justifyContentSpaceBetween" }}
+          alignItems={{ default: "alignItemsCenter" }}
+        >
+          <FlexItem>Infrastructure summary</FlexItem>
+          <FlexItem>{headerActions}</FlexItem>
+        </Flex>
+      ) : (
+        "Infrastructure summary"
+      )}
+    </CardTitle>
     <CardBody>
       <DescriptionList isAutoFit displaySize="lg">
         <DescriptionListGroup>

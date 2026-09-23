@@ -22,11 +22,15 @@ import { VirtualMachineIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo, useState } from "react";
 import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
+import {
   type NavigateToVMFilters,
   useChartDrillDown,
 } from "../VirtualMachinesTab/vmNavigation";
 
-type ViewMode = "issuesVsNoIssues" | "issuesBreakdown";
+export type VmMigrationViewMode = "issuesVsNoIssues" | "issuesBreakdown";
 
 interface VmMigrationStatusProps {
   data: {
@@ -35,6 +39,7 @@ interface VmMigrationStatusProps {
   };
   issuesBreakdown?: IssuesBreakdown;
   isExportMode?: boolean;
+  viewMode?: VmMigrationViewMode;
   onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
@@ -71,13 +76,16 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
   data,
   issuesBreakdown,
   isExportMode = false,
+  viewMode: viewModeProp,
   onNavigateToVMFilters,
 }) => {
   const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
-  const [viewMode, setViewMode] = useState<ViewMode>("issuesVsNoIssues");
+  const [internalViewMode, setViewMode] =
+    useState<VmMigrationViewMode>("issuesVsNoIssues");
+  const viewMode = viewModeProp ?? internalViewMode;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const viewModeLabels: Record<ViewMode, string> = {
+  const viewModeLabels: Record<VmMigrationViewMode, string> = {
     issuesVsNoIssues: "No issues vs with issues",
     issuesBreakdown: "With issues breakdown",
   };
@@ -157,7 +165,7 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
             <VirtualMachineIcon /> VM Migration Status
           </FlexItem>
           {!isExportMode && (
-            <FlexItem>
+            <ChartHeaderActions>
               <Dropdown
                 isOpen={isDropdownOpen}
                 onOpenChange={setIsDropdownOpen}
@@ -193,7 +201,19 @@ export const VMMigrationStatus: React.FC<VmMigrationStatusProps> = ({
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
-            </FlexItem>
+              <ChartDownloadButton
+                chartId={`vm-migration-${viewMode}`}
+                title={`VM migration status — ${viewModeLabels[viewMode]}`}
+                getNode={() => (
+                  <VMMigrationStatus
+                    data={data}
+                    issuesBreakdown={issuesBreakdown}
+                    isExportMode
+                    viewMode={viewMode}
+                  />
+                )}
+              />
+            </ChartHeaderActions>
           )}
         </Flex>
       </CardTitle>

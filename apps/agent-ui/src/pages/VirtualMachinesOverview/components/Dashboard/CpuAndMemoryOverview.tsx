@@ -21,10 +21,16 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { AppEmptyState } from "../../../../common/components";
 import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
+import {
   type NavigateToVMFilters,
   useChartDrillDown,
 } from "../VirtualMachinesTab/vmNavigation";
 import { parseMemoryTierLabelToRange } from "../VirtualMachinesTab/vmTableShared";
+
+export type CpuAndMemoryViewMode = "memoryTiers" | "vcpuTiers";
 
 interface CpuAndMemoryOverviewProps {
   cpuTierDistribution?: Record<string, number>;
@@ -32,10 +38,9 @@ interface CpuAndMemoryOverviewProps {
   memoryTotalGB?: number;
   cpuTotalCores?: number;
   isExportMode?: boolean;
+  viewMode?: CpuAndMemoryViewMode;
   onNavigateToVMFilters?: NavigateToVMFilters;
 }
-
-type ViewMode = "memoryTiers" | "vcpuTiers";
 
 const cardSubtitleStyle = css`
   color: #6a6e73;
@@ -59,11 +64,18 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
   memoryTotalGB,
   cpuTotalCores,
   isExportMode = false,
+  viewMode: viewModeProp,
   onNavigateToVMFilters,
 }) => {
   const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
-  const [viewMode, setViewMode] = useState<ViewMode>("memoryTiers");
+  const [internalViewMode, setViewMode] =
+    useState<CpuAndMemoryViewMode>("memoryTiers");
+  const viewMode = viewModeProp ?? internalViewMode;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const downloadTitle =
+    viewMode === "memoryTiers"
+      ? "CPU & memory — Memory size tiers"
+      : "CPU & memory — vCPU count tiers";
 
   const memorySlices = useMemo(() => {
     return Object.entries(memoryTierDistribution)
@@ -154,17 +166,15 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
               <div>
                 <DataProcessorIcon /> CPU &amp; memory
               </div>
-              {!isExportMode && (
-                <div className={cardSubtitleStyle}>
-                  {viewMode === "memoryTiers"
-                    ? "Memory size tiers"
-                    : "vCPU count tiers"}
-                </div>
-              )}
+              <div className={cardSubtitleStyle}>
+                {viewMode === "memoryTiers"
+                  ? "Memory size tiers"
+                  : "vCPU count tiers"}
+              </div>
             </div>
           </FlexItem>
           {!isExportMode && (
-            <FlexItem>
+            <ChartHeaderActions>
               <Dropdown
                 isOpen={isDropdownOpen}
                 onSelect={(_event, value) => {
@@ -195,7 +205,21 @@ export const CpuAndMemoryOverview: React.FC<CpuAndMemoryOverviewProps> = ({
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
-            </FlexItem>
+              <ChartDownloadButton
+                chartId={`cpu-memory-${viewMode}`}
+                title={downloadTitle}
+                getNode={() => (
+                  <CpuAndMemoryOverview
+                    cpuTierDistribution={cpuTierDistribution}
+                    memoryTierDistribution={memoryTierDistribution}
+                    memoryTotalGB={memoryTotalGB}
+                    cpuTotalCores={cpuTotalCores}
+                    isExportMode
+                    viewMode={viewMode}
+                  />
+                )}
+              />
+            </ChartHeaderActions>
           )}
         </Flex>
       </CardTitle>

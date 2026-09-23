@@ -93,6 +93,17 @@ export {
   HOST_POWER_COLORS,
   VM_POWER_COLORS,
 } from "./powerStates.js";
+export {
+  ExportReportButton,
+  type ExportReportButtonProps,
+  ReportExportMenu,
+  type ReportExportMenuProps,
+} from "./ReportExportMenu.js";
+export {
+  type ReportExportOption,
+  type StandardReportExportHandlers,
+  standardReportExportOptions,
+} from "./reportExportOptions.js";
 export { SupportTierBadge } from "./SupportTierBadge.js";
 export {
   ALL_TIERS_FILTER,

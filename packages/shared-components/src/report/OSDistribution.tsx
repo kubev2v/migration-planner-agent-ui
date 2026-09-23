@@ -19,7 +19,7 @@ import {
 } from "@patternfly/react-core";
 import { DesktopIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
-import type { FC, Ref } from "react";
+import type { FC, ReactNode, Ref } from "react";
 import { CardEmptyState } from "./CardEmptyState.js";
 import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
 import { dashboardStyles, tableFullWidthStyle } from "./dashboardStyles.js";
@@ -46,11 +46,13 @@ const tableScrollStyle = css`
 interface OSDistributionProps {
   osData: Record<string, OSDistributionEntry>;
   isExportMode?: boolean;
+  headerActions?: ReactNode;
 }
 
 export const OSDistribution: FC<OSDistributionProps> = ({
   osData,
   isExportMode = false,
+  headerActions,
 }) => (
   <Card
     className={isExportMode ? dashboardStyles.cardPrint : dashboardStyles.card}
@@ -58,15 +60,23 @@ export const OSDistribution: FC<OSDistributionProps> = ({
   >
     <CardTitle>
       <Flex
+        justifyContent={{ default: "justifyContentSpaceBetween" }}
         alignItems={{ default: "alignItemsCenter" }}
-        spaceItems={{ default: "spaceItemsSm" }}
       >
         <FlexItem>
-          <DesktopIcon /> Operating Systems
+          <Flex
+            alignItems={{ default: "alignItemsCenter" }}
+            spaceItems={{ default: "spaceItemsSm" }}
+          >
+            <FlexItem>
+              <DesktopIcon /> Operating Systems
+            </FlexItem>
+            <FlexItem>
+              <OsSupportTiersHelpPopover />
+            </FlexItem>
+          </Flex>
         </FlexItem>
-        <FlexItem>
-          <OsSupportTiersHelpPopover />
-        </FlexItem>
+        {headerActions ? <FlexItem>{headerActions}</FlexItem> : null}
       </Flex>
     </CardTitle>
     <CardBody>

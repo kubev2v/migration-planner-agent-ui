@@ -1,5 +1,5 @@
 import { ServerIcon } from "@patternfly/react-icons";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { useMemo } from "react";
 import type { MigrationDonutChartLegendVariant } from "../charts/MigrationDonutChart.js";
 import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
@@ -10,12 +10,14 @@ export interface HostPowerStatesProps {
   hostPowerStates?: Record<string, number>;
   isExportMode?: boolean;
   legendVariant?: MigrationDonutChartLegendVariant;
+  headerActions?: ReactNode;
 }
 
 export const HostPowerStates: FC<HostPowerStatesProps> = ({
   hostPowerStates,
   isExportMode = false,
   legendVariant,
+  headerActions,
 }) => {
   const chart = useMemo(
     () => buildHostPowerStateChart(hostPowerStates),
@@ -34,6 +36,7 @@ export const HostPowerStates: FC<HostPowerStatesProps> = ({
       subTitle="Hosts"
       isExportMode={isExportMode}
       legendVariant={legendVariant}
+      headerActions={headerActions}
     />
   );
 };

@@ -8,13 +8,15 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Flex,
+  FlexItem,
   Grid,
   GridItem,
   Label,
   LabelGroup,
 } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { FeatureStatusBadge } from "./FeatureStatusBadge.js";
 import type {
   ClusterDetailRow,
@@ -27,6 +29,7 @@ export interface VCenterClusterDetailsProps {
   rows: ClusterDetailRow[];
   details?: ClusterDetailsModel;
   isExportMode?: boolean;
+  headerActions?: ReactNode;
 }
 
 const clusterDetailsTableScrollStyle = css`
@@ -195,9 +198,22 @@ export const VCenterClusterDetails: FC<VCenterClusterDetailsProps> = ({
   rows,
   details,
   isExportMode = false,
+  headerActions,
 }) => (
   <Card isFullHeight id="vcenter-cluster-details">
-    <CardTitle>vCenter cluster details</CardTitle>
+    <CardTitle>
+      {headerActions ? (
+        <Flex
+          justifyContent={{ default: "justifyContentSpaceBetween" }}
+          alignItems={{ default: "alignItemsCenter" }}
+        >
+          <FlexItem>vCenter cluster details</FlexItem>
+          <FlexItem>{headerActions}</FlexItem>
+        </Flex>
+      ) : (
+        "vCenter cluster details"
+      )}
+    </CardTitle>
     <CardBody>
       {isAggregateView || !details ? (
         <AggregateCluster rows={rows} isExportMode={isExportMode} />

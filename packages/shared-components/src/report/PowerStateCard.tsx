@@ -1,4 +1,10 @@
-import { Card, CardBody, CardTitle } from "@patternfly/react-core";
+import {
+  Card,
+  CardBody,
+  CardTitle,
+  Flex,
+  FlexItem,
+} from "@patternfly/react-core";
 import type { FC, ReactNode } from "react";
 import {
   MigrationDonutChart,
@@ -20,6 +26,7 @@ export interface PowerStateCardProps {
   isExportMode?: boolean;
   itemsPerRow?: number;
   legendVariant?: MigrationDonutChartLegendVariant;
+  headerActions?: ReactNode;
 }
 
 export const PowerStateCard: FC<PowerStateCardProps> = ({
@@ -34,13 +41,28 @@ export const PowerStateCard: FC<PowerStateCardProps> = ({
   isExportMode = false,
   itemsPerRow = 2,
   legendVariant = "html",
+  headerActions,
 }) => (
   <Card
     className={isExportMode ? dashboardStyles.cardPrint : dashboardStyles.card}
     id={id}
   >
     <CardTitle>
-      {icon} {title}
+      {headerActions ? (
+        <Flex
+          justifyContent={{ default: "justifyContentSpaceBetween" }}
+          alignItems={{ default: "alignItemsCenter" }}
+        >
+          <FlexItem>
+            {icon} {title}
+          </FlexItem>
+          <FlexItem>{headerActions}</FlexItem>
+        </Flex>
+      ) : (
+        <>
+          {icon} {title}
+        </>
+      )}
     </CardTitle>
     <CardBody>
       {total === 0 ? (

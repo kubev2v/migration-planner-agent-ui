@@ -1,5 +1,5 @@
 import { VirtualMachineIcon } from "@patternfly/react-icons";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { useMemo } from "react";
 import type { MigrationDonutChartLegendVariant } from "../charts/MigrationDonutChart.js";
 import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
@@ -10,12 +10,14 @@ export interface VmPowerStatesProps {
   powerStates?: Record<string, number>;
   isExportMode?: boolean;
   legendVariant?: MigrationDonutChartLegendVariant;
+  headerActions?: ReactNode;
 }
 
 export const VmPowerStates: FC<VmPowerStatesProps> = ({
   powerStates,
   isExportMode = false,
   legendVariant,
+  headerActions,
 }) => {
   const chart = useMemo(
     () => buildVmPowerStateChart(powerStates),
@@ -34,6 +36,7 @@ export const VmPowerStates: FC<VmPowerStatesProps> = ({
       subTitle="VMs"
       isExportMode={isExportMode}
       legendVariant={legendVariant}
+      headerActions={headerActions}
     />
   );
 };

@@ -1,4 +1,8 @@
 import {
+  ReportExportMenu,
+  type ReportExportOption,
+} from "@openshift-migration-advisor/shared-components";
+import {
   Content,
   ContentVariants,
   Flex,
@@ -14,13 +18,20 @@ import { RunNewReportButton } from "../../common/report/RunNewReportButton";
 interface ReportPageHeaderProps {
   showExport?: boolean;
   onExportClick?: () => void;
+  exportOptions?: ReportExportOption[];
+  isExporting?: boolean;
+  exportLoadingLabel?: string | null;
 }
 
 export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
   showExport = false,
   onExportClick,
+  exportOptions,
+  isExporting = false,
+  exportLoadingLabel = null,
 }) => {
-  const canExport = showExport && Boolean(onExportClick);
+  const hasExportMenu = Boolean(showExport && exportOptions?.length);
+  const canExport = hasExportMenu || (showExport && Boolean(onExportClick));
 
   return (
     <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
@@ -35,7 +46,15 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
           <InputGroup>
             {canExport && (
               <InputGroupItem>
-                <ExportButton onClick={onExportClick} />
+                {hasExportMenu && exportOptions ? (
+                  <ReportExportMenu
+                    options={exportOptions}
+                    isLoading={isExporting}
+                    loadingLabel={exportLoadingLabel}
+                  />
+                ) : (
+                  <ExportButton onClick={onExportClick} />
+                )}
               </InputGroupItem>
             )}
             <InputGroupItem>

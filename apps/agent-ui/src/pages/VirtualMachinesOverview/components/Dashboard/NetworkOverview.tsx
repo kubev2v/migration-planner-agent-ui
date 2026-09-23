@@ -23,6 +23,10 @@ import { InboxIcon, TopologyIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { AppEmptyState } from "../../../../common/components";
+import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
 
 // Reuse an extended palette similar to ClustersOverview to provide stable colors
 const colorPalette = [
@@ -45,11 +49,12 @@ interface NetworkOverviewProps {
     [key: string]: number;
   };
   isExportMode?: boolean;
+  viewMode?: NetworkViewMode;
 }
 
-type ViewMode = "networkDistribution" | "nicCount";
+export type NetworkViewMode = "networkDistribution" | "nicCount";
 
-const VIEW_MODE_LABELS: Record<ViewMode, string> = {
+const VIEW_MODE_LABELS: Record<NetworkViewMode, string> = {
   networkDistribution: "VM distribution by network",
   nicCount: "VM distribution by NIC count",
 };
@@ -59,8 +64,12 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
   nicCount,
   distributionByNicCount,
   isExportMode = false,
+  viewMode: viewModeProp,
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>("networkDistribution");
+  const [internalViewMode, setViewMode] = useState<NetworkViewMode>(
+    "networkDistribution",
+  );
+  const viewMode = viewModeProp ?? internalViewMode;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const { chartData, legend, title, subTitle, legendVlanMap } = useMemo(() => {
@@ -279,7 +288,7 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
             </div>
           </FlexItem>
           {!isExportMode && (
-            <FlexItem>
+            <ChartHeaderActions>
               <Dropdown
                 isOpen={isDropdownOpen}
                 onSelect={onSelect}
@@ -307,7 +316,20 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
-            </FlexItem>
+              <ChartDownloadButton
+                chartId={`networks-${viewMode}`}
+                title={`Networks — ${VIEW_MODE_LABELS[viewMode]}`}
+                getNode={() => (
+                  <NetworkOverview
+                    infra={infra}
+                    nicCount={nicCount}
+                    distributionByNicCount={distributionByNicCount}
+                    isExportMode
+                    viewMode={viewMode}
+                  />
+                )}
+              />
+            </ChartHeaderActions>
           )}
         </Flex>
       </CardTitle>

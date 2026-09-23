@@ -30,6 +30,10 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { AppEmptyState } from "../../../../common/components";
 import {
+  ChartDownloadButton,
+  ChartHeaderActions,
+} from "../Export/ChartDownloadButton";
+import {
   type NavigateToVMFilters,
   useChartDrillDown,
 } from "../VirtualMachinesTab/vmNavigation";
@@ -47,12 +51,17 @@ interface StorageOverviewProps {
   totalWithSharedDisks?: number;
   isExportMode?: boolean;
   exportAllViews?: boolean;
+  viewMode?: StorageViewMode;
   onNavigateToVMFilters?: NavigateToVMFilters;
 }
 
-type ViewMode = "totalSize" | "vmCount" | "vmCountByDiskType" | "sharedDisks";
+export type StorageViewMode =
+  | "totalSize"
+  | "vmCount"
+  | "vmCountByDiskType"
+  | "sharedDisks";
 
-const VIEW_MODE_LABELS: Record<ViewMode, string> = {
+const VIEW_MODE_LABELS: Record<StorageViewMode, string> = {
   totalSize: "Total disk size by tier",
   vmCount: "VM count by disk size tier",
   vmCountByDiskType: "VM count by disk type",
@@ -281,10 +290,12 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
   totalWithSharedDisks,
   isExportMode = false,
   exportAllViews = false,
+  viewMode: viewModeProp,
   onNavigateToVMFilters,
 }) => {
   const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
-  const [viewMode, setViewMode] = useState<ViewMode>("vmCount");
+  const [internalViewMode, setViewMode] = useState<StorageViewMode>("vmCount");
+  const viewMode = viewModeProp ?? internalViewMode;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const totals = useMemo(() => {
@@ -460,7 +471,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
             <DatabaseIcon /> Disks
           </FlexItem>
           {!isExportMode && (
-            <FlexItem>
+            <ChartHeaderActions>
               <Dropdown
                 isOpen={isDropdownOpen}
                 onSelect={onSelect}
@@ -501,12 +512,26 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
-            </FlexItem>
+              <ChartDownloadButton
+                chartId={`storage-${viewMode}`}
+                title={`Storage — ${VIEW_MODE_LABELS[viewMode]}`}
+                getNode={() => (
+                  <StorageOverview
+                    diskSizeTier={diskSizeTier}
+                    diskTypes={diskTypes}
+                    totalVMs={totalVMs}
+                    totalWithSharedDisks={totalWithSharedDisks}
+                    isExportMode
+                    viewMode={viewMode}
+                  />
+                )}
+              />
+            </ChartHeaderActions>
           )}
         </Flex>
       </CardTitle>
       <CardBody className={dashboardStyles.cardBodyScrollable}>
-        {!isExportMode || !exportAllViews ? (
+        {!isExportMode || !exportAllViews || viewModeProp ? (
           viewMode === "vmCountByDiskType" ? (
             <DiskTypeBarChart
               data={diskTypeChartData}
