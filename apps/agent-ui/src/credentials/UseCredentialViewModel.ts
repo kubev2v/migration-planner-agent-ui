@@ -13,6 +13,7 @@ import { parseApiError } from "../common/parseApiError";
 import { agentApiSlice } from "../store/api/agentApiSlice";
 import { usePutCredentialsMutation } from "../store/api/credentialsEndpoints";
 import { useAppDispatch } from "../store/hooks";
+import { dismissCollectError } from "../store/slices/collectionLifecycleSlice";
 
 // Maximum consecutive polling failures before reporting error to user
 const MAX_POLL_FAILURES = 5;
@@ -42,6 +43,7 @@ export const useLoginViewModel = (
   const dispatch = useAppDispatch();
   const refetchAgentStatus = props?.refetchAgentStatus;
   const goToReport = useCallback((): void => {
+    dispatch(dismissCollectError());
     dispatch(agentApiSlice.util.invalidateTags(["Collections", "AgentStatus"]));
     navigate("/report");
   }, [dispatch, navigate]);
