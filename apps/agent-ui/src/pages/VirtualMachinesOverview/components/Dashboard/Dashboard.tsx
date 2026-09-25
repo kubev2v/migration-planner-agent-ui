@@ -35,7 +35,6 @@ interface DashboardProps {
   cpuCores?: VMResourceBreakdown;
   ramGB?: VMResourceBreakdown;
   vms: VMs;
-  isExportMode?: boolean;
   clusters?: { [key: string]: InventoryData };
   vcenterVersion?: string;
   vcenterId?: string;
@@ -50,7 +49,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   cpuCores,
   ramGB,
   vms,
-  isExportMode,
   clusters,
   vcenterVersion,
   vcenterId,
@@ -123,37 +121,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <Grid hasGutter>
-      <GridItem data-export-block={isExportMode ? "1" : undefined}>
+      <GridItem>
         <InfrastructureSummary summary={infrastructureSummary} />
       </GridItem>
 
-      <GridItem data-export-block={isExportMode ? "1a" : undefined}>
+      <GridItem>
         <VCenterClusterDetails
           isAggregateView={isAggregateView}
           rows={clusterRows}
           details={clusterDetails}
-          isExportMode={isExportMode}
         />
       </GridItem>
 
-      <GridItem data-export-block={isExportMode ? "1b" : undefined}>
+      <GridItem>
         <Gallery hasGutter minWidths={{ default: "40%" }}>
           <GalleryItem>
-            <HostPowerStates
-              hostPowerStates={infra.hostPowerStates}
-              isExportMode={isExportMode}
-            />
+            <HostPowerStates hostPowerStates={infra.hostPowerStates} />
           </GalleryItem>
           <GalleryItem>
-            <VmPowerStates
-              powerStates={vms.powerStates}
-              isExportMode={isExportMode}
-            />
+            <VmPowerStates powerStates={vms.powerStates} />
           </GalleryItem>
         </Gallery>
       </GridItem>
 
-      <GridItem data-export-block={isExportMode ? "2" : undefined}>
+      <GridItem>
         <Gallery hasGutter minWidths={{ default: "40%" }}>
           <GalleryItem>
             <VMMigrationStatus
@@ -165,21 +156,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 ),
               }}
               issuesBreakdown={vms.issuesBreakdown}
-              isExportMode={isExportMode}
               onNavigateToVMFilters={onNavigateToVMFilters}
             />
           </GalleryItem>
           <GalleryItem>
-            <OSDistribution osData={osData} isExportMode={isExportMode} />
+            <OSDistribution osData={osData} />
           </GalleryItem>
         </Gallery>
       </GridItem>
 
-      <GridItem data-export-block={isExportMode ? "3" : undefined}>
+      <GridItem>
         <Gallery hasGutter minWidths={{ default: "40%" }}>
           <GalleryItem>
             <CpuAndMemoryOverview
-              isExportMode={isExportMode}
               cpuTierDistribution={vms.distributionByCpuTier}
               memoryTierDistribution={vms.distributionByMemoryTier}
               memoryTotalGB={ramGB?.total}
@@ -193,8 +182,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
               diskTypes={vms.diskTypes ?? {}}
               totalVMs={vms.total ?? 0}
               totalWithSharedDisks={vms.totalWithSharedDisks ?? 0}
-              isExportMode={isExportMode}
-              exportAllViews={isExportMode}
               onNavigateToVMFilters={onNavigateToVMFilters}
             />
           </GalleryItem>
@@ -202,65 +189,60 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </GridItem>
 
       {isAggregateView ? (
-        <GridItem data-export-block={isExportMode ? "4" : undefined}>
+        <GridItem>
           <Gallery hasGutter minWidths={{ default: "300px", md: "45%" }}>
             <GalleryItem>
               <ClustersOverview
                 clustersPerDatacenter={infra.clustersPerDatacenter ?? []}
-                isExportMode={isExportMode}
                 clusters={clusters}
               />
             </GalleryItem>
             <GalleryItem>
-              <HostsOverview hosts={infra.hosts} isExportMode={isExportMode} />
+              <HostsOverview hosts={infra.hosts} />
             </GalleryItem>
           </Gallery>
         </GridItem>
       ) : (
-        <GridItem data-export-block={isExportMode ? "4" : undefined}>
+        <GridItem>
           <Gallery hasGutter minWidths={{ default: "300px", md: "45%" }}>
             <GalleryItem>
-              <HostsOverview hosts={infra.hosts} isExportMode={isExportMode} />
+              <HostsOverview hosts={infra.hosts} />
             </GalleryItem>
             <GalleryItem>
               <NetworkOverview
                 infra={infra}
                 nicCount={vms.nicCount}
                 distributionByNicCount={vms.distributionByNicCount}
-                isExportMode={isExportMode}
               />
             </GalleryItem>
           </Gallery>
         </GridItem>
       )}
       {isAggregateView && (
-        <GridItem data-export-block={isExportMode ? "4a" : undefined}>
+        <GridItem>
           <Gallery hasGutter minWidths={{ default: "300px", md: "45%" }}>
             <GalleryItem>
               <NetworkOverview
                 infra={infra}
                 nicCount={vms.nicCount}
                 distributionByNicCount={vms.distributionByNicCount}
-                isExportMode={isExportMode}
               />
             </GalleryItem>
           </Gallery>
         </GridItem>
       )}
 
-      <GridItem data-export-block={isExportMode ? "5" : undefined}>
+      <GridItem>
         <Gallery hasGutter minWidths={{ default: "300px", md: "45%" }}>
           <GalleryItem>
             <WarningsTable
               warnings={vms.migrationWarnings || []}
-              isExportMode={isExportMode}
               onConcernClick={onConcernClick}
             />
           </GalleryItem>
           <GalleryItem>
             <ErrorTable
               errors={vms.notMigratableReasons || []}
-              isExportMode={isExportMode}
               onConcernClick={onConcernClick}
             />
           </GalleryItem>

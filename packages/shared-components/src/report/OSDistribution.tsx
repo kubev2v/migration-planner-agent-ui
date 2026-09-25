@@ -21,6 +21,9 @@ import { DesktopIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type { FC, Ref } from "react";
 import { CardEmptyState } from "./CardEmptyState.js";
+import { ChartHeaderActions } from "./ChartDownloadButton.js";
+import { ChartExportSurface } from "./ChartExportSurface.js";
+import { chartExportHideProps, chartExportScrollProps } from "./chartExport.js";
 import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
 import { dashboardStyles, tableFullWidthStyle } from "./dashboardStyles.js";
 import { EmptySearchResults } from "./EmptySearchResults.js";
@@ -43,47 +46,55 @@ const tableScrollStyle = css`
   max-height: 350px;
 `;
 
+const OS_DISTRIBUTION_CHART_ID = "os-distribution";
+const OS_DISTRIBUTION_TITLE = "Operating system distribution";
+
 interface OSDistributionProps {
   osData: Record<string, OSDistributionEntry>;
-  isExportMode?: boolean;
 }
 
-export const OSDistribution: FC<OSDistributionProps> = ({
-  osData,
-  isExportMode = false,
-}) => (
-  <Card
-    className={isExportMode ? dashboardStyles.cardPrint : dashboardStyles.card}
-    id="os-distribution"
-  >
+export const OSDistribution: FC<OSDistributionProps> = ({ osData }) => (
+  <Card className={dashboardStyles.card} id={OS_DISTRIBUTION_CHART_ID}>
     <CardTitle>
       <Flex
+        justifyContent={{ default: "justifyContentSpaceBetween" }}
         alignItems={{ default: "alignItemsCenter" }}
-        spaceItems={{ default: "spaceItemsSm" }}
       >
         <FlexItem>
-          <DesktopIcon /> Operating Systems
+          <Flex
+            alignItems={{ default: "alignItemsCenter" }}
+            spaceItems={{ default: "spaceItemsSm" }}
+          >
+            <FlexItem>
+              <DesktopIcon /> Operating Systems
+            </FlexItem>
+            <FlexItem {...chartExportHideProps}>
+              <OsSupportTiersHelpPopover />
+            </FlexItem>
+          </Flex>
         </FlexItem>
-        <FlexItem>
-          <OsSupportTiersHelpPopover />
-        </FlexItem>
+        <ChartHeaderActions
+          chartId={OS_DISTRIBUTION_CHART_ID}
+          title={OS_DISTRIBUTION_TITLE}
+        />
       </Flex>
     </CardTitle>
     <CardBody>
-      <OSBarChart osData={osData} isExportMode={isExportMode} />
+      <ChartExportSurface
+        id={OS_DISTRIBUTION_CHART_ID}
+        title={OS_DISTRIBUTION_TITLE}
+      >
+        <OSBarChart osData={osData} />
+      </ChartExportSurface>
     </CardBody>
   </Card>
 );
 
 interface OSBarChartProps {
   osData: Record<string, OSDistributionEntry>;
-  isExportMode?: boolean;
 }
 
-export const OSBarChart: FC<OSBarChartProps> = ({
-  osData,
-  isExportMode = false,
-}) => {
+export const OSBarChart: FC<OSBarChartProps> = ({ osData }) => {
   const vm = useOsBarChartViewModel(osData);
 
   if (vm.tableRows.length === 0) {
@@ -94,7 +105,7 @@ export const OSBarChart: FC<OSBarChartProps> = ({
 
   return (
     <>
-      {!isExportMode ? (
+      <div {...chartExportHideProps}>
         <Toolbar hasNoPadding>
           <ToolbarContent>
             <ToolbarItem>
@@ -138,7 +149,7 @@ export const OSBarChart: FC<OSBarChartProps> = ({
             </ToolbarItem>
           </ToolbarContent>
         </Toolbar>
-      ) : null}
+      </div>
 
       <Stack hasGutter>
         {vm.showUpgradeNotice ? (
@@ -148,11 +159,8 @@ export const OSBarChart: FC<OSBarChartProps> = ({
         ) : null}
         <StackItem>
           <div
-            className={
-              isExportMode
-                ? tableFullWidthStyle
-                : `${tableScrollStyle} ${tableFullWidthStyle}`
-            }
+            className={`${tableScrollStyle} ${tableFullWidthStyle}`}
+            {...chartExportScrollProps}
           >
             <Table aria-label="Operating systems" variant="compact">
               <Thead>
@@ -176,14 +184,10 @@ export const OSBarChart: FC<OSBarChartProps> = ({
                         <OsNameCell
                           osName={row.osName}
                           upgradeRecommendation={row.upgradeRecommendation}
-                          isExportMode={isExportMode}
                         />
                       </Td>
                       <Td dataLabel="Tier">
-                        <SupportTierBadge
-                          tier={row.tier}
-                          isExportMode={isExportMode}
-                        />
+                        <SupportTierBadge tier={row.tier} />
                       </Td>
                       <Td dataLabel="VMs">{row.count}</Td>
                     </Tr>

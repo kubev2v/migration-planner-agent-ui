@@ -84,28 +84,6 @@ describe("VCenterClusterDetails", () => {
     ).toHaveAttribute("data-scroll-constrained", "true");
   });
 
-  it("does not clip the aggregate table in export mode", () => {
-    render(
-      <VCenterClusterDetails
-        isAggregateView
-        isExportMode
-        rows={Array.from({ length: 12 }, (_, index) => ({
-          id: `cluster-${index}`,
-          name: `cluster-${index}`,
-          hosts: index + 1,
-          vms: (index + 1) * 10,
-          vmotion: "unknown",
-          drs: "unknown",
-          vsan: "disabled",
-        }))}
-      />,
-    );
-
-    expect(
-      screen.getByTestId("vcenter-cluster-details-table").parentElement,
-    ).not.toHaveAttribute("data-scroll-constrained");
-  });
-
   it("renders the detailed cluster cards for a single cluster", () => {
     render(
       <VCenterClusterDetails

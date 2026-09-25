@@ -8,6 +8,8 @@ import {
   DescriptionListDescription,
   DescriptionListGroup,
   DescriptionListTerm,
+  Flex,
+  FlexItem,
   Grid,
   GridItem,
   Label,
@@ -15,6 +17,9 @@ import {
 } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type { FC } from "react";
+import { ChartHeaderActions } from "./ChartDownloadButton.js";
+import { ChartExportSurface } from "./ChartExportSurface.js";
+import { chartExportScrollProps } from "./chartExport.js";
 import { FeatureStatusBadge } from "./FeatureStatusBadge.js";
 import type {
   ClusterDetailRow,
@@ -26,7 +31,6 @@ export interface VCenterClusterDetailsProps {
   isAggregateView: boolean;
   rows: ClusterDetailRow[];
   details?: ClusterDetailsModel;
-  isExportMode?: boolean;
 }
 
 const clusterDetailsTableScrollStyle = css`
@@ -91,16 +95,16 @@ const AggregateClusterTable: FC<{
 
 const AggregateCluster: FC<{
   rows: ClusterDetailRow[];
-  isExportMode: boolean;
-}> = ({ rows, isExportMode }) => {
+}> = ({ rows }) => {
   if (rows.length === 0) {
     return <Content component="p">No vSphere clusters detected</Content>;
   }
 
   return (
     <div
-      className={isExportMode ? undefined : clusterDetailsTableScrollStyle}
-      data-scroll-constrained={isExportMode ? undefined : "true"}
+      className={clusterDetailsTableScrollStyle}
+      data-scroll-constrained="true"
+      {...chartExportScrollProps}
     >
       <AggregateClusterTable rows={rows} />
     </div>
@@ -190,20 +194,38 @@ const DetailedClusterView: FC<{ details: ClusterDetailsModel }> = ({
   </Grid>
 );
 
+const CLUSTER_DETAILS_CHART_ID = "vcenter-cluster-details";
+const CLUSTER_DETAILS_TITLE = "vCenter cluster details";
+
 export const VCenterClusterDetails: FC<VCenterClusterDetailsProps> = ({
   isAggregateView,
   rows,
   details,
-  isExportMode = false,
 }) => (
-  <Card isFullHeight id="vcenter-cluster-details">
-    <CardTitle>vCenter cluster details</CardTitle>
+  <Card isFullHeight id={CLUSTER_DETAILS_CHART_ID}>
+    <CardTitle>
+      <Flex
+        justifyContent={{ default: "justifyContentSpaceBetween" }}
+        alignItems={{ default: "alignItemsCenter" }}
+      >
+        <FlexItem>{CLUSTER_DETAILS_TITLE}</FlexItem>
+        <ChartHeaderActions
+          chartId={CLUSTER_DETAILS_CHART_ID}
+          title={CLUSTER_DETAILS_TITLE}
+        />
+      </Flex>
+    </CardTitle>
     <CardBody>
-      {isAggregateView || !details ? (
-        <AggregateCluster rows={rows} isExportMode={isExportMode} />
-      ) : (
-        <DetailedClusterView details={details} />
-      )}
+      <ChartExportSurface
+        id={CLUSTER_DETAILS_CHART_ID}
+        title={CLUSTER_DETAILS_TITLE}
+      >
+        {isAggregateView || !details ? (
+          <AggregateCluster rows={rows} />
+        ) : (
+          <DetailedClusterView details={details} />
+        )}
+      </ChartExportSurface>
     </CardBody>
   </Card>
 );

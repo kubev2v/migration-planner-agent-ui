@@ -82,14 +82,13 @@ describe("OSBarChart", () => {
     expect(within(popover).getByText("Upgrade to RHEL 7")).toBeInTheDocument();
   });
 
-  it("does not show upgrade recommendation icon in export mode", () => {
-    render(<OSBarChart osData={sampleOsData} isExportMode />);
+  it("marks the upgrade recommendation icon as capture chrome", () => {
+    render(<OSBarChart osData={sampleOsData} />);
 
-    expect(
-      screen.queryByRole("button", {
-        name: "Open operating system upgrade information",
-      }),
-    ).not.toBeInTheDocument();
+    const upgradeButton = screen.getByRole("button", {
+      name: "Open operating system upgrade information",
+    });
+    expect(upgradeButton.closest("[data-chart-export-hide]")).not.toBeNull();
   });
 
   it("shows official Red Hat definitions in tier badge tooltips", async () => {
@@ -149,12 +148,12 @@ describe("OSBarChart", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders export-friendly inline tier badge colors in export mode", () => {
-    render(<OSBarChart osData={sampleOsData} isExportMode />);
+  it("uses explicit badge colors so html2canvas can capture them", () => {
+    render(<OSBarChart osData={sampleOsData} />);
 
     const certifiedBadge = screen.getByText("Certified");
-    expect(certifiedBadge.tagName).toBe("SPAN");
-    expect(certifiedBadge).toHaveStyle({
+    const styledBadge = certifiedBadge.closest("[style]") ?? certifiedBadge;
+    expect(styledBadge).toHaveStyle({
       backgroundColor: "rgb(185, 218, 252)",
       color: "rgb(0, 77, 153)",
     });

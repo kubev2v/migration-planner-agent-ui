@@ -1,6 +1,8 @@
 import { css } from "@emotion/css";
 import type { InventoryData } from "@openshift-migration-advisor/agent-sdk";
 import {
+  ChartExportSurface,
+  ChartHeaderActions,
   dashboardStyles,
   MigrationDonutChart,
 } from "@openshift-migration-advisor/shared-components";
@@ -25,7 +27,6 @@ import { AppEmptyState } from "../../../../common/components";
 
 interface ClustersOverviewProps {
   clustersPerDatacenter: number[];
-  isExportMode?: boolean;
   clusters?: { [key: string]: InventoryData };
 }
 
@@ -150,7 +151,6 @@ const colorPalette = [
 
 export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
   clustersPerDatacenter,
-  isExportMode = false,
   clusters,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("vmByCluster");
@@ -315,13 +315,13 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
     setIsDropdownOpen(false);
   };
 
+  const chartId = "clusters-overview";
+  const chartTitle = `Clusters — ${VIEW_MODE_LABELS[viewMode]}`;
+
   return (
     <Card
-      className={
-        isExportMode ? dashboardStyles.cardPrint : dashboardStyles.card
-      }
-      id="clusters-overview"
-      data-export-block={isExportMode ? "3.1" : undefined}
+      className={dashboardStyles.card}
+      id={chartId}
       style={{ overflow: "hidden" }}
     >
       <CardTitle>
@@ -335,117 +335,112 @@ export const ClustersOverview: React.FC<ClustersOverviewProps> = ({
               <div>
                 <DatabaseIcon /> Clusters
               </div>
-              {!isExportMode && (
-                <div style={{ color: "#6a6e73", fontSize: "0.85rem" }}>
-                  {viewMode === "dataCenterDistribution"
-                    ? "Top 5 datacenters"
-                    : "Top 5 clusters"}
-                </div>
-              )}
+              <div style={{ color: "#6a6e73", fontSize: "0.85rem" }}>
+                {viewMode === "dataCenterDistribution"
+                  ? "Top 5 datacenters"
+                  : "Top 5 clusters"}
+              </div>
             </div>
           </FlexItem>
-          {!isExportMode && (
-            <FlexItem>
-              <Dropdown
-                isOpen={isDropdownOpen}
-                onSelect={onSelect}
-                onOpenChange={(isOpen: boolean) => setIsDropdownOpen(isOpen)}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    onClick={onDropdownToggle}
-                    isExpanded={isDropdownOpen}
-                    style={{ minWidth: "250px" }}
-                  >
-                    {VIEW_MODE_LABELS[viewMode]}
-                  </MenuToggle>
-                )}
-              >
-                <DropdownList>
-                  <DropdownItem key="vmByCluster" value="vmByCluster">
-                    VM distribution by cluster
-                  </DropdownItem>
-                  <DropdownItem
-                    key="cpuOverCommitment"
-                    value="cpuOverCommitment"
-                  >
-                    Cluster CPU over commitment
-                  </DropdownItem>
-                  <DropdownItem
-                    key="dataCenterDistribution"
-                    value="dataCenterDistribution"
-                  >
-                    Cluster distribution by data center
-                  </DropdownItem>
-                </DropdownList>
-              </Dropdown>
-            </FlexItem>
-          )}
+          <ChartHeaderActions chartId={chartId} title={chartTitle}>
+            <Dropdown
+              isOpen={isDropdownOpen}
+              onSelect={onSelect}
+              onOpenChange={(isOpen: boolean) => setIsDropdownOpen(isOpen)}
+              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle
+                  ref={toggleRef}
+                  onClick={onDropdownToggle}
+                  isExpanded={isDropdownOpen}
+                  style={{ minWidth: "250px" }}
+                >
+                  {VIEW_MODE_LABELS[viewMode]}
+                </MenuToggle>
+              )}
+            >
+              <DropdownList>
+                <DropdownItem key="vmByCluster" value="vmByCluster">
+                  VM distribution by cluster
+                </DropdownItem>
+                <DropdownItem key="cpuOverCommitment" value="cpuOverCommitment">
+                  Cluster CPU over commitment
+                </DropdownItem>
+                <DropdownItem
+                  key="dataCenterDistribution"
+                  value="dataCenterDistribution"
+                >
+                  Cluster distribution by data center
+                </DropdownItem>
+              </DropdownList>
+            </Dropdown>
+          </ChartHeaderActions>
         </Flex>
       </CardTitle>
       <CardBody className={dashboardStyles.cardBodyScrollable}>
-        {viewMode === "cpuOverCommitment" ? (
-          chartData.length === 0 ? (
+        <ChartExportSurface id={chartId} title={chartTitle}>
+          {viewMode === "cpuOverCommitment" ? (
+            chartData.length === 0 ? (
+              <AppEmptyState
+                titleText="This inventory has no CPU overcommitment information"
+                icon={InboxIcon}
+                variant={EmptyStateVariant.xs}
+                wrapInBullseye={false}
+              />
+            ) : (
+              <>
+                <div className={styles.cpuOvercommitBoxes}>
+                  {chartData.map((item) => (
+                    <div
+                      key={`cpu-box-${item.legendCategory}`}
+                      className={styles.cpuOvercommitBox}
+                      style={{ background: legend[item.legendCategory] }}
+                    >
+                      {item.countDisplay}
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.cpuOvercommitLegend}>
+                  {chartData.map((item) => (
+                    <div
+                      key={`cpu-legend-${item.legendCategory}`}
+                      className={styles.cpuOvercommitLegendItem}
+                    >
+                      <span
+                        className={styles.cpuOvercommitLegendSwatch}
+                        style={{ background: legend[item.legendCategory] }}
+                      />
+                      <span className={styles.cpuOvercommitLegendText}>
+                        {item.legendCategory} ({item.countDisplay})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          ) : chartData.length === 0 ? (
             <AppEmptyState
-              titleText="This inventory has no CPU overcommitment information"
+              titleText="No data available"
               icon={InboxIcon}
               variant={EmptyStateVariant.xs}
               wrapInBullseye={false}
             />
           ) : (
-            <>
-              <div className={styles.cpuOvercommitBoxes}>
-                {chartData.map((item) => (
-                  <div
-                    key={`cpu-box-${item.legendCategory}`}
-                    className={styles.cpuOvercommitBox}
-                    style={{ background: legend[item.legendCategory] }}
-                  >
-                    {item.countDisplay}
-                  </div>
-                ))}
-              </div>
-              <div className={styles.cpuOvercommitLegend}>
-                {chartData.map((item) => (
-                  <div
-                    key={`cpu-legend-${item.legendCategory}`}
-                    className={styles.cpuOvercommitLegendItem}
-                  >
-                    <span
-                      className={styles.cpuOvercommitLegendSwatch}
-                      style={{ background: legend[item.legendCategory] }}
-                    />
-                    <span className={styles.cpuOvercommitLegendText}>
-                      {item.legendCategory} ({item.countDisplay})
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )
-        ) : chartData.length === 0 ? (
-          <AppEmptyState
-            titleText="No data available"
-            icon={InboxIcon}
-            variant={EmptyStateVariant.xs}
-            wrapInBullseye={false}
-          />
-        ) : (
-          <MigrationDonutChart
-            data={chartData}
-            height={300}
-            width={420}
-            donutThickness={18}
-            titleFontSize={34}
-            legend={legend}
-            title={title}
-            subTitle={subTitle}
-            subTitleColor="#9a9da0"
-            tooltipLabelFormatter={({ datum, percent }) =>
-              `${datum.countDisplay}\n${percent.toFixed(1)}%`
-            }
-          />
-        )}
+            <MigrationDonutChart
+              data={chartData}
+              height={300}
+              width={420}
+              donutThickness={18}
+              titleFontSize={34}
+              legend={legend}
+              title={title}
+              subTitle={subTitle}
+              subTitleColor="#9a9da0"
+              tooltipLabelFormatter={({ datum, percent }) =>
+                `${datum.countDisplay}\n${percent.toFixed(1)}%`
+              }
+            />
+          )}
+        </ChartExportSurface>
       </CardBody>
     </Card>
   );

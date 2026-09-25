@@ -8,13 +8,11 @@ import { buildVmPowerStateChart } from "./powerStates.js";
 
 export interface VmPowerStatesProps {
   powerStates?: Record<string, number>;
-  isExportMode?: boolean;
   legendVariant?: MigrationDonutChartLegendVariant;
 }
 
 export const VmPowerStates: FC<VmPowerStatesProps> = ({
   powerStates,
-  isExportMode = false,
   legendVariant,
 }) => {
   const chart = useMemo(
@@ -32,7 +30,6 @@ export const VmPowerStates: FC<VmPowerStatesProps> = ({
       legend={chart.legend}
       total={chart.total}
       subTitle="VMs"
-      isExportMode={isExportMode}
       legendVariant={legendVariant}
     />
   );

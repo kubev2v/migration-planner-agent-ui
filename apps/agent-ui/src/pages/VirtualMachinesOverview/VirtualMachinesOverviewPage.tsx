@@ -1,3 +1,4 @@
+import { ChartExportProvider } from "@openshift-migration-advisor/shared-components";
 import {
   Alert,
   Content,
@@ -55,7 +56,7 @@ import {
 import type { VMTableFilterOptions } from "./components/VirtualMachinesTab/vmTableTypes";
 import { Header } from "./Header";
 import { getInventoryAggregateView } from "./inventoryParsing";
-import { ReportPageHeader } from "./ReportPageHeader";
+import { OverviewReportHeader, ReportPageHeader } from "./ReportPageHeader";
 import {
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
@@ -348,193 +349,197 @@ export const ReportContainer: React.FC = () => {
   };
 
   return (
-    <PageSection hasBodyWrapper={false} isFilled>
-      <Stack hasGutter>
-        <StackItem>
-          <ReportPageHeader
-            showExport={showExport}
-            onExportClick={openExportModal}
-          />
-          <DiscoveryStatus />
-        </StackItem>
-
-        {/* Cluster Selector */}
-        <StackItem>
-          <Select
-            isScrollable
-            isOpen={isClusterSelectOpen}
-            selected={clusterView.selectionId}
-            onSelect={handleClusterSelect}
-            onOpenChange={(isOpen: boolean) => {
-              if (!clusterSelectDisabled) setIsClusterSelectOpen(isOpen);
-            }}
-            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-              <MenuToggle
-                ref={toggleRef}
-                isExpanded={isClusterSelectOpen}
-                onClick={() => {
-                  if (!clusterSelectDisabled) {
-                    setIsClusterSelectOpen((prev) => !prev);
-                  }
-                }}
-                isDisabled={clusterSelectDisabled}
-                style={{ minWidth: "422px" }}
-              >
-                {clusterView.selectionLabel}
-              </MenuToggle>
-            )}
-          >
-            <SelectList>
-              {clusterView.clusterOptions.map((option: ClusterOption) => (
-                <SelectOption key={option.id} value={option.id}>
-                  {option.label}
-                </SelectOption>
-              ))}
-            </SelectList>
-          </Select>
-        </StackItem>
-
-        <StackItem>
-          <Header totalVMs={totalVMs} totalClusters={totalClusters} />
-        </StackItem>
-
-        {utilizationMetrics && (
+    <ChartExportProvider>
+      <PageSection hasBodyWrapper={false} isFilled>
+        <Stack hasGutter>
           <StackItem>
-            <Content component="p">
-              Total usage statistics{" "}
-              <VMUtilizationMetrics
-                cpu={utilizationMetrics.cpu_avg}
-                disk={utilizationMetrics.disk}
-                ram={utilizationMetrics.mem_avg}
-              />
-            </Content>
+            <OverviewReportHeader
+              showExport={showExport}
+              onExportInventory={openExportModal}
+              documentTitle={`Virtual machines overview - ${clusterView.selectionLabel}`}
+              enableHtml={clusterView.isAggregateView}
+            />
+            <DiscoveryStatus />
           </StackItem>
-        )}
 
-        {/* Tabs */}
-        <StackItem isFilled className={vmsTabsStackItemStyle}>
-          <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
-            <Tab
-              eventKey={REPORT_TAB.overview}
-              title={<TabTitleText>Assessment report</TabTitleText>}
-              tabContentId="report-tab-overview"
-              tabContentRef={overviewTabRef}
-            />
-            <Tab
-              eventKey={REPORT_TAB.vms}
-              title={<TabTitleText>Virtual Machines</TabTitleText>}
-              tabContentId="report-tab-vms"
-              tabContentRef={vmsTabRef}
-            />
-            {!isRvtoolsMode && (
-              <Tab
-                eventKey={REPORT_TAB.applications}
-                title={<TabTitleText>Applications</TabTitleText>}
-                tabContentId="report-tab-applications"
-                tabContentRef={applicationsTabRef}
-              />
-            )}
-          </Tabs>
+          {/* Cluster Selector */}
+          <StackItem>
+            <Select
+              isScrollable
+              isOpen={isClusterSelectOpen}
+              selected={clusterView.selectionId}
+              onSelect={handleClusterSelect}
+              onOpenChange={(isOpen: boolean) => {
+                if (!clusterSelectDisabled) setIsClusterSelectOpen(isOpen);
+              }}
+              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle
+                  ref={toggleRef}
+                  isExpanded={isClusterSelectOpen}
+                  onClick={() => {
+                    if (!clusterSelectDisabled) {
+                      setIsClusterSelectOpen((prev) => !prev);
+                    }
+                  }}
+                  isDisabled={clusterSelectDisabled}
+                  style={{ minWidth: "422px" }}
+                >
+                  {clusterView.selectionLabel}
+                </MenuToggle>
+              )}
+            >
+              <SelectList>
+                {clusterView.clusterOptions.map((option: ClusterOption) => (
+                  <SelectOption key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectOption>
+                ))}
+              </SelectList>
+            </Select>
+          </StackItem>
 
-          {/* TabsContent */}
-          <TabContent
-            eventKey={REPORT_TAB.overview}
-            id="report-tab-overview"
-            ref={overviewTabRef}
-            hidden={activeTab !== REPORT_TAB.overview}
-          >
-            <TabContentBody hasPadding>
-              {clusterView.viewInfra && clusterView.viewVms ? (
-                <Dashboard
-                  key={`assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
-                  infra={clusterView.viewInfra}
-                  cpuCores={clusterView.cpuCores}
-                  ramGB={clusterView.ramGB}
-                  vms={clusterView.viewVms}
-                  clusters={clusterView.viewClusters}
-                  vcenterVersion={inventory?.vcenter_version}
-                  vcenterId={inventory?.vcenter_id}
-                  isAggregateView={clusterView.isAggregateView}
-                  clusterFound={clusterView.clusterFound}
-                  onConcernClick={handleConcernClick}
-                  onNavigateToVMFilters={handleNavigateToVMFilters}
+          <StackItem>
+            <Header totalVMs={totalVMs} totalClusters={totalClusters} />
+          </StackItem>
+
+          {utilizationMetrics && (
+            <StackItem>
+              <Content component="p">
+                Total usage statistics{" "}
+                <VMUtilizationMetrics
+                  cpu={utilizationMetrics.cpu_avg}
+                  disk={utilizationMetrics.disk}
+                  ram={utilizationMetrics.mem_avg}
                 />
-              ) : (
-                <AppEmptyState
-                  titleText={
-                    clusterView.isAggregateView
-                      ? "This assessment does not have report data yet"
-                      : "No data is available for the selected cluster"
-                  }
-                  body={
-                    clusterView.isAggregateView
-                      ? "Report data will appear here once inventory collection is complete."
-                      : "Select a different cluster or check that inventory data has been collected."
-                  }
-                  icon={InboxIcon}
-                  bullseyeStyle={{ minHeight: "240px" }}
+              </Content>
+            </StackItem>
+          )}
+
+          {/* Tabs */}
+          <StackItem isFilled className={vmsTabsStackItemStyle}>
+            <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
+              <Tab
+                eventKey={REPORT_TAB.overview}
+                title={<TabTitleText>Assessment report</TabTitleText>}
+                tabContentId="report-tab-overview"
+                tabContentRef={overviewTabRef}
+              />
+              <Tab
+                eventKey={REPORT_TAB.vms}
+                title={<TabTitleText>Virtual Machines</TabTitleText>}
+                tabContentId="report-tab-vms"
+                tabContentRef={vmsTabRef}
+              />
+              {!isRvtoolsMode && (
+                <Tab
+                  eventKey={REPORT_TAB.applications}
+                  title={<TabTitleText>Applications</TabTitleText>}
+                  tabContentId="report-tab-applications"
+                  tabContentRef={applicationsTabRef}
                 />
               )}
-            </TabContentBody>
-          </TabContent>
+            </Tabs>
 
-          <TabContent
-            eventKey={REPORT_TAB.vms}
-            id="report-tab-vms"
-            ref={vmsTabRef}
-            hidden={activeTab !== REPORT_TAB.vms}
-            className={vmsTabContentStyle}
-          >
-            <TabContentBody hasPadding className={vmsTabContentBodyStyle}>
-              <VirtualMachinesView
-                vms={vmsList}
-                loading={vmsFetching}
-                initialFilters={initialVMFilters}
-                totalVMs={vmsTotalCount}
-                currentPage={vmsPage}
-                pageSize={vmsPageSize}
-                onFiltersChange={handleFiltersChange}
-                onPageChange={handlePageChange}
-                onSortChange={handleSortChange}
-                sortFields={vmsSortFields}
-                availableFilterOptions={availableFilterOptions}
-                agentApi={agentApi}
-              />
-            </TabContentBody>
-          </TabContent>
-
-          {!isRvtoolsMode && (
+            {/* TabsContent */}
             <TabContent
-              eventKey={REPORT_TAB.applications}
-              id="report-tab-applications"
-              ref={applicationsTabRef}
-              hidden={activeTab !== REPORT_TAB.applications}
+              eventKey={REPORT_TAB.overview}
+              id="report-tab-overview"
+              ref={overviewTabRef}
+              hidden={activeTab !== REPORT_TAB.overview}
             >
               <TabContentBody hasPadding>
-                <ApplicationsView
-                  applications={applicationsList}
-                  loading={applicationsFetching}
-                  error={applicationsError}
+                {clusterView.viewInfra && clusterView.viewVms ? (
+                  <Dashboard
+                    key={`assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
+                    infra={clusterView.viewInfra}
+                    cpuCores={clusterView.cpuCores}
+                    ramGB={clusterView.ramGB}
+                    vms={clusterView.viewVms}
+                    clusters={clusterView.viewClusters}
+                    vcenterVersion={inventory?.vcenter_version}
+                    vcenterId={inventory?.vcenter_id}
+                    isAggregateView={clusterView.isAggregateView}
+                    clusterFound={clusterView.clusterFound}
+                    onConcernClick={handleConcernClick}
+                    onNavigateToVMFilters={handleNavigateToVMFilters}
+                  />
+                ) : (
+                  <AppEmptyState
+                    titleText={
+                      clusterView.isAggregateView
+                        ? "This assessment does not have report data yet"
+                        : "No data is available for the selected cluster"
+                    }
+                    body={
+                      clusterView.isAggregateView
+                        ? "Report data will appear here once inventory collection is complete."
+                        : "Select a different cluster or check that inventory data has been collected."
+                    }
+                    icon={InboxIcon}
+                    bullseyeStyle={{ minHeight: "240px" }}
+                  />
+                )}
+              </TabContentBody>
+            </TabContent>
+
+            <TabContent
+              eventKey={REPORT_TAB.vms}
+              id="report-tab-vms"
+              ref={vmsTabRef}
+              hidden={activeTab !== REPORT_TAB.vms}
+              className={vmsTabContentStyle}
+            >
+              <TabContentBody hasPadding className={vmsTabContentBodyStyle}>
+                <VirtualMachinesView
+                  vms={vmsList}
+                  loading={vmsFetching}
+                  initialFilters={initialVMFilters}
+                  totalVMs={vmsTotalCount}
+                  currentPage={vmsPage}
+                  pageSize={vmsPageSize}
+                  onFiltersChange={handleFiltersChange}
+                  onPageChange={handlePageChange}
+                  onSortChange={handleSortChange}
+                  sortFields={vmsSortFields}
+                  availableFilterOptions={availableFilterOptions}
                   agentApi={agentApi}
-                  selectedApplicationName={selectedApplicationName}
-                  onClearSelectedApplication={handleClearSelectedApplication}
-                  onNavigateToVm={handleNavigateToVm}
-                  onViewInVmList={handleViewApplicationInVmList}
                 />
               </TabContentBody>
             </TabContent>
-          )}
-        </StackItem>
-      </Stack>
 
-      <ExportCsvModal
-        isOpen={isExportModalOpen}
-        error={exportError}
-        isExporting={isExporting}
-        onClose={closeExportModal}
-        onExport={confirmExport}
-      />
-    </PageSection>
+            {!isRvtoolsMode && (
+              <TabContent
+                eventKey={REPORT_TAB.applications}
+                id="report-tab-applications"
+                ref={applicationsTabRef}
+                hidden={activeTab !== REPORT_TAB.applications}
+              >
+                <TabContentBody hasPadding>
+                  <ApplicationsView
+                    applications={applicationsList}
+                    loading={applicationsFetching}
+                    error={applicationsError}
+                    agentApi={agentApi}
+                    selectedApplicationName={selectedApplicationName}
+                    onClearSelectedApplication={handleClearSelectedApplication}
+                    onNavigateToVm={handleNavigateToVm}
+                    onViewInVmList={handleViewApplicationInVmList}
+                  />
+                </TabContentBody>
+              </TabContent>
+            )}
+          </StackItem>
+        </Stack>
+
+        <ExportCsvModal
+          isOpen={isExportModalOpen}
+          error={exportError}
+          isExporting={isExporting}
+          onClose={closeExportModal}
+          onExport={confirmExport}
+        />
+      </PageSection>
+    </ChartExportProvider>
   );
 };
 

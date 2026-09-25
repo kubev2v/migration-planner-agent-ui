@@ -7,6 +7,7 @@ Includes:
 - PatternFly form field wrappers (`react-hook-form`)
 - Guest OS support-tier helpers and badges
 - Report chart primitives (`MigrationDonutChart`)
+- Chart export (`ChartExportProvider`, `ChartExportSurface`, PDF / PNG / HTML)
 - Operating Systems distribution card
 - Infrastructure summary, vCenter cluster details, and host/VM power-state cards
 
@@ -25,16 +26,40 @@ npm install @openshift-migration-advisor/shared-components
 ```tsx
 import {
   buildInfrastructureSummary,
+  ChartExportProvider,
   HostPowerStates,
   InfrastructureSummary,
   MigrationDonutChart,
   OSDistribution,
+  ReportExportMenu,
   SupportTierBadge,
   TextInputFormGroup,
+  useChartExport,
   VCenterClusterDetails,
   VmPowerStates,
 } from "@openshift-migration-advisor/shared-components";
+
+<ChartExportProvider>
+  <Dashboard />
+</ChartExportProvider>
 ```
+
+`ChartExportProvider` lazy-loads capture, ZIP, PDF, and HTML. Wrap the chart visual (not the Card chrome) in `ChartExportSurface`. All formats snapshot those same nodes, encode one chart at a time, and drop the canvas. There is no second print tree and no `isExportMode` render:
+
+```tsx
+import { ChartExportSurface } from "@openshift-migration-advisor/shared-components";
+
+<Card>
+  <CardTitle>CPU and memory</CardTitle>
+  <CardBody>
+    <ChartExportSurface id="cpu-memory" title="CPU and memory">
+      <MigrationDonutChart {...chartProps} />
+    </ChartExportSurface>
+  </CardBody>
+</Card>
+```
+
+`ReportExportMenu` accepts a fully custom `options` list. `standardReportExportOptions()` builds the PDF / HTML / PNG entries; omit a handler to hide that format.
 
 Components are SDK-agnostic: pass already-shaped props (for example `OSDistributionEntry` maps). Map `agent-sdk` / `planner-sdk` models at the app boundary.
 

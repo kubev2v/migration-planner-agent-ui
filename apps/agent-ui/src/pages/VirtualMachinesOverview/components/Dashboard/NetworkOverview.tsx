@@ -3,6 +3,8 @@ import type {
   VMResourceBreakdown,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
+  ChartExportSurface,
+  ChartHeaderActions,
   dashboardStyles,
   MigrationDonutChart,
 } from "@openshift-migration-advisor/shared-components";
@@ -44,7 +46,6 @@ interface NetworkOverviewProps {
   distributionByNicCount?: {
     [key: string]: number;
   };
-  isExportMode?: boolean;
 }
 
 type ViewMode = "networkDistribution" | "nicCount";
@@ -58,7 +59,6 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
   infra,
   nicCount,
   distributionByNicCount,
-  isExportMode = false,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("networkDistribution");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -252,12 +252,13 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
     setIsDropdownOpen(false);
   };
 
+  const chartId = "network-overview";
+  const chartTitle = `Networks — ${VIEW_MODE_LABELS[viewMode]}`;
+
   return (
     <Card
-      className={
-        isExportMode ? dashboardStyles.cardPrint : dashboardStyles.card
-      }
-      id="network-overview"
+      className={dashboardStyles.card}
+      id={chartId}
       style={{ overflow: "hidden" }}
     >
       <CardTitle>
@@ -271,96 +272,96 @@ export const NetworkOverview: React.FC<NetworkOverviewProps> = ({
               <div>
                 <TopologyIcon /> Networks
               </div>
-              {!isExportMode && viewMode === "networkDistribution" && (
+              {viewMode === "networkDistribution" && (
                 <div style={{ color: "#6a6e73", fontSize: "0.85rem" }}>
                   Top 5 networks
                 </div>
               )}
             </div>
           </FlexItem>
-          {!isExportMode && (
-            <FlexItem>
-              <Dropdown
-                isOpen={isDropdownOpen}
-                onSelect={onSelect}
-                onOpenChange={(isOpen: boolean) => setIsDropdownOpen(isOpen)}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    onClick={onDropdownToggle}
-                    isExpanded={isDropdownOpen}
-                    style={{ minWidth: "250px" }}
-                  >
-                    {VIEW_MODE_LABELS[viewMode]}
-                  </MenuToggle>
-                )}
-              >
-                <DropdownList>
-                  <DropdownItem
-                    key="networkDistribution"
-                    value="networkDistribution"
-                  >
-                    VM distribution by network
-                  </DropdownItem>
-                  <DropdownItem key="nicCount" value="nicCount">
-                    VM distribution by NIC count
-                  </DropdownItem>
-                </DropdownList>
-              </Dropdown>
-            </FlexItem>
-          )}
+          <ChartHeaderActions chartId={chartId} title={chartTitle}>
+            <Dropdown
+              isOpen={isDropdownOpen}
+              onSelect={onSelect}
+              onOpenChange={(isOpen: boolean) => setIsDropdownOpen(isOpen)}
+              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle
+                  ref={toggleRef}
+                  onClick={onDropdownToggle}
+                  isExpanded={isDropdownOpen}
+                  style={{ minWidth: "250px" }}
+                >
+                  {VIEW_MODE_LABELS[viewMode]}
+                </MenuToggle>
+              )}
+            >
+              <DropdownList>
+                <DropdownItem
+                  key="networkDistribution"
+                  value="networkDistribution"
+                >
+                  VM distribution by network
+                </DropdownItem>
+                <DropdownItem key="nicCount" value="nicCount">
+                  VM distribution by NIC count
+                </DropdownItem>
+              </DropdownList>
+            </Dropdown>
+          </ChartHeaderActions>
         </Flex>
       </CardTitle>
       <CardBody className={dashboardStyles.cardBodyScrollable}>
-        {viewMode === "networkDistribution" &&
-          (chartData.length === 0 ? (
-            <AppEmptyState
-              titleText="No data available"
-              icon={InboxIcon}
-              variant={EmptyStateVariant.xs}
-              wrapInBullseye={false}
-            />
-          ) : (
-            <MigrationDonutChart
-              data={chartData}
-              height={300}
-              width={420}
-              donutThickness={18}
-              titleFontSize={34}
-              legend={legend}
-              title={title}
-              subTitle={subTitle}
-              subTitleColor="#9a9da0"
-              tooltipLabelFormatter={({ datum, percent }) =>
-                `${datum.countDisplay}\n${percent.toFixed(1)}%\nVLAN: ${legendVlanMap[datum.legendCategory] ?? "-"}`
-              }
-            />
-          ))}
-        {viewMode === "nicCount" &&
-          (nicChartData.length === 0 ? (
-            <AppEmptyState
-              titleText="No data available"
-              icon={InboxIcon}
-              variant={EmptyStateVariant.xs}
-              wrapInBullseye={false}
-            />
-          ) : (
-            <MigrationDonutChart
-              data={nicChartData}
-              height={300}
-              width={420}
-              donutThickness={18}
-              titleFontSize={34}
-              legend={nicLegend}
-              title={nicTitle}
-              subTitle={nicSubTitle}
-              subTitleColor="#9a9da0"
-              marginLeft="12%"
-              tooltipLabelFormatter={({ datum, percent }) =>
-                `${datum.countDisplay}\n${percent.toFixed(1)}%`
-              }
-            />
-          ))}
+        <ChartExportSurface id={chartId} title={chartTitle}>
+          {viewMode === "networkDistribution" &&
+            (chartData.length === 0 ? (
+              <AppEmptyState
+                titleText="No data available"
+                icon={InboxIcon}
+                variant={EmptyStateVariant.xs}
+                wrapInBullseye={false}
+              />
+            ) : (
+              <MigrationDonutChart
+                data={chartData}
+                height={300}
+                width={420}
+                donutThickness={18}
+                titleFontSize={34}
+                legend={legend}
+                title={title}
+                subTitle={subTitle}
+                subTitleColor="#9a9da0"
+                tooltipLabelFormatter={({ datum, percent }) =>
+                  `${datum.countDisplay}\n${percent.toFixed(1)}%\nVLAN: ${legendVlanMap[datum.legendCategory] ?? "-"}`
+                }
+              />
+            ))}
+          {viewMode === "nicCount" &&
+            (nicChartData.length === 0 ? (
+              <AppEmptyState
+                titleText="No data available"
+                icon={InboxIcon}
+                variant={EmptyStateVariant.xs}
+                wrapInBullseye={false}
+              />
+            ) : (
+              <MigrationDonutChart
+                data={nicChartData}
+                height={300}
+                width={420}
+                donutThickness={18}
+                titleFontSize={34}
+                legend={nicLegend}
+                title={nicTitle}
+                subTitle={nicSubTitle}
+                subTitleColor="#9a9da0"
+                marginLeft="12%"
+                tooltipLabelFormatter={({ datum, percent }) =>
+                  `${datum.countDisplay}\n${percent.toFixed(1)}%`
+                }
+              />
+            ))}
+        </ChartExportSurface>
       </CardBody>
     </Card>
   );

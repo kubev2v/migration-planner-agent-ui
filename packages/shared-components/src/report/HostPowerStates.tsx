@@ -8,13 +8,11 @@ import { buildHostPowerStateChart } from "./powerStates.js";
 
 export interface HostPowerStatesProps {
   hostPowerStates?: Record<string, number>;
-  isExportMode?: boolean;
   legendVariant?: MigrationDonutChartLegendVariant;
 }
 
 export const HostPowerStates: FC<HostPowerStatesProps> = ({
   hostPowerStates,
-  isExportMode = false,
   legendVariant,
 }) => {
   const chart = useMemo(
@@ -32,7 +30,6 @@ export const HostPowerStates: FC<HostPowerStatesProps> = ({
       legend={chart.legend}
       total={chart.total}
       subTitle="Hosts"
-      isExportMode={isExportMode}
       legendVariant={legendVariant}
     />
   );

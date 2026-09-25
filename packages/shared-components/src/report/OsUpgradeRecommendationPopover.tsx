@@ -2,6 +2,7 @@ import { css } from "@emotion/css";
 import { Button, Flex, FlexItem, Popover } from "@patternfly/react-core";
 import { InfoCircleIcon } from "@patternfly/react-icons";
 import type { FC } from "react";
+import { chartExportHideProps } from "./chartExport.js";
 
 const upgradeRecommendationPopoverCloseButton = css`
   .pf-v6-c-popover__close .pf-v6-c-button.pf-m-plain,
@@ -44,18 +45,16 @@ OsUpgradeRecommendationPopover.displayName = "OsUpgradeRecommendationPopover";
 interface OsNameCellProps {
   osName: string;
   upgradeRecommendation?: string;
-  isExportMode?: boolean;
 }
 
 export const OsNameCell: FC<OsNameCellProps> = ({
   osName,
   upgradeRecommendation,
-  isExportMode = false,
 }) => {
   const hasUpgradeRecommendation =
     upgradeRecommendation && upgradeRecommendation.trim() !== "";
 
-  if (!hasUpgradeRecommendation || isExportMode) {
+  if (!hasUpgradeRecommendation) {
     return <>{osName}</>;
   }
 
@@ -66,7 +65,7 @@ export const OsNameCell: FC<OsNameCellProps> = ({
       flexWrap={{ default: "nowrap" }}
     >
       <FlexItem>{osName}</FlexItem>
-      <FlexItem shrink={{ default: "shrink" }}>
+      <FlexItem shrink={{ default: "shrink" }} {...chartExportHideProps}>
         <OsUpgradeRecommendationPopover
           upgradeRecommendation={upgradeRecommendation}
         />

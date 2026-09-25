@@ -47,21 +47,8 @@ export const dashboardStyles = {
     overflow: hidden !important;
   `,
 
-  cardPrint: css`
-    border: 1px solid #d2d2d2 !important;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    min-height: unset;
-    max-height: unset;
-    page-break-inside: avoid;
-  `,
-
   storageCardOverflowHidden: css`
     overflow: hidden;
-  `,
-
-  storageCardOverflowVisible: css`
-    overflow: visible;
   `,
 
   storageChartWrapper: css`
@@ -70,16 +57,6 @@ export const dashboardStyles = {
     align-items: center;
     width: 100%;
     padding: 20px 0;
-  `,
-
-  storageExportSectionMargin: css`
-    margin-bottom: 24px;
-  `,
-
-  storageExportSectionTitle: css`
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 12px;
   `,
 
   storageFlexFullWidth: css`
