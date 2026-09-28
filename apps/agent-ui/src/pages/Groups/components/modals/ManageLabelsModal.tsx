@@ -1,4 +1,5 @@
 import { css } from "@emotion/css";
+import { FormFieldHelperText } from "@openshift-migration-advisor/shared-components";
 import {
   Button,
   Content,
@@ -10,6 +11,7 @@ import {
   ModalFooter,
   ModalHeader,
   TextInput,
+  ValidatedOptions,
 } from "@patternfly/react-core";
 import {
   CheckIcon,
@@ -23,6 +25,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { AppEmptyState } from "../../../../common/components";
 import { getVmTags } from "../../../VirtualMachinesOverview/virtualMachineParsing";
+import { validateLabel } from "./labelValidation";
 
 const VM_COLUMN_WIDTH = "3.5rem";
 const ACTIONS_COLUMN_WIDTH = "4.5rem";
@@ -64,11 +67,6 @@ const styles = {
     display: flex;
     justify-content: flex-end;
   `,
-  editInputGroup: css`
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  `,
   actionButtons: css`
     display: flex;
     gap: 4px;
@@ -102,6 +100,7 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
   const [deletingLabel, setDeletingLabel] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -131,6 +130,7 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
       fetchLabelsWithCounts();
       setEditingLabel(null);
       setEditValue("");
+      setEditError(null);
       setDeletingLabel(null);
       pendingDeletes.current = [];
       pendingRenames.current = [];
@@ -146,22 +146,31 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     );
   };
 
-  const handleRenameLabel = (oldName: string, newName: string) => {
+  const handleRenameLabel = (oldName: string, newName: string): boolean => {
     const trimmed = newName.trim();
     if (!trimmed || trimmed === oldName) {
       setEditingLabel(null);
-      return;
+      setEditError(null);
+      return true;
+    }
+
+    const validationError = validateLabel(trimmed);
+    if (validationError) {
+      setEditError(validationError);
+      return false;
     }
 
     if (labels.some((l) => l.name === trimmed && l.name !== oldName)) {
       setEditingLabel(null);
-      return;
+      setEditError(null);
+      return true;
     }
 
     setLabels((prev) =>
       prev.map((l) => (l.name === oldName ? { ...l, name: trimmed } : l)),
     );
     setEditingLabel(null);
+    setEditError(null);
 
     const existingRename = pendingRenames.current.find(
       (r) => r.newName === oldName,
@@ -171,21 +180,31 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
     } else {
       pendingRenames.current.push({ oldName, newName: trimmed });
     }
+    return true;
   };
 
   const startEditing = (labelName: string) => {
     setEditingLabel(labelName);
     setEditValue(labelName);
+    setEditError(null);
   };
 
   const cancelEditing = () => {
     setEditingLabel(null);
     setEditValue("");
+    setEditError(null);
+  };
+
+  const onEditValueChange = (value: string) => {
+    setEditValue(value);
+    if (editError) {
+      setEditError(null);
+    }
   };
 
   const handleSave = async () => {
-    if (editingLabel) {
-      handleRenameLabel(editingLabel, editValue);
+    if (editingLabel && !handleRenameLabel(editingLabel, editValue)) {
+      return;
     }
 
     setIsSaving(true);
@@ -278,36 +297,65 @@ export const ManageLabelsModal: React.FC<ManageLabelsModalProps> = ({
                   }
                 >
                   {editingLabel === label.name ? (
-                    <div className={styles.editInputGroup}>
-                      <TextInput
-                        type="text"
-                        value={editValue}
-                        onChange={(_e, value) => setEditValue(value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleRenameLabel(label.name, editValue);
-                          } else if (e.key === "Escape") {
-                            cancelEditing();
-                          }
-                        }}
-                        aria-label="Edit label name"
-                        autoFocus
-                      />
-                      <Button
-                        variant="plain"
-                        aria-label="Confirm rename"
-                        onClick={() => handleRenameLabel(label.name, editValue)}
-                      >
-                        <CheckIcon />
-                      </Button>
-                      <Button
-                        variant="plain"
-                        aria-label="Cancel rename"
-                        onClick={cancelEditing}
-                      >
-                        <TimesIcon />
-                      </Button>
-                    </div>
+                    <Flex
+                      direction={{ default: "column" }}
+                      gap={{ default: "gapXs" }}
+                    >
+                      <FlexItem>
+                        <Flex
+                          alignItems={{ default: "alignItemsCenter" }}
+                          gap={{ default: "gapSm" }}
+                          flexWrap={{ default: "nowrap" }}
+                        >
+                          <FlexItem grow={{ default: "grow" }}>
+                            <TextInput
+                              type="text"
+                              value={editValue}
+                              onChange={(_e, value) => onEditValueChange(value)}
+                              validated={
+                                editError
+                                  ? ValidatedOptions.error
+                                  : ValidatedOptions.default
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleRenameLabel(label.name, editValue);
+                                } else if (e.key === "Escape") {
+                                  cancelEditing();
+                                }
+                              }}
+                              aria-label="Edit label name"
+                              autoFocus
+                            />
+                          </FlexItem>
+                          <FlexItem>
+                            <Button
+                              variant="plain"
+                              aria-label="Confirm rename"
+                              onClick={() =>
+                                handleRenameLabel(label.name, editValue)
+                              }
+                            >
+                              <CheckIcon />
+                            </Button>
+                          </FlexItem>
+                          <FlexItem>
+                            <Button
+                              variant="plain"
+                              aria-label="Cancel rename"
+                              onClick={cancelEditing}
+                            >
+                              <TimesIcon />
+                            </Button>
+                          </FlexItem>
+                        </Flex>
+                      </FlexItem>
+                      {editError && (
+                        <FlexItem>
+                          <FormFieldHelperText errorMessage={editError} />
+                        </FlexItem>
+                      )}
+                    </Flex>
                   ) : (
                     <span>{label.name}</span>
                   )}
