@@ -631,7 +631,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openshift-migration-advisor/shared-components@workspace:packages/shared-components"
   dependencies:
-    html2canvas-pro: "npm:^2.4.4"
+    html2canvas-pro: "npm:^2.4.5"
     jspdf: "npm:^4.2.1"
     jszip: "npm:^3.10.2"
   languageName: unknown
@@ -2133,13 +2133,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"html2canvas-pro@npm:^2.4.4":
-  version: 2.4.4
-  resolution: "html2canvas-pro@npm:2.4.4"
+"html2canvas-pro@npm:^2.4.5":
+  version: 2.4.5
+  resolution: "html2canvas-pro@npm:2.4.5"
   dependencies:
     css-line-break: "npm:^2.1.0"
     text-segmentation: "npm:^1.0.3"
-  checksum: 10c0/7a596c1f65ea31491e1d9239f4aeecbf10ea2859142b3233b91ca052815f434fc1369c17b4d1e9fab2685030b9a4878565420f360502219cab20ce5fd503753c
+  checksum: 10c0/05f668ac7323e92580f09476cf557c1eff529304e6705840c3505e6a24c07abb2be18feba5b643077af5e04cabdf20e96adcc53aa70c02ba47a7cd3a7433a535
   languageName: node
   linkType: hard
 
@@ -2350,9 +2350,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.37.0":
-  version: 6.37.0
-  resolution: "knip@npm:6.37.0"
+"knip@npm:^6.38.0":
+  version: 6.38.0
+  resolution: "knip@npm:6.38.0"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.7.0"
@@ -2370,7 +2370,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/7043798047205c26c1ecdcf677944d25d6dcb78329c9798c0922f09cf3e2b494aa055985ed5eee890e87b8120da133bfa39862a08de1cc43ea97f5924adf1dcf
+  checksum: 10c0/c5f95d1baebfc746133bdcc4a9f244d071f683b40916db1f30cb4f566c5b5b6d730008f8d778a350ddc9507e1016bf7fc01c2b1b580898a221afb5216b4f7d45
   languageName: node
   linkType: hard
 
@@ -2570,7 +2570,7 @@ __metadata:
     "@types/react-dom": "npm:^18.3.7"
     "@vitejs/plugin-react": "npm:^6.1.1"
     jsdom: "npm:^30.1.1"
-    knip: "npm:^6.37.0"
+    knip: "npm:^6.38.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.3.0"
     vitest: "npm:^4.1.11"
