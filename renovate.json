@@ -51,6 +51,18 @@
       "matchUpdateTypes": ["digest"],
       "automerge": true,
       "platformAutomerge": true
+    },
+    {
+      "description": "Automerge Containerfile/Dockerfile base image digest updates",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true,
+      "platformAutomerge": true
     }
-  ]
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "platformAutomerge": true
+  }
 }
