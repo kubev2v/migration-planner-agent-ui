@@ -79,6 +79,11 @@ export {
   type HostPowerStatesProps,
 } from "./HostPowerStates.js";
 export {
+  type HostLike,
+  HostsOverview,
+  type HostsOverviewProps,
+} from "./HostsOverview.js";
+export {
   buildHtmlFromCharts,
   buildHtmlReport,
   escapeHtml,

@@ -10,6 +10,7 @@ import {
   buildInfrastructureSummary,
   ErrorTable,
   HostPowerStates,
+  HostsOverview,
   InfrastructureSummary,
   NetworkOverview,
   OSDistribution,
@@ -25,7 +26,6 @@ import { AppEmptyState } from "../../../../common/components";
 import type { NavigateToVMFilters } from "../VirtualMachinesTab/vmNavigation";
 import { ClustersOverview } from "./ClustersOverview";
 import { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
-import { HostsOverview } from "./HostsOverview";
 import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
 import { WarningsTable } from "./WarningsTable";
