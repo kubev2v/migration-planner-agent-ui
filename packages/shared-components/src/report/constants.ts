@@ -26,6 +26,7 @@ export const REPORT_CARD_EMPTY_STATE_TITLES = {
   migrationStatus: "Migration status data not collected",
   issuesBreakdown: "Issues breakdown data not collected",
   errors: "Error data not collected",
+  warnings: "Warning data not collected",
   hostPowerStates: "Host power state data not collected",
   vmPowerStates: "VM power state data not collected",
 } as const;

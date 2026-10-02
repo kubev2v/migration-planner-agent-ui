@@ -1,25 +1,24 @@
-import type { MigrationIssue } from "@openshift-migration-advisor/agent-sdk";
-import {
-  ChartExportSurface,
-  ChartHeaderActions,
-  dashboardStyles,
-  ReportTable,
-} from "@openshift-migration-advisor/shared-components";
 import {
   Card,
   CardBody,
   CardTitle,
-  EmptyStateVariant,
   Flex,
   FlexItem,
   Icon,
 } from "@patternfly/react-core";
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { AppEmptyState } from "../../../../common/components";
+import { CardEmptyState } from "./CardEmptyState.js";
+import { ChartHeaderActions } from "./ChartDownloadButton.js";
+import { ChartExportSurface } from "./ChartExportSurface.js";
+import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
+import { dashboardStyles } from "./dashboardStyles.js";
+import type { MigrationIssueLike } from "./ErrorTable.js";
+import { ReportTable } from "./ReportTable.js";
 
-interface WarningsTableProps {
-  warnings: MigrationIssue[];
+export interface WarningsTableProps {
+  warnings: MigrationIssueLike[];
+  /** Optional drill-down callback invoked with an issue's `label`. */
   onConcernClick?: (concernLabel: string) => void;
 }
 
@@ -27,7 +26,7 @@ export const WarningsTable: React.FC<WarningsTableProps> = ({
   warnings,
   onConcernClick,
 }) => {
-  const handleRowClick = (issue: MigrationIssue) => {
+  const handleRowClick = (issue: MigrationIssueLike) => {
     if (issue.label && onConcernClick) {
       onConcernClick(issue.label);
     }
@@ -55,15 +54,10 @@ export const WarningsTable: React.FC<WarningsTableProps> = ({
         </CardTitle>
         <CardBody className={dashboardStyles.cardBodyScrollable}>
           {warnings.length === 0 ? (
-            <AppEmptyState
-              titleText="No warning found"
-              status="success"
-              variant={EmptyStateVariant.xs}
-              wrapInBullseye={false}
-            />
+            <CardEmptyState title={REPORT_CARD_EMPTY_STATE_TITLES.warnings} />
           ) : (
             <div>
-              <ReportTable<MigrationIssue>
+              <ReportTable<MigrationIssueLike>
                 data={warnings}
                 columns={["Description", "Total VMs"]}
                 fields={["assessment", "count"]}
@@ -77,3 +71,5 @@ export const WarningsTable: React.FC<WarningsTableProps> = ({
     </ChartExportSurface>
   );
 };
+
+WarningsTable.displayName = "WarningsTable";

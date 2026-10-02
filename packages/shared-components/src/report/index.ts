@@ -198,4 +198,8 @@ export {
   VmPowerStates,
   type VmPowerStatesProps,
 } from "./VmPowerStates.js";
+export {
+  WarningsTable,
+  type WarningsTableProps,
+} from "./WarningsTable.js";
 export { zipChartPngs } from "./zipChartPngs.js";
