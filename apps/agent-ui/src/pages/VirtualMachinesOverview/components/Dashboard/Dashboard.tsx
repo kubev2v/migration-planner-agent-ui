@@ -17,6 +17,7 @@ import {
   type OSDistributionEntry,
   VCenterClusterDetails,
   VmPowerStates,
+  WarningsTable,
 } from "@openshift-migration-advisor/shared-components";
 import { Gallery, GalleryItem, Grid, GridItem } from "@patternfly/react-core";
 import { InboxIcon } from "@patternfly/react-icons";
@@ -28,7 +29,6 @@ import { ClustersOverview } from "./ClustersOverview";
 import { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
 import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
-import { WarningsTable } from "./WarningsTable";
 
 interface DashboardProps {
   infra: Infra;
