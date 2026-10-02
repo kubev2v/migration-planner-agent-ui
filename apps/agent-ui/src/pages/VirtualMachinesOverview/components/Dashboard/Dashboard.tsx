@@ -8,6 +8,7 @@ import {
   buildClusterDetailRows,
   buildClusterDetails,
   buildInfrastructureSummary,
+  ErrorTable,
   HostPowerStates,
   InfrastructureSummary,
   OSDistribution,
@@ -23,7 +24,6 @@ import { AppEmptyState } from "../../../../common/components";
 import type { NavigateToVMFilters } from "../VirtualMachinesTab/vmNavigation";
 import { ClustersOverview } from "./ClustersOverview";
 import { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
-import { ErrorTable } from "./ErrorTable";
 import { HostsOverview } from "./HostsOverview";
 import { NetworkOverview } from "./NetworkOverview";
 import { StorageOverview } from "./StorageOverview";

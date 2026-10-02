@@ -3,6 +3,7 @@ import {
   ChartExportSurface,
   ChartHeaderActions,
   dashboardStyles,
+  ReportTable,
 } from "@openshift-migration-advisor/shared-components";
 import {
   Card,
@@ -16,7 +17,6 @@ import {
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
-import { ReportTable } from "../../../Groups/components/ReportTable";
 
 interface WarningsTableProps {
   warnings: MigrationIssue[];

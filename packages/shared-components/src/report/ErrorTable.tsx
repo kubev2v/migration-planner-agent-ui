@@ -1,25 +1,34 @@
-import type { MigrationIssue } from "@openshift-migration-advisor/agent-sdk";
-import {
-  ChartExportSurface,
-  ChartHeaderActions,
-  dashboardStyles,
-} from "@openshift-migration-advisor/shared-components";
 import {
   Card,
   CardBody,
   CardTitle,
-  EmptyStateVariant,
   Flex,
   FlexItem,
   Icon,
 } from "@patternfly/react-core";
 import { ExclamationCircleIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { AppEmptyState } from "../../../../common/components";
-import { ReportTable } from "../../../Groups/components/ReportTable";
+import { CardEmptyState } from "./CardEmptyState.js";
+import { ChartHeaderActions } from "./ChartDownloadButton.js";
+import { ChartExportSurface } from "./ChartExportSurface.js";
+import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
+import { dashboardStyles } from "./dashboardStyles.js";
+import { ReportTable } from "./ReportTable.js";
 
-interface ErrorTableProps {
-  errors: MigrationIssue[];
+/**
+ * Minimal shape of a migration issue consumed by {@link ErrorTable}. Declared
+ * locally so this package does not depend on a specific SDK (`agent-sdk` or
+ * `planner-sdk`); callers pass the subset of `MigrationIssue` fields read here.
+ */
+export interface MigrationIssueLike {
+  label: string;
+  assessment: string;
+  count: number;
+}
+
+export interface ErrorTableProps {
+  errors: MigrationIssueLike[];
+  /** Optional drill-down callback invoked with an issue's `label`. */
   onConcernClick?: (concernLabel: string) => void;
 }
 
@@ -27,7 +36,7 @@ export const ErrorTable: React.FC<ErrorTableProps> = ({
   errors,
   onConcernClick,
 }) => {
-  const handleRowClick = (issue: MigrationIssue) => {
+  const handleRowClick = (issue: MigrationIssueLike) => {
     if (issue.label && onConcernClick) {
       onConcernClick(issue.label);
     }
@@ -55,15 +64,10 @@ export const ErrorTable: React.FC<ErrorTableProps> = ({
         </CardTitle>
         <CardBody className={dashboardStyles.cardBodyScrollable}>
           {errors.length === 0 ? (
-            <AppEmptyState
-              titleText="No errors found"
-              status="success"
-              variant={EmptyStateVariant.xs}
-              wrapInBullseye={false}
-            />
+            <CardEmptyState title={REPORT_CARD_EMPTY_STATE_TITLES.errors} />
           ) : (
             <div>
-              <ReportTable<MigrationIssue>
+              <ReportTable<MigrationIssueLike>
                 data={errors}
                 columns={["Description", "Total VMs"]}
                 fields={["assessment", "count"]}
@@ -77,3 +81,5 @@ export const ErrorTable: React.FC<ErrorTableProps> = ({
     </ChartExportSurface>
   );
 };
+
+ErrorTable.displayName = "ErrorTable";

@@ -1,7 +1,7 @@
 import { Button } from "@patternfly/react-core";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
-import { commonStyles } from "../../../common/styles";
+import { tableFullWidthStyle } from "./dashboardStyles.js";
 
 export interface ReportTableProps<DataItem> {
   columns: string[];
@@ -56,11 +56,7 @@ export function ReportTable<DataItem>(
   };
 
   return (
-    <Table
-      variant="compact"
-      borders={false}
-      className={commonStyles.tableFullWidth}
-    >
+    <Table variant="compact" borders={false} className={tableFullWidthStyle}>
       {caption && <caption>{caption}</caption>}
       <Thead>
         <Tr>
