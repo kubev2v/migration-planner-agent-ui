@@ -59,7 +59,10 @@ import {
 } from "./components/VirtualMachinesTab/vmTableShared";
 import type { VMTableFilterOptions } from "./components/VirtualMachinesTab/vmTableTypes";
 import { Header } from "./Header";
-import { getInventoryAggregateView } from "./inventoryParsing";
+import {
+  getInventoryAggregateView,
+  inventoryClusterName,
+} from "./inventoryParsing";
 import { OverviewReportHeader, ReportPageHeader } from "./ReportPageHeader";
 import {
   buildApplicationsTabUrl,
@@ -89,6 +92,9 @@ export const ReportContainer: React.FC = () => {
   const { data: collections } = useListCollectionsQuery();
   const hasCollectionData = (collections?.length ?? 0) > 0;
   const newestCollectionId = collections?.[0]?.id;
+  // Collection createdAt is when this report's data was collected. The inventory
+  // response has no separate last-updated time, so the all-VMs report omits it.
+  const collectedAt = collections?.[0]?.createdAt;
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
@@ -167,11 +173,23 @@ export const ReportContainer: React.FC = () => {
   });
   const availableFilterOptions = filterOptionsData ?? EMPTY_FILTER_OPTIONS;
 
-  const byExpression = useMemo(
-    () => buildScopedVmByExpression(initialVMFilters, clusterScopeId),
-    [initialVMFilters, clusterScopeId],
+  const selectedClusterName = useMemo(() => {
+    if (!inventory || clusterScopeId === "all") {
+      return undefined;
+    }
+    const { clusters } = getInventoryAggregateView(inventory);
+    return inventoryClusterName(clusters[clusterScopeId]);
+  }, [inventory, clusterScopeId]);
+  const clusterScope = useMemo(
+    () => ({ clusterId: clusterScopeId, clusterName: selectedClusterName }),
+    [clusterScopeId, selectedClusterName],
   );
-  const clusterScopeExpression = clusterSelectionExpression(clusterScopeId);
+
+  const byExpression = useMemo(
+    () => buildScopedVmByExpression(initialVMFilters, clusterScope),
+    [initialVMFilters, clusterScope],
+  );
+  const clusterScopeExpression = clusterSelectionExpression(clusterScope);
 
   const { data: vmsData, isFetching: vmsFetching } = useGetVMsQuery(
     {
@@ -233,7 +251,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader />
+            <ReportPageHeader collectedAt={collectedAt} />
             <DiscoveryStatus />
           </StackItem>
           <StackItem>
@@ -252,7 +270,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader />
+            <ReportPageHeader collectedAt={collectedAt} />
             <DiscoveryStatus />
           </StackItem>
           <StackItem>
@@ -273,7 +291,7 @@ export const ReportContainer: React.FC = () => {
       <PageSection hasBodyWrapper={false} isFilled>
         <Stack hasGutter>
           <StackItem>
-            <ReportPageHeader />
+            <ReportPageHeader collectedAt={collectedAt} />
             <DiscoveryStatus />
           </StackItem>
           <StackItem>
@@ -372,6 +390,7 @@ export const ReportContainer: React.FC = () => {
               onExportInventory={openExportModal}
               documentTitle={`Virtual machines overview - ${clusterView.selectionLabel}`}
               enableHtml={clusterView.isAggregateView}
+              collectedAt={collectedAt}
             />
             <DiscoveryStatus />
           </StackItem>

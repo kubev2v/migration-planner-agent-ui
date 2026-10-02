@@ -16,6 +16,7 @@ import {
 import type React from "react";
 import { DeleteCollectedDataButton } from "../../common/report/DeleteCollectedDataButton";
 import { ExportButton } from "../../common/report/ExportButton";
+import { ReportTimestamps } from "../../common/report/ReportTimestamps";
 import { RunNewReportButton } from "../../common/report/RunNewReportButton";
 import { buildOverviewExportOptions } from "./reportExportOptions";
 
@@ -25,6 +26,8 @@ interface ReportPageHeaderProps {
   exportOptions?: ReportExportOption[];
   isExporting?: boolean;
   exportLoadingLabel?: string | null;
+  /** When the latest collection was created. */
+  collectedAt?: Date;
 }
 
 export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
@@ -33,6 +36,7 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
   exportOptions,
   isExporting = false,
   exportLoadingLabel = null,
+  collectedAt,
 }) => {
   const hasExportMenu = Boolean(showExport && exportOptions?.length);
   const canExport = hasExportMenu || (showExport && Boolean(onExportClick));
@@ -43,6 +47,7 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
         <Content component={ContentVariants.h1}>
           Virtual machines overview
         </Content>
+        <ReportTimestamps collectedAt={collectedAt} />
       </FlexItem>
       <Flex alignItems={{ default: "alignItemsCenter" }}>
         <RunNewReportButton />
@@ -78,6 +83,7 @@ interface OverviewReportHeaderProps {
   onExportInventory?: () => void;
   documentTitle: string;
   enableHtml?: boolean;
+  collectedAt?: Date;
 }
 
 export const OverviewReportHeader: React.FC<OverviewReportHeaderProps> = ({
@@ -85,6 +91,7 @@ export const OverviewReportHeader: React.FC<OverviewReportHeaderProps> = ({
   onExportInventory,
   documentTitle,
   enableHtml = true,
+  collectedAt,
 }) => {
   const charts = useChartExport();
   const exportOptions = buildOverviewExportOptions({
@@ -114,6 +121,7 @@ export const OverviewReportHeader: React.FC<OverviewReportHeaderProps> = ({
         exportOptions={exportOptions}
         isExporting={Boolean(charts?.isBusy)}
         exportLoadingLabel={charts?.exportLoadingLabel}
+        collectedAt={collectedAt}
       />
       {charts?.exportError ? (
         <Alert

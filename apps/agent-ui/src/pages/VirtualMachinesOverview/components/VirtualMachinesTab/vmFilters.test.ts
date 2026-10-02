@@ -185,25 +185,43 @@ describe("filtersToByExpression reportInclusion", () => {
 
 describe("cluster selection scope", () => {
   it("does not add a cluster clause for all clusters", () => {
-    expect(clusterSelectionExpression("all")).toBeUndefined();
-    expect(clusterSelectionExpression(undefined)).toBeUndefined();
-    expect(buildScopedVmByExpression({ search: "web" }, "all")).toBe(
+    expect(clusterSelectionExpression({ clusterId: "all" })).toBeUndefined();
+    expect(clusterSelectionExpression({})).toBeUndefined();
+    expect(
+      buildScopedVmByExpression({ search: "web" }, { clusterId: "all" }),
+    ).toBe(
       "name like 'web' and (migration_excluded = true or migration_excluded = false)",
     );
   });
 
-  it("limits the VM list to the selected inventory cluster id", () => {
-    expect(clusterSelectionExpression("cluster-fb55d09a08ee0c0f")).toBe(
-      "cluster_id = 'cluster-fb55d09a08ee0c0f'",
-    );
-    expect(buildScopedVmByExpression({}, "cluster-fb55d09a08ee0c0f")).toBe(
-      "(cluster_id = 'cluster-fb55d09a08ee0c0f') and ((migration_excluded = true or migration_excluded = false))",
+  it("limits the VM list to the inventory cluster name", () => {
+    expect(
+      clusterSelectionExpression({
+        clusterId: "cluster-fb55d09a08ee0c0f",
+        clusterName: "Production",
+      }),
+    ).toBe("cluster = 'Production'");
+    expect(
+      buildScopedVmByExpression(
+        {},
+        { clusterId: "cluster-fb55d09a08ee0c0f", clusterName: "Production" },
+      ),
+    ).toBe(
+      "(cluster = 'Production') and ((migration_excluded = true or migration_excluded = false))",
     );
   });
 
-  it("keeps table filters and escapes the cluster id", () => {
-    expect(buildScopedVmByExpression({ search: "web" }, "it's")).toBe(
-      "(cluster_id = 'it\\'s') and (name like 'web' and (migration_excluded = true or migration_excluded = false))",
+  it("falls back to the inventory cluster id when the name is missing", () => {
+    expect(
+      clusterSelectionExpression({ clusterId: "cluster-fb55d09a08ee0c0f" }),
+    ).toBe("cluster_id = 'cluster-fb55d09a08ee0c0f'");
+  });
+
+  it("keeps table filters and escapes the cluster name", () => {
+    expect(
+      buildScopedVmByExpression({ search: "web" }, { clusterName: "it's" }),
+    ).toBe(
+      "(cluster = 'it\\'s') and (name like 'web' and (migration_excluded = true or migration_excluded = false))",
     );
   });
 });

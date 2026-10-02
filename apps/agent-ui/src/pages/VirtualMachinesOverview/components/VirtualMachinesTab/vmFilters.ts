@@ -270,29 +270,34 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
 
 /**
  * Cluster clause for the VM list.
- * The value is the inventory cluster id from the report dropdown
- * (`vcluster."Object ID"`), not the cluster name.
+ * Prefer the cluster name from inventory. Fall back to cluster_id when an older
+ * inventory has no name; that matches vcluster."Object ID" when it was stored.
  * "All vSphere clusters" does not add a clause.
  */
-export function clusterSelectionExpression(
-  clusterId: string | undefined,
-): string | undefined {
-  if (!clusterId || clusterId === "all") {
+export function clusterSelectionExpression(cluster: {
+  clusterId?: string;
+  clusterName?: string;
+}): string | undefined {
+  const name = cluster.clusterName?.trim();
+  if (name) {
+    return `cluster = '${escapeFilterValue(name)}'`;
+  }
+  if (!cluster.clusterId || cluster.clusterId === "all") {
     return undefined;
   }
-  return `cluster_id = '${escapeFilterValue(clusterId)}'`;
+  return `cluster_id = '${escapeFilterValue(cluster.clusterId)}'`;
 }
 
 /**
  * VM list expression for the assessment report: table filters, limited to the
- * selected inventory cluster id when one cluster is selected.
+ * selected cluster when one cluster is selected.
  */
 export function buildScopedVmByExpression(
   filters: VMFilters,
-  clusterId: string | undefined,
+  cluster: { clusterId?: string; clusterName?: string },
 ): string | undefined {
   return combineFilterExpressions(
-    clusterSelectionExpression(clusterId),
+    clusterSelectionExpression(cluster),
     filtersToByExpression(withDefaultReportInclusion(filters)),
   );
 }
