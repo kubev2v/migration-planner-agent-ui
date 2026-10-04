@@ -36,7 +36,9 @@ import {
 } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components";
+import { ReportTimestamps } from "../../common/report/ReportTimestamps";
 import { useAgentStatus } from "../../common/useAgentStatus";
+import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
   useDeleteGroupMutation,
   useGetGroupApplicationsQuery,
@@ -71,6 +73,7 @@ import type { VMTableFilterOptions } from "../VirtualMachinesOverview/components
 import { Header } from "../VirtualMachinesOverview/Header";
 import {
   getInventoryAggregateView,
+  inventoryClusterName,
   inventoryFromGroupResponse,
 } from "../VirtualMachinesOverview/inventoryParsing";
 import {
@@ -117,6 +120,8 @@ export const GroupDetailPage: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const agentApi = getAgentApiClient();
+  const { data: collections } = useListCollectionsQuery();
+  const collectedAt = collections?.[0]?.createdAt;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
@@ -178,11 +183,23 @@ export const GroupDetailPage: React.FC = () => {
   });
   const availableFilterOptions = filterOptionsData ?? EMPTY_FILTER_OPTIONS;
 
-  const byExpression = useMemo(
-    () => buildScopedVmByExpression(initialVMFilters, clusterScopeId),
-    [initialVMFilters, clusterScopeId],
+  const selectedClusterName = useMemo(() => {
+    if (!inventory || clusterScopeId === "all") {
+      return undefined;
+    }
+    const { clusters } = getInventoryAggregateView(inventory);
+    return inventoryClusterName(clusters[clusterScopeId]);
+  }, [inventory, clusterScopeId]);
+  const clusterScope = useMemo(
+    () => ({ clusterId: clusterScopeId, clusterName: selectedClusterName }),
+    [clusterScopeId, selectedClusterName],
   );
-  const clusterScopeExpression = clusterSelectionExpression(clusterScopeId);
+
+  const byExpression = useMemo(
+    () => buildScopedVmByExpression(initialVMFilters, clusterScope),
+    [initialVMFilters, clusterScope],
+  );
+  const clusterScopeExpression = clusterSelectionExpression(clusterScope);
 
   const { data: vmsData, isFetching: vmsLoading } = useGetGroupVMsQuery(
     {
@@ -363,6 +380,10 @@ export const GroupDetailPage: React.FC = () => {
           >
             <FlexItem>
               <Content component={ContentVariants.h1}>{group.name}</Content>
+              <ReportTimestamps
+                collectedAt={collectedAt}
+                updatedAt={group.updatedAt}
+              />
             </FlexItem>
             <FlexItem>
               <Dropdown

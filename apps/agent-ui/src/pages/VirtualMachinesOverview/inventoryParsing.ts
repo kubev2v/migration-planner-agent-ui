@@ -60,6 +60,69 @@ export type MigrationExcludedInventoryChange = {
   affectedVms: VirtualMachine[];
 };
 
+/** vSphere/RVTools cluster name stored on a cluster inventory entry. */
+export function inventoryClusterName(
+  cluster: InventoryData | undefined,
+): string | undefined {
+  const name = (
+    cluster as { clusterName?: string } | undefined
+  )?.clusterName?.trim();
+  return name || undefined;
+}
+
+/**
+ * The generated SDK drops clusterName. Copy it back from the raw payload so the
+ * VM list can filter on the cluster name while the dropdown keeps the inventory id.
+ */
+function applyClusterNames(
+  parsed: InventoryPayload | null,
+  rawClusters: unknown,
+): InventoryPayload | null {
+  if (!parsed?.clusters || !rawClusters || typeof rawClusters !== "object") {
+    return parsed;
+  }
+  for (const [id, raw] of Object.entries(
+    rawClusters as Record<string, unknown>,
+  )) {
+    if (!raw || typeof raw !== "object" || !parsed.clusters[id]) {
+      continue;
+    }
+    const name = (raw as { clusterName?: unknown }).clusterName;
+    if (typeof name === "string" && name.trim()) {
+      (parsed.clusters[id] as { clusterName?: string }).clusterName =
+        name.trim();
+    }
+  }
+  return parsed;
+}
+
+function rawInventoryClusters(jsonData: unknown): unknown {
+  if (!jsonData || typeof jsonData !== "object") {
+    return undefined;
+  }
+  const record = jsonData as Record<string, unknown>;
+  if (
+    record.clusters &&
+    typeof record.clusters === "object" &&
+    "vcenter_id" in record
+  ) {
+    return record.clusters;
+  }
+  const inventory = record.inventory;
+  if (!inventory || typeof inventory !== "object") {
+    return undefined;
+  }
+  const nested = inventory as Record<string, unknown>;
+  if (nested.clusters && typeof nested.clusters === "object") {
+    return nested.clusters;
+  }
+  const inner = nested.inventory;
+  if (inner && typeof inner === "object" && "clusters" in inner) {
+    return (inner as Record<string, unknown>).clusters;
+  }
+  return undefined;
+}
+
 /** Parse inventory from GET /inventory JSON (wrapper or legacy payload). */
 export function parseInventoryResponse(
   jsonData: unknown,
@@ -71,16 +134,17 @@ export function parseInventoryResponse(
   if (Object.keys(record).length === 0) {
     return null;
   }
+  const rawClusters = rawInventoryClusters(jsonData);
   if ("vcenter_id" in record && "clusters" in record) {
-    return Inventory1FromJSON(jsonData);
+    return applyClusterNames(Inventory1FromJSON(jsonData), rawClusters);
   }
   if ("inventory" in record) {
     const parsed = InventoryFromJSON(jsonData);
-    return unwrapInventoryPayload(parsed);
+    return applyClusterNames(unwrapInventoryPayload(parsed), rawClusters);
   }
   if ("agentId" in record && "inventory" in record) {
     const updateInventory = UpdateInventoryFromJSON(jsonData);
-    return updateInventory.inventory ?? null;
+    return applyClusterNames(updateInventory.inventory ?? null, rawClusters);
   }
   return null;
 }
@@ -170,7 +234,12 @@ function findClusterKey(
     return clusterName;
   }
   const normalized = clusterName.toLowerCase();
-  return Object.keys(clusters).find((key) => key.toLowerCase() === normalized);
+  return Object.keys(clusters).find((key) => {
+    if (key.toLowerCase() === normalized) {
+      return true;
+    }
+    return inventoryClusterName(clusters[key])?.toLowerCase() === normalized;
+  });
 }
 
 /** Write aggregate VM totals to the inventory location the dashboard reads. */

@@ -8,7 +8,9 @@ import {
   adjustInventoryForMigrationExcludedChange,
   getInventoryAggregateView,
   type InventoryPayload,
+  inventoryClusterName,
   inventoryFromGroupResponse,
+  parseInventoryResponse,
 } from "./inventoryParsing";
 import type { VirtualMachineWithExclusion } from "./virtualMachineParsing";
 
@@ -183,5 +185,40 @@ describe("inventoryFromGroupResponse", () => {
   it("returns null when the group has no inventory", () => {
     expect(inventoryFromGroupResponse({})).toBeNull();
     expect(inventoryFromGroupResponse({ inventory: null })).toBeNull();
+  });
+});
+
+describe("parseInventoryResponse clusterName", () => {
+  const clusters = {
+    "cluster-fb55d09a08ee0c0f": {
+      clusterName: "Production",
+      infra: testInfra(1),
+      vms: testVms(2, 1),
+    },
+  };
+
+  it("keeps the cluster name on a bare inventory payload", () => {
+    const parsed = parseInventoryResponse({
+      vcenter_id: "vc-1",
+      clusters,
+    });
+    expect(
+      inventoryClusterName(parsed?.clusters["cluster-fb55d09a08ee0c0f"]),
+    ).toBe("Production");
+  });
+
+  it("keeps the cluster name on the agent inventory wrapper", () => {
+    const parsed = parseInventoryResponse({
+      inventory: {
+        agentId: "11111111-1111-1111-1111-111111111111",
+        inventory: {
+          vcenter_id: "vc-1",
+          clusters,
+        },
+      },
+    });
+    expect(
+      inventoryClusterName(parsed?.clusters["cluster-fb55d09a08ee0c0f"]),
+    ).toBe("Production");
   });
 });

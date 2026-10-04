@@ -4,6 +4,7 @@ import type {
   VMResourceBreakdown,
   VMs,
 } from "@openshift-migration-advisor/agent-sdk";
+import { inventoryClusterName } from "./inventoryParsing";
 
 export type ClusterSelection = string;
 
@@ -33,7 +34,10 @@ export const getClusterOptions = (clusters?: {
   });
   return [
     { id: "all", label: "All vSphere clusters" },
-    ...sorted.map((key) => ({ id: key, label: key })),
+    ...sorted.map((key) => ({
+      id: key,
+      label: inventoryClusterName(clusters?.[key]) ?? key,
+    })),
   ];
 };
 
@@ -82,7 +86,9 @@ export const buildClusterViewModel = ({
   const clusterData = clusters ? clusters[effectiveSelection] : undefined;
   const clusterInfra = clusterData?.infra;
   const clusterVms = clusterData?.vms;
-  const selectionLabel = clusterData ? effectiveSelection : "Missing cluster";
+  const selectionLabel = clusterData
+    ? (inventoryClusterName(clusterData) ?? effectiveSelection)
+    : "Missing cluster";
 
   return {
     viewInfra: clusterInfra,

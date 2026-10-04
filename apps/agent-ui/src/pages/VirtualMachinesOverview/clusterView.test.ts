@@ -32,7 +32,7 @@ const vms = (total: number): VMs => ({
 });
 
 const clusters = {
-  prod: { infra, vms: vms(4) },
+  prod: { infra, vms: vms(4), clusterName: "Production" },
   dev: { infra, vms: vms(2) },
 };
 
@@ -60,6 +60,10 @@ describe("getClusterScopedHeaderCounts", () => {
     });
 
     expect(clusterView.viewVms?.total).toBe(4);
+    expect(clusterView.selectionLabel).toBe("Production");
+    expect(
+      clusterView.clusterOptions.find((option) => option.id === "prod")?.label,
+    ).toBe("Production");
     expect(getClusterScopedHeaderCounts(clusterView)).toEqual({
       totalVMs: 4,
       totalClusters: 1,

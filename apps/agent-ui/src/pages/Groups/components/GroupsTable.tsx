@@ -34,6 +34,9 @@ import {
   type AttributeValueFilterAttribute,
   attributeValueFilterToolbarStyle,
 } from "../../../common/components/attribute-value-filter";
+import { formatGroupLastUpdated } from "../../../common/report/reportTimestamps";
+
+const GROUPS_TABLE_COLUMN_COUNT = 4;
 
 function formatCreatedDate(date?: Date): string {
   if (!date) {
@@ -44,6 +47,13 @@ function formatCreatedDate(date?: Date): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatLastUpdated(date?: Date): string {
+  if (!date) {
+    return "—";
+  }
+  return formatGroupLastUpdated(date);
 }
 
 interface GroupsTableProps {
@@ -141,13 +151,21 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
             <Tr>
               <Th>Group name</Th>
               <Th>Created on</Th>
+              <Th
+                info={{
+                  tooltip: "The last time this group was changed.",
+                  ariaLabel: "More information about Last updated",
+                }}
+              >
+                Last updated
+              </Th>
               <Th screenReaderText="Actions" />
             </Tr>
           </Thead>
           <Tbody>
             {loading ? (
               <Tr>
-                <Td colSpan={3}>
+                <Td colSpan={GROUPS_TABLE_COLUMN_COUNT}>
                   <AppEmptyState
                     titleText="Loading groups"
                     icon={Spinner}
@@ -157,7 +175,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
               </Tr>
             ) : showWelcomeEmpty ? (
               <Tr>
-                <Td colSpan={3}>
+                <Td colSpan={GROUPS_TABLE_COLUMN_COUNT}>
                   <AppEmptyState
                     headingLevel="h2"
                     titleText="No virtual machine groups yet"
@@ -176,7 +194,7 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
               </Tr>
             ) : groups.length === 0 ? (
               <Tr>
-                <Td colSpan={3}>
+                <Td colSpan={GROUPS_TABLE_COLUMN_COUNT}>
                   <AppEmptyState
                     titleText="No groups match the current filters"
                     body="Try adjusting your filters or clear all filters."
@@ -192,6 +210,9 @@ export const GroupsTable: React.FC<GroupsTableProps> = ({
                   </Td>
                   <Td dataLabel="Created on">
                     {formatCreatedDate(group.createdAt)}
+                  </Td>
+                  <Td dataLabel="Last updated">
+                    {formatLastUpdated(group.updatedAt)}
                   </Td>
                   <Td isActionCell>
                     <Dropdown
