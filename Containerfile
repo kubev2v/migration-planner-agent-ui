@@ -6,7 +6,7 @@ ARG GIT_COMMIT
 ENV GIT_COMMIT=${GIT_COMMIT}
 ARG GIT_TAG
 ENV GIT_TAG=${GIT_TAG}
-RUN node .yarn/releases/yarn-4.18.0.cjs install --immutable && node .yarn/releases/yarn-4.18.0.cjs build:all
+RUN node .yarn/releases/yarn-4.18.1.cjs install --immutable && node .yarn/releases/yarn-4.18.1.cjs build:all
 
 FROM registry.access.redhat.com/ubi9/nginx-124@sha256:6f058ac2c588d7a33ed8f8d76e4a16c0393b3eb840404ef880e3e5f20a49a9af
 # Required labels for Red Hat / Enterprise Contract
