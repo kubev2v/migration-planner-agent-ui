@@ -1,5 +1,9 @@
 import jsPDF from "jspdf";
-import { type ChartCaptureSource, releaseCanvas } from "./chartExport.js";
+import {
+  type ChartCaptureSource,
+  type PdfTextPage,
+  releaseCanvas,
+} from "./chartExport.js";
 import { fitPdfImageSize, placePdfBlock, sliceCanvas } from "./pdfPage.js";
 
 const MARGIN_MM = 10;
@@ -10,6 +14,7 @@ const PAGE_BACKGROUND = "#ffffff";
 export async function buildPdfFromCharts(
   charts: ChartCaptureSource[],
   documentTitle: string,
+  extraPages: PdfTextPage[] = [],
 ): Promise<Blob> {
   const pdf = new jsPDF("p", "mm", "a4");
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -22,7 +27,7 @@ export async function buildPdfFromCharts(
   addCoverPage(
     pdf,
     documentTitle,
-    charts.map((chart) => chart.title),
+    [...charts.map((chart) => chart.title), ...extraPages.map((p) => p.title)],
     pageWidth,
     pageHeight,
   );
@@ -61,6 +66,10 @@ export async function buildPdfFromCharts(
     } finally {
       releaseCanvas(canvas);
     }
+  }
+
+  if (extraPages.length > 0) {
+    addExtraPages(pdf, extraPages, pageWidth, pageHeight);
   }
 
   addPageNumbers(pdf, pageWidth, pageHeight);
@@ -135,6 +144,76 @@ function addChartImage(
     );
   } finally {
     releaseCanvas(flattened);
+  }
+}
+
+/**
+ * Append one native-text PDF page per entry in `extraPages`, rendered as
+ * label/value rows rather than a captured image. Each page starts fresh so
+ * its content never bleeds into a chart page.
+ */
+function addExtraPages(
+  pdf: jsPDF,
+  extraPages: PdfTextPage[],
+  pageWidth: number,
+  pageHeight: number,
+): void {
+  const LABEL_COL_WIDTH = 68; // mm — enough for the longest label
+  const VALUE_COL_X = MARGIN_MM + LABEL_COL_WIDTH;
+  const VALUE_COL_WIDTH = pageWidth - MARGIN_MM - LABEL_COL_WIDTH;
+  const LINE_HEIGHT = 7; // mm between rows
+
+  for (const page of extraPages) {
+    pdf.addPage();
+    let y = MARGIN_MM + 8;
+
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(page.title, MARGIN_MM, y);
+    y += 10;
+
+    pdf.setDrawColor(0, 103, 187);
+    pdf.setLineWidth(0.5);
+    pdf.line(MARGIN_MM, y, pageWidth - MARGIN_MM, y);
+    y += 10;
+
+    pdf.setFontSize(11);
+
+    for (const item of page.items) {
+      pdf.setFont("helvetica", "bold");
+      const labelLines = pdf.splitTextToSize(
+        item.label,
+        LABEL_COL_WIDTH - 4,
+      ) as string[];
+      pdf.text(labelLines, MARGIN_MM, y);
+
+      pdf.setFont("helvetica", "normal");
+      const valueLines = pdf.splitTextToSize(
+        item.value,
+        VALUE_COL_WIDTH,
+      ) as string[];
+      pdf.text(valueLines, VALUE_COL_X, y);
+
+      y += LINE_HEIGHT * Math.max(labelLines.length, valueLines.length);
+
+      if (y > pageHeight - MARGIN_MM - 25) {
+        pdf.addPage();
+        y = MARGIN_MM + 10;
+      }
+    }
+
+    if (page.footer) {
+      y += 4;
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "bolditalic");
+      const footerLines = pdf.splitTextToSize(
+        page.footer,
+        pageWidth - MARGIN_MM * 2,
+      ) as string[];
+      pdf.text(footerLines, MARGIN_MM, y);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(11);
+    }
   }
 }
 

@@ -9,6 +9,7 @@ import {
   type ChartExportMeta,
   type ChartExportView,
   chartPngFilename,
+  type PdfTextPage,
   type RegisteredChart,
 } from "./chartExport.js";
 
@@ -17,7 +18,14 @@ export type ChartExportFormat = "pdf" | "png" | "html";
 export type ChartExportApi = {
   downloadChart: (id: string) => Promise<void>;
   downloadAll: () => Promise<void>;
-  downloadPdf: (documentTitle: string) => Promise<void>;
+  /**
+   * @param extraPages - Native-text pages appended after the captured chart
+   * images (e.g. calculated recommendations that aren't rendered as charts).
+   */
+  downloadPdf: (
+    documentTitle: string,
+    extraPages?: PdfTextPage[],
+  ) => Promise<void>;
   downloadHtml: (documentTitle: string) => Promise<void>;
   downloadingChartId: string | null;
   exportingFormat: ChartExportFormat | null;
