@@ -51,6 +51,24 @@ export type ChartCaptureSource = {
   capture: () => Promise<HTMLCanvasElement>;
 };
 
+/** One label/value row rendered on a {@link PdfTextPage}. */
+export type PdfTextPageItem = {
+  label: string;
+  value: string;
+};
+
+/**
+ * A native-text PDF page appended after the captured chart images.
+ *
+ * Used for content that is not a chart/card (e.g. calculated recommendations)
+ * but still needs to be part of the exported PDF.
+ */
+export type PdfTextPage = {
+  title: string;
+  items: PdfTextPageItem[];
+  footer?: string;
+};
+
 export function releaseCanvas(canvas: HTMLCanvasElement): void {
   canvas.width = 0;
   canvas.height = 0;

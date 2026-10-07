@@ -7,6 +7,7 @@ import {
 } from "../chartExport.js";
 import { getChartExportFilename } from "../chartExportFilenames.js";
 import { buildHtmlReport, escapeHtml } from "../htmlExport.js";
+import { buildPdfFromCharts } from "../pdfExport.js";
 import {
   fitPdfImageSize,
   placePdfBlock,
@@ -195,6 +196,63 @@ describe("placePdfBlock", () => {
       y: 10,
       needsNewPage: true,
     });
+  });
+});
+
+describe("buildPdfFromCharts with extra text pages", () => {
+  it("appends a text page even when there are no chart captures", async () => {
+    const blob = await buildPdfFromCharts([], "Report", [
+      {
+        title: "Cluster sizing recommendations",
+        items: [
+          { label: "Cluster name", value: "cluster-1" },
+          { label: "Target platform", value: "Bare metal" },
+          {
+            label: "Total nodes",
+            value: "6 (3 workers + 3 control plane)",
+          },
+          { label: "Failover capacity", value: "1 failover nodes" },
+          { label: "Worker node size", value: "8 CPU, 32 GB memory" },
+          {
+            label: "Control plane node size",
+            value: "16 CPU, 64 GB memory",
+          },
+        ],
+        footer: "Note: estimates only.",
+      },
+    ]);
+
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.size).toBeGreaterThan(0);
+    expect(blob.type).toBe("application/pdf");
+  });
+
+  it("paginates extra pages with many rows without throwing", async () => {
+    const manyItems = Array.from({ length: 60 }, (_, index) => ({
+      label: `Field ${index}`,
+      value: `Value ${index}`,
+    }));
+
+    const blob = await buildPdfFromCharts([], "Report", [
+      { title: "Cluster sizing recommendations", items: manyItems },
+    ]);
+
+    expect(blob.size).toBeGreaterThan(0);
+  });
+
+  it("supports multiple extra pages (e.g. one per sized cluster)", async () => {
+    const blob = await buildPdfFromCharts([], "Report", [
+      {
+        title: "Cluster sizing recommendations — cluster-a",
+        items: [{ label: "Cluster name", value: "cluster-a" }],
+      },
+      {
+        title: "Cluster sizing recommendations — cluster-b",
+        items: [{ label: "Cluster name", value: "cluster-b" }],
+      },
+    ]);
+
+    expect(blob.size).toBeGreaterThan(0);
   });
 });
 

@@ -101,12 +101,18 @@ function DownloadChartButton({ id }: { id: string }): JSX.Element {
   );
 }
 
-function DownloadPdfButton(): JSX.Element {
+function DownloadPdfButton({
+  extraPages,
+}: {
+  extraPages?: Parameters<
+    NonNullable<ReturnType<typeof useChartExport>>["downloadPdf"]
+  >[1];
+}): JSX.Element {
   const exportApi = useChartExport();
   return (
     <button
       type="button"
-      onClick={() => void exportApi?.downloadPdf("Overview")}
+      onClick={() => void exportApi?.downloadPdf("Overview", extraPages)}
     >
       Download pdf
     </button>
@@ -233,6 +239,68 @@ describe("ChartExportProvider", () => {
       id: "storage",
       title: "Disks",
     });
+    expect(downloadFile).toHaveBeenCalledWith(expect.any(Blob), "report.pdf");
+  });
+
+  it("forwards extra text pages (e.g. cluster sizing recommendations) to the pdf builder", async () => {
+    const user = userEvent.setup();
+    const capture = vi.fn(async () => fakeCanvas());
+    const buildPdf = vi.fn(async () => new Blob(["pdf"]));
+    const downloadFile = vi.fn();
+    const extraPages = [
+      {
+        title: "Cluster sizing recommendations",
+        items: [
+          { label: "Cluster name", value: "cluster-1" },
+          { label: "Target platform", value: "Bare metal" },
+        ],
+        footer: "Note: estimates only.",
+      },
+    ];
+
+    render(
+      <ChartExportProvider
+        capture={capture}
+        zipFiles={vi.fn()}
+        buildPdf={buildPdf}
+        downloadFile={downloadFile}
+        getPdfFilename={() => "report.pdf"}
+      >
+        <RegisteredChart id="storage" title="Disks" />
+        <DownloadPdfButton extraPages={extraPages} />
+      </ChartExportProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Download pdf" }));
+
+    expect(buildPdf).toHaveBeenCalledTimes(1);
+    expect(buildPdf.mock.calls[0]?.[2]).toEqual(extraPages);
+    expect(downloadFile).toHaveBeenCalledWith(expect.any(Blob), "report.pdf");
+  });
+
+  it("builds a PDF from extra text pages alone when no charts are registered", async () => {
+    const user = userEvent.setup();
+    const buildPdf = vi.fn(async () => new Blob(["pdf"]));
+    const downloadFile = vi.fn();
+    const extraPages = [{ title: "Cluster sizing recommendations", items: [] }];
+
+    render(
+      <ChartExportProvider
+        capture={vi.fn()}
+        zipFiles={vi.fn()}
+        buildPdf={buildPdf}
+        downloadFile={downloadFile}
+        getPdfFilename={() => "report.pdf"}
+      >
+        <DownloadPdfButton extraPages={extraPages} />
+      </ChartExportProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Download pdf" }));
+
+    expect(buildPdf).toHaveBeenCalledTimes(1);
+    expect(buildPdf.mock.calls[0]?.[0]).toEqual([]);
+    expect(buildPdf.mock.calls[0]?.[2]).toEqual(extraPages);
     expect(downloadFile).toHaveBeenCalledWith(expect.any(Blob), "report.pdf");
   });
 

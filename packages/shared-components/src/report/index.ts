@@ -9,6 +9,7 @@ export {
 } from "./ChartDownloadButton.js";
 export {
   type BuildChartDocument,
+  type BuildPdfDocument,
   type CaptureChartElement,
   ChartExportProvider,
   type ChartExportProviderProps,
@@ -32,6 +33,8 @@ export {
   chartExportViewsFromLabels,
   chartPngFilename,
   downloadBlob,
+  type PdfTextPage,
+  type PdfTextPageItem,
   type RegisteredChart,
   releaseCanvas,
   restoreChartExportViews,

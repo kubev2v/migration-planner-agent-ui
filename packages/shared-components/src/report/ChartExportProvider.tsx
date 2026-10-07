@@ -11,6 +11,7 @@ import {
   type ChartExportFile,
   canvasToBlob,
   downloadBlob,
+  type PdfTextPage,
   type RegisteredChart,
   releaseCanvas,
   restoreChartExportViews,
@@ -36,6 +37,12 @@ export type BuildChartDocument = (
   documentTitle: string,
 ) => Promise<Blob>;
 
+export type BuildPdfDocument = (
+  charts: ChartCaptureSource[],
+  documentTitle: string,
+  extraPages?: PdfTextPage[],
+) => Promise<Blob>;
+
 export type {
   ChartExportApi,
   ChartExportFormat,
@@ -47,7 +54,7 @@ export interface ChartExportProviderProps {
   capture?: CaptureChartElement;
   zipFiles?: ZipChartFiles;
   encodePng?: EncodeChartPng;
-  buildPdf?: BuildChartDocument;
+  buildPdf?: BuildPdfDocument;
   buildHtml?: BuildChartDocument;
   downloadFile?: (blob: Blob, filename: string) => void;
   getZipFilename?: () => string;
@@ -96,8 +103,8 @@ async function resolveZip(override?: ZipChartFiles): Promise<ZipChartFiles> {
 }
 
 async function resolvePdf(
-  override?: BuildChartDocument,
-): Promise<BuildChartDocument> {
+  override?: BuildPdfDocument,
+): Promise<BuildPdfDocument> {
   if (override) {
     return override;
   }
@@ -281,11 +288,11 @@ export const ChartExportProvider: FC<ChartExportProviderProps> = ({
   ]);
 
   const downloadPdf = useCallback(
-    async (documentTitle: string) => {
+    async (documentTitle: string, extraPages?: PdfTextPage[]) => {
       await runCapture(
         async () => {
           const charts = listCharts();
-          if (charts.length === 0) {
+          if (charts.length === 0 && (extraPages?.length ?? 0) === 0) {
             throw new Error("The report is not ready to export yet.");
           }
           const captureFn = await resolveCapture(capture);
@@ -296,6 +303,7 @@ export const ChartExportProvider: FC<ChartExportProviderProps> = ({
               await build(
                 toCaptureSources(charts, captureFn, prepareElement),
                 documentTitle,
+                extraPages,
               ),
               getPdfFilename(),
             );
