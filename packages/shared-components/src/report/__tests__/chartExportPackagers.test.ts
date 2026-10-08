@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyLightThemeToDocument,
   chartExportViewsFromLabels,
   restoreChartExportViews,
   sortRegisteredChartsByDocumentOrder,
@@ -278,5 +279,21 @@ describe("buildHtmlReport", () => {
     expect(html).toContain("width: 100%");
     expect(escapeHtml("<b>")).toBe("&lt;b&gt;");
     expect(escapeHtml("it's")).toBe("it&#39;s");
+  });
+});
+
+describe("applyLightThemeToDocument", () => {
+  it("removes PatternFly dark theme classes from the given document", () => {
+    const clone = document.implementation.createHTMLDocument("export");
+    clone.documentElement.classList.add("pf-v6-theme-dark");
+    clone.body.style.colorScheme = "dark";
+
+    applyLightThemeToDocument(clone);
+
+    expect(clone.documentElement.classList.contains("pf-v6-theme-dark")).toBe(
+      false,
+    );
+    expect(clone.documentElement.style.colorScheme).toBe("light");
+    expect(clone.body.style.colorScheme).toBe("light");
   });
 });

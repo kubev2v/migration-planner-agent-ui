@@ -187,6 +187,46 @@ describe("ChartExportProvider", () => {
     expect(downloadFile).toHaveBeenCalledWith(expect.any(Blob), "disks.png");
   });
 
+  it("does not change the live theme while exporting", async () => {
+    const user = userEvent.setup();
+    document.documentElement.classList.add("pf-v6-theme-dark");
+    const capture = vi.fn(async () => {
+      expect(
+        document.documentElement.classList.contains("pf-v6-theme-dark"),
+      ).toBe(true);
+      return fakeCanvas();
+    });
+    const downloadFile = vi.fn();
+
+    render(
+      <ChartExportProvider
+        capture={capture}
+        encodePng={async () => new Blob(["png"])}
+        zipFiles={async () => new Blob(["zip"])}
+        downloadFile={downloadFile}
+        getZipFilename={() => "charts.zip"}
+      >
+        <RegisteredChart id="storage" title="Disks" />
+        <DownloadChartButton id="storage" />
+        <DownloadAllButton />
+      </ChartExportProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Download storage" }));
+    await waitFor(() =>
+      expect(downloadFile).toHaveBeenCalledWith(expect.any(Blob), "disks.png"),
+    );
+    await user.click(screen.getByRole("button", { name: "Download all" }));
+    await waitFor(() =>
+      expect(downloadFile).toHaveBeenCalledWith(expect.any(Blob), "charts.zip"),
+    );
+
+    expect(
+      document.documentElement.classList.contains("pf-v6-theme-dark"),
+    ).toBe(true);
+    document.documentElement.classList.remove("pf-v6-theme-dark");
+  });
+
   it("re-registers charts after React Strict Mode's extra effect cycle", async () => {
     const user = userEvent.setup();
     const capture = vi.fn(async () => fakeCanvas());

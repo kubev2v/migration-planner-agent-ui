@@ -1,5 +1,11 @@
+import {
+  t_color_gray_20,
+  t_color_white,
+  t_global_text_color_regular,
+} from "@patternfly/react-tokens";
 import html2canvas from "html2canvas-pro";
 import {
+  applyLightThemeToDocument,
   CHART_EXPORT_CAPTURING_ATTR,
   CHART_EXPORT_SCROLL_ATTR,
   shouldIgnoreChartExportElement,
@@ -94,6 +100,10 @@ const PADDED_CAPTURE_SELECTOR =
   ".pf-v6-c-card__title, .pf-v6-c-card__header, .pf-v6-c-card__body";
 const CARD_CAPTURE_SELECTOR = ".pf-v6-c-card";
 const TRANSPARENT_FILLS = new Set(["", "transparent", "rgba(0, 0, 0, 0)"]);
+/** PatternFly light-theme chrome. html2canvas inlines live computed SVG styles. */
+const LIGHT_EXPORT_BACKGROUND = t_color_white.value;
+const LIGHT_EXPORT_BORDER = t_color_gray_20.value;
+const LIGHT_EXPORT_TEXT = t_global_text_color_regular.value;
 
 function queryCards(root: HTMLElement): HTMLElement[] {
   const cards = Array.from(
@@ -149,16 +159,34 @@ function readCardBorder(source: HTMLElement): {
   return { width, style, color };
 }
 
-function applyCardChrome(source: HTMLElement, dest: HTMLElement): void {
+function applyCardChrome(
+  source: HTMLElement,
+  dest: HTMLElement,
+  colors: "computed" | "light",
+): void {
   const computed = window.getComputedStyle(source);
   dest.style.borderRadius = computed.borderRadius;
-  dest.style.backgroundColor = resolvedFill(computed.backgroundColor);
   dest.style.overflow = "hidden";
+  dest.style.backgroundColor =
+    colors === "light"
+      ? LIGHT_EXPORT_BACKGROUND
+      : resolvedFill(computed.backgroundColor);
   const border = readCardBorder(source);
   if (border) {
     dest.style.borderWidth = border.width;
     dest.style.borderStyle = border.style;
-    dest.style.borderColor = border.color;
+    dest.style.borderColor =
+      colors === "light" ? LIGHT_EXPORT_BORDER : border.color;
+  }
+}
+
+function applyLightThemeSvgText(root: HTMLElement): void {
+  for (const node of root.querySelectorAll("text, tspan")) {
+    if (!(node instanceof SVGElement)) {
+      continue;
+    }
+    node.style.fill = LIGHT_EXPORT_TEXT;
+    node.style.color = LIGHT_EXPORT_TEXT;
   }
 }
 
@@ -218,7 +246,7 @@ function copyCardChrome(node: HTMLElement): {
     height: node.style.height,
     maxHeight: node.style.maxHeight,
   };
-  applyCardChrome(node, node);
+  applyCardChrome(node, node, "computed");
   node.style.minHeight = "0px";
   node.style.height = "auto";
   node.style.maxHeight = "none";
@@ -234,7 +262,7 @@ function applyComputedStylesToClone(
   sourceCards.forEach((source, index) => {
     const dest = cloneCards[index];
     if (dest) {
-      applyCardChrome(source, dest);
+      applyCardChrome(source, dest, "light");
     }
   });
 
@@ -348,15 +376,17 @@ export async function captureChartElement(
     }
     return html2canvas(element, {
       useCORS: true,
-      backgroundColor: null,
+      backgroundColor: LIGHT_EXPORT_BACKGROUND,
       logging: false,
       scale: CHART_CAPTURE_SCALE,
       imageTimeout: 0,
       ignoreElements: (node) =>
         node instanceof Element &&
         shouldIgnoreChartExportElement(node, element),
-      onclone: (_clonedDoc, clonedElement) => {
+      onclone: (clonedDoc, clonedElement) => {
+        applyLightThemeToDocument(clonedDoc);
         applyComputedStylesToClone(element, clonedElement);
+        applyLightThemeSvgText(clonedElement);
       },
     });
   } finally {
