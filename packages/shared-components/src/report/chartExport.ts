@@ -85,6 +85,28 @@ export function waitForChartExportPaint(): Promise<void> {
   });
 }
 
+/** PatternFly applies dark tokens when this class is on `:root`. */
+export const PATTERNFLY_DARK_THEME_CLASSES = [
+  "pf-v6-theme-dark",
+  "pf-v5-theme-dark",
+] as const;
+
+/**
+ * Force PatternFly light tokens on a document (the html2canvas clone).
+ * Does not touch the live page.
+ */
+export function applyLightThemeToDocument(root: Document): void {
+  for (const node of [root.documentElement, root.body]) {
+    if (!node) {
+      continue;
+    }
+    for (const className of PATTERNFLY_DARK_THEME_CLASSES) {
+      node.classList.remove(className);
+    }
+    node.style.colorScheme = "light";
+  }
+}
+
 export function chartExportViewsFromLabels(
   titlePrefix: string,
   labels: Record<string, string>,
