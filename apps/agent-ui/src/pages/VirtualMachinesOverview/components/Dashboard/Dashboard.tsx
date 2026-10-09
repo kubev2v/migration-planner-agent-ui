@@ -8,6 +8,7 @@ import {
   buildClusterDetailRows,
   buildClusterDetails,
   buildInfrastructureSummary,
+  ClustersOverview,
   CpuAndMemoryOverview,
   ErrorTable,
   HostPowerStates,
@@ -30,7 +31,6 @@ import {
   useChartDrillDown,
 } from "../VirtualMachinesTab/vmNavigation";
 import { parseMemoryTierLabelToRange } from "../VirtualMachinesTab/vmTableShared";
-import { ClustersOverview } from "./ClustersOverview";
 import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
 
