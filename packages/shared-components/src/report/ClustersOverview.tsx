@@ -33,6 +33,7 @@ import {
 import { CardEmptyState } from "./CardEmptyState.js";
 import { ChartHeaderActions } from "./ChartDownloadButton.js";
 import { ChartExportSurface } from "./ChartExportSurface.js";
+import { clustersOverviewStyles } from "./ClustersOverviewStyles.js";
 import { chartExportViewsFromLabels } from "./chartExport.js";
 import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
 import { dashboardStyles } from "./dashboardStyles.js";
@@ -329,7 +330,7 @@ export const ClustersOverview: FC<ClustersOverviewProps> = ({
       <Card className={dashboardStyles.card}>
         <CardTitle>
           <Flex
-            className={dashboardStyles.clustersTitleRow}
+            className={clustersOverviewStyles.titleRow}
             justifyContent={{ default: "justifyContentSpaceBetween" }}
             alignItems={{ default: "alignItemsCenter" }}
           >
@@ -338,7 +339,7 @@ export const ClustersOverview: FC<ClustersOverviewProps> = ({
                 <div>
                   <DatabaseIcon /> {CHART_TITLE}
                 </div>
-                <div className={dashboardStyles.clustersCardSubtitle}>
+                <div className={clustersOverviewStyles.cardSubtitle}>
                   {viewMode === "dataCenterDistribution"
                     ? "Top 5 datacenters"
                     : "Top 5 clusters"}
@@ -360,7 +361,7 @@ export const ClustersOverview: FC<ClustersOverviewProps> = ({
                     ref={toggleRef}
                     onClick={() => setIsDropdownOpen((open) => !open)}
                     isExpanded={isDropdownOpen}
-                    className={dashboardStyles.clustersMenuToggleMinWidth}
+                    className={clustersOverviewStyles.menuToggleMinWidth}
                   >
                     {VIEW_MODE_LABELS[viewMode]}
                   </MenuToggle>
@@ -392,28 +393,32 @@ export const ClustersOverview: FC<ClustersOverviewProps> = ({
             <CardEmptyState title={emptyTitle} />
           ) : viewMode === "cpuOverCommitment" ? (
             <>
-              <div className={dashboardStyles.cpuOvercommitBoxes}>
+              <div className={clustersOverviewStyles.cpuOvercommitBoxes}>
                 {chart.chartData.map((item) => (
                   <div
                     key={`cpu-box-${item.legendCategory}`}
-                    className={dashboardStyles.cpuOvercommitBox}
+                    className={clustersOverviewStyles.cpuOvercommitBox}
                     style={{ background: chart.legend[item.legendCategory] }}
                   >
                     {item.countDisplay}
                   </div>
                 ))}
               </div>
-              <div className={dashboardStyles.cpuOvercommitLegend}>
+              <div className={clustersOverviewStyles.cpuOvercommitLegend}>
                 {chart.chartData.map((item) => (
                   <div
                     key={`cpu-legend-${item.legendCategory}`}
-                    className={dashboardStyles.cpuOvercommitLegendItem}
+                    className={clustersOverviewStyles.cpuOvercommitLegendItem}
                   >
                     <span
-                      className={dashboardStyles.cpuOvercommitLegendSwatch}
+                      className={
+                        clustersOverviewStyles.cpuOvercommitLegendSwatch
+                      }
                       style={{ background: chart.legend[item.legendCategory] }}
                     />
-                    <span className={dashboardStyles.cpuOvercommitLegendText}>
+                    <span
+                      className={clustersOverviewStyles.cpuOvercommitLegendText}
+                    >
                       {item.legendCategory} ({item.countDisplay})
                     </span>
                   </div>
