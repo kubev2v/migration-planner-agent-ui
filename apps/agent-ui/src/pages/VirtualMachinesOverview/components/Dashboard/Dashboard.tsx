@@ -8,6 +8,7 @@ import {
   buildClusterDetailRows,
   buildClusterDetails,
   buildInfrastructureSummary,
+  CpuAndMemoryOverview,
   ErrorTable,
   HostPowerStates,
   HostsOverview,
@@ -22,11 +23,14 @@ import {
 import { Gallery, GalleryItem, Grid, GridItem } from "@patternfly/react-core";
 import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { AppEmptyState } from "../../../../common/components";
-import type { NavigateToVMFilters } from "../VirtualMachinesTab/vmNavigation";
+import {
+  type NavigateToVMFilters,
+  useChartDrillDown,
+} from "../VirtualMachinesTab/vmNavigation";
+import { parseMemoryTierLabelToRange } from "../VirtualMachinesTab/vmTableShared";
 import { ClustersOverview } from "./ClustersOverview";
-import { CpuAndMemoryOverview } from "./CpuAndMemoryOverview";
 import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
 
@@ -108,6 +112,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return buildClusterDetails(Object.values(clusters)[0]);
   }, [clusters, isAggregateView]);
 
+  const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
+  const handleMemoryTierSelect = useCallback(
+    (tierLabel: string) => {
+      const memoryRange = parseMemoryTierLabelToRange(tierLabel);
+      if (memoryRange) {
+        navigateToVMs({ memoryRange });
+      }
+    },
+    [navigateToVMs],
+  );
+  const handleCpuMemoryTitleClick = useCallback(() => {
+    navigateToVMs({});
+  }, [navigateToVMs]);
+
   if (!clusterFound && !isAggregateView) {
     return (
       <AppEmptyState
@@ -173,7 +191,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               memoryTierDistribution={vms.distributionByMemoryTier}
               memoryTotalGB={ramGB?.total}
               cpuTotalCores={cpuCores?.total}
-              onNavigateToVMFilters={onNavigateToVMFilters}
+              onTierSelect={handleMemoryTierSelect}
+              onTitleClick={handleCpuMemoryTitleClick}
             />
           </GalleryItem>
           <GalleryItem>

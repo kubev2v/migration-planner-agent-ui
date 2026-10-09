@@ -17,6 +17,10 @@ export {
   type ZipChartFiles,
 } from "./ChartExportProvider.js";
 export { ChartExportSurface } from "./ChartExportSurface.js";
+export {
+  CpuAndMemoryOverview,
+  type CpuAndMemoryOverviewProps,
+} from "./CpuAndMemoryOverview.js";
 export { captureChartElement } from "./captureChartElement.js";
 export {
   CHART_EXPORT_CAPTURING_ATTR,
