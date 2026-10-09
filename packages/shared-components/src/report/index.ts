@@ -18,6 +18,11 @@ export {
 } from "./ChartExportProvider.js";
 export { ChartExportSurface } from "./ChartExportSurface.js";
 export {
+  ClustersOverview,
+  type ClustersOverviewProps,
+  type InventoryDataLike,
+} from "./ClustersOverview.js";
+export {
   CpuAndMemoryOverview,
   type CpuAndMemoryOverviewProps,
 } from "./CpuAndMemoryOverview.js";
