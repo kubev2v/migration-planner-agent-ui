@@ -157,7 +157,10 @@ export const ReportContainer: React.FC = () => {
     }).selectionId;
   }, [inventory, selectedClusterId]);
 
-  const { data: utilizationMetrics } = useGetClusterUtilizationQuery(
+  // Per-cluster usage stats only; there is no aggregate across clusters, so the
+  // query is skipped for the "all" scope. `currentData` (not `data`) is used so a
+  // previously selected cluster's value doesn't linger when switching scopes.
+  const { currentData: utilizationMetrics } = useGetClusterUtilizationQuery(
     clusterScopeId,
     { skip: clusterScopeId === "all" },
   );
