@@ -508,6 +508,7 @@ export const ReportContainer: React.FC = () => {
             >
               <TabContentBody hasPadding className={vmsTabContentBodyStyle}>
                 <VirtualMachinesView
+                  key={`vms-${clusterView.selectionId}`}
                   vms={vmsList}
                   loading={vmsFetching}
                   initialFilters={initialVMFilters}

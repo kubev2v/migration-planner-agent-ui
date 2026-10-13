@@ -518,6 +518,7 @@ export const GroupDetailPage: React.FC = () => {
           >
             <TabContentBody hasPadding className={vmsTabContentBodyStyle}>
               <VirtualMachinesView
+                key={`group-vms-${clusterView.selectionId}`}
                 vms={vmsList}
                 loading={vmsLoading}
                 initialFilters={initialVMFilters}
