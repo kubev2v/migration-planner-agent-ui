@@ -631,7 +631,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openshift-migration-advisor/shared-components@workspace:packages/shared-components"
   dependencies:
-    html2canvas-pro: "npm:^2.5.1"
+    html2canvas-pro: "npm:^2.5.2"
     jspdf: "npm:^4.2.1"
     jszip: "npm:^3.10.2"
   languageName: unknown
@@ -2140,13 +2140,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"html2canvas-pro@npm:^2.5.1":
-  version: 2.5.1
-  resolution: "html2canvas-pro@npm:2.5.1"
-  dependencies:
-    css-line-break: "npm:^2.1.0"
-    text-segmentation: "npm:^1.0.3"
-  checksum: 10c0/3c62ce3733d100105a6c8ce270c5f4cebd4eb2fb7a95ec3b30a361eacc5578874389b7102cc233b3373218499ec2f6bfe13f97f585eee7000962c47cafb93d1d
+"html2canvas-pro@npm:^2.5.2":
+  version: 2.5.2
+  resolution: "html2canvas-pro@npm:2.5.2"
+  checksum: 10c0/5d9d721a4c44e66b881ce6c5afb35f1c86940aee6d17a816dc25026f52a8706054d9b748329c11bf5fba3f97573f280008cf83de203f41986b76d36af6060021
   languageName: node
   linkType: hard
 
@@ -2357,9 +2354,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.39.0":
-  version: 6.39.0
-  resolution: "knip@npm:6.39.0"
+"knip@npm:^6.40.0":
+  version: 6.40.0
+  resolution: "knip@npm:6.40.0"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.7.0"
@@ -2377,7 +2374,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/66a6c0b6bc339da8d521359b76e34d27dc3f535e98c93eaac21fcd9704813a2b159f5b173c4587cfc10a57bec91ff83c84c6b915726acd92adb1b9896799477e
+  checksum: 10c0/40009f142093db0c7477d894431e0c21746236b6be3c446f758806e7162b0b2b0335372e6e0a00938fd3fcb5e6262c7471cc176780cd77ed748564f963af3a2f
   languageName: node
   linkType: hard
 
@@ -2577,9 +2574,9 @@ __metadata:
     "@types/react-dom": "npm:^18.3.7"
     "@vitejs/plugin-react": "npm:^6.1.2"
     jsdom: "npm:^30.1.2"
-    knip: "npm:^6.39.0"
+    knip: "npm:^6.40.0"
     typescript: "npm:^6.0.3"
-    vite: "npm:^8.3.2"
+    vite: "npm:^8.3.3"
     vitest: "npm:^4.1.11"
   languageName: unknown
   linkType: soft
@@ -3995,7 +3992,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0, vite@npm:^8.3.2":
+"vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0":
   version: 8.3.2
   resolution: "vite@npm:8.3.2"
   dependencies:
@@ -4049,6 +4046,63 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 10c0/bc2dc5b9077624686a0e4ddfdbfca9d35bf97a32c53966bf1cdd7f355a8f2c488c0422d1b02328a959cfd06b490f98c7e24938f8a251a1039adf2219f2da552e
+  languageName: node
+  linkType: hard
+
+"vite@npm:^8.3.3":
+  version: 8.3.3
+  resolution: "vite@npm:8.3.3"
+  dependencies:
+    fsevents: "npm:~2.3.3"
+    lightningcss: "npm:^1.33.0"
+    picomatch: "npm:^4.0.7"
+    postcss: "npm:^8.5.28"
+    rolldown: "npm:~1.2.11"
+    tinyglobby: "npm:^0.2.17"
+  peerDependencies:
+    "@types/node": ^20.19.0 || >=22.12.0
+    "@vitejs/devtools": ^0.7.1
+    esbuild: ^0.27.0 || ^0.28.0
+    jiti: ">=1.21.0"
+    less: ^4.0.0
+    sass: ^1.70.0
+    sass-embedded: ^1.70.0
+    stylus: ">=0.54.8"
+    sugarss: ^5.0.0
+    terser: ^5.16.0
+    tsx: ^4.8.1
+    yaml: ^2.4.2
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  peerDependenciesMeta:
+    "@types/node":
+      optional: true
+    "@vitejs/devtools":
+      optional: true
+    esbuild:
+      optional: true
+    jiti:
+      optional: true
+    less:
+      optional: true
+    sass:
+      optional: true
+    sass-embedded:
+      optional: true
+    stylus:
+      optional: true
+    sugarss:
+      optional: true
+    terser:
+      optional: true
+    tsx:
+      optional: true
+    yaml:
+      optional: true
+  bin:
+    vite: bin/vite.js
+  checksum: 10c0/a1fa945ad1dd98d43e45d491eee11505083b19e00f8c5549cd0771273717f7bdb431eef71ef3568d1effa6ba63719811e5151f3fbec84be5a017d4975470a0d9
   languageName: node
   linkType: hard
 
