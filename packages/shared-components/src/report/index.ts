@@ -195,6 +195,11 @@ export {
   type StandardReportExportHandlers,
   standardReportExportOptions,
 } from "./reportExportOptions.js";
+export {
+  type StorageDiskTierData,
+  StorageOverview,
+  type StorageOverviewProps,
+} from "./StorageOverview.js";
 export { SupportTierBadge } from "./SupportTierBadge.js";
 export {
   ALL_TIERS_FILTER,

@@ -17,6 +17,7 @@ import {
   NetworkOverview,
   OSDistribution,
   type OSDistributionEntry,
+  StorageOverview,
   VCenterClusterDetails,
   VmPowerStates,
   WarningsTable,
@@ -31,7 +32,6 @@ import {
   useChartDrillDown,
 } from "../VirtualMachinesTab/vmNavigation";
 import { parseMemoryTierLabelToRange } from "../VirtualMachinesTab/vmTableShared";
-import { StorageOverview } from "./StorageOverview";
 import { VMMigrationStatus } from "./VMMigrationStatus";
 
 interface DashboardProps {
@@ -125,6 +125,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleCpuMemoryTitleClick = useCallback(() => {
     navigateToVMs({});
   }, [navigateToVMs]);
+  const handleDiskTierSelect = useCallback(
+    (diskRange: { min: number; max?: number }) => {
+      navigateToVMs({ diskRange });
+    },
+    [navigateToVMs],
+  );
+  const handleStorageTitleClick = useCallback(() => {
+    navigateToVMs({});
+  }, [navigateToVMs]);
 
   if (!clusterFound && !isAggregateView) {
     return (
@@ -201,7 +210,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               diskTypes={vms.diskTypes ?? {}}
               totalVMs={vms.total ?? 0}
               totalWithSharedDisks={vms.totalWithSharedDisks ?? 0}
-              onNavigateToVMFilters={onNavigateToVMFilters}
+              onDiskTierSelect={handleDiskTierSelect}
+              onTitleClick={handleStorageTitleClick}
             />
           </GalleryItem>
         </Gallery>

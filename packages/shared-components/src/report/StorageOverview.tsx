@@ -1,11 +1,4 @@
 import {
-  ChartExportSurface,
-  ChartHeaderActions,
-  chartExportViewsFromLabels,
-  dashboardStyles,
-  MigrationDonutChart,
-} from "@openshift-migration-advisor/shared-components";
-import {
   Card,
   CardBody,
   CardTitle,
@@ -13,42 +6,57 @@ import {
   Dropdown,
   DropdownItem,
   DropdownList,
-  EmptyStateVariant,
   Flex,
   FlexItem,
   MenuToggle,
   type MenuToggleElement,
 } from "@patternfly/react-core";
-import { DatabaseIcon, InboxIcon } from "@patternfly/react-icons";
-import chart_color_blue_300 from "@patternfly/react-tokens/dist/esm/chart_color_blue_300";
-import chart_color_green_300 from "@patternfly/react-tokens/dist/esm/chart_color_green_300";
-import chart_color_orange_200 from "@patternfly/react-tokens/dist/esm/chart_color_orange_200";
-import chart_color_purple_100 from "@patternfly/react-tokens/dist/esm/chart_color_purple_100";
-import chart_color_purple_300 from "@patternfly/react-tokens/dist/esm/chart_color_purple_300";
-import chart_color_red_orange_300 from "@patternfly/react-tokens/dist/esm/chart_color_red_orange_300";
-import chart_color_teal_200 from "@patternfly/react-tokens/dist/esm/chart_color_teal_200";
-import chart_color_teal_300 from "@patternfly/react-tokens/dist/esm/chart_color_teal_300";
-import chart_color_yellow_400 from "@patternfly/react-tokens/dist/esm/chart_color_yellow_400";
-import type React from "react";
-import { useMemo, useState } from "react";
-import { AppEmptyState } from "../../../../common/components";
+import { DatabaseIcon } from "@patternfly/react-icons";
 import {
-  type NavigateToVMFilters,
-  useChartDrillDown,
-} from "../VirtualMachinesTab/vmNavigation";
-import { parseDiskTierLabelToRange } from "../VirtualMachinesTab/vmTableShared";
+  chart_color_blue_300,
+  chart_color_green_300,
+  chart_color_orange_200,
+  chart_color_purple_100,
+  chart_color_purple_300,
+  chart_color_red_orange_300,
+  chart_color_teal_200,
+  chart_color_teal_300,
+  chart_color_yellow_400,
+} from "@patternfly/react-tokens";
+import type { FC, Ref } from "react";
+import { useMemo, useState } from "react";
+import {
+  MigrationDonutChart,
+  type MigrationDonutChartDatum,
+  type MigrationDonutChartLegendVariant,
+} from "../charts/MigrationDonutChart.js";
+import { CardEmptyState } from "./CardEmptyState.js";
+import { ChartHeaderActions } from "./ChartDownloadButton.js";
+import { ChartExportSurface } from "./ChartExportSurface.js";
+import { chartExportViewsFromLabels } from "./chartExport.js";
+import { REPORT_CARD_EMPTY_STATE_TITLES } from "./constants.js";
+import { dashboardStyles } from "./dashboardStyles.js";
 
-interface DiskTierData {
+export interface StorageDiskTierData {
   vmCount?: number;
   totalSizeTB?: number;
 }
 
-interface StorageOverviewProps {
-  diskSizeTier?: Record<string, DiskTierData>;
-  diskTypes?: Record<string, DiskTierData>;
+export interface StorageOverviewProps {
+  diskSizeTier?: Record<string, StorageDiskTierData>;
+  diskTypes?: Record<string, StorageDiskTierData>;
   totalVMs?: number;
   totalWithSharedDisks?: number;
-  onNavigateToVMFilters?: NavigateToVMFilters;
+  /**
+   * Disk-tier slice / center-title click. The argument is the tier's parsed
+   * disk-size range (in MB). Agent-ui maps it to a VM disk filter; ui-app omits
+   * it. Called with `undefined` for the center-title click (no tier filter).
+   */
+  onDiskTierSelect?: (diskRange: { min: number; max?: number }) => void;
+  /** Center-title click. Agent-ui opens the VM list with no extra filters. */
+  onTitleClick?: () => void;
+  /** `"html"` in agent-ui; ui-app passes `"chart"`. */
+  legendVariant?: MigrationDonutChartLegendVariant;
 }
 
 type ViewMode = "totalSize" | "vmCount" | "vmCountByDiskType" | "sharedDisks";
@@ -60,6 +68,9 @@ const VIEW_MODE_LABELS: Record<ViewMode, string> = {
   sharedDisks: "Shared disks VS. No shared disks",
 };
 
+const CHART_ID = "storage-overview";
+const CHART_TITLE = "Storage";
+
 const TIER_CONFIG: Record<
   string,
   { order: number; label: string; legendCategory: string }
@@ -70,62 +81,10 @@ const TIER_CONFIG: Record<
   White: { order: 3, label: "> 50 TB", legendCategory: "White glove" },
 };
 
-type TierChartDatum = {
-  name: string;
-  count: number;
-  countDisplay: string;
-  legendCategory: string;
-  diskRange?: { min: number; max?: number };
-};
-
-function buildTierChartData(
-  summary: Record<string, DiskTierData>,
-  tierConfig: Record<
-    string,
-    { order: number; label: string; legendCategory: string }
-  >,
-  selector: (tier: DiskTierData) => {
-    count: number;
-    countDisplay: string;
-  },
-): TierChartDatum[] {
-  if (!summary) return [];
-
-  const getTierPrefix = (key: string): string | null => {
-    const normalizedKey = key.trim().toLowerCase();
-    for (const prefix of Object.keys(tierConfig)) {
-      if (normalizedKey.startsWith(prefix.toLowerCase())) {
-        return prefix;
-      }
-    }
-    return null;
-  };
-
-  return Object.entries(summary)
-    .map(([key, tier]) => {
-      const prefix = getTierPrefix(key);
-      const display = prefix
-        ? tierConfig[prefix]
-        : { label: key, legendCategory: key };
-      const { count, countDisplay } = selector(tier);
-      const label = display.label;
-      return {
-        name: label,
-        count,
-        countDisplay,
-        legendCategory: display.legendCategory,
-        diskRange:
-          parseDiskTierLabelToRange(key) ?? parseDiskTierLabelToRange(label),
-        sortOrder:
-          parseDiskTierLabelToRange(key)?.min ??
-          parseDiskTierLabelToRange(label)?.min ??
-          (prefix ? tierConfig[prefix].order : 999),
-      };
-    })
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map(({ sortOrder: _sortOrder, ...datum }) => datum);
-}
-
+/**
+ * Categorical order shared by the agent-ui and ui-app storage donuts, mapped
+ * onto PatternFly `chart_color_*` tokens.
+ */
 const COLOR_PALETTE = [
   chart_color_blue_300.value,
   chart_color_purple_300.value,
@@ -150,6 +109,153 @@ const SHARED_DISKS_COLORS: Record<string, string> = {
   "No shared disks": chart_color_blue_300.value,
 };
 
+const DISK_TYPE_PREFERRED_ORDER = ["VMFS", "NFS", "vSAN", "RDM", "vVols"];
+
+// --- Disk-tier label parsing (self-contained copy so the shared card does not
+// depend on agent-ui internals). Used for both tier ordering and drill-down. ---
+
+const MB_IN_GIB = 1024;
+const MB_IN_TIB = 1024 * 1024;
+
+const diskSizeRanges = [
+  { label: "0-100GiB", min: 0, max: 100 * MB_IN_GIB },
+  { label: "100-500GiB", min: 100 * MB_IN_GIB, max: 500 * MB_IN_GIB },
+  { label: "500GiB-1TiB", min: 500 * MB_IN_GIB, max: MB_IN_TIB },
+  { label: "1-2TiB", min: MB_IN_TIB, max: 2 * MB_IN_TIB },
+  { label: "2-5TiB", min: 2 * MB_IN_TIB, max: 5 * MB_IN_TIB },
+];
+
+const legacyDiskSizeRanges = [
+  { label: "0-10 TB", min: 0, max: 10 * MB_IN_TIB },
+  { label: "11-20 TB", min: 10 * MB_IN_TIB + 1, max: 20 * MB_IN_TIB },
+  { label: "21-50 TB", min: 20 * MB_IN_TIB + 1, max: 50 * MB_IN_TIB },
+  { label: "50+ TB", min: 50 * MB_IN_TIB + 1, max: undefined },
+];
+
+const sizeValueToMB = (value: string, unit: string): number => {
+  const amount = Number.parseFloat(value);
+  if (!Number.isFinite(amount)) {
+    return Number.NaN;
+  }
+  switch (unit.toLowerCase()) {
+    case "gib":
+    case "gb":
+      return amount * MB_IN_GIB;
+    case "tib":
+    case "tb":
+      return amount * MB_IN_TIB;
+    case "mib":
+    case "mb":
+      return amount;
+    default:
+      return Number.NaN;
+  }
+};
+
+/** Parses inventory disk tier labels (GiB/TiB or legacy TB buckets) into MB ranges. */
+const parseDiskTierLabelToRange = (
+  label: string,
+): { min: number; max?: number } | undefined => {
+  const normalized = label.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  const predefined =
+    diskSizeRanges.find((range) => range.label === normalized) ??
+    legacyDiskSizeRanges.find(
+      (range) =>
+        range.label === normalized ||
+        (normalized === "> 50 TB" && range.label === "50+ TB"),
+    );
+  if (predefined) {
+    return { min: predefined.min, max: predefined.max };
+  }
+
+  const mixedUnitRange =
+    /^(\d+(?:\.\d+)?)\s*(GiB|TiB|GB|TB|MIB|MB)\s*-\s*(\d+(?:\.\d+)?)\s*(GiB|TiB|GB|TB|MIB|MB)$/i.exec(
+      normalized,
+    );
+  if (mixedUnitRange) {
+    const min = sizeValueToMB(mixedUnitRange[1], mixedUnitRange[2]);
+    const max = sizeValueToMB(mixedUnitRange[3], mixedUnitRange[4]);
+    if (Number.isFinite(min) && Number.isFinite(max)) {
+      return { min: Math.floor(min), max: Math.floor(max) };
+    }
+  }
+
+  const singleUnitRange =
+    /^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*(GiB|TiB|GB|TB|MIB|MB)$/i.exec(
+      normalized,
+    );
+  if (singleUnitRange) {
+    const min = sizeValueToMB(singleUnitRange[1], singleUnitRange[3]);
+    const max = sizeValueToMB(singleUnitRange[2], singleUnitRange[3]);
+    if (Number.isFinite(min) && Number.isFinite(max)) {
+      return { min: Math.floor(min), max: Math.floor(max) };
+    }
+  }
+
+  const openEndedRange =
+    /^(\d+(?:\.\d+)?)\s*(GiB|TiB|GB|TB|MIB|MB)?\s*\+$/i.exec(normalized);
+  if (openEndedRange) {
+    const unit = openEndedRange[2] || "TB";
+    const min = sizeValueToMB(openEndedRange[1], unit);
+    if (Number.isFinite(min)) {
+      const minMB = Math.floor(min);
+      return { min: minMB > 0 ? minMB + 1 : minMB, max: undefined };
+    }
+  }
+
+  return undefined;
+};
+
+const buildTierChartData = (
+  summary: Record<string, StorageDiskTierData> | undefined,
+  selector: (tier: StorageDiskTierData) => {
+    count: number;
+    countDisplay: string;
+  },
+): MigrationDonutChartDatum[] => {
+  if (!summary) {
+    return [];
+  }
+
+  const getTierPrefix = (key: string): string | null => {
+    const normalizedKey = key.trim().toLowerCase();
+    for (const prefix of Object.keys(TIER_CONFIG)) {
+      if (normalizedKey.startsWith(prefix.toLowerCase())) {
+        return prefix;
+      }
+    }
+    return null;
+  };
+
+  return Object.entries(summary)
+    .map(([key, tier]) => {
+      const prefix = getTierPrefix(key);
+      const display = prefix
+        ? TIER_CONFIG[prefix]
+        : { label: key, legendCategory: key };
+      const { count, countDisplay } = selector(tier);
+      const label = display.label;
+      return {
+        name: label,
+        count,
+        countDisplay,
+        legendCategory: display.legendCategory,
+        diskRange:
+          parseDiskTierLabelToRange(key) ?? parseDiskTierLabelToRange(label),
+        sortOrder:
+          parseDiskTierLabelToRange(key)?.min ??
+          parseDiskTierLabelToRange(label)?.min ??
+          (prefix ? TIER_CONFIG[prefix].order : 999),
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(({ sortOrder: _sortOrder, ...datum }) => datum);
+};
+
 const getContrastColor = (hexColor: string): string => {
   const hex = hexColor.replace("#", "");
   const r = Number.parseInt(hex.substring(0, 2), 16);
@@ -164,23 +270,14 @@ interface DiskTypeBarChartProps {
   colors: string[];
 }
 
-const DiskTypeBarChart: React.FC<DiskTypeBarChartProps> = ({
-  data,
-  colors,
-}) => {
-  const maxCount = useMemo(() => {
-    return data.length > 0 ? Math.max(...data.map((d) => d.count)) : 0;
-  }, [data]);
+const DiskTypeBarChart: FC<DiskTypeBarChartProps> = ({ data, colors }) => {
+  const maxCount = useMemo(
+    () => (data.length > 0 ? Math.max(...data.map((d) => d.count)) : 0),
+    [data],
+  );
 
   if (data.length === 0) {
-    return (
-      <AppEmptyState
-        titleText="No data available"
-        icon={InboxIcon}
-        variant={EmptyStateVariant.xs}
-        wrapInBullseye={false}
-      />
-    );
+    return <CardEmptyState title={REPORT_CARD_EMPTY_STATE_TITLES.diskTypes} />;
   }
 
   return (
@@ -268,47 +365,58 @@ const DiskTypeBarChart: React.FC<DiskTypeBarChartProps> = ({
   );
 };
 
-export const StorageOverview: React.FC<StorageOverviewProps> = ({
+const isViewMode = (value: string | number | undefined): value is ViewMode =>
+  value === "totalSize" ||
+  value === "vmCount" ||
+  value === "vmCountByDiskType" ||
+  value === "sharedDisks";
+
+export const StorageOverview: FC<StorageOverviewProps> = ({
   diskSizeTier = {},
   diskTypes = {},
   totalVMs,
   totalWithSharedDisks,
-  onNavigateToVMFilters,
+  onDiskTierSelect,
+  onTitleClick,
+  legendVariant = "html",
 }) => {
-  const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
   const [viewMode, setViewMode] = useState<ViewMode>("vmCount");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const totals = useMemo(() => {
-    if (!diskSizeTier) return { totalSize: 0, totalVMs: 0 };
+  const totals = useMemo(
+    () =>
+      Object.values(diskSizeTier).reduce(
+        (acc, tier) => ({
+          totalSize: acc.totalSize + (tier?.totalSizeTB || 0),
+          totalVMs: acc.totalVMs + (tier?.vmCount || 0),
+        }),
+        { totalSize: 0, totalVMs: 0 },
+      ),
+    [diskSizeTier],
+  );
 
-    return Object.values(diskSizeTier).reduce(
-      (acc, tier) => ({
-        totalSize: acc.totalSize + (tier?.totalSizeTB || 0),
-        totalVMs: acc.totalVMs + (tier?.vmCount || 0),
+  const chartData = useMemo(
+    () =>
+      buildTierChartData(diskSizeTier, (tier) => {
+        const count =
+          viewMode === "totalSize"
+            ? tier?.totalSizeTB || 0
+            : tier?.vmCount || 0;
+        return {
+          count,
+          countDisplay:
+            viewMode === "totalSize" ? `${count.toFixed(2)}` : `${count}`,
+        };
       }),
-      { totalSize: 0, totalVMs: 0 },
-    );
-  }, [diskSizeTier]);
-
-  const chartData = useMemo(() => {
-    if (!diskSizeTier) return [];
-    return buildTierChartData(diskSizeTier, TIER_CONFIG, (tier) => {
-      const count =
-        viewMode === "totalSize" ? tier?.totalSizeTB || 0 : tier?.vmCount || 0;
-      return {
-        count,
-        countDisplay:
-          viewMode === "totalSize" ? `${count.toFixed(2)}` : `${count}`,
-      };
-    });
-  }, [diskSizeTier, viewMode]);
+    [diskSizeTier, viewMode],
+  );
 
   const diskTypeChartData = useMemo(() => {
-    if (!diskTypes || Object.keys(diskTypes).length === 0) return [];
-    const preferredOrder = ["VMFS", "NFS", "vSAN", "RDM", "vVols"];
+    if (Object.keys(diskTypes).length === 0) {
+      return [];
+    }
     const orderIndex = (name: string): number => {
-      const idx = preferredOrder.indexOf(name);
+      const idx = DISK_TYPE_PREFERRED_ORDER.indexOf(name);
       return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
     };
     return Object.entries(diskTypes)
@@ -324,8 +432,9 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
       totalWithSharedDisks === undefined ||
       totalVMs === undefined ||
       totalWithSharedDisks === 0
-    )
+    ) {
       return null;
+    }
     const withSharedDisks = Math.min(totalWithSharedDisks, totalVMs);
     const withoutSharedDisks = Math.max(0, totalVMs - withSharedDisks);
     return [
@@ -347,72 +456,46 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
   const tierLegend = useMemo(() => {
     const legendMap: Record<string, string> = {};
     chartData.forEach((slice, idx) => {
-      legendMap[slice.legendCategory] =
-        COLOR_PALETTE[idx % COLOR_PALETTE.length];
+      const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+      if (color) {
+        legendMap[slice.legendCategory] = color;
+      }
     });
     return legendMap;
   }, [chartData]);
 
-  const commonDonutProps = useMemo(
-    () => ({
-      height: 300,
-      width: 420,
-      donutThickness: 18,
-      titleFontSize: 34,
-      subTitleColor: "#9a9da0",
-    }),
-    [],
-  );
-
-  const onDropdownToggle = (): void => {
-    setIsDropdownOpen(!isDropdownOpen);
+  const commonDonutProps = {
+    height: 300,
+    width: 420,
+    donutThickness: 18,
+    titleFontSize: 34,
+    subTitleColor: "var(--pf-t--global--text--color--subtle)",
+    legendVariant,
   };
 
-  const onSelect = (
-    _event: React.MouseEvent<Element, MouseEvent> | undefined,
-    value: string | number | undefined,
-  ): void => {
-    if (
-      value === "totalSize" ||
-      value === "vmCount" ||
-      value === "vmCountByDiskType" ||
-      value === "sharedDisks"
-    ) {
-      setViewMode(value);
-    }
-    setIsDropdownOpen(false);
-  };
-
-  const handleDiskTierClick = (item: {
-    name: string;
-    legendCategory?: string;
-    diskRange?: { min: number; max?: number };
-  }) => {
+  const handleDiskTierClick = (item: MigrationDonutChartDatum): void => {
     const diskRange =
       item.diskRange ??
       parseDiskTierLabelToRange(item.name) ??
-      (item.legendCategory
-        ? parseDiskTierLabelToRange(item.legendCategory)
-        : undefined);
+      parseDiskTierLabelToRange(item.legendCategory);
     if (diskRange) {
-      navigateToVMs({ diskRange });
+      onDiskTierSelect?.(diskRange);
     }
   };
 
-  const handleTitleClick = () => {
-    navigateToVMs({});
-  };
-
-  const chartId = "storage-overview";
-  const chartTitle = `Storage — ${VIEW_MODE_LABELS[viewMode]}`;
+  const chartTitle = `${CHART_TITLE} — ${VIEW_MODE_LABELS[viewMode]}`;
 
   return (
     <ChartExportSurface
-      id={chartId}
+      id={CHART_ID}
       title={chartTitle}
-      exportViews={chartExportViewsFromLabels("Storage", VIEW_MODE_LABELS)}
+      exportViews={chartExportViewsFromLabels(CHART_TITLE, VIEW_MODE_LABELS)}
       activeExportViewId={viewMode}
-      onExportViewChange={(viewId) => setViewMode(viewId as ViewMode)}
+      onExportViewChange={(viewId) => {
+        if (isViewMode(viewId)) {
+          setViewMode(viewId);
+        }
+      }}
     >
       <Card
         className={`${dashboardStyles.card} ${dashboardStyles.storageCardOverflowHidden}`}
@@ -426,15 +509,20 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
             <FlexItem>
               <DatabaseIcon /> Disks
             </FlexItem>
-            <ChartHeaderActions chartId={chartId} title={chartTitle}>
+            <ChartHeaderActions chartId={CHART_ID} title={chartTitle}>
               <Dropdown
                 isOpen={isDropdownOpen}
-                onSelect={onSelect}
-                onOpenChange={(isOpen: boolean) => setIsDropdownOpen(isOpen)}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                onSelect={(_event, value) => {
+                  if (isViewMode(value)) {
+                    setViewMode(value);
+                  }
+                  setIsDropdownOpen(false);
+                }}
+                onOpenChange={setIsDropdownOpen}
+                toggle={(toggleRef: Ref<MenuToggleElement>) => (
                   <MenuToggle
                     ref={toggleRef}
-                    onClick={onDropdownToggle}
+                    onClick={() => setIsDropdownOpen((open) => !open)}
                     isExpanded={isDropdownOpen}
                     className={dashboardStyles.storageMenuToggleMinWidth}
                   >
@@ -444,16 +532,16 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
               >
                 <DropdownList>
                   <DropdownItem key="vmCount" value="vmCount">
-                    VM count by disk size tier
+                    {VIEW_MODE_LABELS.vmCount}
                   </DropdownItem>
                   <DropdownItem
                     key="vmCountByDiskType"
                     value="vmCountByDiskType"
                   >
-                    VM count by disk type
+                    {VIEW_MODE_LABELS.vmCountByDiskType}
                   </DropdownItem>
                   <DropdownItem key="totalSize" value="totalSize">
-                    Total disk size by tier
+                    {VIEW_MODE_LABELS.totalSize}
                   </DropdownItem>
                   <DropdownItem
                     key="sharedDisks"
@@ -463,7 +551,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                       totalWithSharedDisks === 0
                     }
                   >
-                    Shared disks VS. No shared disks
+                    {VIEW_MODE_LABELS.sharedDisks}
                   </DropdownItem>
                 </DropdownList>
               </Dropdown>
@@ -493,20 +581,10 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                 }
               />
             ) : (
-              <AppEmptyState
-                titleText="No data available"
-                icon={InboxIcon}
-                variant={EmptyStateVariant.xs}
-                wrapInBullseye={false}
-              />
+              <CardEmptyState title={REPORT_CARD_EMPTY_STATE_TITLES.storage} />
             )
           ) : chartData.length === 0 ? (
-            <AppEmptyState
-              titleText="No data available"
-              icon={InboxIcon}
-              variant={EmptyStateVariant.xs}
-              wrapInBullseye={false}
-            />
+            <CardEmptyState title={REPORT_CARD_EMPTY_STATE_TITLES.storage} />
           ) : (
             <MigrationDonutChart
               {...commonDonutProps}
@@ -539,7 +617,7 @@ export const StorageOverview: React.FC<StorageOverviewProps> = ({
                   ? handleDiskTierClick
                   : undefined
               }
-              onTitleClick={handleTitleClick}
+              onTitleClick={onTitleClick}
             />
           )}
         </CardBody>
