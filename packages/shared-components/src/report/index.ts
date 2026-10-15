@@ -212,6 +212,11 @@ export {
   type VCenterClusterDetailsProps,
 } from "./VCenterClusterDetails.js";
 export {
+  type IssuesBreakdownLike,
+  VMMigrationStatus,
+  type VMMigrationStatusProps,
+} from "./VMMigrationStatus.js";
+export {
   VmPowerStates,
   type VmPowerStatesProps,
 } from "./VmPowerStates.js";

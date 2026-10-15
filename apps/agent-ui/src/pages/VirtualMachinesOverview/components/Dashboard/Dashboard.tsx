@@ -19,6 +19,7 @@ import {
   type OSDistributionEntry,
   StorageOverview,
   VCenterClusterDetails,
+  VMMigrationStatus,
   VmPowerStates,
   WarningsTable,
 } from "@openshift-migration-advisor/shared-components";
@@ -32,7 +33,6 @@ import {
   useChartDrillDown,
 } from "../VirtualMachinesTab/vmNavigation";
 import { parseMemoryTierLabelToRange } from "../VirtualMachinesTab/vmTableShared";
-import { VMMigrationStatus } from "./VMMigrationStatus";
 
 interface DashboardProps {
   infra: Infra;
@@ -134,6 +134,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleStorageTitleClick = useCallback(() => {
     navigateToVMs({});
   }, [navigateToVMs]);
+  const handleReadinessSelect = useCallback(
+    (isMigratable: boolean) => {
+      navigateToVMs({
+        migrationReadiness: isMigratable ? ["ready"] : ["not-ready"],
+      });
+    },
+    [navigateToVMs],
+  );
+  const handleConcernCategorySelect = useCallback(
+    (category: string) => {
+      navigateToVMs({ concernCategories: [category] });
+    },
+    [navigateToVMs],
+  );
+  const handleMigrationStatusTitleClick = useCallback(() => {
+    navigateToVMs({});
+  }, [navigateToVMs]);
 
   if (!clusterFound && !isAggregateView) {
     return (
@@ -183,7 +200,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 ),
               }}
               issuesBreakdown={vms.issuesBreakdown}
-              onNavigateToVMFilters={onNavigateToVMFilters}
+              onReadinessSelect={handleReadinessSelect}
+              onCategorySelect={handleConcernCategorySelect}
+              onTitleClick={handleMigrationStatusTitleClick}
             />
           </GalleryItem>
           <GalleryItem>
