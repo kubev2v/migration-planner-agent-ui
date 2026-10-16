@@ -1,0 +1,510 @@
+import {
+  Alert,
+  Breadcrumb,
+  BreadcrumbItem,
+  Content,
+  ContentVariants,
+  Dropdown,
+  DropdownItem,
+  DropdownList,
+  Flex,
+  FlexItem,
+  MenuToggle,
+  type MenuToggleElement,
+  PageSection,
+  Select,
+  SelectList,
+  SelectOption,
+  Spinner,
+  Stack,
+  StackItem,
+  Tab,
+  TabContent,
+  TabContentBody,
+  Tabs,
+  TabTitleText,
+  Title,
+} from "@patternfly/react-core";
+import { InboxIcon } from "@patternfly/react-icons";
+import type React from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import { getAgentApiClient } from "../../api/agentApiClient";
+import { AppEmptyState } from "../../common/components";
+import {
+  useDeleteGroupMutation,
+  useGetGroupQuery,
+  useGetGroupVMsQuery,
+  useUpdateGroupNameMutation,
+} from "../../store/api/groupsEndpoints";
+import { useGetVMFilterOptionsQuery } from "../../store/api/vmsEndpoints";
+import {
+  buildClusterViewModel,
+  type ClusterOption,
+  getFleetHeaderCounts,
+} from "../VirtualMachinesOverview/clusterView";
+import { Dashboard } from "../VirtualMachinesOverview/components/Dashboard/Dashboard";
+import { VirtualMachinesView } from "../VirtualMachinesOverview/components/VirtualMachinesTab/VirtualMachinesView";
+import {
+  buildScopedVmByExpression,
+  clusterSelectionExpression,
+  filtersToSearchParams,
+  hasActiveFilters,
+  searchParamsToFilters,
+  type VMFilters,
+} from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmFilters";
+import {
+  vmsTabContentBodyStyle,
+  vmsTabContentStyle,
+  vmsTabsStackItemStyle,
+} from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmTableShared";
+import type { VMTableFilterOptions } from "../VirtualMachinesOverview/components/VirtualMachinesTab/vmTableTypes";
+import { Header } from "../VirtualMachinesOverview/Header";
+import {
+  getInventoryAggregateView,
+  inventoryFromGroupResponse,
+} from "../VirtualMachinesOverview/inventoryParsing";
+import {
+  buildOverviewTabUrl,
+  buildVmsTabUrl,
+  clearVmFilterParams,
+  REPORT_TAB,
+  reportTabToParam,
+  resolveReportTab,
+} from "../VirtualMachinesOverview/reportTabNavigation";
+import { normalizeVirtualMachines } from "../VirtualMachinesOverview/virtualMachineParsing";
+import { DeleteGroupModal } from "./components/modals/DeleteGroupModal";
+import { EditGroupNameModal } from "./components/modals/EditGroupNameModal";
+import { combineFilterExpressions } from "./utils/groupFilters";
+
+const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
+  clusters: [],
+  datacenters: [],
+  concernLabels: [],
+  concernCategories: [],
+  vmLabels: [],
+  groups: [],
+};
+
+/** Extract a human-readable message from an RTK Query / SDK error. */
+function getGroupErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const candidate = error as { status?: number; message?: string };
+    if (candidate.status === 404) {
+      return "Group not found.";
+    }
+    if (typeof candidate.message === "string") {
+      return candidate.message;
+    }
+  }
+  return "Failed to load group.";
+}
+
+export const GroupDetailPage: React.FC = () => {
+  const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
+  const agentApi = getAgentApiClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
+  const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const [vmsPage, setVmsPage] = useState(1);
+  const [vmsPageSize, setVmsPageSize] = useState(20);
+  const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
+
+  const overviewTabRef = useRef<HTMLElement>(null);
+  const vmsTabRef = useRef<HTMLElement>(null);
+
+  const initialVMFilters = useMemo(
+    () => searchParamsToFilters(searchParams),
+    [searchParams],
+  );
+
+  const activeTab: string | number = resolveReportTab(
+    searchParams,
+    hasActiveFilters(initialVMFilters),
+  );
+
+  // --- Group (header source) ------------------------------------------------
+  // The GroupResponse carries `inventory`, `total` and `group`; the header VM
+  // count derives from this single cache entry.
+  const {
+    data: groupData,
+    isLoading: loading,
+    error: groupError,
+  } = useGetGroupQuery({ groupId: groupId ?? "" }, { skip: !groupId });
+
+  const group = groupData?.group ?? null;
+  const groupFilter = group?.filter;
+  const inventory = useMemo(
+    () => inventoryFromGroupResponse(groupData ?? {}),
+    [groupData],
+  );
+
+  // --- Group VMs (table source) --------------------------------------------
+  const clusterScopeId = useMemo(() => {
+    if (!inventory) {
+      return "all";
+    }
+    const aggregateView = getInventoryAggregateView(inventory);
+    return buildClusterViewModel({
+      infra: aggregateView.infra,
+      vms: aggregateView.vms,
+      clusters: aggregateView.clusters,
+      selectedClusterId,
+    }).selectionId;
+  }, [inventory, selectedClusterId]);
+
+  const { data: filterOptionsData } = useGetVMFilterOptionsQuery(undefined, {
+    skip: activeTab !== REPORT_TAB.vms,
+  });
+  const availableFilterOptions = filterOptionsData ?? EMPTY_FILTER_OPTIONS;
+
+  const byExpression = useMemo(
+    () => buildScopedVmByExpression(initialVMFilters, clusterScopeId),
+    [initialVMFilters, clusterScopeId],
+  );
+  const clusterScopeExpression = clusterSelectionExpression(clusterScopeId);
+
+  const { data: vmsData, isFetching: vmsLoading } = useGetGroupVMsQuery(
+    {
+      groupId: groupId ?? "",
+      groupFilter,
+      byExpression,
+      sort: vmsSortFields,
+      page: vmsPage,
+      pageSize: vmsPageSize,
+    },
+    {
+      skip: activeTab !== REPORT_TAB.vms || !groupId || !groupFilter,
+    },
+  );
+
+  const vmsList = useMemo(
+    () => normalizeVirtualMachines(vmsData?.virtualMachines ?? []),
+    [vmsData],
+  );
+  const vmsTotalCount = vmsData?.total ?? 0;
+
+  const handleNavigateToVMFilters = useCallback(
+    (filters: VMFilters) => {
+      setVmsPage(1);
+      const newParams = filtersToSearchParams(filters);
+      newParams.set("tab", "vms");
+      setSearchParams(newParams, { replace: true });
+    },
+    [setSearchParams],
+  );
+
+  const [updateGroupName] = useUpdateGroupNameMutation();
+  const [deleteGroup] = useDeleteGroupMutation();
+
+  const handleTabSelect = (
+    _event: React.MouseEvent<HTMLElement, MouseEvent>,
+    tabIndex: string | number,
+  ) => {
+    let newParams: URLSearchParams;
+    if (tabIndex === REPORT_TAB.vms) {
+      newParams = buildVmsTabUrl(searchParams);
+      setVmsPage(1);
+    } else {
+      newParams = buildOverviewTabUrl(searchParams);
+    }
+    setSearchParams(newParams, { replace: true });
+  };
+
+  const handleConcernClick = useCallback(
+    (concernLabel: string) => {
+      handleNavigateToVMFilters({ concernLabels: [concernLabel] });
+    },
+    [handleNavigateToVMFilters],
+  );
+
+  const handleClusterSelect = (
+    _event: React.MouseEvent<Element, MouseEvent> | undefined,
+    value: string | number | undefined,
+  ): void => {
+    if (typeof value === "string") {
+      setSelectedClusterId(value);
+      setVmsPage(1);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("tab", reportTabToParam(activeTab));
+      newParams.delete("vmId");
+      clearVmFilterParams(newParams);
+      setSearchParams(newParams, { replace: true });
+    }
+    setIsClusterSelectOpen(false);
+  };
+
+  const handleUpdateGroupName = async (name: string) => {
+    if (!group) {
+      return;
+    }
+    await updateGroupName({ groupId: group.id, name }).unwrap();
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!group) {
+      return;
+    }
+    await deleteGroup({ groupId: group.id }).unwrap();
+    navigate("/report/groups");
+  };
+
+  if (loading) {
+    return (
+      <PageSection hasBodyWrapper={false} isFilled>
+        <AppEmptyState
+          titleText="Loading group"
+          icon={Spinner}
+          bullseyeStyle={{ minHeight: "240px" }}
+        />
+      </PageSection>
+    );
+  }
+
+  if (!group) {
+    const message = groupId
+      ? getGroupErrorMessage(groupError)
+      : "Group not found.";
+    return (
+      <PageSection hasBodyWrapper={false} isFilled>
+        <Alert variant="danger" title="Unable to load group">
+          {message}
+        </Alert>
+        <Link to="/report/groups">Back to groups</Link>
+      </PageSection>
+    );
+  }
+
+  const aggregateView = getInventoryAggregateView(inventory);
+  const clusterView = buildClusterViewModel({
+    infra: aggregateView.infra,
+    vms: aggregateView.vms,
+    clusters: aggregateView.clusters,
+    selectedClusterId,
+  });
+  const { totalVMs, totalClusters } = getFleetHeaderCounts(aggregateView);
+
+  const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
+  return (
+    <PageSection hasBodyWrapper={false} isFilled>
+      <Stack hasGutter>
+        <StackItem>
+          <Breadcrumb>
+            <BreadcrumbItem>
+              <Link to="/report/groups">Groups</Link>
+            </BreadcrumbItem>
+            <BreadcrumbItem isActive>{group.name}</BreadcrumbItem>
+          </Breadcrumb>
+        </StackItem>
+
+        <StackItem>
+          <Flex
+            justifyContent={{ default: "justifyContentSpaceBetween" }}
+            alignItems={{ default: "alignItemsFlexStart" }}
+            gap={{ default: "gapMd" }}
+          >
+            <FlexItem>
+              <Content component={ContentVariants.h1}>{group.name}</Content>
+            </FlexItem>
+            <FlexItem>
+              <Dropdown
+                isOpen={isActionsOpen}
+                onOpenChange={setIsActionsOpen}
+                onSelect={() => setIsActionsOpen(false)}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                  <MenuToggle
+                    ref={toggleRef}
+                    onClick={() => setIsActionsOpen((open) => !open)}
+                    isExpanded={isActionsOpen}
+                  >
+                    Actions
+                  </MenuToggle>
+                )}
+                popperProps={{ position: "right" }}
+              >
+                <DropdownList>
+                  <DropdownItem
+                    key="edit"
+                    onClick={() => {
+                      setIsEditModalOpen(true);
+                      setIsActionsOpen(false);
+                    }}
+                  >
+                    Edit group name
+                  </DropdownItem>
+                  <DropdownItem
+                    key="delete"
+                    onClick={() => {
+                      setIsDeleteModalOpen(true);
+                      setIsActionsOpen(false);
+                    }}
+                  >
+                    Delete group
+                  </DropdownItem>
+                </DropdownList>
+              </Dropdown>
+            </FlexItem>
+          </Flex>
+        </StackItem>
+
+        <StackItem>
+          <Header totalVMs={totalVMs} totalClusters={totalClusters} />
+        </StackItem>
+
+        <StackItem>
+          <Select
+            isScrollable
+            isOpen={isClusterSelectOpen}
+            selected={clusterView.selectionId}
+            onSelect={handleClusterSelect}
+            onOpenChange={(isOpen: boolean) => {
+              if (!clusterSelectDisabled) setIsClusterSelectOpen(isOpen);
+            }}
+            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+              <MenuToggle
+                ref={toggleRef}
+                isExpanded={isClusterSelectOpen}
+                onClick={() => {
+                  if (!clusterSelectDisabled) {
+                    setIsClusterSelectOpen((prev) => !prev);
+                  }
+                }}
+                isDisabled={clusterSelectDisabled}
+                style={{ minWidth: "422px" }}
+              >
+                {clusterView.selectionLabel}
+              </MenuToggle>
+            )}
+          >
+            <SelectList>
+              {clusterView.clusterOptions.map((option: ClusterOption) => (
+                <SelectOption key={option.id} value={option.id}>
+                  {option.label}
+                </SelectOption>
+              ))}
+            </SelectList>
+          </Select>
+        </StackItem>
+
+        <StackItem isFilled className={vmsTabsStackItemStyle}>
+          <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
+            <Tab
+              eventKey={REPORT_TAB.overview}
+              title={<TabTitleText>Assessment report</TabTitleText>}
+              tabContentId="group-tab-overview"
+              tabContentRef={overviewTabRef}
+            />
+            <Tab
+              eventKey={REPORT_TAB.vms}
+              title={<TabTitleText>Virtual machines</TabTitleText>}
+              tabContentId="group-tab-vms"
+              tabContentRef={vmsTabRef}
+            />
+          </Tabs>
+
+          {/* TabsContent */}
+          <TabContent
+            eventKey={REPORT_TAB.overview}
+            id="group-tab-overview"
+            ref={overviewTabRef}
+            hidden={activeTab !== REPORT_TAB.overview}
+          >
+            <TabContentBody hasPadding>
+              <Title headingLevel="h2" size="lg">
+                Report for {group.name} group
+              </Title>
+              <Content component="p">
+                This report is based on all the virtual machines inside this
+                group, except those marked as excluded from reports.
+              </Content>
+              {clusterView.viewInfra && clusterView.viewVms ? (
+                <Dashboard
+                  key={`group-assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
+                  infra={clusterView.viewInfra}
+                  cpuCores={clusterView.cpuCores}
+                  ramGB={clusterView.ramGB}
+                  vms={clusterView.viewVms}
+                  clusters={clusterView.viewClusters}
+                  vcenterVersion={inventory?.vcenter_version}
+                  vcenterId={inventory?.vcenter_id}
+                  isAggregateView={clusterView.isAggregateView}
+                  clusterFound={clusterView.clusterFound}
+                  onConcernClick={handleConcernClick}
+                  onNavigateToVMFilters={handleNavigateToVMFilters}
+                />
+              ) : (
+                <AppEmptyState
+                  titleText="No assessment data is available for this group yet"
+                  body="Assessment data will appear here once virtual machines in this group have been inventoried."
+                  icon={InboxIcon}
+                  bullseyeStyle={{ minHeight: "240px", marginTop: "16px" }}
+                />
+              )}
+            </TabContentBody>
+          </TabContent>
+
+          <TabContent
+            eventKey={REPORT_TAB.vms}
+            id="group-tab-vms"
+            ref={vmsTabRef}
+            hidden={activeTab !== REPORT_TAB.vms}
+            className={vmsTabContentStyle}
+          >
+            <TabContentBody hasPadding className={vmsTabContentBodyStyle}>
+              <VirtualMachinesView
+                key={`group-vms-${clusterView.selectionId}`}
+                vms={vmsList}
+                loading={vmsLoading}
+                initialFilters={initialVMFilters}
+                totalVMs={vmsTotalCount}
+                currentPage={vmsPage}
+                pageSize={vmsPageSize}
+                onFiltersChange={() => setVmsPage(1)}
+                onPageChange={(page, pageSize) => {
+                  setVmsPage(page);
+                  setVmsPageSize(pageSize);
+                }}
+                onSortChange={setVmsSortFields}
+                availableFilterOptions={availableFilterOptions}
+                agentApi={agentApi}
+                groupContext={{ id: group.id, name: group.name }}
+                scopedFilterExpression={combineFilterExpressions(
+                  group.filter,
+                  clusterScopeExpression,
+                )}
+                sortFields={vmsSortFields}
+              />
+            </TabContentBody>
+          </TabContent>
+        </StackItem>
+      </Stack>
+
+      <EditGroupNameModal
+        isOpen={isEditModalOpen}
+        group={group}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleUpdateGroupName}
+      />
+
+      <DeleteGroupModal
+        isOpen={isDeleteModalOpen}
+        group={group}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteGroup}
+      />
+    </PageSection>
+  );
+};
+
+GroupDetailPage.displayName = "GroupDetailPage";
