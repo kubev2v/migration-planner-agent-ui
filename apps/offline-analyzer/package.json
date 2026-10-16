@@ -1,0 +1,42 @@
+{
+  "name": "@openshift-migration-advisor/offline-analyzer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "yarn run -T vite --host 127.0.0.1 --port 3002",
+    "build": "yarn run -T tsc -b && yarn run -T vite build",
+    "bundle": "yarn build && yarn pack --out ../../out/%s-%v.tgz",
+    "clean": "rm -rf node_modules dist .tmp",
+    "preview": "yarn run -T vite preview --host 127.0.0.1 --port 4002",
+    "check": "yarn run -T biome check .",
+    "check:fix": "yarn run -T biome check --write .",
+    "test": "yarn run -T vitest run",
+    "test:watch": "yarn run -T vitest watch"
+  },
+  "dependencies": {
+    "@emotion/css": "^11.13.5",
+    "@hookform/resolvers": "^5.9.1",
+    "@openshift-migration-advisor/agent-sdk": "0.24.0-96217627668a",
+    "@openshift-migration-advisor/shared-components": "workspace:*",
+    "@patternfly/react-core": "^6.6.1",
+    "@patternfly/react-icons": "^6.6.1",
+    "@patternfly/react-table": "^6.6.1",
+    "@reduxjs/toolkit": "^2.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.89.0",
+    "react-redux": "^9.3.0",
+    "react-router-dom": "^7.18.4",
+    "yup": "^1.7.1"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7"
+  },
+  "files": [
+    "dist"
+  ]
+}

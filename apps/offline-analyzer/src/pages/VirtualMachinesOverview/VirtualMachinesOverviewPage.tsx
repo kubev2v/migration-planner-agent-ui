@@ -1,0 +1,489 @@
+import { ChartExportProvider } from "@openshift-migration-advisor/shared-components";
+import {
+  Alert,
+  Content,
+  MenuToggle,
+  type MenuToggleElement,
+  PageSection,
+  Select,
+  SelectList,
+  SelectOption,
+  Stack,
+  StackItem,
+  Tab,
+  TabContent,
+  TabContentBody,
+  Tabs,
+  TabTitleText,
+} from "@patternfly/react-core";
+import { InboxIcon } from "@patternfly/react-icons";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { getAgentApiClient } from "../../api/agentApiClient";
+import { AppEmptyState } from "../../common/components/index";
+import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
+import {
+  useGetClusterUtilizationQuery,
+  useGetInventoryQuery,
+  useGetVMFilterOptionsQuery,
+  useGetVMsQuery,
+} from "../../store/api/vmsEndpoints";
+import { getSdkErrorMessage } from "../../store/baseQuery";
+import {
+  buildClusterViewModel,
+  type ClusterOption,
+  getFleetHeaderCounts,
+} from "./clusterView";
+import { Dashboard } from "./components/Dashboard/Dashboard";
+import { ExportCsvModal } from "./components/Export/ExportCsvModal";
+import { useExportInventory } from "./components/Export/useExportInventory";
+import { VirtualMachinesView } from "./components/VirtualMachinesTab/VirtualMachinesView";
+import { VMUtilizationMetrics } from "./components/VirtualMachinesTab/VMUtilizationMetrics";
+import {
+  buildScopedVmByExpression,
+  clusterSelectionExpression,
+  filtersToSearchParams,
+  hasActiveFilters,
+  searchParamsToFilters,
+  type VMFilters,
+} from "./components/VirtualMachinesTab/vmFilters";
+import {
+  vmsTabContentBodyStyle,
+  vmsTabContentStyle,
+  vmsTabsStackItemStyle,
+} from "./components/VirtualMachinesTab/vmTableShared";
+import type { VMTableFilterOptions } from "./components/VirtualMachinesTab/vmTableTypes";
+import { Header } from "./Header";
+import { getInventoryAggregateView } from "./inventoryParsing";
+import { OverviewReportHeader, ReportPageHeader } from "./ReportPageHeader";
+import {
+  buildOverviewTabUrl,
+  buildVmsTabUrl,
+  clearVmFilterParams,
+  REPORT_TAB,
+  reportTabToParam,
+  resolveReportTab,
+} from "./reportTabNavigation";
+import { normalizeVirtualMachines } from "./virtualMachineParsing";
+
+const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
+  clusters: [],
+  datacenters: [],
+  concernLabels: [],
+  concernCategories: [],
+  vmLabels: [],
+};
+
+export const ReportContainer: React.FC = () => {
+  const agentApi = getAgentApiClient();
+  const { data: collections } = useListCollectionsQuery();
+  const hasCollectionData = (collections?.length ?? 0) > 0;
+  const newestCollectionId = collections?.[0]?.id;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
+  const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
+
+  // VM pagination state (client-only; the query keys on these values)
+  const [vmsPage, setVmsPage] = useState(1);
+  const [vmsPageSize, setVmsPageSize] = useState(20);
+  const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
+
+  const overviewTabRef = useRef<HTMLElement>(null);
+  const vmsTabRef = useRef<HTMLElement>(null);
+
+  const initialVMFilters = useMemo(
+    () => searchParamsToFilters(searchParams),
+    [searchParams],
+  );
+
+  const handleNavigateToVMFilters = useCallback(
+    (filters: VMFilters) => {
+      setVmsPage(1);
+      const newParams = filtersToSearchParams(filters);
+      newParams.set("tab", "vms");
+      setSearchParams(newParams, { replace: true });
+    },
+    [setSearchParams],
+  );
+
+  const activeTab: string | number = resolveReportTab(
+    searchParams,
+    hasActiveFilters(initialVMFilters),
+  );
+
+  // --- Server data (RTK Query) ---------------------------------------------
+  // The assessment inventory drives the dashboard, the header counts and the
+  // gating of the whole page (loading / error / no-inventory states).
+  const {
+    data: inventory,
+    isLoading: inventoryLoading,
+    error: inventoryError,
+  } = useGetInventoryQuery();
+
+  const clusterScopeId = useMemo(() => {
+    if (!inventory) {
+      return "all";
+    }
+    const aggregateView = getInventoryAggregateView(inventory);
+    return buildClusterViewModel({
+      infra: aggregateView.infra,
+      vms: aggregateView.vms,
+      clusters: aggregateView.clusters,
+      selectedClusterId,
+    }).selectionId;
+  }, [inventory, selectedClusterId]);
+
+  // Per-cluster usage stats only; there is no aggregate across clusters, so the
+  // query is skipped for the "all" scope. `currentData` (not `data`) is used so a
+  // previously selected cluster's value doesn't linger when switching scopes.
+  const { currentData: utilizationMetrics } = useGetClusterUtilizationQuery(
+    clusterScopeId,
+    { skip: clusterScopeId === "all" },
+  );
+
+  const { data: filterOptionsData } = useGetVMFilterOptionsQuery(undefined, {
+    skip: activeTab !== REPORT_TAB.vms || !inventory,
+  });
+  const availableFilterOptions = filterOptionsData ?? EMPTY_FILTER_OPTIONS;
+
+  const byExpression = useMemo(
+    () => buildScopedVmByExpression(initialVMFilters, clusterScopeId),
+    [initialVMFilters, clusterScopeId],
+  );
+  const clusterScopeExpression = clusterSelectionExpression(clusterScopeId);
+
+  const { data: vmsData, isFetching: vmsFetching } = useGetVMsQuery(
+    {
+      byExpression,
+      sort: vmsSortFields,
+      page: vmsPage,
+      pageSize: vmsPageSize,
+    },
+    { skip: activeTab !== REPORT_TAB.vms },
+  );
+  const vmsList = useMemo(
+    () => normalizeVirtualMachines(vmsData?.virtualMachines),
+    [vmsData],
+  );
+  const vmsTotalCount = vmsData?.total ?? 0;
+
+  // A completed report invalidates the inventory/VM caches through the
+  // collection-completion listener (see
+  // `store/listeners/vmsInvalidationListeners.ts`), so the queries above refetch
+  // on their own. The page only needs to reset its client-side pagination back
+  // to the first page when a newer collection replaces the current one.
+  const [pagedCollectionId, setPagedCollectionId] = useState<
+    string | undefined
+  >(newestCollectionId);
+  useEffect(() => {
+    if (newestCollectionId !== pagedCollectionId) {
+      setPagedCollectionId(newestCollectionId);
+      setVmsPage(1);
+    }
+  }, [newestCollectionId, pagedCollectionId]);
+
+  const {
+    isExportModalOpen,
+    showExport,
+    exportError,
+    isExporting,
+    openExportModal,
+    closeExportModal,
+    confirmExport,
+  } = useExportInventory(agentApi, {
+    hasCollectionData,
+    hasInventory: Boolean(inventory),
+  });
+
+  if (inventoryLoading) {
+    return (
+      <PageSection hasBodyWrapper={false} isFilled>
+        <Stack hasGutter>
+          <StackItem>
+            <ReportPageHeader />
+          </StackItem>
+          <StackItem>
+            <Header totalVMs={0} totalClusters={0} />
+          </StackItem>
+          <StackItem>
+            <Content component="p">Loading inventory data...</Content>
+          </StackItem>
+        </Stack>
+      </PageSection>
+    );
+  }
+
+  if (inventoryError) {
+    return (
+      <PageSection hasBodyWrapper={false} isFilled>
+        <Stack hasGutter>
+          <StackItem>
+            <ReportPageHeader />
+          </StackItem>
+          <StackItem>
+            <Header totalVMs={0} totalClusters={0} />
+          </StackItem>
+          <StackItem>
+            <Alert variant="danger" title="Error loading inventory">
+              {getSdkErrorMessage(inventoryError, "Failed to load data")}
+            </Alert>
+          </StackItem>
+        </Stack>
+      </PageSection>
+    );
+  }
+
+  if (!inventory) {
+    return (
+      <PageSection hasBodyWrapper={false} isFilled>
+        <Stack hasGutter>
+          <StackItem>
+            <ReportPageHeader />
+          </StackItem>
+          <StackItem>
+            <Header totalVMs={0} totalClusters={0} />
+          </StackItem>
+          <StackItem>
+            <Alert variant="info" title="No inventory available">
+              The inventory has not been collected yet. Please start the
+              collector to gather information about your virtual machines.
+            </Alert>
+          </StackItem>
+        </Stack>
+      </PageSection>
+    );
+  }
+
+  const aggregateView = getInventoryAggregateView(inventory);
+  const clusterView = buildClusterViewModel({
+    infra: aggregateView.infra,
+    vms: aggregateView.vms,
+    clusters: aggregateView.clusters,
+    selectedClusterId,
+  });
+  const { totalVMs, totalClusters } = getFleetHeaderCounts(aggregateView);
+
+  const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
+
+  const handleClusterSelect = (
+    _event: React.MouseEvent<Element, MouseEvent> | undefined,
+    value: string | number | undefined,
+  ): void => {
+    if (typeof value === "string") {
+      setSelectedClusterId(value);
+      setVmsPage(1);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("tab", reportTabToParam(activeTab));
+      newParams.delete("vmId");
+      clearVmFilterParams(newParams);
+      setSearchParams(newParams, { replace: true });
+    }
+    setIsClusterSelectOpen(false);
+  };
+
+  const handleTabSelect = (
+    _event: React.MouseEvent<HTMLElement, MouseEvent>,
+    tabIndex: string | number,
+  ) => {
+    let newParams: URLSearchParams;
+    if (tabIndex === REPORT_TAB.vms) {
+      newParams = buildVmsTabUrl(searchParams);
+      setVmsPage(1);
+    } else {
+      newParams = buildOverviewTabUrl(searchParams);
+    }
+    setSearchParams(newParams, { replace: true });
+  };
+
+  const handleFiltersChange = () => {
+    // Filters are already in URL params via initialVMFilters
+    // Reset to page 1 when filters change
+    setVmsPage(1);
+  };
+
+  const handlePageChange = (page: number, pageSize: number) => {
+    setVmsPage(page);
+    setVmsPageSize(pageSize);
+  };
+
+  const handleSortChange = (sortFields: string[]) => {
+    setVmsSortFields(sortFields);
+  };
+
+  const handleConcernClick = (concernLabel: string) => {
+    const newParams = filtersToSearchParams({
+      concernLabels: [concernLabel],
+    });
+    newParams.set("tab", "vms");
+    setSearchParams(newParams, { replace: true });
+    setVmsPage(1);
+  };
+
+  return (
+    <ChartExportProvider>
+      <PageSection hasBodyWrapper={false} isFilled>
+        <Stack hasGutter>
+          <StackItem>
+            <OverviewReportHeader
+              showExport={showExport}
+              onExportInventory={openExportModal}
+              documentTitle={`Virtual machines overview - ${clusterView.selectionLabel}`}
+              enableHtml={clusterView.isAggregateView}
+            />
+          </StackItem>
+
+          <StackItem>
+            <Header totalVMs={totalVMs} totalClusters={totalClusters} />
+          </StackItem>
+
+          {/* Cluster Selector */}
+          <StackItem>
+            <Select
+              isScrollable
+              isOpen={isClusterSelectOpen}
+              selected={clusterView.selectionId}
+              onSelect={handleClusterSelect}
+              onOpenChange={(isOpen: boolean) => {
+                if (!clusterSelectDisabled) setIsClusterSelectOpen(isOpen);
+              }}
+              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle
+                  ref={toggleRef}
+                  isExpanded={isClusterSelectOpen}
+                  onClick={() => {
+                    if (!clusterSelectDisabled) {
+                      setIsClusterSelectOpen((prev) => !prev);
+                    }
+                  }}
+                  isDisabled={clusterSelectDisabled}
+                  style={{ minWidth: "422px" }}
+                >
+                  {clusterView.selectionLabel}
+                </MenuToggle>
+              )}
+            >
+              <SelectList>
+                {clusterView.clusterOptions.map((option: ClusterOption) => (
+                  <SelectOption key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectOption>
+                ))}
+              </SelectList>
+            </Select>
+          </StackItem>
+
+          {utilizationMetrics && (
+            <StackItem>
+              <Content component="p">
+                Total usage statistics{" "}
+                <VMUtilizationMetrics
+                  cpu={utilizationMetrics.cpu_avg}
+                  disk={utilizationMetrics.disk}
+                  ram={utilizationMetrics.mem_avg}
+                />
+              </Content>
+            </StackItem>
+          )}
+
+          {/* Tabs */}
+          <StackItem isFilled className={vmsTabsStackItemStyle}>
+            <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
+              <Tab
+                eventKey={REPORT_TAB.overview}
+                title={<TabTitleText>Assessment report</TabTitleText>}
+                tabContentId="report-tab-overview"
+                tabContentRef={overviewTabRef}
+              />
+              <Tab
+                eventKey={REPORT_TAB.vms}
+                title={<TabTitleText>Virtual Machines</TabTitleText>}
+                tabContentId="report-tab-vms"
+                tabContentRef={vmsTabRef}
+              />
+            </Tabs>
+
+            {/* TabsContent */}
+            <TabContent
+              eventKey={REPORT_TAB.overview}
+              id="report-tab-overview"
+              ref={overviewTabRef}
+              hidden={activeTab !== REPORT_TAB.overview}
+            >
+              <TabContentBody hasPadding>
+                {clusterView.viewInfra && clusterView.viewVms ? (
+                  <Dashboard
+                    key={`assessment-${clusterView.viewVms.total ?? 0}-${clusterView.selectionId}`}
+                    infra={clusterView.viewInfra}
+                    cpuCores={clusterView.cpuCores}
+                    ramGB={clusterView.ramGB}
+                    vms={clusterView.viewVms}
+                    clusters={clusterView.viewClusters}
+                    vcenterVersion={inventory?.vcenter_version}
+                    vcenterId={inventory?.vcenter_id}
+                    isAggregateView={clusterView.isAggregateView}
+                    clusterFound={clusterView.clusterFound}
+                    onConcernClick={handleConcernClick}
+                    onNavigateToVMFilters={handleNavigateToVMFilters}
+                  />
+                ) : (
+                  <AppEmptyState
+                    titleText={
+                      clusterView.isAggregateView
+                        ? "This assessment does not have report data yet"
+                        : "No data is available for the selected cluster"
+                    }
+                    body={
+                      clusterView.isAggregateView
+                        ? "Report data will appear here once inventory collection is complete."
+                        : "Select a different cluster or check that inventory data has been collected."
+                    }
+                    icon={InboxIcon}
+                    bullseyeStyle={{ minHeight: "240px" }}
+                  />
+                )}
+              </TabContentBody>
+            </TabContent>
+
+            <TabContent
+              eventKey={REPORT_TAB.vms}
+              id="report-tab-vms"
+              ref={vmsTabRef}
+              hidden={activeTab !== REPORT_TAB.vms}
+              className={vmsTabContentStyle}
+            >
+              <TabContentBody hasPadding className={vmsTabContentBodyStyle}>
+                <VirtualMachinesView
+                  key={`vms-${clusterView.selectionId}`}
+                  vms={vmsList}
+                  loading={vmsFetching}
+                  initialFilters={initialVMFilters}
+                  totalVMs={vmsTotalCount}
+                  currentPage={vmsPage}
+                  pageSize={vmsPageSize}
+                  onFiltersChange={handleFiltersChange}
+                  onPageChange={handlePageChange}
+                  onSortChange={handleSortChange}
+                  sortFields={vmsSortFields}
+                  availableFilterOptions={availableFilterOptions}
+                  agentApi={agentApi}
+                  scopedFilterExpression={clusterScopeExpression}
+                />
+              </TabContentBody>
+            </TabContent>
+          </StackItem>
+        </Stack>
+
+        <ExportCsvModal
+          isOpen={isExportModalOpen}
+          error={exportError}
+          isExporting={isExporting}
+          onClose={closeExportModal}
+          onExport={confirmExport}
+        />
+      </PageSection>
+    </ChartExportProvider>
+  );
+};
+
+ReportContainer.displayName = "ReportContainer";

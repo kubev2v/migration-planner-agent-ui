@@ -2,6 +2,9 @@
   "workspaces": {
     "apps/agent-ui": {
       "project": ["src/**/*.{ts,tsx}"]
+    },
+    "apps/offline-analyzer": {
+      "project": ["src/**/*.{ts,tsx}"]
     }
   }
 }

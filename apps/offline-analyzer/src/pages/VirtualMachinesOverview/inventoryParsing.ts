@@ -1,0 +1,295 @@
+import type {
+  Infra,
+  Inventory,
+  Inventory1,
+  InventoryData,
+  VirtualMachine,
+  VMs,
+} from "@openshift-migration-advisor/agent-sdk";
+import {
+  Inventory1FromJSON,
+  InventoryFromJSON,
+  instanceOfInventory,
+  instanceOfUpdateInventory,
+  UpdateInventoryFromJSON,
+} from "@openshift-migration-advisor/agent-sdk";
+import { getMigrationExcluded } from "./virtualMachineParsing";
+
+/** vCenter/cluster inventory payload (nested inside GET /inventory wrapper). */
+export type InventoryPayload = Inventory1;
+
+export function unwrapInventoryPayload(
+  inventory: Inventory | InventoryPayload | null | undefined,
+): InventoryPayload | null {
+  if (!inventory || typeof inventory !== "object") {
+    return null;
+  }
+  if ("vcenter_id" in inventory && "clusters" in inventory) {
+    return inventory as InventoryPayload;
+  }
+  if (instanceOfInventory(inventory)) {
+    return inventory.inventory?.inventory ?? null;
+  }
+  if (
+    typeof inventory === "object" &&
+    "agentId" in inventory &&
+    "inventory" in inventory &&
+    instanceOfUpdateInventory(inventory as object)
+  ) {
+    return (inventory as { inventory?: InventoryPayload }).inventory ?? null;
+  }
+  return null;
+}
+
+export function wrapInventoryPayload(
+  payload: InventoryPayload,
+  agentId = "",
+): Inventory {
+  return {
+    inventory: {
+      agentId,
+      inventory: payload,
+    },
+  };
+}
+
+export type MigrationExcludedInventoryChange = {
+  vmIds: string[];
+  excluded: boolean;
+  affectedVms: VirtualMachine[];
+};
+
+/** Parse inventory from GET /inventory JSON (wrapper or legacy payload). */
+export function parseInventoryResponse(
+  jsonData: unknown,
+): InventoryPayload | null {
+  if (!jsonData || typeof jsonData !== "object") {
+    return null;
+  }
+  const record = jsonData as Record<string, unknown>;
+  if (Object.keys(record).length === 0) {
+    return null;
+  }
+  if ("vcenter_id" in record && "clusters" in record) {
+    return Inventory1FromJSON(jsonData);
+  }
+  if ("inventory" in record) {
+    const parsed = InventoryFromJSON(jsonData);
+    return unwrapInventoryPayload(parsed);
+  }
+  if ("agentId" in record && "inventory" in record) {
+    const updateInventory = UpdateInventoryFromJSON(jsonData);
+    return updateInventory.inventory ?? null;
+  }
+  return null;
+}
+
+/** Extract inventory payload from GET /inventory SDK response. */
+export function inventoryFromGetInventoryResponse(
+  response: Inventory | null | undefined,
+): InventoryPayload | null {
+  return unwrapInventoryPayload(response);
+}
+
+/** Parse inventory JSON from GET /inventory. */
+export function parseInventoryFromJson(json: unknown): InventoryPayload | null {
+  return parseInventoryResponse(json);
+}
+
+/** Fetch inventory from GET /inventory (bypasses SDK response parsing bug). */
+export async function fetchInventoryFromApi(
+  basePath: string,
+): Promise<InventoryPayload | null> {
+  const url = new URL(`${basePath}/inventory`);
+
+  const httpResponse = await fetch(url.toString(), { cache: "no-store" });
+  if (!httpResponse.ok) {
+    if (httpResponse.status === 404) {
+      return null;
+    }
+    throw new Error(`HTTP ${httpResponse.status}: ${httpResponse.statusText}`);
+  }
+
+  const jsonData = await httpResponse.json();
+  return parseInventoryResponse(jsonData);
+}
+
+function adjustVmsTotals(
+  vms: VMs,
+  totalDelta: number,
+  migratableDelta: number,
+): VMs {
+  return {
+    ...vms,
+    total: Math.max(0, (vms.total ?? 0) + totalDelta),
+    totalMigratable: Math.max(0, (vms.totalMigratable ?? 0) + migratableDelta),
+  };
+}
+
+function cloneInventory(inventory: InventoryPayload): InventoryPayload {
+  try {
+    return structuredClone(inventory);
+  } catch {
+    return JSON.parse(JSON.stringify(inventory)) as InventoryPayload;
+  }
+}
+
+function findClusterKey(
+  clusters: InventoryPayload["clusters"] | undefined,
+  clusterName: string,
+): string | undefined {
+  if (!clusters) {
+    return undefined;
+  }
+  if (clusterName in clusters) {
+    return clusterName;
+  }
+  const normalized = clusterName.toLowerCase();
+  return Object.keys(clusters).find((key) => key.toLowerCase() === normalized);
+}
+
+/** Write aggregate VM totals to the inventory location the dashboard reads. */
+function writeAggregateVms(
+  inventory: InventoryPayload,
+  vms: VMs,
+): InventoryPayload {
+  if (inventory.vcenter?.vms) {
+    return {
+      ...inventory,
+      vcenter: {
+        ...inventory.vcenter,
+        vms,
+      },
+    };
+  }
+
+  const clusters = inventory.clusters ?? {};
+  const keys = Object.keys(clusters);
+  const clusterKey =
+    keys.find((key) => clusters[key]?.infra && clusters[key]?.vms) ?? keys[0];
+  if (!clusterKey || !clusters[clusterKey]?.vms) {
+    return inventory;
+  }
+
+  return {
+    ...inventory,
+    clusters: {
+      ...clusters,
+      [clusterKey]: {
+        ...clusters[clusterKey],
+        vms,
+      },
+    },
+  };
+}
+
+/**
+ * Optimistically adjust VM totals after exclude/include from reports.
+ * Keeps the assessment report in sync while the server recomputes inventory.
+ */
+export function adjustInventoryForMigrationExcludedChange(
+  inventory: InventoryPayload,
+  vmIds: string[],
+  excluded: boolean,
+  knownVms: VirtualMachine[],
+): InventoryPayload {
+  const sign = excluded ? -1 : 1;
+  let totalDelta = 0;
+  let migratableDelta = 0;
+  const clusterDeltas = new Map<
+    string,
+    { total: number; migratable: number }
+  >();
+
+  for (const id of vmIds) {
+    const vm = knownVms.find((candidate) => candidate.id === id);
+    if (getMigrationExcluded(vm) === excluded) {
+      continue;
+    }
+
+    totalDelta += sign;
+    if (vm?.migratable) {
+      migratableDelta += sign;
+    }
+
+    if (vm?.cluster) {
+      const current = clusterDeltas.get(vm.cluster) ?? {
+        total: 0,
+        migratable: 0,
+      };
+      current.total += sign;
+      if (vm.migratable) {
+        current.migratable += sign;
+      }
+      clusterDeltas.set(vm.cluster, current);
+    }
+  }
+
+  if (totalDelta === 0) {
+    return inventory;
+  }
+
+  let next = cloneInventory(inventory);
+  const aggregate = getInventoryAggregateView(next);
+  const aggregateClusterKey = !next.vcenter?.vms
+    ? (Object.keys(next.clusters ?? {}).find(
+        (key) => next.clusters[key]?.infra && next.clusters[key]?.vms,
+      ) ?? Object.keys(next.clusters ?? {})[0])
+    : undefined;
+
+  if (aggregate.vms) {
+    next = writeAggregateVms(
+      next,
+      adjustVmsTotals(aggregate.vms, totalDelta, migratableDelta),
+    );
+  }
+
+  for (const [clusterName, delta] of clusterDeltas) {
+    const clusterKey = findClusterKey(next.clusters, clusterName);
+    if (!clusterKey || !next.clusters?.[clusterKey]?.vms) {
+      continue;
+    }
+    if (!next.vcenter?.vms && clusterKey === aggregateClusterKey) {
+      continue;
+    }
+    next.clusters[clusterKey].vms = adjustVmsTotals(
+      next.clusters[clusterKey].vms,
+      delta.total,
+      delta.migratable,
+    );
+  }
+
+  return next;
+}
+
+export type InventoryAggregateView = {
+  infra?: Infra;
+  vms?: VMs;
+  clusters: { [key: string]: InventoryData };
+};
+
+/** Aggregate infra/vms for the dashboard (vcenter scope, or cluster fallback). */
+export function getInventoryAggregateView(
+  inventory: InventoryPayload | Inventory | null,
+): InventoryAggregateView {
+  const payload = unwrapInventoryPayload(inventory);
+  const clusters = payload?.clusters ?? {};
+  const vcenterInfra = payload?.vcenter?.infra;
+  const vcenterVms = payload?.vcenter?.vms;
+
+  if (vcenterVms) {
+    return { infra: vcenterInfra, vms: vcenterVms, clusters };
+  }
+
+  const keys = Object.keys(clusters);
+  if (keys.length > 0) {
+    const clusterKey =
+      keys.find((key) => clusters[key]?.infra && clusters[key]?.vms) ?? keys[0];
+    const cluster = clusters[clusterKey];
+    if (cluster?.infra && cluster?.vms) {
+      return { infra: cluster.infra, vms: cluster.vms, clusters };
+    }
+  }
+
+  return { infra: vcenterInfra, vms: vcenterVms, clusters };
+}
