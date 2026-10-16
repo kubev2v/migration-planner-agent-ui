@@ -8,7 +8,7 @@
     "enabled": true,
     "packageRules": [
       {
-        "matchUpdateTypes": ["digest"],
+        "matchUpdateTypes": ["digest", "pinDigest", "patch", "minor"],
         "platformAutomerge": true,
         "automerge": true
       }
