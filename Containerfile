@@ -6,7 +6,9 @@ ARG GIT_COMMIT
 ENV GIT_COMMIT=${GIT_COMMIT}
 ARG GIT_TAG
 ENV GIT_TAG=${GIT_TAG}
-RUN node .yarn/releases/yarn-4.18.1.cjs install --immutable && node .yarn/releases/yarn-4.18.1.cjs build:all
+# Resolve the committed Yarn release from .yarnrc.yml (the source of truth) so this
+# stays in sync when the Yarn version is bumped (e.g. by Renovate).
+RUN YARN_RELEASE="$(sed -n 's/^yarnPath:[[:space:]]*//p' .yarnrc.yml)" && node "${YARN_RELEASE}" install --immutable && node "${YARN_RELEASE}" build:all
 
 FROM registry.access.redhat.com/ubi9/nginx-124@sha256:34f9e6e406e72041463c5d6426f5f76ba8d59ab9ad111636bf4a9fb75f4c768d
 # Required labels for Red Hat / Enterprise Contract
