@@ -176,6 +176,7 @@ export {
   sliceCanvas,
   splitSegmentForPageHeight,
 } from "./pdfPage.js";
+export { popoverPlainCloseButtonStyle } from "./popoverStyles.js";
 export type { PowerStateChartModel } from "./powerStates.js";
 export {
   buildHostPowerStateChart,

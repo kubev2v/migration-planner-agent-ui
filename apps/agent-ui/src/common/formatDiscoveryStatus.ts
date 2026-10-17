@@ -1,6 +1,9 @@
 import type { AgentStatus } from "@openshift-migration-advisor/agent-sdk";
 
-export type DiscoverySharingStatus = "Sharing" | "Not shared" | "Sharing error";
+export type DiscoverySharingStatus =
+  | "Sharing"
+  | "Not sharing"
+  | "Sharing error";
 
 export function getDiscoverySharingStatus(
   agentStatus: AgentStatus | null | undefined,
@@ -13,5 +16,5 @@ export function getDiscoverySharingStatus(
     return "Sharing";
   }
 
-  return "Not shared";
+  return "Not sharing";
 }

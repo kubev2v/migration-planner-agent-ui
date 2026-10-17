@@ -233,7 +233,7 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
       <ToolbarItem align={{ default: "alignEnd" }}>
         <Flex
           alignItems={{ default: "alignItemsCenter" }}
-          gap={{ default: "gapMd" }}
+          gap={{ default: "gapSm" }}
         >
           <FlexItem>
             {loading && vms.length > 0 && <Spinner size="sm" />}

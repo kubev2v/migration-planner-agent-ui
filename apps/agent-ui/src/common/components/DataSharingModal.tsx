@@ -32,7 +32,10 @@ export const DataSharingModal: React.FC<DataSharingModalProps> = ({
       aria-describedby="data-sharing-modal-body"
       variant="small"
     >
-      <ModalHeader title="Share data" labelId="data-sharing-modal-title" />
+      <ModalHeader
+        title="Share data with Red Hat"
+        labelId="data-sharing-modal-title"
+      />
       <ModalBody id="data-sharing-modal-body">
         {error && (
           <Alert
@@ -52,7 +55,6 @@ export const DataSharingModal: React.FC<DataSharingModalProps> = ({
           <strong>Important:</strong> This operation is permanent and cannot be
           undone.
         </Content>
-        <Content component="p">Do you want to enable data sharing?</Content>
       </ModalBody>
       <ModalFooter>
         <Button

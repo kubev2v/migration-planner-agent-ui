@@ -11,13 +11,13 @@ describe("getDiscoverySharingStatus", () => {
     ).toEqual("Sharing");
   });
 
-  it("returns Not shared when console connection is disconnected", () => {
+  it("returns Not sharing when console connection is disconnected", () => {
     expect(
       getDiscoverySharingStatus({
         mode: "disconnected",
         consoleConnection: { status: "disconnected" },
       }),
-    ).toEqual("Not shared");
+    ).toEqual("Not sharing");
   });
 
   it("returns Sharing error when console connection has an error", () => {
@@ -29,7 +29,7 @@ describe("getDiscoverySharingStatus", () => {
     ).toEqual("Sharing error");
   });
 
-  it("returns Not shared when agent status is null", () => {
-    expect(getDiscoverySharingStatus(null)).toEqual("Not shared");
+  it("returns Not sharing when agent status is null", () => {
+    expect(getDiscoverySharingStatus(null)).toEqual("Not sharing");
   });
 });

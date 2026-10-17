@@ -440,6 +440,14 @@ export function resolveVisibleColumns({
   return baseColumns;
 }
 
+export const vmTableToolbarStyle = css`
+  &.pf-v6-c-toolbar {
+    --pf-v6-c-toolbar__content--PaddingBlock: var(--pf-t--global--spacer--sm);
+    --pf-v6-c-toolbar__content--RowGap: var(--pf-t--global--spacer--sm);
+    --pf-v6-c-toolbar__content--ColumnGap: var(--pf-t--global--spacer--md);
+  }
+`;
+
 export const vmsTabsStackItemStyle = css`
   display: flex;
   flex-direction: column;
