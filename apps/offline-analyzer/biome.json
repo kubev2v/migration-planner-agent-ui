@@ -1,0 +1,11 @@
+{
+  "root": false,
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": "//",
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "react": "recommended"
+    }
+  }
+}
