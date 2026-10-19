@@ -220,9 +220,21 @@ export const MigrationDonutChart: FC<MigrationDonutChartProps> = ({
     }));
   }, [data]);
 
-  const colorScale = useMemo(() => {
-    return chartData.map((item) => getColor(item.legendCategory));
-  }, [chartData, getColor]);
+  // Victory renders zero-value slices as degenerate zero-angle wedges but still
+  // keeps a `padAngle` gap around each one.
+  const donutChartData = useMemo(
+    () => chartData.filter((item) => Number(item.y) > 0),
+    [chartData],
+  );
+
+  const donutColorScale = useMemo(
+    () => donutChartData.map((item) => getColor(item.legendCategory)),
+    [donutChartData, getColor],
+  );
+
+  // A lone slice has no neighbour to pad against; forcing padAngle to 0 keeps it
+  // from leaving a gap against itself.
+  const effectivePadAngle = donutChartData.length <= 1 ? 0 : padAngle;
 
   const legendData = useMemo(() => {
     return chartData.map((item) => ({
@@ -446,7 +458,7 @@ export const MigrationDonutChart: FC<MigrationDonutChartProps> = ({
       <div className={styles.donutWrapper}>
         <ChartDonut
           ariaDesc="Migration data donut chart"
-          data={chartData}
+          data={donutChartData}
           events={chartEvents}
           labelComponent={donutTooltip}
           labels={({
@@ -459,10 +471,10 @@ export const MigrationDonutChart: FC<MigrationDonutChartProps> = ({
               countDisplay?: string | number;
             };
           }) => formatLabel(datum)}
-          colorScale={colorScale}
+          colorScale={donutColorScale}
           constrainToVisibleArea
           innerRadius={innerRadius}
-          padAngle={padAngle}
+          padAngle={effectivePadAngle}
           title={title}
           subTitle={subTitle}
           height={height}
