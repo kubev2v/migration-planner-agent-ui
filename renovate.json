@@ -1,20 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Renovate configuration for migration-planner-agent-ui",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "extends": ["github>kubev2v/migration-planner-workflows//renovate-config/default.json"],
   "semanticCommits": "enabled",
   "minimumReleaseAge": "7 days",
-  "tekton": {
-    "enabled": true,
-    "packageRules": [
-      {
-        "matchUpdateTypes": ["digest", "pinDigest", "patch", "minor"],
-        "platformAutomerge": true,
-        "automerge": true
-      }
-    ],
-    "schedule": ["at any time"]
-  },
   "packageRules": [
     {
       "description": "Use bump strategy for npm dependencies",
@@ -48,13 +37,6 @@
       "description": "Automerge build-tools submodule updates",
       "matchManagers": ["git-submodules"],
       "matchDepNames": ["build-tools"],
-      "matchUpdateTypes": ["digest"],
-      "automerge": true,
-      "platformAutomerge": true
-    },
-    {
-      "description": "Automerge Containerfile/Dockerfile base image digest updates",
-      "matchManagers": ["dockerfile"],
       "matchUpdateTypes": ["digest"],
       "automerge": true,
       "platformAutomerge": true
