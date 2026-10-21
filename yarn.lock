@@ -4140,13 +4140,13 @@ __metadata:
   linkType: hard
 
 "whatwg-url@npm:^17.1.2, whatwg-url@npm:^17.2.0":
-  version: 17.2.0
-  resolution: "whatwg-url@npm:17.2.0"
+  version: 17.3.0
+  resolution: "whatwg-url@npm:17.3.0"
   dependencies:
     "@exodus/bytes": "npm:^1.16.0"
     tr46: "npm:^7.0.0"
     webidl-conversions: "npm:^8.0.1"
-  checksum: 10c0/e04762553b8bd7e0f693993f314e698e5a9db8ba3d0261d53160ee145dcbf13012e8c418662765b27069077ac6a65f18b23a3dd12a0330b7a008114171d9493d
+  checksum: 10c0/865502309e64e3e46c6e68307da4e517b45630752479d4a117ea5c3bd6ce97be5d2a36072ae0e4ad5dc5fe80e1f00c5dc665e1f9a99c3bc9fd5b7d1127e965c8
   languageName: node
   linkType: hard
 
