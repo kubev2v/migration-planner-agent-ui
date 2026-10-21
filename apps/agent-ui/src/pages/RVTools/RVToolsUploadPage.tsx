@@ -52,7 +52,16 @@ export const RVToolsUploadPage: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const goToReport = useCallback((): void => {
-    dispatch(agentApiSlice.util.invalidateTags(["Collections", "AgentStatus"]));
+    dispatch(
+      agentApiSlice.util.invalidateTags([
+        "Vms",
+        "VmLabels",
+        "Inventory",
+        "Applications",
+        "Collections",
+        "AgentStatus",
+      ]),
+    );
     navigate("/report");
   }, [dispatch, navigate]);
 
