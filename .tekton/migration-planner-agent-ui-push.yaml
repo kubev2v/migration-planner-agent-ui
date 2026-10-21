@@ -24,7 +24,7 @@ spec:
   - name: output-image
     value: quay.io/redhat-user-workloads/assisted-migration-tenant/migration-planner-agent-ui:{{revision}}
   - name: dockerfile
-    value: ./Containerfile
+    value: ./apps/agent-ui/Containerfile
   - name: path-context
     value: .
   - name: hermetic
