@@ -38,6 +38,14 @@ const ACCEPTED_MIME =
 const POLL_INTERVAL_MS = 1500;
 const COLLECTION_TIMEOUT_MS = POLL_INTERVAL_MS * 200; // ~5 minutes
 
+// shortcut: SaaS colon trimming can retain technical text; replace with shared readable errors when available.
+const extractErrorMessage = (message: string): string => {
+  const lastColonIndex = message.lastIndexOf(":");
+  return lastColonIndex !== -1
+    ? message.slice(lastColonIndex + 1).trim()
+    : message;
+};
+
 type CollectorStatusValue = CollectorStatus["status"];
 
 const IN_PROGRESS_STATUSES: CollectorStatusValue[] = [
@@ -119,7 +127,11 @@ export const RVToolsUploadPage: React.FC = () => {
 
     if (collectorStatus.status === "error") {
       setIsCollecting(false);
-      setError(collectorStatus.error ?? "The RVTools collection failed.");
+      setError(
+        extractErrorMessage(
+          collectorStatus.error || "The RVTools collection failed.",
+        ),
+      );
     }
   }, [isCollecting, collectorStatus, goToReport]);
 
@@ -156,7 +168,11 @@ export const RVToolsUploadPage: React.FC = () => {
       setStartedStatus(initialStatus.status);
 
       if (initialStatus.status === "error") {
-        setError(initialStatus.error ?? "The RVTools collection failed.");
+        setError(
+          extractErrorMessage(
+            initialStatus.error || "The RVTools collection failed.",
+          ),
+        );
         return;
       }
       if (initialStatus.status === "collected") {
