@@ -10,6 +10,7 @@ Includes:
 - Chart export (`ChartExportProvider`, `ChartExportSurface`, PDF / PNG / HTML)
 - Operating Systems distribution card
 - Infrastructure summary, vCenter cluster details, and host/VM power-state cards
+- RVTools multi-file upload field (`RvtoolsFilesField`, `useRvtoolsFileStaging`)
 
 ## Installation
 
