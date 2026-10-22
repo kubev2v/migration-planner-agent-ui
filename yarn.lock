@@ -635,17 +635,17 @@ __metadata:
     "@hookform/resolvers": "npm:^5.9.1"
     "@openshift-migration-advisor/agent-sdk": "npm:0.24.0-96217627668a"
     "@openshift-migration-advisor/shared-components": "workspace:*"
-    "@patternfly/react-core": "npm:^6.6.1"
+    "@patternfly/react-core": "npm:^6.6.2"
     "@patternfly/react-icons": "npm:^6.6.1"
-    "@patternfly/react-table": "npm:^6.6.1"
+    "@patternfly/react-table": "npm:^6.6.2"
     "@reduxjs/toolkit": "npm:^2.13.0"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
-    "@testing-library/user-event": "npm:^14.6.7"
+    "@testing-library/user-event": "npm:^14.6.8"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
-    react-hook-form: "npm:^7.89.0"
+    react-hook-form: "npm:^7.90.0"
     react-redux: "npm:^9.3.0"
     react-router-dom: "npm:^7.18.4"
     yup: "npm:^1.7.1"
@@ -1010,7 +1010,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@patternfly/react-core@npm:^6.6.1, @patternfly/react-core@npm:^6.6.2":
+"@patternfly/react-core@npm:^6.6.2":
   version: 6.6.2
   resolution: "@patternfly/react-core@npm:6.6.2"
   dependencies:
@@ -1046,7 +1046,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@patternfly/react-table@npm:^6.6.1, @patternfly/react-table@npm:^6.6.2":
+"@patternfly/react-table@npm:^6.6.2":
   version: 6.6.2
   resolution: "@patternfly/react-table@npm:6.6.2"
   dependencies:
@@ -1274,7 +1274,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/user-event@npm:^14.6.7, @testing-library/user-event@npm:^14.6.8":
+"@testing-library/user-event@npm:^14.6.8":
   version: 14.6.8
   resolution: "@testing-library/user-event@npm:14.6.8"
   peerDependencies:
@@ -3010,7 +3010,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-hook-form@npm:^7.89.0, react-hook-form@npm:^7.90.0":
+"react-hook-form@npm:^7.90.0":
   version: 7.90.0
   resolution: "react-hook-form@npm:7.90.0"
   peerDependencies:
