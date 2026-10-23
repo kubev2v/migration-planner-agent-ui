@@ -7,6 +7,9 @@ import type {
 
 export type ClusterSelection = string;
 
+/** Session key for the report-wide vSphere cluster scope dropdown. */
+export const REPORT_CLUSTER_SELECTION_KEY = "report-cluster-selection";
+
 export type ClusterOption = { id: string; label: string };
 
 export type ClusterViewModel = {

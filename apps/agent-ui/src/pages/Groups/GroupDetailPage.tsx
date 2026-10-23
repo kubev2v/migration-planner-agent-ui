@@ -36,6 +36,7 @@ import {
 } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components";
+import useSessionStorage from "../../common/hooks/useSessionStorage";
 import { useAgentStatus } from "../../common/useAgentStatus";
 import {
   useDeleteGroupMutation,
@@ -50,6 +51,7 @@ import {
   buildClusterViewModel,
   type ClusterOption,
   getFleetHeaderCounts,
+  REPORT_CLUSTER_SELECTION_KEY,
 } from "../VirtualMachinesOverview/clusterView";
 import { ApplicationsView } from "../VirtualMachinesOverview/components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "../VirtualMachinesOverview/components/Dashboard/Dashboard";
@@ -119,7 +121,10 @@ export const GroupDetailPage: React.FC = () => {
   const agentApi = getAgentApiClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
+  const [selectedClusterId, setSelectedClusterId] = useSessionStorage(
+    REPORT_CLUSTER_SELECTION_KEY,
+    "all",
+  );
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

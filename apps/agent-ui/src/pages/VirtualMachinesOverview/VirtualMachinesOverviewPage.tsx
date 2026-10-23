@@ -23,6 +23,7 @@ import { useSearchParams } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components/index";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
+import useSessionStorage from "../../common/hooks/useSessionStorage";
 import { useAgentStatus } from "../../common/useAgentStatus";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
@@ -37,6 +38,7 @@ import {
   buildClusterViewModel,
   type ClusterOption,
   getFleetHeaderCounts,
+  REPORT_CLUSTER_SELECTION_KEY,
 } from "./clusterView";
 import { ApplicationsView } from "./components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "./components/Dashboard/Dashboard";
@@ -90,7 +92,10 @@ export const ReportContainer: React.FC = () => {
   const hasCollectionData = (collections?.length ?? 0) > 0;
   const newestCollectionId = collections?.[0]?.id;
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedClusterId, setSelectedClusterId] = useState<string>("all");
+  const [selectedClusterId, setSelectedClusterId] = useSessionStorage(
+    REPORT_CLUSTER_SELECTION_KEY,
+    "all",
+  );
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
 
   // VM pagination state (client-only; the query keys on these values)
