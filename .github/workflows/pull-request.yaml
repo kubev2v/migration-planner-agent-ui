@@ -24,6 +24,7 @@ jobs:
       jira-pattern: ${{ steps.set-config.outputs.jira-pattern }}
       jira-required-types: ${{ steps.set-config.outputs.jira-required-types }}
       bot-authors: ${{ steps.set-config.outputs.bot-authors }}
+      run-code-validations: ${{ steps.filter.outputs.code }}
     steps:
       - id: set-config
         run: |
@@ -31,6 +32,16 @@ jobs:
           echo 'jira-pattern=(ECOPROJECT|OMA)-[0-9]+' >> $GITHUB_OUTPUT
           echo 'jira-required-types=["feat","fix"]' >> $GITHUB_OUTPUT
           echo 'bot-authors=["red-hat-konflux[bot]","dependabot[bot]","renovate[bot]"]' >> $GITHUB_OUTPUT
+
+      - name: Check out path filters
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Detect whether code validations are needed
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: .github/path-filters.yml
+          predicate-quantifier: 'every'
 
   # Validate commit messages
   validate-commits:
@@ -53,30 +64,80 @@ jobs:
       skip-authors: ${{ needs.config.outputs.bot-authors }}
 
   lint-and-format:
-    needs: [validate-commits, validate-pr-title]
+    needs: [config, validate-commits, validate-pr-title]
+    if: needs.config.outputs.run-code-validations == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install-dependencies
       - run: yarn check:all
   type-check:
-    needs: [validate-commits, validate-pr-title]
+    needs: [config, validate-commits, validate-pr-title]
+    if: needs.config.outputs.run-code-validations == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install-dependencies
       - run: yarn typecheck:all
   test:
-    needs: [validate-commits, validate-pr-title]
+    needs: [config, validate-commits, validate-pr-title]
+    if: needs.config.outputs.run-code-validations == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install-dependencies
       - run: yarn test:all
   build:
-    needs: [validate-commits, validate-pr-title]
+    needs: [config, validate-commits, validate-pr-title]
+    if: needs.config.outputs.run-code-validations == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/install-dependencies
       - run: yarn build:all
+
+  # Always runs so branch protection can require this single check.
+  # Skipped jobs count as success, but a failed commit check would also skip
+  # them — this job fails unless commit/title checks passed and, when code
+  # changed, the code validations passed.
+  required:
+    name: Required validations
+    needs:
+      - config
+      - validate-commits
+      - validate-pr-title
+      - lint-and-format
+      - type-check
+      - test
+      - build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs
+        env:
+          RUN_CODE: ${{ needs.config.outputs.run-code-validations }}
+          CONFIG: ${{ needs.config.result }}
+          COMMITS: ${{ needs.validate-commits.result }}
+          TITLE: ${{ needs.validate-pr-title.result }}
+          LINT: ${{ needs.lint-and-format.result }}
+          TYPECHECK: ${{ needs.type-check.result }}
+          TEST: ${{ needs.test.result }}
+          BUILD: ${{ needs.build.result }}
+        run: |
+          echo "config=$CONFIG commits=$COMMITS title=$TITLE run_code=$RUN_CODE"
+          echo "lint=$LINT typecheck=$TYPECHECK test=$TEST build=$BUILD"
+
+          fail() { echo "::error::$1"; exit 1; }
+
+          [[ "$CONFIG" == success ]] || fail "config did not succeed ($CONFIG)"
+          [[ "$COMMITS" == success ]] || fail "validate-commits did not succeed ($COMMITS)"
+          [[ "$TITLE" == success ]] || fail "validate-pr-title did not succeed ($TITLE)"
+
+          if [[ "$RUN_CODE" == true ]]; then
+            [[ "$LINT" == success ]] || fail "lint-and-format did not succeed ($LINT)"
+            [[ "$TYPECHECK" == success ]] || fail "type-check did not succeed ($TYPECHECK)"
+            [[ "$TEST" == success ]] || fail "test did not succeed ($TEST)"
+            [[ "$BUILD" == success ]] || fail "build did not succeed ($BUILD)"
+          else
+            echo "Only skippable files changed; code validations were skipped"
+          fi
