@@ -1,0 +1,31 @@
+FROM registry.access.redhat.com/ubi9/nodejs-24-minimal@sha256:ab6fb9bb47eb008f85da7a26321ded691324b6469f54d6b3ac263dfbd0bddd97 AS builder
+USER 1001
+WORKDIR ${APP_ROOT}/repo
+COPY --chown=1001:0 . .
+ARG GIT_COMMIT
+ENV GIT_COMMIT=${GIT_COMMIT}
+ARG GIT_TAG
+ENV GIT_TAG=${GIT_TAG}
+# Resolve the committed Yarn release from .yarnrc.yml (the source of truth) so this
+# stays in sync when the Yarn version is bumped (e.g. by Renovate).
+RUN YARN_RELEASE="$(sed -n 's/^yarnPath:[[:space:]]*//p' .yarnrc.yml)" && node "${YARN_RELEASE}" install --immutable && node "${YARN_RELEASE}" workspace @openshift-migration-advisor/offline-analyzer build
+
+FROM registry.access.redhat.com/ubi9/nginx-124@sha256:d830c4d4aa22d8e491c3d881e331f9cf9b25dd1ac8849448827774bf3c7571fe
+# Required labels for Red Hat / Enterprise Contract
+ARG IMAGE_NAME=oma-rvtool-offline-analyzer-ui
+ARG IMAGE_VERSION=0.0.0
+ARG IMAGE_RELEASE=1
+ARG IMAGE_DESCRIPTION="OMA RVTools Offline Analyzer UI"
+ARG IMAGE_VENDOR="Red Hat, Inc."
+ARG IMAGE_URL=""
+ARG IMAGE_DISTRIBUTION_SCOPE=restricted
+LABEL com.redhat.component="${IMAGE_NAME}" \
+      description="${IMAGE_DESCRIPTION}" \
+      distribution-scope="${IMAGE_DISTRIBUTION_SCOPE}" \
+      io.k8s.description="${IMAGE_DESCRIPTION}" \
+      name="${IMAGE_NAME}" \
+      release="${IMAGE_RELEASE}" \
+      url="${IMAGE_URL}" \
+      vendor="${IMAGE_VENDOR}" \
+      version="${IMAGE_VERSION}"
+COPY --from=builder ${APP_ROOT}/repo/apps/offline-analyzer/dist /apps/offline-analyzer/dist
