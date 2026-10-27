@@ -10,7 +10,7 @@ ENV GIT_TAG=${GIT_TAG}
 # stays in sync when the Yarn version is bumped (e.g. by Renovate).
 RUN YARN_RELEASE="$(sed -n 's/^yarnPath:[[:space:]]*//p' .yarnrc.yml)" && node "${YARN_RELEASE}" install --immutable && node "${YARN_RELEASE}" workspace @openshift-migration-advisor/offline-analyzer build
 
-FROM registry.access.redhat.com/ubi9/nginx-124@sha256:d830c4d4aa22d8e491c3d881e331f9cf9b25dd1ac8849448827774bf3c7571fe
+FROM registry.access.redhat.com/ubi9/nginx-124@sha256:d1eb117322c0374e286f73d6f67912c1171c605eb34cd5dd33005375747c77a5
 # Required labels for Red Hat / Enterprise Contract
 ARG IMAGE_NAME=oma-rvtool-offline-analyzer-ui
 ARG IMAGE_VERSION=0.0.0
