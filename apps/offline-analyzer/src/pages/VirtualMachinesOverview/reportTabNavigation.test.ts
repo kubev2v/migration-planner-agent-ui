@@ -3,8 +3,12 @@ import {
   buildOverviewTabUrl,
   buildVmDetailUrl,
   buildVmsTabUrl,
+  CLUSTER_PARAM,
+  getClusterParam,
   REPORT_TAB,
   resolveReportTab,
+  setClusterParam,
+  setTabParam,
 } from "./reportTabNavigation";
 
 describe("resolveReportTab", () => {
@@ -70,5 +74,42 @@ describe("tab navigation URLs", () => {
     );
     expect(params.get("tab")).toBe("vms");
     expect(params.get("reportInclusion")).toBe("included");
+  });
+
+  it("preserves cluster scope when switching tabs", () => {
+    const params = buildVmsTabUrl(
+      new URLSearchParams("tab=overview&cluster=prod-cluster"),
+    );
+    expect(params.get(CLUSTER_PARAM)).toBe("prod-cluster");
+  });
+});
+
+describe("cluster selection URL helpers", () => {
+  it("defaults to all when the cluster param is missing", () => {
+    expect(getClusterParam(new URLSearchParams())).toBe("all");
+  });
+
+  it("reads and writes the cluster scope param", () => {
+    const params = new URLSearchParams();
+    setClusterParam(params, "prod-cluster");
+    expect(params.get(CLUSTER_PARAM)).toBe("prod-cluster");
+    expect(getClusterParam(params)).toBe("prod-cluster");
+
+    setClusterParam(params, "all");
+    expect(params.get(CLUSTER_PARAM)).toBeNull();
+  });
+
+  it("copies cluster scope into a rebuilt filter URL", () => {
+    const source = new URLSearchParams("cluster=prod-cluster&tab=vms");
+    const target = new URLSearchParams("tab=vms&search=web");
+    setClusterParam(target, getClusterParam(source));
+    expect(target.get(CLUSTER_PARAM)).toBe("prod-cluster");
+    expect(target.get("search")).toBe("web");
+  });
+
+  it("writes the tab param from a tab index", () => {
+    const params = new URLSearchParams();
+    setTabParam(params, REPORT_TAB.vms);
+    expect(params.get("tab")).toBe("vms");
   });
 });

@@ -28,10 +28,7 @@ import { InboxIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { AppEmptyState } from "../../../../common/components";
-import {
-  type NavigateToVMFilters,
-  useChartDrillDown,
-} from "../VirtualMachinesTab/vmNavigation";
+import type { VMFilters } from "../VirtualMachinesTab/vmFilters";
 import { parseMemoryTierLabelToRange } from "../VirtualMachinesTab/vmTableShared";
 
 interface DashboardProps {
@@ -45,7 +42,7 @@ interface DashboardProps {
   isAggregateView?: boolean;
   clusterFound?: boolean;
   onConcernClick?: (concernLabel: string) => void;
-  onNavigateToVMFilters?: NavigateToVMFilters;
+  onNavigateToVMFilters: (filters: VMFilters) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -112,45 +109,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return buildClusterDetails(Object.values(clusters)[0]);
   }, [clusters, isAggregateView]);
 
-  const navigateToVMs = useChartDrillDown(onNavigateToVMFilters);
   const handleMemoryTierSelect = useCallback(
     (tierLabel: string) => {
       const memoryRange = parseMemoryTierLabelToRange(tierLabel);
       if (memoryRange) {
-        navigateToVMs({ memoryRange });
+        onNavigateToVMFilters({ memoryRange });
       }
     },
-    [navigateToVMs],
+    [onNavigateToVMFilters],
   );
   const handleCpuMemoryTitleClick = useCallback(() => {
-    navigateToVMs({});
-  }, [navigateToVMs]);
+    onNavigateToVMFilters({});
+  }, [onNavigateToVMFilters]);
   const handleDiskTierSelect = useCallback(
     (diskRange: { min: number; max?: number }) => {
-      navigateToVMs({ diskRange });
+      onNavigateToVMFilters({ diskRange });
     },
-    [navigateToVMs],
+    [onNavigateToVMFilters],
   );
   const handleStorageTitleClick = useCallback(() => {
-    navigateToVMs({});
-  }, [navigateToVMs]);
+    onNavigateToVMFilters({});
+  }, [onNavigateToVMFilters]);
   const handleReadinessSelect = useCallback(
     (isMigratable: boolean) => {
-      navigateToVMs({
+      onNavigateToVMFilters({
         migrationReadiness: isMigratable ? ["ready"] : ["not-ready"],
       });
     },
-    [navigateToVMs],
+    [onNavigateToVMFilters],
   );
   const handleConcernCategorySelect = useCallback(
     (category: string) => {
-      navigateToVMs({ concernCategories: [category] });
+      onNavigateToVMFilters({ concernCategories: [category] });
     },
-    [navigateToVMs],
+    [onNavigateToVMFilters],
   );
   const handleMigrationStatusTitleClick = useCallback(() => {
-    navigateToVMs({});
-  }, [navigateToVMs]);
+    onNavigateToVMFilters({});
+  }, [onNavigateToVMFilters]);
 
   if (!clusterFound && !isAggregateView) {
     return (
