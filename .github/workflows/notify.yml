@@ -1,4 +1,4 @@
-name: Notify planner repo
+name: Notify agent repo
 on:
   push:
     branches:
@@ -35,11 +35,12 @@ jobs:
           echo "Timeout reached: image $IMAGE:$TAG is still not available."
           exit 1
 
-  notify:
+  notify-agent:
     needs: wait-for-image
     uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@b5de744cc45e4daaf9e28dcd6b179ab4a8ad7c7c # main
     with:
       event-type: agent_ui_updated
+      target-repo: kubev2v/assisted-migration-agent
     secrets:
       APP_ID: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_ID }}
       APP_PRIVATE_KEY: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_PRIVATE_KEY }}
