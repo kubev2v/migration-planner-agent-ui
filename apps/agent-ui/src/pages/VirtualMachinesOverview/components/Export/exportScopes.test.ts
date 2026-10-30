@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROCESSES_EXPORT_SCOPE_ID, scopesToExportParam } from "./exportScopes";
+import { scopesToExportParam } from "./exportScopes";
 
 describe("scopesToExportParam", () => {
   it("joins scopes into a comma-separated export param", () => {
@@ -9,7 +9,7 @@ describe("scopesToExportParam", () => {
   });
 
   it("includes the processes scope in the export param", () => {
-    expect(scopesToExportParam(["overview", PROCESSES_EXPORT_SCOPE_ID])).toBe(
+    expect(scopesToExportParam(["overview", "processes"])).toBe(
       "overview,processes",
     );
   });

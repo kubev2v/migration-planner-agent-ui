@@ -22,9 +22,6 @@ export type ExportScopeId =
   | "processes"
   | "groups";
 
-export const PROCESSES_EXPORT_SCOPE_ID =
-  "processes" as const satisfies ExportScopeId;
-
 export type ExportScopeOption = {
   id: ExportScopeId;
   label: string;
@@ -78,7 +75,7 @@ export const EXPORT_SCOPE_OPTIONS: ExportScopeOption[] = [
     description: "Discovered applications and VM mappings",
   },
   {
-    id: PROCESSES_EXPORT_SCOPE_ID,
+    id: "processes",
     label: "VM processes",
     description:
       "Processes detected on powered-on virtual machines during discovery",
