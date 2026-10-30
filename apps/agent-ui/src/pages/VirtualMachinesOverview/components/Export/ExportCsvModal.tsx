@@ -24,6 +24,7 @@ import {
   EXPORT_SCOPE_OPTIONS,
   type ExportFormat,
   type ExportScopeId,
+  PROCESSES_EXPORT_SCOPE_ID,
 } from "./exportScopes";
 
 const scopeDescriptionStyle = css`
@@ -110,6 +111,10 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
     void onExport(selectedScopes, selectedFormat);
   };
 
+  const includesProcessesScope = selectedScopes.includes(
+    PROCESSES_EXPORT_SCOPE_ID,
+  );
+
   return (
     <Modal
       isOpen={isOpen}
@@ -193,6 +198,7 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
                 <StackItem key={option.id}>
                   <Checkbox
                     id={`export-scope-${option.id}`}
+                    aria-label={option.label}
                     label={
                       <div>
                         <div className={scopeLabelStyle}>{option.label}</div>
@@ -212,6 +218,20 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
               ))}
             </Stack>
           </StackItem>
+          {includesProcessesScope ? (
+            <StackItem>
+              <Alert
+                variant="info"
+                isInline
+                title="Some virtual machines may not include process data"
+              >
+                Process information is collected from powered-on virtual
+                machines during discovery. VMs without process data are omitted
+                from the processes export; other selected scopes are still
+                included.
+              </Alert>
+            </StackItem>
+          ) : null}
         </Stack>
       </ModalBody>
       <ModalFooter>
