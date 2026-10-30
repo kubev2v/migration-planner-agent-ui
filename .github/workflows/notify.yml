@@ -8,12 +8,13 @@ on:
 permissions: {}
 
 jobs:
-  wait-for-image:
+  wait-for-agent-ui-image:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for Quay.io image
-        run: |
-          IMAGE="quay.io/redhat-user-workloads/assisted-migration-tenant/migration-planner-agent-ui"
+        env:
+          IMAGE: quay.io/redhat-services-prod/assisted-migration-tenant/assisted-migration/migration-planner-agent-ui
+        run: &wait-for-image |
           TAG="${GITHUB_SHA}"
           TIMEOUT=3600
           INTERVAL=10
@@ -35,11 +36,29 @@ jobs:
           echo "Timeout reached: image $IMAGE:$TAG is still not available."
           exit 1
 
-  notify-agent:
-    needs: wait-for-image
+  notify-agent-ui-updated:
+    needs: wait-for-agent-ui-image
     uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@b5de744cc45e4daaf9e28dcd6b179ab4a8ad7c7c # main
     with:
       event-type: agent_ui_updated
+      target-repo: kubev2v/assisted-migration-agent
+    secrets:
+      APP_ID: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_PRIVATE_KEY }}
+
+  wait-for-offline-analyzer-ui-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Quay.io image
+        env:
+          IMAGE: quay.io/redhat-services-prod/assisted-migration-tenant/assisted-migration/oma-rvtool-offline-analyzer-ui
+        run: *wait-for-image
+
+  notify-offline-analyzer-ui-updated:
+    needs: wait-for-offline-analyzer-ui-image
+    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@b5de744cc45e4daaf9e28dcd6b179ab4a8ad7c7c # main
+    with:
+      event-type: offline_analyzer_ui_updated
       target-repo: kubev2v/assisted-migration-agent
     secrets:
       APP_ID: ${{ secrets.MIGRATION_PLANNER_SYNC_APP_ID }}
