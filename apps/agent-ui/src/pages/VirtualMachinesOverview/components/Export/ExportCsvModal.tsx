@@ -24,7 +24,6 @@ import {
   EXPORT_SCOPE_OPTIONS,
   type ExportFormat,
   type ExportScopeId,
-  PROCESSES_EXPORT_SCOPE_ID,
 } from "./exportScopes";
 
 const scopeDescriptionStyle = css`
@@ -111,9 +110,7 @@ export const ExportCsvModal: React.FC<ExportCsvModalProps> = ({
     void onExport(selectedScopes, selectedFormat);
   };
 
-  const includesProcessesScope = selectedScopes.includes(
-    PROCESSES_EXPORT_SCOPE_ID,
-  );
+  const includesProcessesScope = selectedScopes.includes("processes");
 
   return (
     <Modal

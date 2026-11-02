@@ -4,7 +4,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ExportCsvModal } from "./ExportCsvModal";
-import { PROCESSES_EXPORT_SCOPE_ID } from "./exportScopes";
 
 describe("ExportCsvModal", () => {
   it("exports with Excel format by default", async () => {
@@ -58,10 +57,7 @@ describe("ExportCsvModal", () => {
     await user.click(screen.getByLabelText("VM processes"));
     await user.click(screen.getByRole("button", { name: /Export \(2\)/i }));
 
-    expect(onExport).toHaveBeenCalledWith(
-      ["overview", PROCESSES_EXPORT_SCOPE_ID],
-      "xlsx",
-    );
+    expect(onExport).toHaveBeenCalledWith(["overview", "processes"], "xlsx");
   });
 
   it("shows guidance when VM processes are selected", async () => {
