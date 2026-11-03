@@ -41,7 +41,7 @@ import {
 
 <ChartExportProvider>
   <Dashboard />
-</ChartExportProvider>
+</ChartExportProvider>;
 ```
 
 `ChartExportProvider` lazy-loads capture, ZIP, PDF, and HTML. Wrap the chart visual (not the Card chrome) in `ChartExportSurface`. All formats snapshot those same nodes, encode one chart at a time, and drop the canvas. There is no second print tree and no `isExportMode` render:
@@ -56,7 +56,7 @@ import { ChartExportSurface } from "@openshift-migration-advisor/shared-componen
       <MigrationDonutChart {...chartProps} />
     </ChartExportSurface>
   </CardBody>
-</Card>
+</Card>;
 ```
 
 `ReportExportMenu` accepts a fully custom `options` list. `standardReportExportOptions()` builds the PDF / HTML / PNG entries; omit a handler to hide that format.
@@ -78,10 +78,10 @@ The package is published to npm under `@openshift-migration-advisor/shared-compo
 
 **Workflow:** [`.github/workflows/release-shared-components.yaml`](../../.github/workflows/release-shared-components.yaml)
 
-| Trigger | Result |
-|---|---|
+| Trigger                                                            | Result                                  |
+| ------------------------------------------------------------------ | --------------------------------------- |
 | Push to `main` / `stable` changing `packages/shared-components/**` | Prerelease: `{latestTag}-{12-char-sha}` |
-| Tag `vX.Y.Z` | Release: `X.Y.Z` |
+| Tag `vX.Y.Z`                                                       | Release: `X.Y.Z`                        |
 
 ### One-time npm setup (required before first publish)
 

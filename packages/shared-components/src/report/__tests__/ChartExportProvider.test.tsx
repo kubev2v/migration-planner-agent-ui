@@ -3,7 +3,12 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ChartExportProvider, useChartExport } from "../ChartExportProvider.js";
+import {
+  type BuildChartDocument,
+  type BuildPdfDocument,
+  ChartExportProvider,
+  useChartExport,
+} from "../ChartExportProvider.js";
 import { ChartExportSurface } from "../ChartExportSurface.js";
 import {
   CHART_EXPORT_HIDE_ATTR,
@@ -31,6 +36,29 @@ vi.mock("../../charts/MigrationDonutChart.js", () => ({
 }));
 
 afterEach(() => cleanup());
+
+function DropdownChart(): JSX.Element {
+  const [view, setView] = useState("a");
+  return (
+    <ChartExportSurface
+      id="vm"
+      title={view === "a" ? "View A" : "View B"}
+      exportViews={[
+        { id: "a", title: "View A" },
+        { id: "b", title: "View B" },
+      ]}
+      activeExportViewId={view}
+      onExportViewChange={setView}
+    >
+      <div data-testid="active-view">{view}</div>
+    </ChartExportSurface>
+  );
+}
+
+function ErrorText(): JSX.Element {
+  const exportApi = useChartExport();
+  return <div>{exportApi?.exportError}</div>;
+}
 
 function RegisteredChart({
   id,
@@ -255,7 +283,7 @@ describe("ChartExportProvider", () => {
   it("builds a PDF from the same captured canvases", async () => {
     const user = userEvent.setup();
     const capture = vi.fn(async () => fakeCanvas());
-    const buildPdf = vi.fn(async () => new Blob(["pdf"]));
+    const buildPdf = vi.fn<BuildPdfDocument>(async () => new Blob(["pdf"]));
     const downloadFile = vi.fn();
 
     render(
@@ -285,7 +313,7 @@ describe("ChartExportProvider", () => {
   it("forwards extra text pages (e.g. cluster sizing recommendations) to the pdf builder", async () => {
     const user = userEvent.setup();
     const capture = vi.fn(async () => fakeCanvas());
-    const buildPdf = vi.fn(async () => new Blob(["pdf"]));
+    const buildPdf = vi.fn<BuildPdfDocument>(async () => new Blob(["pdf"]));
     const downloadFile = vi.fn();
     const extraPages = [
       {
@@ -320,7 +348,7 @@ describe("ChartExportProvider", () => {
 
   it("builds a PDF from extra text pages alone when no charts are registered", async () => {
     const user = userEvent.setup();
-    const buildPdf = vi.fn(async () => new Blob(["pdf"]));
+    const buildPdf = vi.fn<BuildPdfDocument>(async () => new Blob(["pdf"]));
     const downloadFile = vi.fn();
     const extraPages = [{ title: "Cluster sizing recommendations", items: [] }];
 
@@ -347,7 +375,7 @@ describe("ChartExportProvider", () => {
   it("builds HTML from the same captured canvases", async () => {
     const user = userEvent.setup();
     const capture = vi.fn(async () => fakeCanvas());
-    const buildHtml = vi.fn(async () => new Blob(["html"]));
+    const buildHtml = vi.fn<BuildChartDocument>(async () => new Blob(["html"]));
     const downloadFile = vi.fn();
 
     render(
@@ -396,24 +424,6 @@ describe("ChartExportProvider", () => {
       },
     );
     const downloadFile = vi.fn();
-
-    function DropdownChart(): JSX.Element {
-      const [view, setView] = useState("a");
-      return (
-        <ChartExportSurface
-          id="vm"
-          title={view === "a" ? "View A" : "View B"}
-          exportViews={[
-            { id: "a", title: "View A" },
-            { id: "b", title: "View B" },
-          ]}
-          activeExportViewId={view}
-          onExportViewChange={setView}
-        >
-          <div data-testid="active-view">{view}</div>
-        </ChartExportSurface>
-      );
-    }
 
     render(
       <ChartExportProvider
@@ -472,11 +482,6 @@ describe("ChartExportProvider", () => {
   it("shows a generic error when capture fails", async () => {
     const user = userEvent.setup();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    function ErrorText(): JSX.Element {
-      const exportApi = useChartExport();
-      return <div>{exportApi?.exportError}</div>;
-    }
 
     render(
       <ChartExportProvider
