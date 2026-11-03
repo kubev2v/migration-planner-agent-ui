@@ -1,3 +1,4 @@
+import { css } from "@emotion/css";
 import type { CollectorStatus } from "@openshift-migration-advisor/agent-sdk";
 import {
   Alert,
@@ -214,7 +215,12 @@ export const RVToolsUploadPage: React.FC = () => {
 
               {error && (
                 <FlexItem>
-                  <Alert variant="danger" isInline title="Upload failed">
+                  <Alert
+                    variant="danger"
+                    isInline
+                    title="Upload failed"
+                    className={css({ whiteSpace: "pre-line" })}
+                  >
                     {error}
                   </Alert>
                 </FlexItem>
