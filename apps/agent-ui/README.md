@@ -17,12 +17,12 @@ If you are developing a production application, we recommend updating the config
 export default {
   // other rules...
   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json', './tsconfig.app.json'],
+    ecmaVersion: "latest",
+    sourceType: "module",
+    project: ["./tsconfig.json", "./tsconfig.node.json", "./tsconfig.app.json"],
     tsconfigRootDir: __dirname,
   },
-}
+};
 ```
 
 - Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
@@ -30,7 +30,9 @@ export default {
 - Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
 
 ## bundle creation
+
 We can create a TGZ file executing `yarn bundle` and the file generated can be consumed by oher projects like [migration-planner](https://github.com/kubev2v/migration-planner).
 
 ## bundle creation on push to main
+
 With the .github/workflows/push-to-main.yaml action the TGZ file is automatically generated when we push to main branch changes related with agent folder (apps/agent).

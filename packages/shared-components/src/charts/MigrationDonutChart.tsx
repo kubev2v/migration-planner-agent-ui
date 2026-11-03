@@ -266,7 +266,7 @@ export const MigrationDonutChart: FC<MigrationDonutChartProps> = ({
   const innerRadius = useMemo(() => {
     const outerApprox = Math.min(width, height) / 2;
     const computed = outerApprox - donutThickness;
-    return computed > 0 ? computed : 0;
+    return Math.max(computed, 0);
   }, [width, height, donutThickness]);
 
   const totalY = useMemo(() => {

@@ -105,6 +105,75 @@ afterEach(() => {
   cleanup();
 });
 
+const DuplicateLabelHarness: React.FC<{ onOpen: () => void }> = ({
+  onOpen,
+}) => {
+  const [selections, setSelections] = useState<string[]>(["vm-a", "vm-b"]);
+
+  const attributes = useMemo(
+    (): AttributeValueFilterAttribute[] => [
+      {
+        id: "virtual-machine",
+        label: "Virtual machine",
+        type: "checkbox",
+        options: [
+          { value: "vm-a", label: "web-01" },
+          { value: "vm-b", label: "web-01" },
+        ],
+        selections,
+        onSelectionsChange: setSelections,
+        onOpen,
+      },
+    ],
+    [selections, onOpen],
+  );
+
+  return (
+    <>
+      <Toolbar>
+        <ToolbarContent>
+          <AttributeValueFilter attributes={attributes} />
+        </ToolbarContent>
+      </Toolbar>
+      <div data-testid="selections">{selections.join(",")}</div>
+    </>
+  );
+};
+
+const SearchableHarness: React.FC<{ onOpen: () => void }> = ({ onOpen }) => {
+  const [selections, setSelections] = useState<string[]>([]);
+
+  const attributes = useMemo(
+    (): AttributeValueFilterAttribute[] => [
+      {
+        id: "virtual-machine",
+        label: "Virtual machine",
+        type: "searchable-checkbox",
+        options: [
+          { value: "vm-a", label: "Alpha VM" },
+          { value: "vm-b", label: "Beta VM" },
+        ],
+        selections,
+        onSelectionsChange: setSelections,
+        onOpen,
+        searchPlaceholder: "Type to filter VMs",
+      },
+    ],
+    [selections, onOpen],
+  );
+
+  return (
+    <>
+      <Toolbar>
+        <ToolbarContent>
+          <AttributeValueFilter attributes={attributes} />
+        </ToolbarContent>
+      </Toolbar>
+      <div data-testid="selections">{selections.join(",")}</div>
+    </>
+  );
+};
+
 describe("AttributeValueFilter", () => {
   it("shows the text value control for the default active attribute", () => {
     render(<FilterHarness />);
@@ -224,40 +293,7 @@ describe("AttributeValueFilter", () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();
 
-    const DuplicateLabelHarness: React.FC = () => {
-      const [selections, setSelections] = useState<string[]>(["vm-a", "vm-b"]);
-
-      const attributes = useMemo(
-        (): AttributeValueFilterAttribute[] => [
-          {
-            id: "virtual-machine",
-            label: "Virtual machine",
-            type: "checkbox",
-            options: [
-              { value: "vm-a", label: "web-01" },
-              { value: "vm-b", label: "web-01" },
-            ],
-            selections,
-            onSelectionsChange: setSelections,
-            onOpen,
-          },
-        ],
-        [selections],
-      );
-
-      return (
-        <>
-          <Toolbar>
-            <ToolbarContent>
-              <AttributeValueFilter attributes={attributes} />
-            </ToolbarContent>
-          </Toolbar>
-          <div data-testid="selections">{selections.join(",")}</div>
-        </>
-      );
-    };
-
-    render(<DuplicateLabelHarness />);
+    render(<DuplicateLabelHarness onOpen={onOpen} />);
 
     const closeButtons = screen.getAllByRole("button", {
       name: "Close web-01",
@@ -274,41 +310,7 @@ describe("AttributeValueFilter", () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();
 
-    const SearchableHarness: React.FC = () => {
-      const [selections, setSelections] = useState<string[]>([]);
-
-      const attributes = useMemo(
-        (): AttributeValueFilterAttribute[] => [
-          {
-            id: "virtual-machine",
-            label: "Virtual machine",
-            type: "searchable-checkbox",
-            options: [
-              { value: "vm-a", label: "Alpha VM" },
-              { value: "vm-b", label: "Beta VM" },
-            ],
-            selections,
-            onSelectionsChange: setSelections,
-            onOpen,
-            searchPlaceholder: "Type to filter VMs",
-          },
-        ],
-        [selections],
-      );
-
-      return (
-        <>
-          <Toolbar>
-            <ToolbarContent>
-              <AttributeValueFilter attributes={attributes} />
-            </ToolbarContent>
-          </Toolbar>
-          <div data-testid="selections">{selections.join(",")}</div>
-        </>
-      );
-    };
-
-    render(<SearchableHarness />);
+    render(<SearchableHarness onOpen={onOpen} />);
 
     await user.click(
       screen.getByRole("button", { name: "Filter by virtual machine" }),
