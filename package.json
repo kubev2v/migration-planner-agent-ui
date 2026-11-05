@@ -18,8 +18,8 @@
     "knip:offline-analyzer": "knip --workspace apps/offline-analyzer"
   },
   "devDependencies": {
-    "@biomejs/biome": "~2.6.3",
-    "@types/node": "^26.6.5",
+    "@biomejs/biome": "~2.6.4",
+    "@types/node": "^26.6.6",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.2",
