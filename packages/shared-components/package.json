@@ -46,7 +46,7 @@
     "README.md"
   ],
   "dependencies": {
-    "html2canvas-pro": "^2.5.2",
+    "html2canvas-pro": "^2.5.3",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.2"
   }
