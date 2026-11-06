@@ -676,7 +676,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openshift-migration-advisor/shared-components@workspace:packages/shared-components"
   dependencies:
-    html2canvas-pro: "npm:^2.5.3"
+    html2canvas-pro: "npm:^2.5.4"
     jspdf: "npm:^4.2.1"
     jszip: "npm:^3.10.2"
   languageName: unknown
@@ -2178,10 +2178,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"html2canvas-pro@npm:^2.5.3":
-  version: 2.5.3
-  resolution: "html2canvas-pro@npm:2.5.3"
-  checksum: 10c0/6e44a48b945ca7dd82906b446dda0b28cea93a699a3c1a91e0e50d2163f60942672e7661751524ddd19fb1f4b7e339f8e3c24071a0d230a2d81d742b8568f84d
+"html2canvas-pro@npm:^2.5.4":
+  version: 2.5.4
+  resolution: "html2canvas-pro@npm:2.5.4"
+  checksum: 10c0/144b4de9f069643dfd03498209051199a221428953f258d5bdce0ff05b640a0993f403c9c761704207b18b6a3bee61a6f0110a85a85f1a56d234242acd487262
   languageName: node
   linkType: hard
 
