@@ -8,6 +8,6 @@ export type ApiWithConfig = DefaultApiInterface & {
 export function getAgentApiBasePath(agentApi?: DefaultApiInterface): string {
   return (
     (agentApi as ApiWithConfig | undefined)?.configuration?.basePath ||
-    `${window.location.origin}/agent/api/v2`
+    `${window.location.origin}/agent/api/v1`
   );
 }
