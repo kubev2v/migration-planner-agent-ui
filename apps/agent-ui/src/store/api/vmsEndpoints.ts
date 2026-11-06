@@ -18,9 +18,9 @@ import { fetchVmTableFilterOptions } from "../../pages/VirtualMachinesOverview/c
 import type { VMTableFilterOptions } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmTableTypes";
 import {
   adjustInventoryForMigrationExcludedChange,
-  fetchInventoryFromApi,
-  type InventoryPayload,
+  fetchReportInventoryFromApi,
   type MigrationExcludedInventoryChange,
+  type ReportInventoryResult,
 } from "../../pages/VirtualMachinesOverview/inventoryParsing";
 import { agentApiSlice } from "./agentApiSlice";
 import { groupChangeTags } from "./groupTags";
@@ -30,6 +30,12 @@ interface GetVMsArg {
   sort?: string[];
   page: number;
   pageSize: number;
+}
+
+/** vCenter scope for assessment inventory (`GET /assessments/.../vcenters/{vid}`). */
+export interface GetInventoryArg {
+  /** `"all"` = merged inventory from `GET /assessments/{id}`; otherwise a vCenter UUID. */
+  selectedVcenterId: string;
 }
 
 interface GetApplicationDrawerVmsArg {
@@ -100,10 +106,16 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       ],
     }),
 
-    // Header/dashboard source: the whole-fleet inventory (via raw fetch to work
-    // around an SDK response-parsing bug — see fetchInventoryFromApi).
-    getInventory: build.query<InventoryPayload | null, void>({
-      query: () => (sdk) => fetchInventoryFromApi(getAgentApiBasePath(sdk)),
+    // Header/dashboard source: assessment API when present (`/assessments`, multi-vCenter),
+    // else `GET /inventory` (agent). Keyed by vCenter selection.
+    getInventory: build.query<ReportInventoryResult, GetInventoryArg>({
+      query:
+        ({ selectedVcenterId }) =>
+        (sdk) =>
+          fetchReportInventoryFromApi(
+            getAgentApiBasePath(sdk),
+            selectedVcenterId === "all" ? undefined : selectedVcenterId,
+          ),
       providesTags: ["Inventory"],
     }),
 
@@ -223,17 +235,20 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
         const patch = dispatch(
           vmsEndpoints.util.updateQueryData(
             "getInventory",
-            undefined,
+            { selectedVcenterId: "all" },
             (draft) => {
-              if (!draft) {
+              if (!draft?.inventory) {
                 return draft;
               }
-              return adjustInventoryForMigrationExcludedChange(
-                draft,
-                vmIds,
-                migrationExcluded,
-                affectedVms,
-              );
+              return {
+                ...draft,
+                inventory: adjustInventoryForMigrationExcludedChange(
+                  draft.inventory,
+                  vmIds,
+                  migrationExcluded,
+                  affectedVms,
+                ),
+              };
             },
           ),
         );

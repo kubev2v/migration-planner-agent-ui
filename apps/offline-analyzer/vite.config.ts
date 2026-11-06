@@ -7,7 +7,8 @@ export default defineConfig((_env) => {
     plugins: [react()],
     server: {
       proxy: {
-        "/agent/api/v2": {
+        // Standalone RVTools Analyzer: OpenAPI base path `/api/v1` (served under `/agent` in dev)
+        "/agent/api/v1": {
           target: process.env.VITE_API_BASE_URL || "http://localhost:8000",
           changeOrigin: true,
           rewrite: (path): string => path.replace(/^\/agent/, ""),

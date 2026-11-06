@@ -32,17 +32,31 @@ function makeFakeApi(counts: { total: number }): AgentApiClient {
   } as unknown as AgentApiClient;
 }
 
+const INVENTORY_ARG = { selectedVcenterId: "all" as const };
+
 /** Stub GET /inventory so getInventory (raw fetch) returns tracked totals. */
 function stubInventoryFetch(counts: { total: number }) {
-  const fetchMock = vi.fn(async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({
-      vcenter_id: "vc1",
-      clusters: {},
-      vcenter: { vms: { total: counts.total } },
-    }),
-  }));
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input.toString();
+    // Agent appliance has no assessment API — skip multi-vCenter path with 404.
+    if (url.includes("/assessments")) {
+      return {
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+        json: async () => ({}),
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        vcenter_id: "vc1",
+        clusters: {},
+        vcenter: { vms: { total: counts.total } },
+      }),
+    };
+  });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
@@ -64,7 +78,9 @@ describe("vmsEndpoints tag invalidation", () => {
 
     // Initial load: table and inventory both observe 7.
     await store.dispatch(vmsEndpoints.endpoints.getVMs.initiate(VMS_ARG));
-    await store.dispatch(vmsEndpoints.endpoints.getInventory.initiate());
+    await store.dispatch(
+      vmsEndpoints.endpoints.getInventory.initiate(INVENTORY_ARG),
+    );
 
     const vmsTotal = () =>
       vmsEndpoints.endpoints.getVMs.select(VMS_ARG)(store.getState()).data
@@ -72,7 +88,8 @@ describe("vmsEndpoints tag invalidation", () => {
 
     expect(vmsTotal()).toBe(7);
     expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Probes `GET /assessments` (404 on agent) then loads `GET /inventory`.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
     // Exclude two VMs from reports, then invalidate exactly what the mutation
     // invalidates (Vms:LIST + Inventory).
@@ -91,7 +108,7 @@ describe("vmsEndpoints tag invalidation", () => {
     // exclusion invalidation — they cannot diverge.
     await vi.waitFor(() => {
       expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(2);
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
       expect(vmsTotal()).toBe(5);
     });
   });
