@@ -215,7 +215,12 @@ export const RVToolsUploadPage: React.FC = () => {
 
               {error && (
                 <FlexItem>
-                  <Alert variant="danger" isInline title="Upload failed">
+                  <Alert
+                    variant="danger"
+                    isInline
+                    title="Upload failed"
+                    style={{ whiteSpace: "pre-line" }}
+                  >
                     {error}
                   </Alert>
                 </FlexItem>
