@@ -20,13 +20,13 @@ import { type AgentApiClient, createAgentApi } from "./agentApi";
 
 export const getConfigurationBasePath = (): string => {
   if (import.meta.env.PROD) {
-    // In production, use HTTPS
+    // In production, use HTTPS — Standalone RVTools Analyzer API (OpenAPI servers: /api/v1)
     const origin = window.location.origin.replace(/^http:/, "https:");
-    return `${origin}/api/v2`;
+    return `${origin}/api/v1`;
   }
 
-  // In development, use the current origin (allows HTTP for local dev)
-  return `${window.location.origin}/agent/api/v2`;
+  // In development, proxy via Vite `/agent/api/v1` → analyzer backend (see vite.config.ts)
+  return `${window.location.origin}/agent/api/v1`;
 };
 
 let client: AgentApiClient | undefined;

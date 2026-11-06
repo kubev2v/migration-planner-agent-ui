@@ -3,12 +3,14 @@ import type {
   VirtualMachine,
   VMs,
 } from "@openshift-migration-advisor/agent-sdk";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adjustInventoryForMigrationExcludedChange,
+  fetchReportInventoryFromApi,
   getInventoryAggregateView,
   type InventoryPayload,
   inventoryFromGroupResponse,
+  parseInventoryResponse,
 } from "./inventoryParsing";
 import type { VirtualMachineWithExclusion } from "./virtualMachineParsing";
 
@@ -183,5 +185,87 @@ describe("inventoryFromGroupResponse", () => {
   it("returns null when the group has no inventory", () => {
     expect(inventoryFromGroupResponse({})).toBeNull();
     expect(inventoryFromGroupResponse({ inventory: null })).toBeNull();
+  });
+});
+
+describe("standalone analyzer inventory (GET /inventory InventoryResponse)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("parseInventoryResponse reads data from { data, vcenters }", () => {
+    const parsed = parseInventoryResponse({
+      data: {
+        vcenter_id: "vc-a",
+        clusters: {},
+        vcenter: {
+          infra: testInfra(0),
+          vms: testVms(42, 40),
+        },
+      },
+      vcenters: [{ id: "vc-a" }, { id: "vc-b" }],
+    });
+    expect(parsed?.vcenter_id).toBe("vc-a");
+    expect(parsed?.vcenter?.vms?.total).toBe(42);
+  });
+
+  it("fetchReportInventoryFromApi loads GET /inventory/vcenters/{vid} when scoped", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/assessments")) {
+        return {
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: async () => ({}),
+        };
+      }
+      if (url.endsWith("/inventory")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              vcenter_id: "vc-a",
+              clusters: {},
+              vcenter: {
+                infra: testInfra(1),
+                vms: testVms(100, 80),
+              },
+            },
+            vcenters: [{ id: "vc-a" }, { id: "vc-b" }],
+          }),
+        };
+      }
+      if (url.includes("/inventory/vcenters/vc-b")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            inventory: {
+              vcenter_id: "vc-b",
+              clusters: {},
+              vcenter: {
+                infra: testInfra(1),
+                vms: testVms(7, 6),
+              },
+            },
+          }),
+        };
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchReportInventoryFromApi(
+      "http://localhost/api/v1",
+      "vc-b",
+    );
+
+    // Probes SaaS `GET .../assessments`, then analyzer `GET .../inventory` + per-vCenter inventory.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.vcenters).toEqual([{ id: "vc-a" }, { id: "vc-b" }]);
+    expect(result.inventory?.vcenter_id).toBe("vc-b");
+    expect(result.inventory?.vcenter?.vms?.total).toBe(7);
   });
 });

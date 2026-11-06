@@ -12,8 +12,31 @@ export type ReportTabIndex = (typeof REPORT_TAB)[keyof typeof REPORT_TAB];
  */
 export const CLUSTER_PARAM = "cluster";
 
+/**
+ * Selected vCenter for multi-vCenter report inventory: SaaS `GET .../assessments/.../vcenters/{id}`,
+ * or standalone analyzer `GET .../inventory/vcenters/{vid}`. Omitted or `all` means aggregated
+ * inventory across vCenters.
+ */
+export const VCENTER_PARAM = "vcenter";
+
 export function getClusterParam(searchParams: URLSearchParams): string {
   return searchParams.get(CLUSTER_PARAM) ?? "all";
+}
+
+export function getVcenterParam(searchParams: URLSearchParams): string {
+  return searchParams.get(VCENTER_PARAM) ?? "all";
+}
+
+/** Writes or clears the vCenter scope param (`all` / empty removes it). */
+export function setVcenterParam(
+  params: URLSearchParams,
+  vcenterId: string,
+): void {
+  if (!vcenterId || vcenterId === "all") {
+    params.delete(VCENTER_PARAM);
+  } else {
+    params.set(VCENTER_PARAM, vcenterId);
+  }
 }
 
 /** Writes or clears the cluster scope param (`all` / empty removes it). */
