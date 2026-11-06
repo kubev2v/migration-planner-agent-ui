@@ -2,6 +2,8 @@ import { ChartExportProvider } from "@openshift-migration-advisor/shared-compone
 import {
   Alert,
   Content,
+  Flex,
+  FlexItem,
   MenuToggle,
   type MenuToggleElement,
   PageSection,
@@ -68,10 +70,12 @@ import {
   buildVmsTabUrl,
   clearVmFilterParams,
   getClusterParam,
+  getVcenterParam,
   REPORT_TAB,
   resolveReportTab,
   setClusterParam,
   setTabParam,
+  setVcenterParam,
 } from "./reportTabNavigation";
 import { normalizeVirtualMachines } from "./virtualMachineParsing";
 
@@ -93,7 +97,9 @@ export const ReportContainer: React.FC = () => {
   const newestCollectionId = collections?.[0]?.id;
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedClusterId = getClusterParam(searchParams);
+  const selectedVcenterId = getVcenterParam(searchParams);
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
+  const [isVcenterSelectOpen, setIsVcenterSelectOpen] = useState(false);
 
   // VM pagination state (client-only; the query keys on these values)
   const [vmsPage, setVmsPage] = useState(1);
@@ -115,6 +121,7 @@ export const ReportContainer: React.FC = () => {
       const newParams = filtersToSearchParams(filters);
       setTabParam(newParams, REPORT_TAB.vms);
       setClusterParam(newParams, getClusterParam(searchParams));
+      setVcenterParam(newParams, getVcenterParam(searchParams));
       setSearchParams(newParams, { replace: true });
     },
     [searchParams, setSearchParams],
@@ -142,10 +149,34 @@ export const ReportContainer: React.FC = () => {
   // The assessment inventory drives the dashboard, the header counts and the
   // gating of the whole page (loading / error / no-inventory states).
   const {
-    data: inventory,
+    data: inventoryResult,
     isLoading: inventoryLoading,
     error: inventoryError,
-  } = useGetInventoryQuery();
+  } = useGetInventoryQuery({ selectedVcenterId });
+
+  const inventory = inventoryResult?.inventory ?? null;
+  const vcenters = inventoryResult?.vcenters ?? [];
+  const showVcenterSelect = vcenters.length > 1;
+
+  useEffect(() => {
+    if (!showVcenterSelect || vcenters.length === 0) {
+      return;
+    }
+    if (
+      selectedVcenterId !== "all" &&
+      !vcenters.some((v) => v.id === selectedVcenterId)
+    ) {
+      const params = new URLSearchParams(searchParams);
+      setVcenterParam(params, "all");
+      setSearchParams(params, { replace: true });
+    }
+  }, [
+    showVcenterSelect,
+    vcenters,
+    selectedVcenterId,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const clusterScopeId = useMemo(() => {
     if (!inventory) {
@@ -236,6 +267,32 @@ export const ReportContainer: React.FC = () => {
     hasCollectionData,
     hasInventory: Boolean(inventory),
   });
+
+  const vcenterSelectDisabled = !showVcenterSelect;
+
+  const formatVcenterLabel = (id: string): string => {
+    if (id.length <= 12) {
+      return id;
+    }
+    return `${id.slice(0, 8)}…${id.slice(-4)}`;
+  };
+
+  const handleVcenterSelect = (
+    _event: React.MouseEvent<Element, MouseEvent> | undefined,
+    value: string | number | undefined,
+  ): void => {
+    if (typeof value === "string") {
+      setVmsPage(1);
+      const newParams = new URLSearchParams(searchParams);
+      setVcenterParam(newParams, value);
+      setClusterParam(newParams, "all");
+      setTabParam(newParams, activeTab);
+      newParams.delete("vmId");
+      clearVmFilterParams(newParams);
+      setSearchParams(newParams, { replace: true });
+    }
+    setIsVcenterSelectOpen(false);
+  };
 
   if (inventoryLoading) {
     return (
@@ -368,6 +425,7 @@ export const ReportContainer: React.FC = () => {
     });
     setTabParam(newParams, REPORT_TAB.vms);
     setClusterParam(newParams, getClusterParam(searchParams));
+    setVcenterParam(newParams, getVcenterParam(searchParams));
     setSearchParams(newParams, { replace: true });
     setVmsPage(1);
   };
@@ -397,40 +455,96 @@ export const ReportContainer: React.FC = () => {
             <Header totalVMs={totalVMs} totalClusters={totalClusters} />
           </StackItem>
 
-          {/* Cluster Selector */}
+          {/* vCenter + cluster scope (multi-vCenter assessments list vCenters from the API). */}
           <StackItem>
-            <Select
-              isScrollable
-              isOpen={isClusterSelectOpen}
-              selected={clusterView.selectionId}
-              onSelect={handleClusterSelect}
-              onOpenChange={(isOpen: boolean) => {
-                if (!clusterSelectDisabled) setIsClusterSelectOpen(isOpen);
-              }}
-              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                <MenuToggle
-                  ref={toggleRef}
-                  isExpanded={isClusterSelectOpen}
-                  onClick={() => {
-                    if (!clusterSelectDisabled) {
-                      setIsClusterSelectOpen((prev) => !prev);
-                    }
-                  }}
-                  isDisabled={clusterSelectDisabled}
-                  style={{ minWidth: "422px" }}
-                >
-                  {clusterView.selectionLabel}
-                </MenuToggle>
-              )}
+            <Flex
+              gap={{ default: "gapMd" }}
+              alignItems={{ default: "alignItemsFlexStart" }}
+              flexWrap={{ default: "wrap" }}
             >
-              <SelectList>
-                {clusterView.clusterOptions.map((option: ClusterOption) => (
-                  <SelectOption key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectOption>
-                ))}
-              </SelectList>
-            </Select>
+              {showVcenterSelect ? (
+                <FlexItem>
+                  <Select
+                    isScrollable
+                    isOpen={isVcenterSelectOpen}
+                    selected={
+                      selectedVcenterId === "all" ||
+                      vcenters.some((v) => v.id === selectedVcenterId)
+                        ? selectedVcenterId
+                        : "all"
+                    }
+                    onSelect={handleVcenterSelect}
+                    onOpenChange={(isOpen: boolean) => {
+                      if (!vcenterSelectDisabled) {
+                        setIsVcenterSelectOpen(isOpen);
+                      }
+                    }}
+                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                      <MenuToggle
+                        ref={toggleRef}
+                        isExpanded={isVcenterSelectOpen}
+                        onClick={() => {
+                          if (!vcenterSelectDisabled) {
+                            setIsVcenterSelectOpen((prev) => !prev);
+                          }
+                        }}
+                        isDisabled={vcenterSelectDisabled}
+                        style={{ minWidth: "320px" }}
+                      >
+                        {selectedVcenterId === "all"
+                          ? "All vCenters"
+                          : formatVcenterLabel(selectedVcenterId)}
+                      </MenuToggle>
+                    )}
+                  >
+                    <SelectList>
+                      <SelectOption key="all" value="all">
+                        All vCenters
+                      </SelectOption>
+                      {vcenters.map((vc) => (
+                        <SelectOption key={vc.id} value={vc.id}>
+                          {formatVcenterLabel(vc.id)}
+                        </SelectOption>
+                      ))}
+                    </SelectList>
+                  </Select>
+                </FlexItem>
+              ) : null}
+              <FlexItem>
+                <Select
+                  isScrollable
+                  isOpen={isClusterSelectOpen}
+                  selected={clusterView.selectionId}
+                  onSelect={handleClusterSelect}
+                  onOpenChange={(isOpen: boolean) => {
+                    if (!clusterSelectDisabled) setIsClusterSelectOpen(isOpen);
+                  }}
+                  toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                    <MenuToggle
+                      ref={toggleRef}
+                      isExpanded={isClusterSelectOpen}
+                      onClick={() => {
+                        if (!clusterSelectDisabled) {
+                          setIsClusterSelectOpen((prev) => !prev);
+                        }
+                      }}
+                      isDisabled={clusterSelectDisabled}
+                      style={{ minWidth: "422px" }}
+                    >
+                      {clusterView.selectionLabel}
+                    </MenuToggle>
+                  )}
+                >
+                  <SelectList>
+                    {clusterView.clusterOptions.map((option: ClusterOption) => (
+                      <SelectOption key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectOption>
+                    ))}
+                  </SelectList>
+                </Select>
+              </FlexItem>
+            </Flex>
           </StackItem>
 
           {utilizationMetrics && (
