@@ -7,7 +7,6 @@ export const AGENT_API_TAGS = [
   "Inventory",
   "VmLabels",
   "Collections",
-  "AgentStatus",
   "CollectorStatus",
 ] as const;
 

@@ -49,7 +49,7 @@ describe("comparisonEndpoints tag invalidation", () => {
 
     // A completed report invalidates the shared tag.
     store.dispatch(
-      agentApiSlice.util.invalidateTags(["Collections", "AgentStatus"]),
+      agentApiSlice.util.invalidateTags(["Collections"]),
     );
 
     await vi.waitFor(() => {
