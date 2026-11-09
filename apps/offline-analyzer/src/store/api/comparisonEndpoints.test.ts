@@ -48,9 +48,7 @@ describe("comparisonEndpoints tag invalidation", () => {
     expect(api.compareCollections).toHaveBeenCalledTimes(1);
 
     // A completed report invalidates the shared tag.
-    store.dispatch(
-      agentApiSlice.util.invalidateTags(["Collections", "AgentStatus"]),
-    );
+    store.dispatch(agentApiSlice.util.invalidateTags(["Collections"]));
 
     await vi.waitFor(() => {
       expect(api.listCollections).toHaveBeenCalledTimes(2);

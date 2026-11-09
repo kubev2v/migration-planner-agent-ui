@@ -10,30 +10,21 @@ import {
 import { ExclamationCircleIcon } from "@patternfly/react-icons";
 import type React from "react";
 import { useListCollectionsQuery } from "../store/api/comparisonEndpoints";
-import { useGetAgentStatusQuery } from "../store/api/lifecycleEndpoints";
 
 /**
- * Startup gate: loads the only data the app needs to decide its initial route —
- * the agent status and the list of collections — before anything else mounts.
- *
- * This component is the single subscriber for those two cache entries. Because
- * the router (and every page) only mounts once both requests have succeeded,
- * downstream consumers read the fulfilled cache instead of re-issuing their own
- * requests. When the backend is unreachable, we stop at the error screen rather
- * than mounting pages that would each retry the failing calls.
+ * Startup gate: ensures we can reach the analyzer (`GET /collections`) before the
+ * router mounts. Offline analyzer is always RVTools mode — no agent `/agent` status
+ * probe (appliance-only SDK surface).
  */
 export const AppBootstrap: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const agentStatus = useGetAgentStatusQuery();
   const collections = useListCollectionsQuery();
 
-  const ready =
-    agentStatus.data !== undefined && collections.data !== undefined;
+  const ready = collections.data !== undefined;
 
-  if (!ready && (agentStatus.isError || collections.isError)) {
+  if (!ready && collections.isError) {
     const retry = (): void => {
-      void agentStatus.refetch();
       void collections.refetch();
     };
     return (
@@ -41,7 +32,7 @@ export const AppBootstrap: React.FC<{ children: React.ReactNode }> = ({
         <EmptyState
           headingLevel="h2"
           icon={ExclamationCircleIcon}
-          titleText="Unable to reach the appliance backend"
+          titleText="Unable to reach the analyzer backend"
           status="danger"
         >
           <EmptyStateBody>
