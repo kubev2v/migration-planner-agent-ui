@@ -1973,10 +1973,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"entities@npm:^8.0.0":
-  version: 8.1.0
-  resolution: "entities@npm:8.1.0"
-  checksum: 10c0/da0bf22912c19d2a4707783e1b905d3f6a977e93e0655a8d2c526455eb3996f668f9f2e4c2a07af8d6927d232c41b6e929a7044df0236c7bf6e9c38e070e3719
+"entities@npm:^9.0.0":
+  version: 9.0.0
+  resolution: "entities@npm:9.0.0"
+  checksum: 10c0/ef713ce6256d2d878390376f0c42e6ccfeee9032c57c48bd224b9a48f8eb44d4403ad4321d1aeebe973fb08eac8ab324abeebc04a92748c0bac9261968e6d395
   languageName: node
   linkType: hard
 
@@ -2885,11 +2885,11 @@ __metadata:
   linkType: hard
 
 "parse5@npm:^8.0.1":
-  version: 8.0.1
-  resolution: "parse5@npm:8.0.1"
+  version: 8.1.0
+  resolution: "parse5@npm:8.1.0"
   dependencies:
-    entities: "npm:^8.0.0"
-  checksum: 10c0/c3c1c5aab55f6e4be5245599790e56e64be7764a4a0edd7f98db4fe3bb380f63add752fa047dff0496446c25f4104f0c7c1967723de640bde92306a7bb67ed2f
+    entities: "npm:^9.0.0"
+  checksum: 10c0/2b00189fbeb73a47422bed831b970502258a44dc53134c0db8e2d3114cec0766fea5346dbb61aff94978c6bf666e5243bc5bcb2279b680f130f8de98cd28ac18
   languageName: node
   linkType: hard
 
@@ -3577,9 +3577,9 @@ __metadata:
   linkType: hard
 
 "unbash@npm:^6.0.1":
-  version: 6.0.2
-  resolution: "unbash@npm:6.0.2"
-  checksum: 10c0/812eed30e3e87358af2f175bf28ea34efcefb41a2ca48f54c560de78d22fb64a14993269e75605626c49ce81d03c84b97cc52e3d2c100f1b3cd10aacf45d9e50
+  version: 6.0.3
+  resolution: "unbash@npm:6.0.3"
+  checksum: 10c0/215d6f54dc9f21bc0644aaf0d51db265b0b240c015c1f482af9e80874818411a0ef5a200a257e976bb0bc04ddb41fabcef1d68f071bed67a266fcc877c5f1795
   languageName: node
   linkType: hard
 
