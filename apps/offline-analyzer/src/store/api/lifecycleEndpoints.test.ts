@@ -12,11 +12,6 @@ import { lifecycleEndpoints } from "./lifecycleEndpoints";
 
 function makeFakeApi(): AgentApiClient {
   return {
-    getAgentStatus: vi.fn(async () => ({
-      mode: "connected",
-      consoleConnection: { status: "connected" },
-      rvtoolsModeEnabled: false,
-    })),
     getCollectorStatus: vi.fn(async () => ({ status: "ready" })),
     startCollector: vi.fn(async () => ({ status: "running" })),
     listCollections: vi.fn(async () => ({

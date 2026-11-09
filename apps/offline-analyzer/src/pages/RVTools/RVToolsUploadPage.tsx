@@ -58,7 +58,6 @@ export const RVToolsUploadPage: React.FC = () => {
         "VmLabels",
         "Inventory",
         "Collections",
-        "AgentStatus",
       ]),
     );
     navigate("/report");

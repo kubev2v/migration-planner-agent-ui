@@ -29,3 +29,11 @@ absent here — RVTools exports do not carry the data those features need.
 - `yarn test` / `yarn test:watch` — Vitest suite.
 
 > Dev server uses port `3002` (preview `4002`) to avoid colliding with the `agent-ui` app, which uses `3001` / `4001`.
+
+## API
+
+The UI talks to the **Standalone RVTools Analyzer** HTTP API (OpenAPI `servers: /api/v1` in `assisted-migration-agent/analyzer/api/v1/openapi.yaml`) — base path **`/api/v1`** (paths match the agent SDK operations; `agent-ui` uses `/api/v2` for the live appliance).
+
+- **Development:** requests go to `/agent/api/v1/...` on the Vite dev server; configure the backend with `VITE_API_BASE_URL` (default `http://localhost:8000`). The proxy strips the `/agent` prefix so the analyzer receives `/api/v1/...`.
+- **Startup:** the app only checks that **`GET /collections`** succeeds (via `AppBootstrap`); there is no agent `GET /agent` or analyzer `GET /status` probe — RVTools mode is implicit.
+- **Production:** the app uses `{origin}/api/v1` as the SDK `basePath` (serve the analyzer behind that path or adjust deployment/nginx accordingly).

@@ -1,7 +1,4 @@
-import type {
-  AgentStatus,
-  CollectorStatus,
-} from "@openshift-migration-advisor/agent-sdk";
+import type { CollectorStatus } from "@openshift-migration-advisor/agent-sdk";
 import { agentApiSlice } from "./agentApiSlice";
 
 /**
@@ -20,11 +17,6 @@ import { agentApiSlice } from "./agentApiSlice";
 export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
   endpoints: (build) => ({
     // --- Queries -----------------------------------------------------------
-    getAgentStatus: build.query<AgentStatus, void>({
-      query: () => (sdk) => sdk.getAgentStatus(),
-      providesTags: ["AgentStatus"],
-    }),
-
     getCollectorStatus: build.query<CollectorStatus, void>({
       query: () => (sdk) => sdk.getCollectorStatus(),
       providesTags: ["CollectorStatus"],
@@ -63,7 +55,6 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
 });
 
 export const {
-  useGetAgentStatusQuery,
   useGetCollectorStatusQuery,
   useStartCollectorMutation,
   useStartRvtoolsCollectorMutation,
