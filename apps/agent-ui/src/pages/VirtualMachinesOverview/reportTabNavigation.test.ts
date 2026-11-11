@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildApplianceDetailUrl,
+  buildAppliancesTabUrl,
   buildApplicationDetailUrl,
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
@@ -20,6 +22,12 @@ describe("resolveReportTab", () => {
     ).toBe(REPORT_TAB.applications);
   });
 
+  it("returns the appliances tab from the URL", () => {
+    expect(resolveReportTab(new URLSearchParams("tab=appliances"), false)).toBe(
+      REPORT_TAB.appliances,
+    );
+  });
+
   it("opens the VMs tab when filters are active without a tab param", () => {
     expect(resolveReportTab(new URLSearchParams("search=web"), true)).toBe(
       REPORT_TAB.vms,
@@ -30,6 +38,18 @@ describe("resolveReportTab", () => {
     expect(resolveReportTab(new URLSearchParams(), false)).toBe(
       REPORT_TAB.overview,
     );
+  });
+});
+
+describe("buildApplianceDetailUrl", () => {
+  it("opens the appliances tab with the selected appliance", () => {
+    const params = buildApplianceDetailUrl(
+      new URLSearchParams("tab=vms&application=Nginx"),
+      "F5 BIG-IP Virtual Edition",
+    );
+    expect(params.get("tab")).toBe("appliances");
+    expect(params.get("appliance")).toBe("F5 BIG-IP Virtual Edition");
+    expect(params.get("application")).toBeNull();
   });
 });
 
@@ -110,6 +130,14 @@ describe("tab navigation URLs", () => {
     expect(params.get("reportInclusion")).toBe("excluded");
   });
 
+  it("preserves VM filters when switching to the appliances tab", () => {
+    const params = buildAppliancesTabUrl(
+      new URLSearchParams("tab=vms&reportInclusion=excluded"),
+    );
+    expect(params.get("tab")).toBe("appliances");
+    expect(params.get("reportInclusion")).toBe("excluded");
+  });
+
   it("preserves cluster scope when switching tabs", () => {
     const params = buildVmsTabUrl(
       new URLSearchParams("tab=overview&cluster=prod-cluster"),
@@ -145,5 +173,8 @@ describe("cluster selection URL helpers", () => {
     const params = new URLSearchParams();
     setTabParam(params, REPORT_TAB.applications);
     expect(params.get("tab")).toBe("applications");
+
+    setTabParam(params, REPORT_TAB.appliances);
+    expect(params.get("tab")).toBe("appliances");
   });
 });

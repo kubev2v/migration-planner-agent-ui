@@ -39,6 +39,7 @@ import { AppEmptyState } from "../../common/components";
 import { useAgentStatus } from "../../common/useAgentStatus";
 import {
   useDeleteGroupMutation,
+  useGetGroupAppliancesQuery,
   useGetGroupApplicationsQuery,
   useGetGroupQuery,
   useGetGroupVMsQuery,
@@ -51,6 +52,7 @@ import {
   type ClusterOption,
   getFleetHeaderCounts,
 } from "../VirtualMachinesOverview/clusterView";
+import { AppliancesView } from "../VirtualMachinesOverview/components/ApplicationsTab/AppliancesView";
 import { ApplicationsView } from "../VirtualMachinesOverview/components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "../VirtualMachinesOverview/components/Dashboard/Dashboard";
 import { VirtualMachinesView } from "../VirtualMachinesOverview/components/VirtualMachinesTab/VirtualMachinesView";
@@ -74,6 +76,7 @@ import {
   inventoryFromGroupResponse,
 } from "../VirtualMachinesOverview/inventoryParsing";
 import {
+  buildAppliancesTabUrl,
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
   buildVmDetailUrl,
@@ -134,6 +137,7 @@ export const GroupDetailPage: React.FC = () => {
   const overviewTabRef = useRef<HTMLElement>(null);
   const vmsTabRef = useRef<HTMLElement>(null);
   const applicationsTabRef = useRef<HTMLElement>(null);
+  const appliancesTabRef = useRef<HTMLElement>(null);
 
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
@@ -220,6 +224,22 @@ export const GroupDetailPage: React.FC = () => {
     ? getSdkErrorMessage(applicationsQueryError, "Failed to load applications.")
     : null;
 
+  const {
+    data: groupAppliancesData,
+    isFetching: groupAppliancesLoading,
+    error: groupAppliancesQueryError,
+  } = useGetGroupAppliancesQuery(
+    { groupId: groupId ?? "" },
+    { skip: activeTab !== REPORT_TAB.appliances || !groupId },
+  );
+  const appliancesList = groupAppliancesData ?? [];
+  const appliancesError = groupAppliancesQueryError
+    ? getSdkErrorMessage(
+        groupAppliancesQueryError,
+        "Failed to load appliances.",
+      )
+    : null;
+
   const handleNavigateToVMFilters = useCallback(
     (filters: VMFilters) => {
       setVmsPage(1);
@@ -244,6 +264,8 @@ export const GroupDetailPage: React.FC = () => {
       setVmsPage(1);
     } else if (tabIndex === REPORT_TAB.applications) {
       newParams = buildApplicationsTabUrl(searchParams);
+    } else if (tabIndex === REPORT_TAB.appliances) {
+      newParams = buildAppliancesTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
     }
@@ -259,11 +281,23 @@ export const GroupDetailPage: React.FC = () => {
     setSearchParams(buildApplicationsTabUrl(searchParams), { replace: true });
   }, [searchParams, setSearchParams]);
 
+  const handleClearSelectedAppliance = useCallback(() => {
+    setSearchParams(buildAppliancesTabUrl(searchParams), { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const selectedApplicationName = searchParams.get("application");
+  const selectedApplianceName = searchParams.get("appliance");
 
   const handleViewApplicationInVmList = useCallback(
     (applicationName: string) => {
       handleNavigateToVMFilters({ applications: [applicationName] });
+    },
+    [handleNavigateToVMFilters],
+  );
+
+  const handleViewApplianceInVmList = useCallback(
+    (applianceName: string) => {
+      handleNavigateToVMFilters({ products: [applianceName] });
     },
     [handleNavigateToVMFilters],
   );
@@ -465,6 +499,14 @@ export const GroupDetailPage: React.FC = () => {
                 tabContentRef={applicationsTabRef}
               />
             )}
+            {!isRvtoolsMode && (
+              <Tab
+                eventKey={REPORT_TAB.appliances}
+                title={<TabTitleText>Appliances</TabTitleText>}
+                tabContentId="group-tab-appliances"
+                tabContentRef={appliancesTabRef}
+              />
+            )}
           </Tabs>
 
           {/* TabsContent */}
@@ -560,6 +602,29 @@ export const GroupDetailPage: React.FC = () => {
                   onClearSelectedApplication={handleClearSelectedApplication}
                   onNavigateToVm={handleNavigateToVm}
                   onViewInVmList={handleViewApplicationInVmList}
+                />
+              </TabContentBody>
+            </TabContent>
+          )}
+
+          {!isRvtoolsMode && (
+            <TabContent
+              eventKey={REPORT_TAB.appliances}
+              id="group-tab-appliances"
+              ref={appliancesTabRef}
+              hidden={activeTab !== REPORT_TAB.appliances}
+            >
+              <TabContentBody hasPadding>
+                <AppliancesView
+                  appliances={appliancesList}
+                  loading={groupAppliancesLoading}
+                  error={appliancesError}
+                  agentApi={agentApi}
+                  vmScopeExpression={groupFilter}
+                  selectedApplianceName={selectedApplianceName}
+                  onClearSelectedAppliance={handleClearSelectedAppliance}
+                  onNavigateToVm={handleNavigateToVm}
+                  onViewInVmList={handleViewApplianceInVmList}
                 />
               </TabContentBody>
             </TabContent>

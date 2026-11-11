@@ -1,13 +1,21 @@
 import type {
-  ApplicationOverview,
+  ApplicationOverview as SdkApplicationOverview,
   VirtualMachine,
 } from "@openshift-migration-advisor/agent-sdk";
 
 export type {
   ApplicationListResponse,
-  ApplicationOverview,
   ApplicationVM,
 } from "@openshift-migration-advisor/agent-sdk";
+
+/** Agent application list entry (SDK fields plus newer API metadata when present). */
+export type ApplicationOverview = SdkApplicationOverview & {
+  vendor?: string;
+  category?: string;
+  confidence?: number;
+  containerizationCandidate?: boolean;
+  certified?: string;
+};
 
 /** Build a VM id → application names lookup from the global applications list. */
 export function buildVmApplicationsMap(

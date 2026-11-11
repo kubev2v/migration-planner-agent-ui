@@ -20,6 +20,7 @@ const COLLECTION_COMPLETED_TAGS = [
   "VmLabels",
   "Inventory",
   "Applications",
+  "Appliances",
   "Collections",
 ] as const;
 

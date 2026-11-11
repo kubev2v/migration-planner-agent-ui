@@ -12,6 +12,11 @@ import type {
 import { getAgentApiBasePath } from "../../api/agentApiConfig";
 import { getLatestCollectionId } from "../../api/collectionApi";
 import type { VirtualMachineWithGroupItems } from "../../pages/Groups/utils/vmGroupMembership";
+import { fetchApplianceDrawerVms } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applianceDrawerVms";
+import {
+  type ApplianceOverview,
+  listCollectionAppliances,
+} from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/appliancesApi";
 import { fetchApplicationDrawerVms } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationDrawerVms";
 import type { ApplicationOverview } from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/applicationsApi";
 import { fetchVmTableFilterOptions } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmFilterOptions";
@@ -42,6 +47,8 @@ interface GetApplicationDrawerVmsArg {
   applicationName: string;
   /** Optional VM membership filter (e.g. a group's `filter`). Omitted in the fleet view. */
   scopeExpression?: string;
+  /** When `appliance`, match VMs by vApp product name instead of detected application. */
+  matchKind?: "application" | "appliance";
 }
 
 /** A single VM's detail record with its (optional) rightsizing utilization. */
@@ -189,6 +196,17 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       providesTags: ["Applications"],
     }),
 
+    getAppliances: build.query<ApplianceOverview[], void>({
+      query: () => async (sdk) => {
+        const collectionId = await getLatestCollectionId(sdk);
+        if (!collectionId) {
+          return [];
+        }
+        return listCollectionAppliances(sdk, collectionId);
+      },
+      providesTags: ["Appliances"],
+    }),
+
     // VMs running a given application, enriched with each VM's group membership,
     // for the applications drawer. Depends on the VM list, the label set and
     // group membership, so it provides all three LIST tags — a label or group
@@ -198,9 +216,11 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       GetApplicationDrawerVmsArg
     >({
       query:
-        ({ applicationName, scopeExpression }) =>
+        ({ applicationName, scopeExpression, matchKind = "application" }) =>
         (sdk) =>
-          fetchApplicationDrawerVms(sdk, applicationName, scopeExpression),
+          matchKind === "appliance"
+            ? fetchApplianceDrawerVms(sdk, applicationName, scopeExpression)
+            : fetchApplicationDrawerVms(sdk, applicationName, scopeExpression),
       providesTags: [
         { type: "Vms", id: "LIST" },
         "VmLabels",
@@ -328,6 +348,7 @@ export const {
   useGetVMDetailQuery,
   useGetClusterUtilizationQuery,
   useGetApplicationsQuery,
+  useGetAppliancesQuery,
   useGetApplicationDrawerVmsQuery,
   useSetVMExclusionMutation,
   useUpdateVirtualMachineMutation,

@@ -28,6 +28,7 @@ import { DiscoveryStatus } from "../../common/DiscoveryStatus";
 import { useAgentStatus } from "../../common/useAgentStatus";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
+  useGetAppliancesQuery,
   useGetApplicationsQuery,
   useGetClusterUtilizationQuery,
   useGetInventoryQuery,
@@ -40,6 +41,7 @@ import {
   type ClusterOption,
   getFleetHeaderCounts,
 } from "./clusterView";
+import { AppliancesView } from "./components/ApplicationsTab/AppliancesView";
 import { ApplicationsView } from "./components/ApplicationsTab/ApplicationsView";
 import { Dashboard } from "./components/Dashboard/Dashboard";
 import { ExportCsvModal } from "./components/Export/ExportCsvModal";
@@ -64,6 +66,7 @@ import { Header } from "./Header";
 import { getInventoryAggregateView } from "./inventoryParsing";
 import { OverviewReportHeader, ReportPageHeader } from "./ReportPageHeader";
 import {
+  buildAppliancesTabUrl,
   buildApplicationsTabUrl,
   buildOverviewTabUrl,
   buildVmDetailUrl,
@@ -109,6 +112,7 @@ export const ReportContainer: React.FC = () => {
   const overviewTabRef = useRef<HTMLElement>(null);
   const vmsTabRef = useRef<HTMLElement>(null);
   const applicationsTabRef = useRef<HTMLElement>(null);
+  const appliancesTabRef = useRef<HTMLElement>(null);
 
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
@@ -131,6 +135,10 @@ export const ReportContainer: React.FC = () => {
     setSearchParams(buildApplicationsTabUrl(searchParams), { replace: true });
   }, [searchParams, setSearchParams]);
 
+  const handleClearSelectedAppliance = useCallback(() => {
+    setSearchParams(buildAppliancesTabUrl(searchParams), { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const handleViewApplicationInVmList = useCallback(
     (applicationName: string) => {
       handleNavigateToVMFilters({ applications: [applicationName] });
@@ -138,7 +146,15 @@ export const ReportContainer: React.FC = () => {
     [handleNavigateToVMFilters],
   );
 
+  const handleViewApplianceInVmList = useCallback(
+    (applianceName: string) => {
+      handleNavigateToVMFilters({ products: [applianceName] });
+    },
+    [handleNavigateToVMFilters],
+  );
+
   const selectedApplicationName = searchParams.get("application");
+  const selectedApplianceName = searchParams.get("appliance");
 
   const activeTab: string | number = resolveReportTab(
     searchParams,
@@ -235,6 +251,18 @@ export const ReportContainer: React.FC = () => {
   const applicationsList = applicationsData ?? [];
   const applicationsError = applicationsQueryError
     ? getSdkErrorMessage(applicationsQueryError, "Failed to load applications.")
+    : null;
+
+  const {
+    data: appliancesData,
+    isFetching: appliancesFetching,
+    error: appliancesQueryError,
+  } = useGetAppliancesQuery(undefined, {
+    skip: activeTab !== REPORT_TAB.appliances,
+  });
+  const appliancesList = appliancesData ?? [];
+  const appliancesError = appliancesQueryError
+    ? getSdkErrorMessage(appliancesQueryError, "Failed to load appliances.")
     : null;
 
   // A completed report invalidates the inventory/VM caches through the
@@ -393,6 +421,8 @@ export const ReportContainer: React.FC = () => {
       setVmsPage(1);
     } else if (tabIndex === REPORT_TAB.applications) {
       newParams = buildApplicationsTabUrl(searchParams);
+    } else if (tabIndex === REPORT_TAB.appliances) {
+      newParams = buildAppliancesTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
     }
@@ -583,6 +613,14 @@ export const ReportContainer: React.FC = () => {
                   tabContentRef={applicationsTabRef}
                 />
               )}
+              {!isRvtoolsMode && (
+                <Tab
+                  eventKey={REPORT_TAB.appliances}
+                  title={<TabTitleText>Appliances</TabTitleText>}
+                  tabContentId="report-tab-appliances"
+                  tabContentRef={appliancesTabRef}
+                />
+              )}
             </Tabs>
 
             {/* TabsContent */}
@@ -671,6 +709,28 @@ export const ReportContainer: React.FC = () => {
                     onClearSelectedApplication={handleClearSelectedApplication}
                     onNavigateToVm={handleNavigateToVm}
                     onViewInVmList={handleViewApplicationInVmList}
+                  />
+                </TabContentBody>
+              </TabContent>
+            )}
+
+            {!isRvtoolsMode && (
+              <TabContent
+                eventKey={REPORT_TAB.appliances}
+                id="report-tab-appliances"
+                ref={appliancesTabRef}
+                hidden={activeTab !== REPORT_TAB.appliances}
+              >
+                <TabContentBody hasPadding>
+                  <AppliancesView
+                    appliances={appliancesList}
+                    loading={appliancesFetching}
+                    error={appliancesError}
+                    agentApi={agentApi}
+                    selectedApplianceName={selectedApplianceName}
+                    onClearSelectedAppliance={handleClearSelectedAppliance}
+                    onNavigateToVm={handleNavigateToVm}
+                    onViewInVmList={handleViewApplianceInVmList}
                   />
                 </TabContentBody>
               </TabContent>

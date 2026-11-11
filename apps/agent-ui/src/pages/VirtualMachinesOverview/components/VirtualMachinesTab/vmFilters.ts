@@ -19,6 +19,8 @@ export interface VMFilters {
   concernLabels?: string[];
   concernCategories?: string[];
   applications?: string[];
+  /** Filter VMs by vApp product name (appliance identity). */
+  products?: string[];
   /** @deprecated Use `applications` instead. Kept for legacy URL params. */
   vmApplication?: string;
   reportInclusion?: string[];
@@ -232,6 +234,19 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     );
   }
 
+  if (filters.products && filters.products.length > 0) {
+    if (filters.products.length === 1) {
+      conditions.push(
+        `product.name = '${escapeFilterValue(filters.products[0])}'`,
+      );
+    } else {
+      const productList = filters.products
+        .map((product) => `'${escapeFilterValue(product)}'`)
+        .join(",");
+      conditions.push(`product.name in [${productList}]`);
+    }
+  }
+
   // Migration readiness filter
   if (filters.migrationReadiness && filters.migrationReadiness.length > 0) {
     const hasReady = filters.migrationReadiness.includes("ready");
@@ -418,6 +433,12 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
     }
   }
 
+  if (filters.products && filters.products.length > 0) {
+    for (const product of filters.products) {
+      params.append("products", product);
+    }
+  }
+
   if (filters.reportInclusion && filters.reportInclusion.length > 0) {
     params.set("reportInclusion", filters.reportInclusion.join(","));
   }
@@ -578,6 +599,11 @@ export function searchParamsToFilters(
     filters.applications = [vmApplication];
   }
 
+  const products = searchParams.getAll("products");
+  if (products.length > 0) {
+    filters.products = products.filter(Boolean);
+  }
+
   const reportInclusion = searchParams.get("reportInclusion");
   if (reportInclusion) {
     filters.reportInclusion = reportInclusion.split(",").filter(Boolean);
@@ -608,6 +634,7 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.concernLabels && filters.concernLabels.length > 0) ||
     (filters.concernCategories && filters.concernCategories.length > 0) ||
     (filters.applications && filters.applications.length > 0) ||
+    (filters.products && filters.products.length > 0) ||
     (filters.reportInclusion && filters.reportInclusion.length > 0) ||
     filters.search
   );

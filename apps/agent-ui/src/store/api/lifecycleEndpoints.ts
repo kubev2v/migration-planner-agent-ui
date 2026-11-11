@@ -107,6 +107,7 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
         "Vms",
         "Inventory",
         "Applications",
+        "Appliances",
         "Group",
         "GroupVms",
         "GroupInventory",
