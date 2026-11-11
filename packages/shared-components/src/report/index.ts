@@ -131,6 +131,27 @@ export {
   vsanStatus,
 } from "./infrastructureSummaryModel.js";
 export {
+  getRecommendationToolCards,
+  getRecommendationToolTitle,
+  isRecommendationToolAvailable,
+  RECOMMENDATION_TOOL_CARDS,
+} from "./migration-recommendations/constants.js";
+export {
+  MigrationRecommendationsView,
+  type MigrationRecommendationsViewProps,
+} from "./migration-recommendations/MigrationRecommendationsView.js";
+export {
+  disabledToolCardStyle,
+  RecommendationToolsLanding,
+  type RecommendationToolsLandingProps,
+  toolCardStyle,
+} from "./migration-recommendations/RecommendationToolsLanding.js";
+export type {
+  RecommendationToolCard,
+  RecommendationToolCatalogOptions,
+  RecommendationToolId,
+} from "./migration-recommendations/types.js";
+export {
   type NetworkInfraLike,
   type NetworkLike,
   NetworkOverview,
