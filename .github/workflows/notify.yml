@@ -38,7 +38,7 @@ jobs:
 
   notify-agent-ui-updated:
     needs: wait-for-agent-ui-image
-    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@b5de744cc45e4daaf9e28dcd6b179ab4a8ad7c7c # main
+    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@68cbb5b9d8b568b36c5bd770608bcfab650ae0b1 # main
     with:
       event-type: agent_ui_updated
       target-repo: kubev2v/assisted-migration-agent
@@ -56,7 +56,7 @@ jobs:
 
   notify-offline-analyzer-ui-updated:
     needs: wait-for-offline-analyzer-ui-image
-    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@b5de744cc45e4daaf9e28dcd6b179ab4a8ad7c7c # main
+    uses: kubev2v/migration-planner-workflows/.github/workflows/repo-dispatch-notify.yml@68cbb5b9d8b568b36c5bd770608bcfab650ae0b1 # main
     with:
       event-type: offline_analyzer_ui_updated
       target-repo: kubev2v/assisted-migration-agent
