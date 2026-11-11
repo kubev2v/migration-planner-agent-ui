@@ -147,6 +147,126 @@ export {
   toolCardStyle,
 } from "./migration-recommendations/RecommendationToolsLanding.js";
 export type {
+  ClusterRequirementsResponseLike,
+  ClusterSizingLike,
+  InventoryTotalsLike,
+  OptimizationStatusLike,
+  ResourceConsumptionLike,
+  SavingsLike,
+} from "./migration-recommendations/tools/architecture/clusterRequirementsResponseLike.js";
+export { SizingInputForm } from "./migration-recommendations/tools/architecture/SizingInputForm.js";
+export {
+  SizingResult,
+  type SizingResultProps,
+} from "./migration-recommendations/tools/architecture/SizingResult.js";
+export {
+  CLUSTER_MODE_OPTIONS,
+  CONTROL_PLANE_CPU_OPTIONS,
+  CONTROL_PLANE_MEMORY_OPTIONS,
+  CONTROL_PLANE_OPTIONS,
+  CPU_OPTIONS,
+  CPU_OVERCOMMIT_OPTIONS,
+  DEFAULT_FORM_VALUES,
+  DEFAULT_WORKLOAD_FORM_VALUES,
+  HA_OPTIONS,
+  MEMORY_OPTIONS,
+  MEMORY_OVERCOMMIT_OPTIONS,
+  SMT_THREADS_MAX,
+  SMT_THREADS_MIN,
+  WORKER_NODE_PRESETS,
+} from "./migration-recommendations/tools/architecture/sizingConstants.js";
+export {
+  formatNumber,
+  formatRatio,
+  getCpuOvercommitLabel,
+  getMemoryOvercommitLabel,
+} from "./migration-recommendations/tools/architecture/sizingFormatters.js";
+export {
+  type ClusterMode,
+  type HAReplicaCount,
+  isControlPlaneOnlyClusterMode,
+  type MemoryOvercommitRatio,
+  type OvercommitRatio,
+  type SizingFormValues,
+  type WorkerNodePreset,
+  type WorkloadFormValues,
+} from "./migration-recommendations/tools/architecture/sizingFormTypes.js";
+export { UtilizationComparisonCards } from "./migration-recommendations/tools/architecture/UtilizationComparisonCards.js";
+export {
+  getUtilizationComparisonData,
+  type UtilizationComparisonData,
+} from "./migration-recommendations/tools/architecture/utilizationComparisonData.js";
+export {
+  computeEffectiveCpu,
+  computeEffectiveMemory,
+  formatUtilizationPercent,
+  getOptimizationStatusMessage,
+  hasUtilizationComparison,
+  type UtilizationComparisonResponse,
+} from "./migration-recommendations/tools/architecture/utilizationSizing.js";
+export {
+  ComplexityResult,
+  type ComplexityResultProps,
+} from "./migration-recommendations/tools/complexity/ComplexityResult.js";
+export {
+  COMPLEXITY_COLORS,
+  COMPLEXITY_LABELS,
+} from "./migration-recommendations/tools/complexity/complexityConstants.js";
+export type {
+  ComplexityDiskScoreEntryLike,
+  ComplexityOSNameEntryLike,
+  MigrationComplexityResponseLike,
+  MigrationEstimationByComplexityResponseLike,
+  OsDiskEstimationEntryLike,
+} from "./migration-recommendations/tools/complexity/complexityTypes.js";
+export { MigrationComplexityHelpPopover } from "./migration-recommendations/tools/complexity/MigrationComplexityHelpPopover.js";
+export { OsComplexityChart } from "./migration-recommendations/tools/complexity/OsComplexityChart.js";
+export {
+  limitOsChartData,
+  OS_CHART_MAX_BARS,
+  sortComplexityOsData,
+} from "./migration-recommendations/tools/complexity/osComplexityChartData.js";
+export {
+  type RecommendationPhase,
+  RecommendationTemplate,
+} from "./migration-recommendations/tools/RecommendationTemplate.js";
+export {
+  RecommendationToolActions,
+  type RecommendationToolActionsProps,
+} from "./migration-recommendations/tools/RecommendationToolActions.js";
+export {
+  ToolLayout,
+  type ToolLayoutProps,
+} from "./migration-recommendations/tools/ToolLayout.js";
+export type {
+  EstimationDetailLike,
+  MigrationEstimationResponseLike,
+  SchemaEstimationResultLike,
+} from "./migration-recommendations/tools/time-estimation/migrationEstimationResponseLike.js";
+export { TimeEstimationForm } from "./migration-recommendations/tools/time-estimation/TimeEstimationForm.js";
+export {
+  generateTimeEstimationPlainText,
+  TimeEstimationResult,
+  type TimeEstimationResultProps,
+} from "./migration-recommendations/tools/time-estimation/TimeEstimationResult.js";
+export {
+  DEFAULT_ESTIMATION_FORM_VALUES,
+  ESTIMATION_SLIDER_LIMITS,
+} from "./migration-recommendations/tools/time-estimation/timeEstimationConstants.js";
+export type { EstimationFormValues } from "./migration-recommendations/tools/time-estimation/timeEstimationFormTypes.js";
+export {
+  type ParsedAssumption,
+  parsePostMigrationChecks,
+  parseStorageOffload,
+  parseStorageTransfer,
+} from "./migration-recommendations/tools/time-estimation/timeParsingUtils.js";
+export {
+  durationToHours,
+  formatDuration,
+  formatHumanDuration,
+  parseDuration,
+} from "./migration-recommendations/tools/time-estimation/timeUtils.js";
+export type {
   RecommendationToolCard,
   RecommendationToolCatalogOptions,
   RecommendationToolId,
