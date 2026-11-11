@@ -625,7 +625,7 @@ __metadata:
     "@patternfly/react-icons": "npm:^6.7.0"
     "@patternfly/react-table": "npm:^6.7.0"
     "@patternfly/react-tokens": "npm:^6.7.0"
-    "@reduxjs/toolkit": "npm:^2.13.0"
+    "@reduxjs/toolkit": "npm:^2.14.0"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
@@ -658,7 +658,7 @@ __metadata:
     "@patternfly/react-core": "npm:^6.7.0"
     "@patternfly/react-icons": "npm:^6.7.0"
     "@patternfly/react-table": "npm:^6.7.0"
-    "@reduxjs/toolkit": "npm:^2.13.0"
+    "@reduxjs/toolkit": "npm:^2.14.0"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
@@ -676,7 +676,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openshift-migration-advisor/shared-components@workspace:packages/shared-components"
   dependencies:
-    html2canvas-pro: "npm:^2.6.0"
+    html2canvas-pro: "npm:^2.6.1"
     jspdf: "npm:^4.2.1"
     jszip: "npm:^3.10.2"
   languageName: unknown
@@ -1097,7 +1097,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@reduxjs/toolkit@npm:^2.13.0":
+"@reduxjs/toolkit@npm:^2.14.0":
   version: 2.14.0
   resolution: "@reduxjs/toolkit@npm:2.14.0"
   dependencies:
@@ -1492,7 +1492,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react@npm:^6.1.2":
+"@vitejs/plugin-react@npm:^6.2.1":
   version: 6.2.1
   resolution: "@vitejs/plugin-react@npm:6.2.1"
   dependencies:
@@ -2188,10 +2188,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"html2canvas-pro@npm:^2.6.0":
-  version: 2.6.0
-  resolution: "html2canvas-pro@npm:2.6.0"
-  checksum: 10c0/f713cf477c184a75bbe6f6430fed34e188f72328361324374eb867b4d0c9cd416285be105b4cc5fd2c4caea8182e990a9572359ee349afaf2916094bf18a4d93
+"html2canvas-pro@npm:^2.6.1":
+  version: 2.6.1
+  resolution: "html2canvas-pro@npm:2.6.1"
+  checksum: 10c0/7ac06b8da5e12282bcf55038b09f4fffa866f8a24aeb3778d40e4c8cd367a3a6d63bcb713beae921b471e52acc25b33131d2e8755a8a97a6df6bfae0dd22edf3
   languageName: node
   linkType: hard
 
@@ -2619,7 +2619,7 @@ __metadata:
     "@types/node": "npm:^26.6.6"
     "@types/react": "npm:^18.3.31"
     "@types/react-dom": "npm:^18.3.7"
-    "@vitejs/plugin-react": "npm:^6.1.2"
+    "@vitejs/plugin-react": "npm:^6.2.1"
     jsdom: "npm:^30.1.3"
     knip: "npm:^6.44.1"
     typescript: "npm:^6.0.3"
