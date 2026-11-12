@@ -11,6 +11,7 @@ export interface MigrationRecommendationsViewProps {
   areToolsDisabled?: boolean;
   canOpenArchitecture?: boolean;
   isPartner?: boolean;
+  enabledToolIds?: RecommendationToolId[];
   renderSelectedTool: (toolId: RecommendationToolId) => ReactNode;
 }
 
@@ -23,12 +24,14 @@ export const MigrationRecommendationsView: FC<
   areToolsDisabled = false,
   canOpenArchitecture = true,
   isPartner = false,
+  enabledToolIds,
   renderSelectedTool,
 }) => {
   if (!selectedTool) {
     const tools = getRecommendationToolCards({
       isAggregateView,
       isPartner,
+      enabledToolIds,
     }).map((card) =>
       card.id === "architecture" && !canOpenArchitecture
         ? { ...card, isDisabled: true }

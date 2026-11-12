@@ -74,6 +74,7 @@ export const isRecommendationToolAvailable = (
 export const getRecommendationToolCards = ({
   isAggregateView,
   isPartner = false,
+  enabledToolIds,
 }: RecommendationToolCatalogOptions): RecommendationToolCard[] => {
   const availableIds = isAggregateView
     ? ENVIRONMENT_WIDE_TOOL_IDS
@@ -81,7 +82,8 @@ export const getRecommendationToolCards = ({
   return RECOMMENDATION_TOOL_CARDS.filter(
     (card) =>
       availableIds.includes(card.id) &&
-      isCatalogToolVisible(card.id, isPartner),
+      isCatalogToolVisible(card.id, isPartner) &&
+      (!enabledToolIds || enabledToolIds.includes(card.id)),
   );
 };
 

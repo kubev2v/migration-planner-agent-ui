@@ -1,4 +1,7 @@
-import { ChartExportProvider } from "@openshift-migration-advisor/shared-components";
+import {
+  ChartExportProvider,
+  type RecommendationToolId,
+} from "@openshift-migration-advisor/shared-components";
 import {
   Alert,
   Content,
@@ -32,6 +35,8 @@ import {
   useGetVMsQuery,
 } from "../../store/api/vmsEndpoints";
 import { getSdkErrorMessage } from "../../store/baseQuery";
+import { MigrationRecommendationsPanel } from "../MigrationRecommendations/MigrationRecommendationsPanel";
+import { buildRecommendationScopeExpression } from "../MigrationRecommendations/recommendationScopeExpression";
 import {
   buildClusterViewModel,
   type ClusterOption,
@@ -61,13 +66,17 @@ import { getInventoryAggregateView } from "./inventoryParsing";
 import { OverviewReportHeader, ReportPageHeader } from "./ReportPageHeader";
 import {
   buildOverviewTabUrl,
+  buildRecommendationsTabUrl,
   buildVmsTabUrl,
+  clearRecommendationToolParam,
   clearVmFilterParams,
   getClusterParam,
+  getRecommendationToolParam,
   getVcenterParam,
   REPORT_TAB,
   resolveReportTab,
   setClusterParam,
+  setRecommendationToolParam,
   setTabParam,
   setVcenterParam,
 } from "./reportTabNavigation";
@@ -99,6 +108,7 @@ export const ReportContainer: React.FC = () => {
 
   const overviewTabRef = useRef<HTMLElement>(null);
   const vmsTabRef = useRef<HTMLElement>(null);
+  const recommendationsTabRef = useRef<HTMLElement>(null);
 
   const initialVMFilters = useMemo(
     () => searchParamsToFilters(searchParams),
@@ -117,10 +127,26 @@ export const ReportContainer: React.FC = () => {
     [searchParams, setSearchParams],
   );
 
+  const handleOpenRecommendationTool = useCallback(
+    (toolId: RecommendationToolId) => {
+      const params = buildRecommendationsTabUrl(searchParams);
+      setRecommendationToolParam(params, toolId);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleCloseRecommendationTool = useCallback(() => {
+    const params = new URLSearchParams(searchParams);
+    clearRecommendationToolParam(params);
+    setSearchParams(params, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const activeTab: string | number = resolveReportTab(
     searchParams,
     hasActiveFilters(initialVMFilters),
   );
+  const selectedRecommendationTool = getRecommendationToolParam(searchParams);
 
   // --- Server data (RTK Query) ---------------------------------------------
   // The assessment inventory drives the dashboard, the header counts and the
@@ -325,6 +351,10 @@ export const ReportContainer: React.FC = () => {
   const { totalVMs, totalClusters } = getFleetHeaderCounts(aggregateView);
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
+  const recommendationScopeExpression = buildRecommendationScopeExpression(
+    clusterScopeId,
+    selectedVcenterId,
+  );
 
   const handleClusterSelect = (
     _event: React.MouseEvent<Element, MouseEvent> | undefined,
@@ -350,6 +380,8 @@ export const ReportContainer: React.FC = () => {
     if (tabIndex === REPORT_TAB.vms) {
       newParams = buildVmsTabUrl(searchParams);
       setVmsPage(1);
+    } else if (tabIndex === REPORT_TAB.recommendations) {
+      newParams = buildRecommendationsTabUrl(searchParams);
     } else {
       newParams = buildOverviewTabUrl(searchParams);
     }
@@ -519,6 +551,12 @@ export const ReportContainer: React.FC = () => {
                 tabContentId="report-tab-vms"
                 tabContentRef={vmsTabRef}
               />
+              <Tab
+                eventKey={REPORT_TAB.recommendations}
+                title={<TabTitleText>Migration recommendations</TabTitleText>}
+                tabContentId="report-tab-recommendations"
+                tabContentRef={recommendationsTabRef}
+              />
             </Tabs>
 
             {/* TabsContent */}
@@ -560,6 +598,26 @@ export const ReportContainer: React.FC = () => {
                     bullseyeStyle={{ minHeight: "240px" }}
                   />
                 )}
+              </TabContentBody>
+            </TabContent>
+
+            <TabContent
+              eventKey={REPORT_TAB.recommendations}
+              id="report-tab-recommendations"
+              ref={recommendationsTabRef}
+              hidden={activeTab !== REPORT_TAB.recommendations}
+            >
+              <TabContentBody hasPadding>
+                <MigrationRecommendationsPanel
+                  selectedTool={selectedRecommendationTool}
+                  onSelectTool={handleOpenRecommendationTool}
+                  onBack={handleCloseRecommendationTool}
+                  isAggregateView={clusterView.isAggregateView}
+                  areToolsDisabled={!hasCollectionData}
+                  clusterName={clusterView.selectionLabel}
+                  collectionId={newestCollectionId}
+                  filterExpression={recommendationScopeExpression}
+                />
               </TabContentBody>
             </TabContent>
 

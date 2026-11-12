@@ -130,6 +130,18 @@ Extraction scope for shared-components **ends at phase 3**. Cost estimation and 
 - Map agent-sdk cluster sizing responses → `ClusterRequirementsResponseLike`.
 - Cost estimation is **ui-app only** today; add in agent-ui only if product requires it.
 
+### offline-analyzer integration (this repo)
+
+- **Tab:** Migration recommendations on the VMs overview report (`?tab=recommendations`, tool via `?recommendationTool=complexity`).
+- **API:** `POST /api/v1/complexity-estimation` with optional `filterExpression` (see `assisted-migration-agent` analyzer OpenAPI).
+- **App code:** `apps/offline-analyzer/src/pages/MigrationRecommendations/`.
+- **Catalog:** only **Migration complexity** in `ENABLED_RECOMMENDATION_TOOL_IDS` until more endpoints exist.
+- **Scope:** `buildRecommendationScopeExpression` aligns with cluster / vCenter report dropdowns (`vcenter_id`, `cluster_id` filter fields).
+
+Complexity UI is not in the published agent-sdk yet; offline-analyzer uses `migrationComplexityApi.ts` (`fetch`). After OpenAPI is published to npm SDK, swap the view-model to the generated client (optional: `scripts/generate-agent-sdk-local.sh` with `analyzer/api/v1/openapi.yaml`).
+
+**Follow-up:** agent-ui fleet + group report tabs (separate PR; requires agent v2 route or dev feature flag).
+
 ## Copy / clipboard
 
 Plain-text export (`generatePlainTextRecommendation`, etc.) stays in the **app** until shapes are unified; shared components accept `onCopy` from containers.

@@ -14,4 +14,6 @@ export interface RecommendationToolCard {
 export interface RecommendationToolCatalogOptions {
   isAggregateView: boolean;
   isPartner?: boolean;
+  /** When set, only these tools appear (e.g. partial agent/analyzer API support). */
+  enabledToolIds?: RecommendationToolId[];
 }

@@ -65,6 +65,15 @@ describe("recommendation tool catalog", () => {
     ).toBe(true);
   });
 
+  it("limits the catalog when enabledToolIds is set", () => {
+    expect(
+      getRecommendationToolCards({
+        isAggregateView: false,
+        enabledToolIds: ["complexity"],
+      }).map((card) => card.id),
+    ).toEqual(["complexity"]);
+  });
+
   it("treats cost estimation as partner-only", () => {
     expect(
       isRecommendationToolAvailable("cost-estimation", {
