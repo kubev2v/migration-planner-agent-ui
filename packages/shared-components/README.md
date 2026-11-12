@@ -4,6 +4,7 @@ Shared React UI components for Migration Advisor applications (agent UI and clou
 
 Includes:
 
+- Migration recommendations landing, tool chrome, and architecture sizing form/result UI ([design doc](../../docs/migration-recommendations-tools.md))
 - PatternFly form field wrappers (`react-hook-form`)
 - Guest OS support-tier helpers and badges
 - Report chart primitives (`MigrationDonutChart`)
