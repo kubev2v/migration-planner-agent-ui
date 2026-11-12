@@ -29,6 +29,12 @@ describe("resolveReportTab", () => {
       REPORT_TAB.overview,
     );
   });
+
+  it("returns the recommendations tab from the URL", () => {
+    expect(
+      resolveReportTab(new URLSearchParams("tab=recommendations"), false),
+    ).toBe(REPORT_TAB.recommendations);
+  });
 });
 
 describe("buildVmDetailUrl", () => {

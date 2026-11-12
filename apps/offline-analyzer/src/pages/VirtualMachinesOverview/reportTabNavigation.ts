@@ -1,8 +1,20 @@
-/** Tab indices for report overview pages (Assessment / VMs). */
+import type { RecommendationToolId } from "@openshift-migration-advisor/shared-components";
+
+/** Tab indices for report overview pages (Assessment / VMs / Recommendations). */
 export const REPORT_TAB = {
   overview: 0,
   vms: 1,
+  recommendations: 2,
 } as const;
+
+export const RECOMMENDATION_TOOL_PARAM = "recommendationTool";
+
+const RECOMMENDATION_TOOL_IDS = new Set<RecommendationToolId>([
+  "architecture",
+  "cost-estimation",
+  "time-estimation",
+  "complexity",
+]);
 
 export type ReportTabIndex = (typeof REPORT_TAB)[keyof typeof REPORT_TAB];
 
@@ -68,6 +80,9 @@ export function resolveReportTab(
   if (tabParam === "vms") {
     return REPORT_TAB.vms;
   }
+  if (tabParam === "recommendations") {
+    return REPORT_TAB.recommendations;
+  }
   if (tabParam === "overview") {
     return REPORT_TAB.overview;
   }
@@ -81,7 +96,31 @@ function reportTabToParam(tabIndex: string | number): string {
   if (tabIndex === REPORT_TAB.vms) {
     return "vms";
   }
+  if (tabIndex === REPORT_TAB.recommendations) {
+    return "recommendations";
+  }
   return "overview";
+}
+
+export function getRecommendationToolParam(
+  searchParams: URLSearchParams,
+): RecommendationToolId | null {
+  const value = searchParams.get(RECOMMENDATION_TOOL_PARAM);
+  if (!value || !RECOMMENDATION_TOOL_IDS.has(value as RecommendationToolId)) {
+    return null;
+  }
+  return value as RecommendationToolId;
+}
+
+export function setRecommendationToolParam(
+  params: URLSearchParams,
+  toolId: RecommendationToolId,
+): void {
+  params.set(RECOMMENDATION_TOOL_PARAM, toolId);
+}
+
+export function clearRecommendationToolParam(params: URLSearchParams): void {
+  params.delete(RECOMMENDATION_TOOL_PARAM);
 }
 
 /** Removes VM-table filter query params (not tab or vmId). */
@@ -131,6 +170,7 @@ export function buildVmsTabUrl(searchParams: URLSearchParams): URLSearchParams {
   const params = new URLSearchParams(searchParams);
   params.delete("vmId");
   setTabParam(params, REPORT_TAB.vms);
+  clearRecommendationToolParam(params);
   return params;
 }
 
@@ -140,5 +180,15 @@ export function buildOverviewTabUrl(
   const params = new URLSearchParams(searchParams);
   params.delete("vmId");
   setTabParam(params, REPORT_TAB.overview);
+  clearRecommendationToolParam(params);
+  return params;
+}
+
+export function buildRecommendationsTabUrl(
+  searchParams: URLSearchParams,
+): URLSearchParams {
+  const params = new URLSearchParams(searchParams);
+  params.delete("vmId");
+  setTabParam(params, REPORT_TAB.recommendations);
   return params;
 }

@@ -254,6 +254,19 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
 }
 
 /**
+ * vCenter clause for scoped VM queries (`vcenter_id` filter field).
+ * Omitted when viewing all vCenters.
+ */
+export function vcenterSelectionExpression(
+  vcenterId: string | undefined,
+): string | undefined {
+  if (!vcenterId || vcenterId === "all") {
+    return undefined;
+  }
+  return `vcenter_id = '${escapeFilterValue(vcenterId)}'`;
+}
+
+/**
  * Cluster clause for the VM list.
  * The value is the inventory cluster id from the report dropdown
  * (`vcluster."Object ID"`), not the cluster name.
