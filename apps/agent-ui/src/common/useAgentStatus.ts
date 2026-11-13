@@ -15,7 +15,6 @@ export interface AgentStatusValue {
   discoverySharingStatus: DiscoverySharingStatus;
   discoverySharingError: string | undefined;
   isDataShared: boolean;
-  isRvtoolsMode: boolean;
   loading: boolean;
   error: string | null;
   fetchStatus: () => Promise<void>;
@@ -27,12 +26,12 @@ const ENABLE_SHARING_POLL_INTERVAL_MS = 2000;
 
 /**
  * Agent status backed by RTK Query, replacing the former `AgentStatusContext`.
- * All callers share the single `getAgentStatus` cache entry, so the value can no
- * longer diverge between the masthead, the login page and the app-mode seed.
+ * All callers share the single `getAgentStatus` cache entry, so the value cannot
+ * diverge between the masthead and the login page.
  *
- * The public shape is preserved so existing consumers keep working: `agentStatus`
- * is the cached response, `fetchStatus` refetches, and `enableSharing` switches
- * the agent to connected mode and polls until the console connection settles.
+ * `agentStatus` is the cached response, `fetchStatus` refetches, and
+ * `enableSharing` switches the agent to connected mode and polls until the
+ * console connection settles.
  */
 export function useAgentStatus(): AgentStatusValue {
   const {
@@ -76,7 +75,6 @@ export function useAgentStatus(): AgentStatusValue {
     discoverySharingStatus: getDiscoverySharingStatus(agentStatus),
     discoverySharingError: agentStatus?.consoleConnection.error,
     isDataShared: agentStatus?.mode === "connected",
-    isRvtoolsMode: agentStatus?.rvtoolsModeEnabled === true,
     loading: isLoading,
     error: queryError
       ? getSdkErrorMessage(queryError, "Failed to fetch status")

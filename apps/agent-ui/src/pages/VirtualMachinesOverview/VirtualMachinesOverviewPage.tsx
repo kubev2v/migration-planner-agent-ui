@@ -25,7 +25,6 @@ import { useSearchParams } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components/index";
 import { DiscoveryStatus } from "../../common/DiscoveryStatus";
-import { useAgentStatus } from "../../common/useAgentStatus";
 import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
 import {
   useGetAppliancesQuery,
@@ -93,7 +92,6 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
 };
 
 export const ReportContainer: React.FC = () => {
-  const { isRvtoolsMode } = useAgentStatus();
   const agentApi = getAgentApiClient();
   const { data: collections } = useListCollectionsQuery();
   const hasCollectionData = (collections?.length ?? 0) > 0;
@@ -605,22 +603,18 @@ export const ReportContainer: React.FC = () => {
                 tabContentId="report-tab-vms"
                 tabContentRef={vmsTabRef}
               />
-              {!isRvtoolsMode && (
-                <Tab
-                  eventKey={REPORT_TAB.applications}
-                  title={<TabTitleText>Applications</TabTitleText>}
-                  tabContentId="report-tab-applications"
-                  tabContentRef={applicationsTabRef}
-                />
-              )}
-              {!isRvtoolsMode && (
-                <Tab
-                  eventKey={REPORT_TAB.appliances}
-                  title={<TabTitleText>Appliances</TabTitleText>}
-                  tabContentId="report-tab-appliances"
-                  tabContentRef={appliancesTabRef}
-                />
-              )}
+              <Tab
+                eventKey={REPORT_TAB.applications}
+                title={<TabTitleText>Applications</TabTitleText>}
+                tabContentId="report-tab-applications"
+                tabContentRef={applicationsTabRef}
+              />
+              <Tab
+                eventKey={REPORT_TAB.appliances}
+                title={<TabTitleText>Appliances</TabTitleText>}
+                tabContentId="report-tab-appliances"
+                tabContentRef={appliancesTabRef}
+              />
             </Tabs>
 
             {/* TabsContent */}
@@ -692,49 +686,45 @@ export const ReportContainer: React.FC = () => {
               </TabContentBody>
             </TabContent>
 
-            {!isRvtoolsMode && (
-              <TabContent
-                eventKey={REPORT_TAB.applications}
-                id="report-tab-applications"
-                ref={applicationsTabRef}
-                hidden={activeTab !== REPORT_TAB.applications}
-              >
-                <TabContentBody hasPadding>
-                  <ApplicationsView
-                    applications={applicationsList}
-                    loading={applicationsFetching}
-                    error={applicationsError}
-                    agentApi={agentApi}
-                    selectedApplicationName={selectedApplicationName}
-                    onClearSelectedApplication={handleClearSelectedApplication}
-                    onNavigateToVm={handleNavigateToVm}
-                    onViewInVmList={handleViewApplicationInVmList}
-                  />
-                </TabContentBody>
-              </TabContent>
-            )}
+            <TabContent
+              eventKey={REPORT_TAB.applications}
+              id="report-tab-applications"
+              ref={applicationsTabRef}
+              hidden={activeTab !== REPORT_TAB.applications}
+            >
+              <TabContentBody hasPadding>
+                <ApplicationsView
+                  applications={applicationsList}
+                  loading={applicationsFetching}
+                  error={applicationsError}
+                  agentApi={agentApi}
+                  selectedApplicationName={selectedApplicationName}
+                  onClearSelectedApplication={handleClearSelectedApplication}
+                  onNavigateToVm={handleNavigateToVm}
+                  onViewInVmList={handleViewApplicationInVmList}
+                />
+              </TabContentBody>
+            </TabContent>
 
-            {!isRvtoolsMode && (
-              <TabContent
-                eventKey={REPORT_TAB.appliances}
-                id="report-tab-appliances"
-                ref={appliancesTabRef}
-                hidden={activeTab !== REPORT_TAB.appliances}
-              >
-                <TabContentBody hasPadding>
-                  <AppliancesView
-                    appliances={appliancesList}
-                    loading={appliancesFetching}
-                    error={appliancesError}
-                    agentApi={agentApi}
-                    selectedApplianceName={selectedApplianceName}
-                    onClearSelectedAppliance={handleClearSelectedAppliance}
-                    onNavigateToVm={handleNavigateToVm}
-                    onViewInVmList={handleViewApplianceInVmList}
-                  />
-                </TabContentBody>
-              </TabContent>
-            )}
+            <TabContent
+              eventKey={REPORT_TAB.appliances}
+              id="report-tab-appliances"
+              ref={appliancesTabRef}
+              hidden={activeTab !== REPORT_TAB.appliances}
+            >
+              <TabContentBody hasPadding>
+                <AppliancesView
+                  appliances={appliancesList}
+                  loading={appliancesFetching}
+                  error={appliancesError}
+                  agentApi={agentApi}
+                  selectedApplianceName={selectedApplianceName}
+                  onClearSelectedAppliance={handleClearSelectedAppliance}
+                  onNavigateToVm={handleNavigateToVm}
+                  onViewInVmList={handleViewApplianceInVmList}
+                />
+              </TabContentBody>
+            </TabContent>
           </StackItem>
         </Stack>
 
