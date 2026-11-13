@@ -7,6 +7,7 @@ import { Alert } from "@patternfly/react-core";
 import type { FC } from "react";
 import { ComplexityToolView } from "./ComplexityToolView";
 import { ENABLED_RECOMMENDATION_TOOL_IDS } from "./enabledRecommendationTools";
+import { TimeEstimationToolView } from "./TimeEstimationToolView";
 
 export interface RecommendationToolsRouterProps {
   tool: RecommendationToolId;
@@ -21,6 +22,16 @@ export const RecommendationToolsRouter: FC<RecommendationToolsRouterProps> = ({
   clusterName,
   filterExpression,
 }) => {
+  if (tool === "time-estimation") {
+    return (
+      <TimeEstimationToolView
+        onBack={onBack}
+        clusterName={clusterName}
+        filterExpression={filterExpression}
+      />
+    );
+  }
+
   if (tool === "complexity") {
     return (
       <ComplexityToolView
