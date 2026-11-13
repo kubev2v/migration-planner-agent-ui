@@ -36,7 +36,6 @@ import {
 } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components";
-import { useAgentStatus } from "../../common/useAgentStatus";
 import {
   useDeleteGroupMutation,
   useGetGroupAppliancesQuery,
@@ -118,7 +117,6 @@ function getGroupErrorMessage(error: unknown): string {
 }
 
 export const GroupDetailPage: React.FC = () => {
-  const { isRvtoolsMode } = useAgentStatus();
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const agentApi = getAgentApiClient();
@@ -491,22 +489,18 @@ export const GroupDetailPage: React.FC = () => {
               tabContentId="group-tab-vms"
               tabContentRef={vmsTabRef}
             />
-            {!isRvtoolsMode && (
-              <Tab
-                eventKey={REPORT_TAB.applications}
-                title={<TabTitleText>Applications</TabTitleText>}
-                tabContentId="group-tab-applications"
-                tabContentRef={applicationsTabRef}
-              />
-            )}
-            {!isRvtoolsMode && (
-              <Tab
-                eventKey={REPORT_TAB.appliances}
-                title={<TabTitleText>Appliances</TabTitleText>}
-                tabContentId="group-tab-appliances"
-                tabContentRef={appliancesTabRef}
-              />
-            )}
+            <Tab
+              eventKey={REPORT_TAB.applications}
+              title={<TabTitleText>Applications</TabTitleText>}
+              tabContentId="group-tab-applications"
+              tabContentRef={applicationsTabRef}
+            />
+            <Tab
+              eventKey={REPORT_TAB.appliances}
+              title={<TabTitleText>Appliances</TabTitleText>}
+              tabContentId="group-tab-appliances"
+              tabContentRef={appliancesTabRef}
+            />
           </Tabs>
 
           {/* TabsContent */}
@@ -584,51 +578,47 @@ export const GroupDetailPage: React.FC = () => {
             </TabContentBody>
           </TabContent>
 
-          {!isRvtoolsMode && (
-            <TabContent
-              eventKey={REPORT_TAB.applications}
-              id="group-tab-applications"
-              ref={applicationsTabRef}
-              hidden={activeTab !== REPORT_TAB.applications}
-            >
-              <TabContentBody hasPadding>
-                <ApplicationsView
-                  applications={applicationsList}
-                  loading={applicationsLoading}
-                  error={applicationsError}
-                  agentApi={agentApi}
-                  vmScopeExpression={groupFilter}
-                  selectedApplicationName={selectedApplicationName}
-                  onClearSelectedApplication={handleClearSelectedApplication}
-                  onNavigateToVm={handleNavigateToVm}
-                  onViewInVmList={handleViewApplicationInVmList}
-                />
-              </TabContentBody>
-            </TabContent>
-          )}
+          <TabContent
+            eventKey={REPORT_TAB.applications}
+            id="group-tab-applications"
+            ref={applicationsTabRef}
+            hidden={activeTab !== REPORT_TAB.applications}
+          >
+            <TabContentBody hasPadding>
+              <ApplicationsView
+                applications={applicationsList}
+                loading={applicationsLoading}
+                error={applicationsError}
+                agentApi={agentApi}
+                vmScopeExpression={groupFilter}
+                selectedApplicationName={selectedApplicationName}
+                onClearSelectedApplication={handleClearSelectedApplication}
+                onNavigateToVm={handleNavigateToVm}
+                onViewInVmList={handleViewApplicationInVmList}
+              />
+            </TabContentBody>
+          </TabContent>
 
-          {!isRvtoolsMode && (
-            <TabContent
-              eventKey={REPORT_TAB.appliances}
-              id="group-tab-appliances"
-              ref={appliancesTabRef}
-              hidden={activeTab !== REPORT_TAB.appliances}
-            >
-              <TabContentBody hasPadding>
-                <AppliancesView
-                  appliances={appliancesList}
-                  loading={groupAppliancesLoading}
-                  error={appliancesError}
-                  agentApi={agentApi}
-                  vmScopeExpression={groupFilter}
-                  selectedApplianceName={selectedApplianceName}
-                  onClearSelectedAppliance={handleClearSelectedAppliance}
-                  onNavigateToVm={handleNavigateToVm}
-                  onViewInVmList={handleViewApplianceInVmList}
-                />
-              </TabContentBody>
-            </TabContent>
-          )}
+          <TabContent
+            eventKey={REPORT_TAB.appliances}
+            id="group-tab-appliances"
+            ref={appliancesTabRef}
+            hidden={activeTab !== REPORT_TAB.appliances}
+          >
+            <TabContentBody hasPadding>
+              <AppliancesView
+                appliances={appliancesList}
+                loading={groupAppliancesLoading}
+                error={appliancesError}
+                agentApi={agentApi}
+                vmScopeExpression={groupFilter}
+                selectedApplianceName={selectedApplianceName}
+                onClearSelectedAppliance={handleClearSelectedAppliance}
+                onNavigateToVm={handleNavigateToVm}
+                onViewInVmList={handleViewApplianceInVmList}
+              />
+            </TabContentBody>
+          </TabContent>
         </StackItem>
       </Stack>
 

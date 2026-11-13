@@ -17,12 +17,10 @@ function makeFakeApi(): AgentApiClient {
     getAgentStatus: vi.fn(async () => ({
       mode: "connected",
       consoleConnection: { status: "connected" },
-      rvtoolsModeEnabled: false,
     })),
     setAgentMode: vi.fn(async () => ({
       mode: "connected",
       consoleConnection: { status: "connected" },
-      rvtoolsModeEnabled: false,
     })),
     getInspectorStatus: vi.fn(async () => ({ state: "ready" })),
     startInspection: vi.fn(async () => ({ state: "running" })),

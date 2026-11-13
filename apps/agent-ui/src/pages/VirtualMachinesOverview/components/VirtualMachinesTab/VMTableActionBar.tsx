@@ -16,7 +16,6 @@ import {
 } from "@patternfly/react-core";
 import { MagicIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useAgentStatus } from "../../../../common/useAgentStatus";
 import { useCredentialsModal } from "../../../../credentials/CredentialsModalController";
 import { useCapability } from "../../../../credentials/useCapability";
 import {
@@ -78,7 +77,6 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
     isPending,
   } = useCapability("inspector");
   const { openCredentialsModal } = useCredentialsModal();
-  const { isRvtoolsMode } = useAgentStatus();
 
   const {
     page,
@@ -182,21 +180,19 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                 >
                   Remove from group
                 </DropdownItem>
-                {!isRvtoolsMode && (
-                  <DropdownItem
-                    key="reset-deep-inspection"
-                    isDisabled={selectedVMs.size === 0}
-                    onClick={() => onResetInspection?.()}
-                  >
-                    Reset deep inspection
-                  </DropdownItem>
-                )}
+                <DropdownItem
+                  key="reset-deep-inspection"
+                  isDisabled={selectedVMs.size === 0}
+                  onClick={() => onResetInspection?.()}
+                >
+                  Reset deep inspection
+                </DropdownItem>
               </DropdownList>
             </Dropdown>
           </ToolbarItem>
 
           <ToolbarItem>
-            {isRvtoolsMode ? null : shouldShowTooltip ? (
+            {shouldShowTooltip ? (
               <Tooltip content={errorTooltipContent}>
                 <Button variant="primary" icon={<MagicIcon />} isAriaDisabled>
                   Run deep inspection

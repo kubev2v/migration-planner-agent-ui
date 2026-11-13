@@ -40,7 +40,6 @@ import {
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { useAgentStatus } from "../../../../common/useAgentStatus";
 import {
   useGetApplicationsQuery,
   useGetVMDetailQuery,
@@ -174,8 +173,6 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
     isLoading: loading,
     error: vmError,
   } = useGetVMDetailQuery(vmId);
-
-  const { isRvtoolsMode } = useAgentStatus();
 
   const {
     data: allApplications = [],
@@ -929,22 +926,18 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
         </Card>
       </StackItem>
 
-      {!isRvtoolsMode && (
-        <StackItem>
-          <VMApplicationsCard
-            key={vmId}
-            applications={vmApplications}
-            loading={applicationsLoading}
-            error={applicationsError}
-          />
-        </StackItem>
-      )}
+      <StackItem>
+        <VMApplicationsCard
+          key={vmId}
+          applications={vmApplications}
+          loading={applicationsLoading}
+          error={applicationsError}
+        />
+      </StackItem>
 
-      {!isRvtoolsMode && (
-        <StackItem>
-          <VMProcessesCard key={vmId} processes={vm.processes ?? []} />
-        </StackItem>
-      )}
+      <StackItem>
+        <VMProcessesCard key={vmId} processes={vm.processes ?? []} />
+      </StackItem>
     </Stack>
   );
 };

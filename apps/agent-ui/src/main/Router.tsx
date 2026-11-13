@@ -20,15 +20,6 @@ export const router = createBrowserRouter(
       },
     },
     {
-      path: "/rvtools-upload",
-      lazy: async () => {
-        const { RVToolsUploadPage } = await import(
-          "../pages/RVTools/RVToolsUploadPage.tsx"
-        );
-        return { Component: RVToolsUploadPage };
-      },
-    },
-    {
       path: "/report",
       lazy: async () => {
         const { ProtectedRoute } = await import("../pages/ProtectedRoute.tsx");

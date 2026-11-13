@@ -1,7 +1,6 @@
 import { css } from "@emotion/css";
 import type { CapabilityStatusCapabilities } from "@openshift-migration-advisor/agent-sdk";
 import type React from "react";
-import { useAgentStatus } from "../common/useAgentStatus";
 import {
   useGetCredentialCapabilitiesQuery,
   useGetCredentialsQuery,
@@ -26,7 +25,6 @@ export const useCapability = (
     useGetCredentialsQuery();
   const { data: capabilities = null, isLoading: isCapabilitiesLoading } =
     useGetCredentialCapabilitiesQuery();
-  const { isRvtoolsMode } = useAgentStatus();
 
   const isPending = isCredentialsLoading || isCapabilitiesLoading;
 
@@ -35,20 +33,6 @@ export const useCapability = (
       isPending: true,
       shouldShowTooltip: false,
       shouldRequestCredentials: false,
-    };
-  }
-
-  if (isRvtoolsMode) {
-    return {
-      isPending: false,
-      shouldShowTooltip: true,
-      shouldRequestCredentials: false,
-      errorTooltipContent: (
-        <div>
-          You're in RVTools mode and don't have access to connected mode
-          features.
-        </div>
-      ),
     };
   }
 

@@ -34,7 +34,6 @@ export const DiscoveryStatus: React.FC = () => {
     discoverySharingStatus,
     discoverySharingError,
     isDataShared,
-    isRvtoolsMode,
     enableSharing,
   } = useAgentStatus();
 
@@ -74,10 +73,6 @@ export const DiscoveryStatus: React.FC = () => {
     setShareError(null);
     setIsShareModalOpen(false);
   };
-
-  if (isRvtoolsMode) {
-    return null;
-  }
 
   let statusContent: React.ReactNode;
 

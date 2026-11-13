@@ -34,7 +34,6 @@ import RedHatOpenShiftLogo from "../assets/RedHatOpenShiftLogo.png";
 import { getCollectionProgressInfo } from "../common/collectionProgress";
 import { CollectionProgress } from "../common/components";
 import { RunNewReportModal } from "../common/report/RunNewReportModal";
-import { useAgentStatus } from "../common/useAgentStatus";
 import { CredentialsModalProvider } from "../credentials/CredentialsModalController";
 import VCenterCredentialsDropdownMenu from "../credentials/VCenterCredentialsDropdownMenu";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
@@ -210,22 +209,13 @@ const RunNewReportModalContainer: React.FC = () => {
 export const PageLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isRvtoolsMode } = useAgentStatus();
-
-  const navSections = useMemo(
-    () =>
-      isRvtoolsMode
-        ? NAV_SECTIONS.filter((section) => section.title !== "Tools")
-        : NAV_SECTIONS,
-    [isRvtoolsMode],
-  );
 
   const activeItem = useMemo(
     () =>
-      navSections
-        .flatMap((section) => section.items)
-        .find((item) => location.pathname.startsWith(item.path)),
-    [navSections, location.pathname],
+      NAV_SECTIONS.flatMap((section) => section.items).find((item) =>
+        location.pathname.startsWith(item.path),
+      ),
+    [location.pathname],
   );
 
   useEffect(() => {
@@ -278,7 +268,7 @@ export const PageLayout: React.FC = () => {
               </Title>
               <Nav aria-label="Main navigation">
                 <NavList>
-                  {navSections.map((section) => (
+                  {NAV_SECTIONS.map((section) => (
                     <NavGroup
                       key={section.title}
                       title={section.title}
