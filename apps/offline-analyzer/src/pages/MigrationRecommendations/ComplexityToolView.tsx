@@ -18,8 +18,14 @@ export const ComplexityToolView: FC<ComplexityToolViewProps> = ({
   clusterName,
   filterExpression,
 }) => {
-  const { complexityEstimation, isCalculatingComplexity, complexityError } =
-    useComplexityToolViewModel(filterExpression);
+  const {
+    complexityEstimation,
+    isCalculatingComplexity,
+    complexityError,
+    estimationByComplexity,
+    isLoadingEstimationByComplexity,
+    estimationByComplexityError,
+  } = useComplexityToolViewModel(filterExpression);
 
   return (
     <ToolLayout
@@ -32,9 +38,9 @@ export const ComplexityToolView: FC<ComplexityToolViewProps> = ({
         complexityOutput={complexityEstimation}
         isLoading={isCalculatingComplexity}
         error={complexityError}
-        estimationByComplexity={null}
-        isLoadingEstimationByComplexity={false}
-        estimationByComplexityError={null}
+        estimationByComplexity={estimationByComplexity}
+        isLoadingEstimationByComplexity={isLoadingEstimationByComplexity}
+        estimationByComplexityError={estimationByComplexityError}
       />
     </ToolLayout>
   );
