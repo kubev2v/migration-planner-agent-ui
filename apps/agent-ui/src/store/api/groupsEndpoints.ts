@@ -8,6 +8,10 @@ import type {
 } from "@openshift-migration-advisor/agent-sdk";
 import { combineFilterExpressions } from "../../pages/Groups/utils/groupFilters";
 import { fetchAllGroupsPages } from "../../pages/Groups/utils/groupList";
+import {
+  type ApplianceOverview,
+  listGroupAppliances,
+} from "../../pages/VirtualMachinesOverview/components/ApplicationsTab/appliancesApi";
 import { agentApiSlice } from "./agentApiSlice";
 import { groupChangeTags } from "./groupTags";
 
@@ -132,6 +136,17 @@ export const groupsEndpoints = agentApiSlice.injectEndpoints({
       ],
     }),
 
+    getGroupAppliances: build.query<ApplianceOverview[], GetGroupArg>({
+      query:
+        ({ groupId }) =>
+        async (sdk) =>
+          listGroupAppliances(sdk, groupId),
+      providesTags: (_result, _error, { groupId }) => [
+        "Appliances",
+        { type: "Group", id: groupId },
+      ],
+    }),
+
     createGroup: build.mutation<Group, CreateGroupArg>({
       query:
         ({ createGroupRequest }) =>
@@ -191,6 +206,7 @@ export const {
   useGetGroupQuery,
   useGetGroupVMsQuery,
   useGetGroupApplicationsQuery,
+  useGetGroupAppliancesQuery,
   useCreateGroupMutation,
   useUpdateGroupNameMutation,
   useChangeGroupMembershipMutation,

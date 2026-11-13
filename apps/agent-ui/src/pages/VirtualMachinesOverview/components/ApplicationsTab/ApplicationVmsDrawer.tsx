@@ -56,6 +56,8 @@ interface ApplicationVmsDrawerProps {
   onAddLabels?: (vmIds: string[]) => void;
   onCreateGroup?: (vmIds: string[]) => void;
   onAddToGroup?: (vmIds: string[]) => void;
+  /** When set to `appliance`, VMs are resolved via vApp product name filters. */
+  matchKind?: "application" | "appliance";
 }
 
 export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
@@ -68,6 +70,7 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
   onAddLabels,
   onCreateGroup,
   onAddToGroup,
+  matchKind = "application",
 }) => {
   const [vmSearch, setVmSearch] = useState("");
   const [selectedVmIds, setSelectedVmIds] = useState<Set<string>>(new Set());
@@ -101,8 +104,8 @@ export const ApplicationVmsDrawer: React.FC<ApplicationVmsDrawerProps> = ({
     error: queryError,
   } = useGetApplicationDrawerVmsQuery(
     scopeExpression
-      ? { applicationName: application.name, scopeExpression }
-      : { applicationName: application.name },
+      ? { applicationName: application.name, scopeExpression, matchKind }
+      : { applicationName: application.name, matchKind },
     { skip: !agentApi },
   );
 

@@ -12,7 +12,7 @@ import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { useCallback } from "react";
 import { AppEmptyState } from "../../../../common/components";
-import { getApplicationVendor } from "../ApplicationsTab/applicationVendor";
+import { getApplicationVendorDisplay } from "../ApplicationsTab/applicationDisplay";
 import { VmDetailListCardToolbar } from "./VmDetailListCardToolbar";
 import { VmDetailListSearchEmptyState } from "./VmDetailListSearchEmptyState";
 import { useVmDetailListCardState } from "./vmDetailListCard";
@@ -112,7 +112,7 @@ export const VMApplicationsCard: React.FC<VMApplicationsCardProps> = ({
                   paginatedItems.map((application) => (
                     <Tr key={application.name}>
                       <Td>{application.name}</Td>
-                      <Td>{getApplicationVendor(application.name)}</Td>
+                      <Td>{getApplicationVendorDisplay(application)}</Td>
                     </Tr>
                   ))
                 )}

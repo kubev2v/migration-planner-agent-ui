@@ -1,8 +1,9 @@
-/** Tab indices for report overview pages (Assessment / VMs / Applications). */
+/** Tab indices for report overview pages (Assessment / VMs / Applications / Appliances). */
 export const REPORT_TAB = {
   overview: 0,
   vms: 1,
   applications: 2,
+  appliances: 3,
 } as const;
 
 export type ReportTabIndex = (typeof REPORT_TAB)[keyof typeof REPORT_TAB];
@@ -67,6 +68,9 @@ export function reportTabFromParam(tabParam: string | null): ReportTabIndex {
   if (tabParam === "applications") {
     return REPORT_TAB.applications;
   }
+  if (tabParam === "appliances") {
+    return REPORT_TAB.appliances;
+  }
   if (tabParam === "overview") {
     return REPORT_TAB.overview;
   }
@@ -85,6 +89,9 @@ export function resolveReportTab(
   if (tabParam === "applications") {
     return REPORT_TAB.applications;
   }
+  if (tabParam === "appliances") {
+    return REPORT_TAB.appliances;
+  }
   if (tabParam === "overview") {
     return REPORT_TAB.overview;
   }
@@ -100,6 +107,9 @@ function reportTabToParam(tabIndex: string | number): string {
   }
   if (tabIndex === REPORT_TAB.applications) {
     return "applications";
+  }
+  if (tabIndex === REPORT_TAB.appliances) {
+    return "appliances";
   }
   return "overview";
 }
@@ -141,6 +151,7 @@ export function buildVmDetailUrl(
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams);
   params.delete("application");
+  params.delete("appliance");
   setTabParam(params, REPORT_TAB.vms);
   params.set("vmId", vmId);
   if (options?.section) {
@@ -156,7 +167,18 @@ export function buildApplicationsTabUrl(
 ): URLSearchParams {
   const params = new URLSearchParams(searchParams);
   params.delete("vmId");
+  params.delete("appliance");
   setTabParam(params, REPORT_TAB.applications);
+  return params;
+}
+
+export function buildAppliancesTabUrl(
+  searchParams: URLSearchParams,
+): URLSearchParams {
+  const params = new URLSearchParams(searchParams);
+  params.delete("vmId");
+  params.delete("application");
+  setTabParam(params, REPORT_TAB.appliances);
   return params;
 }
 
@@ -166,6 +188,15 @@ export function buildApplicationDetailUrl(
 ): URLSearchParams {
   const params = buildApplicationsTabUrl(searchParams);
   params.set("application", applicationName);
+  return params;
+}
+
+export function buildApplianceDetailUrl(
+  searchParams: URLSearchParams,
+  applianceName: string,
+): URLSearchParams {
+  const params = buildAppliancesTabUrl(searchParams);
+  params.set("appliance", applianceName);
   return params;
 }
 
