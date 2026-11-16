@@ -26,6 +26,10 @@ export interface VMTableActionBarProps {
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
   onAddLabels?: (vmIds: string[]) => void;
+  onCreateGroup?: (vmIds: string[]) => void;
+  onAddToGroup?: (vmIds: string[]) => void;
+  canRemoveFromGroup?: boolean;
+  onRemoveFromGroup?: (vmIds: string[]) => void;
   onManageLabels?: () => void;
 }
 
@@ -40,6 +44,10 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
   onExcludeFromReports,
   onIncludeInReports,
   onAddLabels,
+  onCreateGroup,
+  onAddToGroup,
+  canRemoveFromGroup = false,
+  onRemoveFromGroup,
   onManageLabels,
 }) => {
   const {
@@ -92,19 +100,47 @@ export const VMTableActionBar: React.FC<VMTableActionBarProps> = ({
                   Include in reports
                 </DropdownItem>
               )}
-              <DropdownItem
-                key="add-label"
-                isDisabled={selectedVMs.size === 0}
-                onClick={() => onAddLabels?.(Array.from(selectedVMs))}
-              >
-                Add labels
-              </DropdownItem>
-              <DropdownItem
-                key="manage-labels"
-                onClick={() => onManageLabels?.()}
-              >
-                Manage all labels
-              </DropdownItem>
+              {onAddLabels && (
+                <DropdownItem
+                  key="add-label"
+                  isDisabled={selectedVMs.size === 0}
+                  onClick={() => onAddLabels(Array.from(selectedVMs))}
+                >
+                  Add labels
+                </DropdownItem>
+              )}
+              {onCreateGroup && (
+                <DropdownItem
+                  key="create-group"
+                  isDisabled={selectedVMs.size === 0}
+                  onClick={() => onCreateGroup(Array.from(selectedVMs))}
+                >
+                  Create group
+                </DropdownItem>
+              )}
+              {onAddToGroup && (
+                <DropdownItem
+                  key="add-to-group"
+                  isDisabled={selectedVMs.size === 0}
+                  onClick={() => onAddToGroup(Array.from(selectedVMs))}
+                >
+                  Add to group
+                </DropdownItem>
+              )}
+              {onRemoveFromGroup && (
+                <DropdownItem
+                  key="remove-from-group"
+                  isDisabled={selectedVMs.size === 0 || !canRemoveFromGroup}
+                  onClick={() => onRemoveFromGroup(Array.from(selectedVMs))}
+                >
+                  Remove from group
+                </DropdownItem>
+              )}
+              {onManageLabels && (
+                <DropdownItem key="manage-labels" onClick={onManageLabels}>
+                  Manage all labels
+                </DropdownItem>
+              )}
             </DropdownList>
           </Dropdown>
         </ToolbarItem>

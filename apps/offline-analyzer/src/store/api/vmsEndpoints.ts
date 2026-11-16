@@ -20,6 +20,7 @@ import {
   type ReportInventoryResult,
 } from "../../pages/VirtualMachinesOverview/inventoryParsing";
 import { agentApiSlice } from "./agentApiSlice";
+import { groupChangeTags } from "./groupTags";
 
 interface GetVMsArg {
   byExpression?: string;
@@ -45,6 +46,7 @@ interface SetVMExclusionArg {
   migrationExcluded: boolean;
   /** Pre-change VM records, used to optimistically adjust inventory counts. */
   affectedVms: MigrationExcludedInventoryChange["affectedVms"];
+  groupId?: string;
 }
 
 interface UpdateVirtualMachineArg {
@@ -56,6 +58,7 @@ interface UpdateVMLabelsArg {
   label: string;
   add?: string[];
   remove?: string[];
+  groupId?: string;
 }
 
 interface DeleteLabelGloballyArg {
@@ -175,9 +178,12 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       // report reflects the change instantly; the invalidation below then
       // refetches the authoritative value.
       onQueryStarted: async (
-        { vmIds, migrationExcluded, affectedVms },
+        { vmIds, migrationExcluded, affectedVms, groupId },
         { dispatch, queryFulfilled },
       ) => {
+        if (groupId) {
+          return;
+        }
         const patch = dispatch(
           vmsEndpoints.util.updateQueryData(
             "getInventory",
@@ -204,7 +210,11 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
           patch.undo();
         }
       },
-      invalidatesTags: () => [{ type: "Vms", id: "LIST" }, "Inventory"],
+      invalidatesTags: (_result, _error, { groupId }) => [
+        { type: "Vms", id: "LIST" },
+        "Inventory",
+        ...groupChangeTags(groupId),
+      ],
     }),
 
     // Single-VM update (e.g. exclusion toggle for one row).
@@ -233,7 +243,12 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
             } satisfies UpdateLabelVMsRequest,
           });
         },
-      invalidatesTags: () => ["VmLabels", { type: "Vms", id: "LIST" }],
+      invalidatesTags: (_result, _error, { groupId }) => [
+        "VmLabels",
+        { type: "Vms", id: "LIST" },
+        { type: "Group", id: "LIST" },
+        ...groupChangeTags(groupId),
+      ],
     }),
 
     // Delete a label everywhere it is applied.
@@ -245,7 +260,11 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
         ({ label }) =>
         (sdk) =>
           sdk.deleteLatestLabelGlobally({ label }),
-      invalidatesTags: () => ["VmLabels", { type: "Vms", id: "LIST" }],
+      invalidatesTags: () => [
+        "VmLabels",
+        { type: "Vms", id: "LIST" },
+        { type: "Group", id: "LIST" },
+      ],
     }),
   }),
 });

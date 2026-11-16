@@ -10,6 +10,8 @@ import {
   type Configuration,
   CredentialsApi,
   type CredentialsApiInterface,
+  GroupsApi,
+  type GroupsApiInterface,
   InspectorApi,
   type InspectorApiInterface,
   InventoriesApi,
@@ -31,6 +33,7 @@ export type DefaultApiInterface = AgentApiInterface &
   CollectionsApiInterface &
   CollectorApiInterface &
   CredentialsApiInterface &
+  GroupsApiInterface &
   InspectorApiInterface &
   InventoriesApiInterface &
   RightsizingApiInterface &
@@ -70,6 +73,7 @@ export function createAgentApi(configuration: Configuration): AgentApiClient {
     bindApiMethods(new CollectionsApi(configuration)),
     bindApiMethods(new CollectorApi(configuration)),
     bindApiMethods(new CredentialsApi(configuration)),
+    bindApiMethods(new GroupsApi(configuration)),
     bindApiMethods(new InspectorApi(configuration)),
     bindApiMethods(new InventoriesApi(configuration)),
     bindApiMethods(new RightsizingApi(configuration)),

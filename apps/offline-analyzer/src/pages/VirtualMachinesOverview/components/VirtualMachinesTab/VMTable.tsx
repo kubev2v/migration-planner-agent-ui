@@ -54,6 +54,10 @@ export const VMTable: React.FC<VMTableProps> = ({
   onExcludeFromReports,
   onIncludeInReports,
   onAddLabels,
+  onCreateGroup,
+  onAddToGroup,
+  canRemoveFromGroup,
+  onRemoveFromGroup,
   onEditLabels,
   onManageLabels,
   variant = "overview",
@@ -96,6 +100,10 @@ export const VMTable: React.FC<VMTableProps> = ({
         onExcludeFromReports={onExcludeFromReports}
         onIncludeInReports={onIncludeInReports}
         onAddLabels={onAddLabels}
+        onCreateGroup={onCreateGroup}
+        onAddToGroup={onAddToGroup}
+        canRemoveFromGroup={canRemoveFromGroup}
+        onRemoveFromGroup={onRemoveFromGroup}
         onManageLabels={onManageLabels}
       />
       <div

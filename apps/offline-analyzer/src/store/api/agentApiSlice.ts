@@ -3,6 +3,9 @@ import { sdkBaseQuery } from "../baseQuery";
 
 /** Cache tag types used for cross-endpoint invalidation. */
 export const AGENT_API_TAGS = [
+  "Group",
+  "GroupVms",
+  "GroupInventory",
   "Vms",
   "Inventory",
   "VmLabels",

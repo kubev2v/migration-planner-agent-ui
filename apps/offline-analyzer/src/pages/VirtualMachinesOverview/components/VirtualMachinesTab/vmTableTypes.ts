@@ -30,6 +30,10 @@ export interface VMTableProps {
   onExcludeFromReports?: (vmIds: string[]) => Promise<void>;
   onIncludeInReports?: (vmIds: string[]) => Promise<void>;
   onAddLabels?: (vmIds: string[]) => void;
+  onCreateGroup?: (vmIds: string[]) => void;
+  onAddToGroup?: (vmIds: string[]) => void;
+  canRemoveFromGroup?: boolean;
+  onRemoveFromGroup?: (vmIds: string[]) => void;
   onEditLabels?: (vmIds: string[]) => void;
   onManageLabels?: () => void;
   variant?: VMTableVariant;

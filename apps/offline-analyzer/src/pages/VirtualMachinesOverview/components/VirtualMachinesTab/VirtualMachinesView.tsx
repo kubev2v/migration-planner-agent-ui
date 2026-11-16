@@ -1,15 +1,22 @@
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import { Alert, Button } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { agentApiSlice } from "../../../../store/api/agentApiSlice";
+import { useGetVmGroupMembershipQuery } from "../../../../store/api/groupsEndpoints";
 import {
   useGetVMLabelsQuery,
   useSetVMExclusionMutation,
   useUpdateVMLabelsMutation,
 } from "../../../../store/api/vmsEndpoints";
+import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import { useAppDispatch } from "../../../../store/hooks";
+import { AddToGroupModal } from "../../../Groups/components/modals/AddToGroupModal";
+import { CreateGroupFromSelectionModal } from "../../../Groups/components/modals/CreateGroupFromSelectionModal";
+import { RemoveFromGroupModal } from "../../../Groups/components/modals/RemoveFromGroupModal";
+import { mergeVmGroupItems } from "../../../Groups/utils/vmGroupMembership";
 import { buildVmDetailUrl } from "../../reportTabNavigation";
 import type { VirtualMachineWithExclusion } from "../../virtualMachineParsing";
 import { getVmTags } from "../../virtualMachineParsing";
@@ -43,6 +50,8 @@ interface VirtualMachinesViewProps {
     vmLabels: string[];
   };
   agentApi?: DefaultApiInterface;
+  /** When set, table actions are scoped to this group's report. */
+  groupContext?: { id: string; name: string };
   /** Base filter applied before table filters (e.g. cluster scope). */
   scopedFilterExpression?: string;
   sortFields?: string[];
@@ -74,11 +83,13 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   onSortChange,
   availableFilterOptions,
   agentApi,
+  groupContext,
   scopedFilterExpression,
   sortFields = [],
 }) => {
   const dispatch = useAppDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
+  const variant = groupContext ? "groups" : "overview";
   const [selectedVMId, setSelectedVMId] = useState<string | null>(null);
   const [selectedVMs, setSelectedVMs] = useState<Set<string>>(new Set());
 
@@ -86,8 +97,14 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   // The VM list (and, for exclusion, the inventory) this view shows lives in
   // one cache entry, refetched by tag invalidation.
   const refreshVmList = useCallback(() => {
-    dispatch(agentApiSlice.util.invalidateTags([{ type: "Vms", id: "LIST" }]));
-  }, [dispatch]);
+    dispatch(
+      agentApiSlice.util.invalidateTags(
+        groupContext
+          ? [{ type: "GroupVms", id: groupContext.id }]
+          : [{ type: "Vms", id: "LIST" }],
+      ),
+    );
+  }, [dispatch, groupContext]);
 
   const refreshLabels = useCallback(() => {
     dispatch(agentApiSlice.util.invalidateTags(["VmLabels"]));
@@ -111,12 +128,49 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
   const [addLabelsMode, setAddLabelsMode] = useState<"add" | "edit">("add");
   const [isManageLabelsModalOpen, setIsManageLabelsModalOpen] = useState(false);
   const [addLabelsVMIds, setAddLabelsVMIds] = useState<string[]>([]);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [createGroupVMIds, setCreateGroupVMIds] = useState<string[]>([]);
+  const [isAddToGroupModalOpen, setIsAddToGroupModalOpen] = useState(false);
+  const [addToGroupVMIds, setAddToGroupVMIds] = useState<string[]>([]);
+  const [isRemoveFromGroupModalOpen, setIsRemoveFromGroupModalOpen] =
+    useState(false);
+  const [removeFromGroupVMIds, setRemoveFromGroupVMIds] = useState<string[]>(
+    [],
+  );
   const { data: availableLabels = [] } = useGetVMLabelsQuery(undefined, {
     skip: !agentApi,
   });
 
-  const vmsForTable = vms;
+  const {
+    data: vmGroupMembership,
+    error: vmGroupMembershipError,
+    isFetching: isFetchingVmGroupMembership,
+    refetch: refetchVmGroupMembership,
+  } = useGetVmGroupMembershipQuery(undefined, { skip: !agentApi });
+  const vmsForTable = useMemo(
+    () => (vmGroupMembership ? mergeVmGroupItems(vms, vmGroupMembership) : vms),
+    [vms, vmGroupMembership],
+  );
   const visibleVms = vmsForTable;
+  const selectedGroupIds = useMemo(() => {
+    const groupIds = new Set<string>();
+    for (const vmId of selectedVMs) {
+      for (const group of vmGroupMembership?.[vmId] ?? []) {
+        groupIds.add(group.id);
+      }
+    }
+    return [...groupIds];
+  }, [selectedVMs, vmGroupMembership]);
+
+  const groupIdsForRemoval = useMemo(() => {
+    const groupIds = new Set<string>();
+    for (const vmId of removeFromGroupVMIds) {
+      for (const group of vmGroupMembership?.[vmId] ?? []) {
+        groupIds.add(group.id);
+      }
+    }
+    return [...groupIds];
+  }, [removeFromGroupVMIds, vmGroupMembership]);
 
   const currentVMLabels = useMemo(() => {
     if (addLabelsVMIds.length === 0) return [];
@@ -154,6 +208,25 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
     setIsManageLabelsModalOpen(true);
   }, []);
 
+  const handleCreateGroup = useCallback((vmIds: string[]) => {
+    setCreateGroupVMIds(vmIds);
+    setIsCreateGroupModalOpen(true);
+  }, []);
+
+  const handleAddToGroup = useCallback((vmIds: string[]) => {
+    setAddToGroupVMIds(vmIds);
+    setIsAddToGroupModalOpen(true);
+  }, []);
+
+  const handleRemoveFromGroup = useCallback((vmIds: string[]) => {
+    setRemoveFromGroupVMIds(vmIds);
+    setIsRemoveFromGroupModalOpen(true);
+  }, []);
+
+  const handleGroupActionComplete = useCallback(() => {
+    setSelectedVMs(new Set());
+  }, []);
+
   const handleFetchAllVmIds = useCallback(
     async (filters: VMFilters) => {
       if (!agentApi) {
@@ -186,18 +259,20 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
           updateVMLabels({
             label,
             add: vmIds,
+            groupId: groupContext?.id,
           }).unwrap(),
         ),
         ...labelsToRemove.map((label) =>
           updateVMLabels({
             label,
             remove: vmIds,
+            groupId: groupContext?.id,
           }).unwrap(),
         ),
       ]);
       setSelectedVMs(new Set());
     },
-    [addLabelsVMIds, agentApi, updateVMLabels],
+    [addLabelsVMIds, agentApi, groupContext, updateVMLabels],
   );
 
   const handleVMClick = (vmId: string) => {
@@ -248,9 +323,10 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         vmIds,
         migrationExcluded,
         affectedVms,
+        groupId: groupContext?.id,
       }).unwrap();
     },
-    [agentApi, setVMExclusion, vmsForTable],
+    [agentApi, groupContext, setVMExclusion, vmsForTable],
   );
 
   const handleExcludeFromReports = useCallback(
@@ -276,6 +352,25 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
 
   return (
     <>
+      {vmGroupMembershipError && (
+        <Alert
+          variant="danger"
+          title="Failed to load VM group membership"
+          isInline
+        >
+          {getSdkErrorMessage(
+            vmGroupMembershipError,
+            "Failed to load VM group membership.",
+          )}{" "}
+          <Button
+            variant="link"
+            onClick={() => void refetchVmGroupMembership()}
+            isDisabled={isFetchingVmGroupMembership}
+          >
+            Retry
+          </Button>
+        </Alert>
+      )}
       <VMTable
         vms={visibleVms}
         loading={loading}
@@ -297,6 +392,15 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
         onAddLabels={handleAddLabels}
         onEditLabels={handleEditLabels}
         onManageLabels={handleManageLabels}
+        onCreateGroup={
+          agentApi && !groupContext ? handleCreateGroup : undefined
+        }
+        onAddToGroup={agentApi && !groupContext ? handleAddToGroup : undefined}
+        canRemoveFromGroup={
+          groupContext ? selectedVMs.size > 0 : selectedGroupIds.length > 0
+        }
+        onRemoveFromGroup={agentApi ? handleRemoveFromGroup : undefined}
+        variant={variant}
       />
       <AddLabelsModal
         isOpen={isAddLabelsModalOpen}
@@ -316,6 +420,27 @@ export const VirtualMachinesView: React.FC<VirtualMachinesViewProps> = ({
           agentApi={agentApi}
         />
       )}
+      <CreateGroupFromSelectionModal
+        isOpen={isCreateGroupModalOpen}
+        vmIds={createGroupVMIds}
+        onClose={() => setIsCreateGroupModalOpen(false)}
+        onCreated={() => setSelectedVMs(new Set())}
+      />
+      <AddToGroupModal
+        isOpen={isAddToGroupModalOpen}
+        vmIds={addToGroupVMIds}
+        onClose={() => setIsAddToGroupModalOpen(false)}
+        onUpdated={handleGroupActionComplete}
+      />
+      <RemoveFromGroupModal
+        isOpen={isRemoveFromGroupModalOpen}
+        vmIds={removeFromGroupVMIds}
+        groupIds={groupIdsForRemoval}
+        fixedGroupId={groupContext?.id}
+        fixedGroupName={groupContext?.name}
+        onClose={() => setIsRemoveFromGroupModalOpen(false)}
+        onUpdated={handleGroupActionComplete}
+      />
     </>
   );
 };

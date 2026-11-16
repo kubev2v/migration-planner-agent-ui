@@ -21,6 +21,10 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     onExcludeFromReports,
     onIncludeInReports,
     onAddLabels,
+    onCreateGroup,
+    onAddToGroup,
+    canRemoveFromGroup,
+    onRemoveFromGroup,
     onManageLabels,
   } = props;
 
@@ -43,6 +47,10 @@ export const VMTableToolbar: React.FC<VMTableToolbarProps> = (props) => {
     onExcludeFromReports,
     onIncludeInReports,
     onAddLabels,
+    onCreateGroup,
+    onAddToGroup,
+    canRemoveFromGroup,
+    onRemoveFromGroup,
     onManageLabels,
   };
 
