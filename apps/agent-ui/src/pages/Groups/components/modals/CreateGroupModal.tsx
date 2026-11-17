@@ -63,6 +63,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     concernLabels: [] as string[],
     concernCategories: [] as string[],
     vmLabels: [] as string[],
+    vsphereTags: [] as string[],
     groups: [] as string[],
     applications: [] as string[],
   });

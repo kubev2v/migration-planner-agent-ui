@@ -8,6 +8,32 @@ import {
   withDefaultReportInclusion,
 } from "./vmFilters";
 
+describe("filtersToByExpression vsphereTags", () => {
+  it("filters by a single metadata key/value pair", () => {
+    expect(
+      filtersToByExpression({ vsphereTags: ["Environment:Production"] }),
+    ).toBe(
+      "((metadata.key = 'Environment' and metadata.value = 'Production'))",
+    );
+  });
+
+  it("ORs multiple metadata pairs", () => {
+    expect(
+      filtersToByExpression({
+        vsphereTags: ["Environment:Production", "Owner:Finance"],
+      }),
+    ).toBe(
+      "((metadata.key = 'Environment' and metadata.value = 'Production') or (metadata.key = 'Owner' and metadata.value = 'Finance'))",
+    );
+  });
+
+  it("escapes quotes in metadata key and value", () => {
+    expect(filtersToByExpression({ vsphereTags: ["It's:ok"] })).toBe(
+      "((metadata.key = 'It\\'s' and metadata.value = 'ok'))",
+    );
+  });
+});
+
 describe("filtersToByExpression vmLabels", () => {
   it("uses a single contains check for one label", () => {
     expect(filtersToByExpression({ vmLabels: ["prod"] })).toBe(

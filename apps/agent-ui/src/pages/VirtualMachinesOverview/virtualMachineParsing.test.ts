@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   getMigrationExcluded,
   getVmTags,
+  getVmVSphereTags,
   normalizeVirtualMachine,
+  virtualMachineFromListJson,
 } from "./virtualMachineParsing";
 
 const baseVm: VirtualMachine = {
@@ -36,5 +38,46 @@ describe("normalizeVirtualMachine", () => {
 
     expect(normalized.labels).toEqual(["prod"]);
     expect(getVmTags(normalized)).toEqual(["prod"]);
+  });
+});
+
+describe("getVmVSphereTags", () => {
+  it("flattens metadata into sorted category:value labels", () => {
+    const tags = getVmVSphereTags({
+      ...baseVm,
+      metadata: {
+        Owner: ["Platform team"],
+        Environment: ["Production"],
+        Application: ["Customer portal"],
+      },
+    } as VirtualMachine);
+
+    expect(tags).toEqual([
+      "Application:Customer portal",
+      "Environment:Production",
+      "Owner:Platform team",
+    ]);
+  });
+
+  it("returns an empty list when metadata is absent", () => {
+    expect(getVmVSphereTags(baseVm)).toEqual([]);
+  });
+});
+
+describe("virtualMachineFromListJson", () => {
+  it("preserves metadata omitted from the list SDK model", () => {
+    const vm = virtualMachineFromListJson({
+      ...baseVm,
+      metadata: { Forklift: ["migrated"] },
+    });
+    expect(getVmVSphereTags(vm)).toEqual(["Forklift:migrated"]);
+  });
+
+  it("normalizes string metadata values", () => {
+    const vm = virtualMachineFromListJson({
+      ...baseVm,
+      metadata: { Forklift: "migrated" },
+    });
+    expect(getVmVSphereTags(vm)).toEqual(["Forklift:migrated"]);
   });
 });

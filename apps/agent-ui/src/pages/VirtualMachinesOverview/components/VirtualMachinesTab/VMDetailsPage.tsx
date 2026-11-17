@@ -49,6 +49,7 @@ import { getApplicationsForVm } from "../ApplicationsTab/applicationsApi";
 import { VMApplicationsCard } from "./VMApplicationsCard";
 import { VMProcessesCard } from "./VMProcessesCard";
 import { formatMetric } from "./VMUtilizationMetrics";
+import { VMVSphereMetadataSection } from "./VMVSphereMetadataSection";
 
 const MB_IN_GB = 1024;
 
@@ -439,6 +440,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                 </DescriptionList>
+                <VMVSphereMetadataSection vm={vm} />
               </CardBody>
             </Card>
           </GridItem>
