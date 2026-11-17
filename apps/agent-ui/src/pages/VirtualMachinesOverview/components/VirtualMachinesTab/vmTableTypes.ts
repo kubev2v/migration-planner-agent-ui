@@ -9,6 +9,7 @@ export interface VMTableFilterOptions {
   concernLabels: string[];
   concernCategories: string[];
   vmLabels: string[];
+  vsphereTags: string[];
   groups: string[];
   applications: string[];
 }

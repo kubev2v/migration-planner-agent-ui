@@ -34,6 +34,10 @@ function createParams(
     onReportInclusionChange: vi.fn(),
     selectedVmLabels: [],
     onVmLabelsChange: vi.fn(),
+    selectedVsphereTags: [],
+    onVsphereTagsChange: vi.fn(),
+    vsphereAnnotationSearch: "",
+    onVsphereAnnotationSearchChange: vi.fn(),
     selectedGroups: [],
     onGroupsChange: vi.fn(),
     selectedApplications: [],
@@ -46,6 +50,7 @@ function createParams(
     availableDatacenters: ["dc-1"],
     availableClusters: ["cluster-a"],
     availableVmLabels: ["tier-1"],
+    availableVsphereTags: ["Environment:Production"],
     availableGroups: ["production"],
     availableApplications: ["SAP ERP"],
     showGroupsFilter: true,
@@ -62,6 +67,7 @@ describe("buildVmTableFilterAttributes", () => {
         availableDatacenters: [],
         availableClusters: [],
         availableVmLabels: [],
+        availableVsphereTags: [],
         availableGroups: [],
         availableApplications: [],
       }),
@@ -78,6 +84,8 @@ describe("buildVmTableFilterAttributes", () => {
       "status",
       "migration-readiness",
       "report-inclusion",
+      "vsphere-tags",
+      "vsphere-annotation",
     ]);
   });
 

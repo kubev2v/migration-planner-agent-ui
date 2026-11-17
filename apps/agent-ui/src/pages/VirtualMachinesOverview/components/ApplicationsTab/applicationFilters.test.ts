@@ -12,12 +12,16 @@ const applications: ApplicationOverview[] = [
   {
     name: "Apache HTTP Server",
     description: "",
+    vendor: "Apache Software Foundation",
+    category: "Web server",
     vmCount: 1,
     vms: [{ id: "vm-1", name: "web-01.prod.local" }],
   },
   {
     name: "PostgreSQL",
     description: "",
+    vendor: "PostgreSQL Global Development Group",
+    category: "Database",
     vmCount: 1,
     vms: [{ id: "vm-2", name: "db-01.prod.local" }],
   },
@@ -77,12 +81,16 @@ describe("getUniqueVms", () => {
       {
         name: "App A",
         description: "",
+        vendor: "",
+        category: "",
         vmCount: 1,
         vms: [{ id: "vm-1", name: "shared" }],
       },
       {
         name: "App B",
         description: "",
+        vendor: "",
+        category: "",
         vmCount: 1,
         vms: [{ id: "vm-1", name: "shared" }],
       },

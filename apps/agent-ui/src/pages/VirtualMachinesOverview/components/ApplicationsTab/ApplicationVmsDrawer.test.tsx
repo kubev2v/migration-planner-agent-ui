@@ -18,6 +18,8 @@ vi.mock("../../../../store/api/vmsEndpoints", () => ({
 const application: ApplicationOverview = {
   name: "Active Directory Domain Services",
   description: "",
+  vendor: "Microsoft",
+  category: "Directory service",
   vmCount: 3,
   vms: [
     { id: "vm-1", name: "win10-rvtools" },

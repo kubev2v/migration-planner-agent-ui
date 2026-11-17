@@ -10,11 +10,12 @@ export type {
 
 /** Agent application list entry (SDK fields plus newer API metadata when present). */
 export type ApplicationOverview = SdkApplicationOverview & {
-  vendor?: string;
-  category?: string;
   confidence?: number;
   containerizationCandidate?: boolean;
   certified?: string;
+  /** Optional until exposed on the agent applications API / SDK. */
+  vendor?: string;
+  category?: string;
 };
 
 /** Build a VM id → application names lookup from the global applications list. */

@@ -15,6 +15,7 @@ export type VMTableFilterSelection = {
   selectedMigrationReadiness: string[];
   selectedReportInclusion: string[];
   selectedVmLabels: string[];
+  selectedVsphereTags: string[];
   selectedGroups: string[];
   selectedApplications: string[];
   selectedConcernLabels: string[];
@@ -35,6 +36,7 @@ export const EMPTY_VM_TABLE_FILTER_SELECTION: VMTableFilterSelection = {
   selectedMigrationReadiness: [],
   selectedReportInclusion: [],
   selectedVmLabels: [],
+  selectedVsphereTags: [],
   selectedGroups: [],
   selectedApplications: [],
   selectedConcernLabels: [],
@@ -240,6 +242,14 @@ export function buildAppliedFilters(
     });
   }
 
+  for (const tag of selection.selectedVsphereTags) {
+    filters.push({
+      category: "vSphere tag",
+      label: tag,
+      key: `vsphere-tag-${tag}`,
+    });
+  }
+
   for (const group of selection.selectedGroups) {
     filters.push({
       category: "Group",
@@ -365,6 +375,15 @@ export function removeFilterFromSelection(
     return {
       ...selection,
       selectedVmLabels: selection.selectedVmLabels.filter((l) => l !== label),
+    };
+  }
+  if (filterKey.startsWith("vsphere-tag-")) {
+    const tag = filterKey.slice("vsphere-tag-".length);
+    return {
+      ...selection,
+      selectedVsphereTags: selection.selectedVsphereTags.filter(
+        (t) => t !== tag,
+      ),
     };
   }
   if (filterKey.startsWith("group-")) {
