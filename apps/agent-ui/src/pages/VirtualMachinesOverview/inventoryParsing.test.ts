@@ -174,7 +174,7 @@ describe("sequential migration excluded changes", () => {
 });
 
 describe("inventoryFromGroupResponse", () => {
-  it("returns group-scoped Inventory1 payloads", () => {
+  it("returns group-scoped inventory payloads", () => {
     expect(
       inventoryFromGroupResponse({
         inventory: baseInventory,
@@ -207,6 +207,20 @@ describe("standalone analyzer inventory (GET /inventory InventoryResponse)", () 
     });
     expect(parsed?.vcenter_id).toBe("vc-a");
     expect(parsed?.vcenter?.vms?.total).toBe(42);
+  });
+
+  it("parseInventoryResponse tolerates null clusters", () => {
+    const parsed = parseInventoryResponse({
+      vcenter_id: "vc-a",
+      clusters: null,
+      vcenter: {
+        infra: testInfra(0),
+        vms: testVms(3, 2),
+      },
+    });
+    expect(parsed?.vcenter_id).toBe("vc-a");
+    expect(parsed?.clusters).toEqual({});
+    expect(parsed?.vcenter?.vms?.total).toBe(3);
   });
 
   it("fetchReportInventoryFromApi loads GET /inventory/vcenters/{vid} when scoped", async () => {

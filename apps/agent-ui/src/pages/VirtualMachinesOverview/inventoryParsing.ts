@@ -1,25 +1,26 @@
 import type {
+  CollectedInventory,
   Infra,
   Inventory,
-  Inventory1,
   InventoryData,
   IssuesBreakdown,
   MigrationIssue,
+  UpdateInventory,
   VirtualMachine,
   VMs,
 } from "@openshift-migration-advisor/agent-sdk";
 import {
-  Inventory1FromJSON,
+  CollectedInventoryFromJSON,
   InventoryFromJSON,
-  instanceOfInventory,
+  instanceOfCollectedInventory,
   instanceOfUpdateInventory,
   UpdateInventoryFromJSON,
 } from "@openshift-migration-advisor/agent-sdk";
 import type { DefaultApiInterface } from "../../api/agentApi";
 import { getMigrationExcluded } from "./virtualMachineParsing";
 
-/** vCenter/cluster inventory payload (nested inside GET /inventory wrapper). */
-export type InventoryPayload = Inventory1;
+/** vCenter/cluster inventory payload from GET /inventory or assessments API. */
+export type InventoryPayload = Inventory;
 
 /** Sub-resource reference (`AssessmentV2.vcenters` in the Migration Advisor API). */
 export type AssessmentSubResource = { id: string };
@@ -44,8 +45,45 @@ function parseOptionalDate(value: unknown): Date | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Agent/OpenAPI may send `clusters: null`; SDK mapValues throws on null. */
+function normalizeInventoryClustersInJson(json: unknown): unknown {
+  if (!isRecord(json)) {
+    return json;
+  }
+  const out: Record<string, unknown> = { ...json };
+  if ("vcenter_id" in out) {
+    const clusters = out.clusters;
+    if (
+      clusters == null ||
+      typeof clusters !== "object" ||
+      Array.isArray(clusters)
+    ) {
+      out.clusters = {};
+    }
+  }
+  if (isRecord(out.inventory)) {
+    out.inventory = normalizeInventoryClustersInJson(out.inventory);
+  }
+  if (isRecord(out.data) && "vcenter_id" in out.data) {
+    out.data = normalizeInventoryClustersInJson(out.data);
+  }
+  return out;
+}
+
+function inventoryFromJsonSafe(json: unknown): InventoryPayload {
+  return InventoryFromJSON(normalizeInventoryClustersInJson(json));
+}
+
+function updateInventoryFromJsonSafe(json: unknown): UpdateInventory {
+  return UpdateInventoryFromJSON(normalizeInventoryClustersInJson(json));
+}
+
 /**
- * Maps `InventoryV2` (assessment API) into the dashboard's `Inventory1` shape.
+ * Maps `InventoryV2` (assessment API) into the dashboard inventory payload shape.
  * @see openapi AssessmentV2 / AssessmentVCenterV2
  */
 export function inventoryPayloadFromInventoryV2(
@@ -186,7 +224,12 @@ async function tryFetchAssessmentInventory(
 }
 
 export function unwrapInventoryPayload(
-  inventory: Inventory | InventoryPayload | null | undefined,
+  inventory:
+    | InventoryPayload
+    | UpdateInventory
+    | CollectedInventory
+    | null
+    | undefined,
 ): InventoryPayload | null {
   if (!inventory || typeof inventory !== "object") {
     return null;
@@ -194,16 +237,19 @@ export function unwrapInventoryPayload(
   if ("vcenter_id" in inventory && "clusters" in inventory) {
     return inventory as InventoryPayload;
   }
-  if (instanceOfInventory(inventory)) {
-    return inventory.inventory?.inventory ?? null;
-  }
   if (
-    typeof inventory === "object" &&
     "agentId" in inventory &&
     "inventory" in inventory &&
     instanceOfUpdateInventory(inventory as object)
   ) {
-    return (inventory as { inventory?: InventoryPayload }).inventory ?? null;
+    return (inventory as UpdateInventory).inventory ?? null;
+  }
+  if (
+    "inventory" in inventory &&
+    instanceOfCollectedInventory(inventory as object) &&
+    !("agentId" in inventory)
+  ) {
+    return unwrapInventoryPayload((inventory as CollectedInventory).inventory);
   }
   return null;
 }
@@ -211,12 +257,10 @@ export function unwrapInventoryPayload(
 export function wrapInventoryPayload(
   payload: InventoryPayload,
   agentId = "",
-): Inventory {
+): UpdateInventory {
   return {
-    inventory: {
-      agentId,
-      inventory: payload,
-    },
+    agentId,
+    inventory: payload,
   };
 }
 
@@ -262,10 +306,10 @@ export function parseInventoryResponse(
     record.data &&
     typeof record.data === "object"
   ) {
-    return Inventory1FromJSON(record.data);
+    return inventoryFromJsonSafe(record.data);
   }
   if ("vcenter_id" in record && "clusters" in record) {
-    return Inventory1FromJSON(jsonData);
+    return inventoryFromJsonSafe(jsonData);
   }
   if ("inventory" in record) {
     const inner = record.inventory;
@@ -275,13 +319,23 @@ export function parseInventoryResponse(
       "vcenter_id" in inner &&
       "clusters" in inner
     ) {
-      return Inventory1FromJSON(inner);
+      return inventoryFromJsonSafe(inner);
     }
-    const parsed = InventoryFromJSON(jsonData);
+    if (
+      inner &&
+      typeof inner === "object" &&
+      "agentId" in inner &&
+      "inventory" in inner
+    ) {
+      return updateInventoryFromJsonSafe(inner).inventory ?? null;
+    }
+    const parsed = CollectedInventoryFromJSON(
+      normalizeInventoryClustersInJson(jsonData),
+    );
     return unwrapInventoryPayload(parsed);
   }
   if ("agentId" in record && "inventory" in record) {
-    const updateInventory = UpdateInventoryFromJSON(jsonData);
+    const updateInventory = updateInventoryFromJsonSafe(jsonData);
     return updateInventory.inventory ?? null;
   }
   return null;
@@ -289,7 +343,12 @@ export function parseInventoryResponse(
 
 /** Extract inventory payload from GET /inventory SDK response. */
 export function inventoryFromGetInventoryResponse(
-  response: Inventory | null | undefined,
+  response:
+    | CollectedInventory
+    | UpdateInventory
+    | InventoryPayload
+    | null
+    | undefined,
 ): InventoryPayload | null {
   return unwrapInventoryPayload(response);
 }
@@ -997,7 +1056,7 @@ export type InventoryAggregateView = {
 
 /** Aggregate infra/vms for the dashboard (vcenter scope, or cluster fallback). */
 export function getInventoryAggregateView(
-  inventory: InventoryPayload | Inventory | null,
+  inventory: InventoryPayload | UpdateInventory | CollectedInventory | null,
 ): InventoryAggregateView {
   const payload = unwrapInventoryPayload(inventory);
   const clusters = payload?.clusters ?? {};
