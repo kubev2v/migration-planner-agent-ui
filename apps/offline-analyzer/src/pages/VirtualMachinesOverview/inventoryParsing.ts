@@ -207,6 +207,13 @@ export function unwrapInventoryPayload(
   return null;
 }
 
+/** Extract the group-scoped report inventory carried by GET /groups/{id}. */
+export function inventoryFromGroupResponse(response: {
+  inventory?: Inventory | InventoryPayload | null;
+}): InventoryPayload | null {
+  return unwrapInventoryPayload(response.inventory);
+}
+
 export function wrapInventoryPayload(
   payload: InventoryPayload,
   agentId = "",

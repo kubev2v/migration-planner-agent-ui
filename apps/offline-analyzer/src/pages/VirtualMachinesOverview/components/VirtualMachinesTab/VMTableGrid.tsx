@@ -16,6 +16,8 @@ import { EllipsisVIcon, SearchIcon } from "@patternfly/react-icons";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table";
 import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
+import { GroupsList } from "../../../Groups/components/GroupsList";
+import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
 import { getMigrationExcluded, getVmTags } from "../../virtualMachineParsing";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { renderVmStatus } from "./vmTableCellRenderers";
@@ -129,6 +131,11 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
           </Tr>
         ) : (
           displayVMs.map((vm, rowIndex) => {
+            const groupItems: GroupListItem[] =
+              "groupItems" in vm &&
+              Array.isArray((vm as { groupItems?: unknown }).groupItems)
+                ? (vm as { groupItems: GroupListItem[] }).groupItems
+                : [];
             return (
               <Tr key={vm.id}>
                 <Td
@@ -182,6 +189,15 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                       }
                       return "–";
                     })()}
+                  </Td>
+                )}
+                {isColumnVisible("groups") && (
+                  <Td dataLabel="Groups">
+                    {groupItems.length > 0 ? (
+                      <GroupsList groups={groupItems} />
+                    ) : (
+                      "–"
+                    )}
                   </Td>
                 )}
                 {isColumnVisible("vCenterState") && (

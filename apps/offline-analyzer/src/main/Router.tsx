@@ -39,6 +39,24 @@ export const router = createBrowserRouter(
             return { Component: ReportContainer };
           },
         },
+        {
+          path: "groups",
+          lazy: async () => {
+            const { GroupsPage } = await import(
+              "../pages/Groups/GroupsPage.tsx"
+            );
+            return { Component: GroupsPage };
+          },
+        },
+        {
+          path: "groups/:groupId",
+          lazy: async () => {
+            const { GroupDetailPage } = await import(
+              "../pages/Groups/GroupDetailPage.tsx"
+            );
+            return { Component: GroupDetailPage };
+          },
+        },
       ],
     },
     {

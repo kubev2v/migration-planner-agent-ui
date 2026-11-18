@@ -1,10 +1,11 @@
 import { css } from "@emotion/css";
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
-import { labelsSort } from "./vmSort";
+import { groupsSort, labelsSort } from "./vmSort";
 
 export type ColumnKey =
   | "name"
   | "labels"
+  | "groups"
   | "vCenterState"
   | "id"
   | "cpuUsage"
@@ -30,7 +31,7 @@ export const BACKEND_SORTABLE_COLUMNS = [
   "issues",
 ] as const;
 
-export const FRONTEND_SORTABLE_COLUMNS = ["labels"] as const;
+export const FRONTEND_SORTABLE_COLUMNS = ["labels", "groups"] as const;
 
 export type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
 export type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
@@ -39,6 +40,7 @@ export type SortableColumn = BackendSortableColumn | FrontendSortableColumn;
 export const Columns: Record<ColumnKey, string> = {
   name: "Name",
   labels: "Labels",
+  groups: "Groups",
   vCenterState: "Status",
   migratable: "Migration Readiness",
   id: "ID",
@@ -65,7 +67,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 8;
+export const VISIBLE_COLUMNS_VERSION = 9;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -100,7 +102,7 @@ export const getColumnModifier = (key: ColumnKey) => {
   ) {
     return "fitContent";
   }
-  if (key === "labels") {
+  if (key === "labels" || key === "groups") {
     return "wrap";
   }
   return "nowrap";
@@ -278,6 +280,7 @@ export const FRONTEND_SORT_METHODS: Record<
   FrontendSortFunction
 > = {
   labels: labelsSort,
+  groups: groupsSort,
 };
 
 export const formatDiskSize = (sizeInMB: number): string => {
@@ -351,7 +354,7 @@ export const filterStyles = {
   `,
 };
 
-export type VMTableVariant = "overview" | "compact";
+export type VMTableVariant = "overview" | "groups" | "compact";
 
 export type VMTableVariantUI = {
   showManageColumns: boolean;
@@ -367,6 +370,12 @@ export const VM_TABLE_VARIANT_UI: Record<VMTableVariant, VMTableVariantUI> = {
     disableVmNavigation: false,
     defaultColumnsKeys: [...ALL_COLUMN_KEYS],
   },
+  groups: {
+    showManageColumns: true,
+    hideToolbarActions: false,
+    disableVmNavigation: false,
+    defaultColumnsKeys: ALL_COLUMN_KEYS.filter((key) => key !== "groups"),
+  },
   compact: {
     showManageColumns: false,
     hideToolbarActions: true,
@@ -377,11 +386,16 @@ export const VM_TABLE_VARIANT_UI: Record<VMTableVariant, VMTableVariantUI> = {
 
 export function resolveVariantUI({
   variant,
+  totalVMs,
 }: {
   variant: VMTableVariant;
   totalVMs?: number;
 }): VMTableVariantUI {
-  return VM_TABLE_VARIANT_UI[variant];
+  const base = VM_TABLE_VARIANT_UI[variant];
+  if (variant === "groups" && (totalVMs ?? 0) === 0) {
+    return { ...base, hideToolbarActions: true };
+  }
+  return base;
 }
 
 export function resolveVisibleColumns({
@@ -399,7 +413,10 @@ export function resolveVisibleColumns({
   ]);
 
   // Maintain the order defined in ALL_COLUMN_KEYS
-  return ALL_COLUMN_KEYS.filter((key) => selectedSet.has(key));
+  const selectedColumns = ALL_COLUMN_KEYS.filter((key) => selectedSet.has(key));
+  return variant === "groups"
+    ? selectedColumns.filter((key) => key !== "groups")
+    : selectedColumns;
 }
 
 export const vmsTabsStackItemStyle = css`

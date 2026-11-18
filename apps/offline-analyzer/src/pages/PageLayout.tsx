@@ -36,6 +36,7 @@ const NAV_SECTIONS: ReportNavSection[] = [
     title: "Reporting",
     items: [
       { path: "/report/vms-overview", label: "Virtual machines overview" },
+      { path: "/report/groups", label: "Groups" },
     ],
   },
 ];
