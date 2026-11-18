@@ -66,6 +66,12 @@ export interface NetworkOverviewProps {
   infra?: NetworkInfraLike;
   nicCount?: NicCountSummary;
   distributionByNicCount?: Record<string, number>;
+  /**
+   * Distinct VM count for the network-distribution donut center.
+   * When omitted, falls back to the sum of per-network connection counts
+   * (which may over-count multi-homed VMs).
+   */
+  uniqueVmCount?: number;
   /** `"html"` in agent-ui; ui-app passes `"chart"`. */
   legendVariant?: MigrationDonutChartLegendVariant;
 }
@@ -73,9 +79,12 @@ export interface NetworkOverviewProps {
 type ViewMode = "networkDistribution" | "nicCount";
 
 const VIEW_MODE_LABELS: Record<ViewMode, string> = {
-  networkDistribution: "VM distribution by network",
+  networkDistribution: "VMs by network (may overlap)",
   nicCount: "VM distribution by NIC count",
 };
+
+const NETWORK_CARD_SUBTITLE =
+  "Top 5 networks - a VM can be on multiple networks";
 
 const TOP_NETWORKS = 4;
 const REST_OF_NETWORKS_LABEL = "Rest of networks";
@@ -166,7 +175,7 @@ const buildNetworkDonut = (
     return {
       name,
       count: network.vmsCount,
-      countDisplay: `${network.vmsCount} VMs`,
+      countDisplay: `${network.vmsCount} VMs connected`,
       legendCategory: name,
     };
   });
@@ -175,7 +184,7 @@ const buildNetworkDonut = (
     slices.push({
       name: REST_OF_NETWORKS_LABEL,
       count: restSum,
-      countDisplay: `${restSum} VMs`,
+      countDisplay: `${restSum} VMs connected`,
       legendCategory: REST_OF_NETWORKS_LABEL,
     });
     vlanBySlice[REST_OF_NETWORKS_LABEL] = "-";
@@ -281,6 +290,7 @@ export const NetworkOverview: FC<NetworkOverviewProps> = ({
   infra,
   nicCount,
   distributionByNicCount,
+  uniqueVmCount,
   legendVariant = "html",
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("networkDistribution");
@@ -296,8 +306,16 @@ export const NetworkOverview: FC<NetworkOverviewProps> = ({
   );
 
   const chartTitle = `${CHART_TITLE} — ${VIEW_MODE_LABELS[viewMode]}`;
+  const networkTitle =
+    typeof uniqueVmCount === "number" && Number.isFinite(uniqueVmCount)
+      ? `${uniqueVmCount}`
+      : networkChart.title;
   const activeChart =
-    viewMode === "networkDistribution" ? networkChart : nicChart;
+    viewMode === "networkDistribution"
+      ? { ...networkChart, title: networkTitle }
+      : nicChart;
+  const activeSubTitle =
+    viewMode === "networkDistribution" ? "unique VMs" : "VMs";
   const emptyTitle =
     viewMode === "networkDistribution"
       ? REPORT_CARD_EMPTY_STATE_TITLES.networks
@@ -328,7 +346,7 @@ export const NetworkOverview: FC<NetworkOverviewProps> = ({
                   <TopologyIcon /> {CHART_TITLE}
                 </div>
                 {viewMode === "networkDistribution" && (
-                  <div className={cardSubtitle}>Top 5 networks</div>
+                  <div className={cardSubtitle}>{NETWORK_CARD_SUBTITLE}</div>
                 )}
               </div>
             </FlexItem>
@@ -381,7 +399,7 @@ export const NetworkOverview: FC<NetworkOverviewProps> = ({
               donutThickness={18}
               titleFontSize={34}
               title={activeChart.title}
-              subTitle="VMs"
+              subTitle={activeSubTitle}
               subTitleColor="var(--pf-t--global--text--color--subtle)"
               itemsPerRow={Math.ceil(activeChart.slices.length / 2)}
               labelFontSize={18}
