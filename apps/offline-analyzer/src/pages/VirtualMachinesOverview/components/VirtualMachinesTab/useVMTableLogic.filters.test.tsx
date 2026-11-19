@@ -20,6 +20,7 @@ const EMPTY_FILTER_OPTIONS: NonNullable<
   concernLabels: [],
   concernCategories: [],
   vmLabels: [],
+  vsphereTags: [],
 };
 const PERFORMANCE_CATEGORY = ["Performance"];
 const HIGH_CPU_LABEL = ["High CPU"];

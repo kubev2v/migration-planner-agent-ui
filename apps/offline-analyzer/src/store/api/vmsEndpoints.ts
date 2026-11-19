@@ -19,6 +19,10 @@ import {
   type MigrationExcludedInventoryChange,
   type ReportInventoryResult,
 } from "../../pages/VirtualMachinesOverview/inventoryParsing";
+import {
+  getLatestVirtualMachineWithVSphere,
+  listLatestVirtualMachinesWithMetadata,
+} from "../../pages/VirtualMachinesOverview/virtualMachineParsing";
 import { agentApiSlice } from "./agentApiSlice";
 import { groupChangeTags } from "./groupTags";
 
@@ -79,7 +83,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       query:
         ({ byExpression, sort, page, pageSize }) =>
         (sdk) =>
-          sdk.listLatestVirtualMachines({
+          listLatestVirtualMachinesWithMetadata(sdk, {
             byExpression,
             sort: sort && sort.length > 0 ? sort : undefined,
             page,
@@ -129,7 +133,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
     // best-effort and swallowed on failure.
     getVMDetail: build.query<VirtualMachineDetailWithUtilization, string>({
       query: (vmId) => async (sdk) => {
-        const vmData = await sdk.getLatestVirtualMachine({ vmId });
+        const vmData = await getLatestVirtualMachineWithVSphere(sdk, { vmId });
         let utilization: VmUtilizationDetails | undefined;
         try {
           utilization = await sdk.getLatestVMUtilization({ vmId });

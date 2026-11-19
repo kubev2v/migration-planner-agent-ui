@@ -1,10 +1,11 @@
 import { css } from "@emotion/css";
 import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
-import { groupsSort, labelsSort } from "./vmSort";
+import { groupsSort, labelsSort, vsphereTagsSort } from "./vmSort";
 
 export type ColumnKey =
   | "name"
   | "labels"
+  | "vsphereTags"
   | "groups"
   | "vCenterState"
   | "id"
@@ -31,7 +32,11 @@ export const BACKEND_SORTABLE_COLUMNS = [
   "issues",
 ] as const;
 
-export const FRONTEND_SORTABLE_COLUMNS = ["labels", "groups"] as const;
+export const FRONTEND_SORTABLE_COLUMNS = [
+  "labels",
+  "vsphereTags",
+  "groups",
+] as const;
 
 export type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
 export type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
@@ -40,6 +45,7 @@ export type SortableColumn = BackendSortableColumn | FrontendSortableColumn;
 export const Columns: Record<ColumnKey, string> = {
   name: "Name",
   labels: "Labels",
+  vsphereTags: "vSphere tags",
   groups: "Groups",
   vCenterState: "Status",
   migratable: "Migration Readiness",
@@ -102,7 +108,7 @@ export const getColumnModifier = (key: ColumnKey) => {
   ) {
     return "fitContent";
   }
-  if (key === "labels" || key === "groups") {
+  if (key === "labels" || key === "vsphereTags" || key === "groups") {
     return "wrap";
   }
   return "nowrap";
@@ -280,6 +286,7 @@ export const FRONTEND_SORT_METHODS: Record<
   FrontendSortFunction
 > = {
   labels: labelsSort,
+  vsphereTags: vsphereTagsSort,
   groups: groupsSort,
 };
 

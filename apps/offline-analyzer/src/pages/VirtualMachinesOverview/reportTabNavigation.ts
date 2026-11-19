@@ -145,6 +145,7 @@ export function clearVmFilterParams(params: URLSearchParams): void {
   params.delete("migrationReadiness");
   params.delete("reportInclusion");
   params.delete("vmLabels");
+  params.delete("vsphereTags");
   params.delete("concernLabels");
   params.delete("concernCategories");
   params.delete("vmSection");
