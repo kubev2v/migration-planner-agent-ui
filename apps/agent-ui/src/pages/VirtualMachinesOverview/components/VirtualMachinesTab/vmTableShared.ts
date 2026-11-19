@@ -5,11 +5,13 @@ import {
   deepInspectionSort,
   groupsSort,
   labelsSort,
+  vsphereTagsSort,
 } from "./vmSort";
 
 export type ColumnKey =
   | "name"
   | "labels"
+  | "vsphereTags"
   | "groups"
   | "applications"
   | "vCenterState"
@@ -42,6 +44,7 @@ export const FRONTEND_SORTABLE_COLUMNS = [
   "applications",
   "deepInspection",
   "labels",
+  "vsphereTags",
   "groups",
 ] as const;
 
@@ -52,6 +55,7 @@ export type SortableColumn = BackendSortableColumn | FrontendSortableColumn;
 export const Columns: Record<ColumnKey, string> = {
   name: "Name",
   labels: "Labels",
+  vsphereTags: "vSphere tags",
   groups: "Groups",
   applications: "Applications",
   vCenterState: "Status",
@@ -81,7 +85,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 8;
+export const VISIBLE_COLUMNS_VERSION = 9;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -116,7 +120,7 @@ export const getColumnModifier = (key: ColumnKey) => {
   ) {
     return "fitContent";
   }
-  if (key === "labels" || key === "applications") {
+  if (key === "labels" || key === "vsphereTags" || key === "applications") {
     return "wrap";
   }
   return "nowrap";
@@ -296,6 +300,7 @@ export const FRONTEND_SORT_METHODS: Record<
   applications: applicationsSort,
   deepInspection: deepInspectionSort,
   labels: labelsSort,
+  vsphereTags: vsphereTagsSort,
   groups: groupsSort,
 };
 

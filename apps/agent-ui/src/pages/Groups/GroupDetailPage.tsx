@@ -98,6 +98,7 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
   concernLabels: [],
   concernCategories: [],
   vmLabels: [],
+  vsphereTags: [],
   groups: [],
   applications: [],
 };

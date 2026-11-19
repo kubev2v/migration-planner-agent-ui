@@ -20,6 +20,7 @@ const EMPTY_FILTER_OPTIONS: NonNullable<
   concernLabels: [],
   concernCategories: [],
   vmLabels: [],
+  vsphereTags: [],
   groups: [],
   applications: [],
 };

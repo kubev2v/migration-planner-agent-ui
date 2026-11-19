@@ -83,6 +83,8 @@ export type BuildVmTableFilterAttributesParams = {
   onReportInclusionChange: (values: string[]) => void;
   selectedVmLabels: string[];
   onVmLabelsChange: (values: string[]) => void;
+  selectedVsphereTags: string[];
+  onVsphereTagsChange: (values: string[]) => void;
   selectedGroups: string[];
   onGroupsChange: (values: string[]) => void;
   selectedApplications: string[];
@@ -95,6 +97,7 @@ export type BuildVmTableFilterAttributesParams = {
   availableDatacenters: string[];
   availableClusters: string[];
   availableVmLabels: string[];
+  availableVsphereTags: string[];
   availableGroups: string[];
   availableApplications: string[];
   showGroupsFilter: boolean;
@@ -148,6 +151,8 @@ export function buildVmTableFilterAttributes({
   onReportInclusionChange,
   selectedVmLabels,
   onVmLabelsChange,
+  selectedVsphereTags,
+  onVsphereTagsChange,
   selectedGroups,
   onGroupsChange,
   selectedApplications,
@@ -160,6 +165,7 @@ export function buildVmTableFilterAttributes({
   availableDatacenters,
   availableClusters,
   availableVmLabels,
+  availableVsphereTags,
   availableGroups,
   availableApplications,
   showGroupsFilter,
@@ -337,6 +343,20 @@ export function buildVmTableFilterAttributes({
       })),
       selections: selectedVmLabels,
       onSelectionsChange: onVmLabelsChange,
+    });
+  }
+
+  if (availableVsphereTags.length > 0) {
+    attributes.push({
+      id: "vsphere-tags",
+      label: "vSphere tags",
+      type: "searchable-checkbox",
+      options: availableVsphereTags.map((tag) => ({
+        value: tag,
+        label: tag,
+      })),
+      selections: selectedVsphereTags,
+      onSelectionsChange: onVsphereTagsChange,
     });
   }
 
