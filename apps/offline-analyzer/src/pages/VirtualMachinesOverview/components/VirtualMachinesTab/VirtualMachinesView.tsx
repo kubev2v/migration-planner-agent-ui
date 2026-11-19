@@ -1,4 +1,4 @@
-import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { Alert, Button } from "@patternfly/react-core";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";

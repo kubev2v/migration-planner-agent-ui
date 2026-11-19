@@ -3,7 +3,7 @@ import type {
   InventoryData,
   VMResourceBreakdown,
   VMs,
-} from "@openshift-migration-advisor/agent-sdk";
+} from "@openshift-migration-advisor/offline-analyzer-sdk";
 import {
   buildClusterDetailRows,
   buildClusterDetails,

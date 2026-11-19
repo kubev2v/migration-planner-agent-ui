@@ -1,4 +1,4 @@
-import type { Collection } from "@openshift-migration-advisor/agent-sdk";
+import type { Collection } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import type { DefaultApiInterface } from "./agentApi";
 
 /** Returns collections sorted newest-first by createdAt. */

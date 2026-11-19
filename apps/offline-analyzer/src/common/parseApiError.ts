@@ -1,4 +1,4 @@
-import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
+import { ResponseError } from "@openshift-migration-advisor/offline-analyzer-sdk";
 
 export async function parseApiError(
   err: unknown,

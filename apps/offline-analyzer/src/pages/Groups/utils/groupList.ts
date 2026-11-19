@@ -1,4 +1,4 @@
-import type { Group } from "@openshift-migration-advisor/agent-sdk";
+import type { Group } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import type { DefaultApiInterface } from "../../../api/agentApi";
 
 const GROUP_LIST_PAGE_SIZE = 100;

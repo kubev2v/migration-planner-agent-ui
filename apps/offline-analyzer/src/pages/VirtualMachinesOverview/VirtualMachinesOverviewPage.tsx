@@ -27,9 +27,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { getAgentApiClient } from "../../api/agentApiClient";
 import { AppEmptyState } from "../../common/components/index";
-import { useListCollectionsQuery } from "../../store/api/comparisonEndpoints";
+import { useListCollectionsQuery } from "../../store/api/collectionsEndpoints";
 import {
-  useGetClusterUtilizationQuery,
   useGetInventoryQuery,
   useGetVMFilterOptionsQuery,
   useGetVMsQuery,
@@ -46,7 +45,6 @@ import { Dashboard } from "./components/Dashboard/Dashboard";
 import { ExportCsvModal } from "./components/Export/ExportCsvModal";
 import { useExportInventory } from "./components/Export/useExportInventory";
 import { VirtualMachinesView } from "./components/VirtualMachinesTab/VirtualMachinesView";
-import { VMUtilizationMetrics } from "./components/VirtualMachinesTab/VMUtilizationMetrics";
 import {
   buildScopedVmByExpression,
   clusterSelectionExpression,
@@ -193,14 +191,6 @@ export const ReportContainer: React.FC = () => {
       selectedClusterId,
     }).selectionId;
   }, [inventory, selectedClusterId]);
-
-  // Per-cluster usage stats only; there is no aggregate across clusters, so the
-  // query is skipped for the "all" scope. `currentData` (not `data`) is used so a
-  // previously selected cluster's value doesn't linger when switching scopes.
-  const { currentData: utilizationMetrics } = useGetClusterUtilizationQuery(
-    clusterScopeId,
-    { skip: clusterScopeId === "all" },
-  );
 
   const { data: filterOptionsData } = useGetVMFilterOptionsQuery(undefined, {
     skip: activeTab !== REPORT_TAB.vms || !inventory,
@@ -431,7 +421,6 @@ export const ReportContainer: React.FC = () => {
             <Header totalVMs={totalVMs} totalClusters={totalClusters} />
           </StackItem>
 
-          {/* vCenter + cluster scope (multi-vCenter assessments list vCenters from the API). */}
           <StackItem>
             <Flex
               gap={{ default: "gapMd" }}
@@ -523,20 +512,6 @@ export const ReportContainer: React.FC = () => {
             </Flex>
           </StackItem>
 
-          {utilizationMetrics && (
-            <StackItem>
-              <Content component="p">
-                Total usage statistics{" "}
-                <VMUtilizationMetrics
-                  cpu={utilizationMetrics.cpu_avg}
-                  disk={utilizationMetrics.disk}
-                  ram={utilizationMetrics.mem_avg}
-                />
-              </Content>
-            </StackItem>
-          )}
-
-          {/* Tabs */}
           <StackItem isFilled className={vmsTabsStackItemStyle}>
             <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
               <Tab

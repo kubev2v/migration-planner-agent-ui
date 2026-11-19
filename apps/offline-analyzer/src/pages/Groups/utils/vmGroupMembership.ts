@@ -1,4 +1,4 @@
-import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import type { DefaultApiInterface } from "../../../api/agentApi";
 import { fetchAllMatchingVmIds } from "../../VirtualMachinesOverview/components/VirtualMachinesTab/vmSelection";
 import { parseIdsFromFilter } from "./groupFilters";

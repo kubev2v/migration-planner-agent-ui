@@ -1,19 +1,11 @@
 import {
-  AgentApi,
-  type AgentApiInterface,
-  ApplicationsApi,
-  type ApplicationsApiInterface,
   CollectionsApi,
   type CollectionsApiInterface,
   CollectorApi,
   type CollectorApiInterface,
   type Configuration,
-  CredentialsApi,
-  type CredentialsApiInterface,
   GroupsApi,
   type GroupsApiInterface,
-  InspectorApi,
-  type InspectorApiInterface,
   InventoriesApi,
   type InventoriesApiInterface,
   RightsizingApi,
@@ -22,19 +14,12 @@ import {
   type VersionApiInterface,
   VirtualMachinesApi,
   type VirtualMachinesApiInterface,
-} from "@openshift-migration-advisor/agent-sdk";
+} from "@openshift-migration-advisor/offline-analyzer-sdk";
 
-/**
- * Published v2 agent-sdk splits operations by OpenAPI tag (no DefaultApi).
- * This intersection matches the previous single-client surface used by agent-ui.
- */
-export type DefaultApiInterface = AgentApiInterface &
-  ApplicationsApiInterface &
-  CollectionsApiInterface &
+/** The Offline Analyzer SDK splits its generated clients by OpenAPI tag. */
+export type DefaultApiInterface = CollectionsApiInterface &
   CollectorApiInterface &
-  CredentialsApiInterface &
   GroupsApiInterface &
-  InspectorApiInterface &
   InventoriesApiInterface &
   RightsizingApiInterface &
   VersionApiInterface &
@@ -64,17 +49,13 @@ function bindApiMethods<T extends object>(api: T): Partial<T> {
   return bound;
 }
 
-/** Compose all tagged v2 API clients into one object (DefaultApi-compatible). */
+/** Compose the generated Offline Analyzer API clients into one object. */
 export function createAgentApi(configuration: Configuration): AgentApiClient {
   return Object.assign(
     { configuration },
-    bindApiMethods(new AgentApi(configuration)),
-    bindApiMethods(new ApplicationsApi(configuration)),
     bindApiMethods(new CollectionsApi(configuration)),
     bindApiMethods(new CollectorApi(configuration)),
-    bindApiMethods(new CredentialsApi(configuration)),
     bindApiMethods(new GroupsApi(configuration)),
-    bindApiMethods(new InspectorApi(configuration)),
     bindApiMethods(new InventoriesApi(configuration)),
     bindApiMethods(new RightsizingApi(configuration)),
     bindApiMethods(new VersionApi(configuration)),

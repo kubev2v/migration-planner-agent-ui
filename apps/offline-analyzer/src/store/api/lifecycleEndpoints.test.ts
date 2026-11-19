@@ -13,7 +13,7 @@ import { lifecycleEndpoints } from "./lifecycleEndpoints";
 function makeFakeApi(): AgentApiClient {
   return {
     getCollectorStatus: vi.fn(async () => ({ status: "ready" })),
-    startCollector: vi.fn(async () => ({ status: "running" })),
+    startRvtoolsCollector: vi.fn(async () => ({ status: "collecting" })),
     listCollections: vi.fn(async () => ({
       collections: [{ id: "c1", createdAt: new Date("2026-01-01T00:00:00Z") }],
     })),
@@ -25,7 +25,7 @@ describe("lifecycleEndpoints tag invalidation", () => {
     vi.restoreAllMocks();
   });
 
-  test("startCollector invalidates CollectorStatus so getCollectorStatus refetches", async () => {
+  test("startRvtoolsCollector invalidates CollectorStatus", async () => {
     const api = makeFakeApi();
     const store = createStore(api);
 
@@ -35,7 +35,9 @@ describe("lifecycleEndpoints tag invalidation", () => {
     expect(api.getCollectorStatus).toHaveBeenCalledTimes(1);
 
     await store.dispatch(
-      lifecycleEndpoints.endpoints.startCollector.initiate(),
+      lifecycleEndpoints.endpoints.startRvtoolsCollector.initiate({
+        files: [],
+      }),
     );
 
     await vi.waitFor(() => {

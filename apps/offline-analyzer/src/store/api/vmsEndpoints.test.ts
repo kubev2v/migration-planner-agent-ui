@@ -4,7 +4,7 @@ import { createStore } from "../index";
 import { vmsEndpoints } from "./vmsEndpoints";
 
 /**
- * The VM table (getVMs) and the assessment inventory (getInventory) are two
+ * The VM table (getVMs) and the report inventory (getInventory) are two
  * independent cache entries. This suite proves a single exclusion mutation
  * invalidates both, so their counts can never diverge.
  */
@@ -19,6 +19,21 @@ const VMS_ARG = {
 function makeFakeApi(counts: { total: number }): AgentApiClient {
   return {
     configuration: { basePath: "http://localhost/agent/api/v1" },
+    getLatestInventory: vi.fn(async () => ({
+      data: {
+        vcenter_id: "vc1",
+        clusters: {},
+        vcenter: { vms: { total: counts.total } },
+      },
+      vcenters: [{ id: "vc1" }],
+    })),
+    getLatestVcenterInventory: vi.fn(async () => ({
+      inventory: {
+        vcenter_id: "vc1",
+        clusters: {},
+        vcenter: { vms: { total: counts.total } },
+      },
+    })),
     listLatestVirtualMachines: vi.fn(async () => ({
       virtualMachines: [{ id: "vm1" }, { id: "vm2" }],
       total: counts.total,
@@ -32,33 +47,6 @@ function makeFakeApi(counts: { total: number }): AgentApiClient {
 
 const INVENTORY_ARG = { selectedVcenterId: "all" as const };
 
-/** Stub GET /inventory so getInventory (raw fetch) returns tracked totals. */
-function stubInventoryFetch(counts: { total: number }) {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = typeof input === "string" ? input : input.toString();
-    // Agent appliance has no assessment API — skip multi-vCenter path with 404.
-    if (url.includes("/assessments")) {
-      return {
-        ok: false,
-        status: 404,
-        statusText: "Not Found",
-        json: async () => ({}),
-      };
-    }
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({
-        vcenter_id: "vc1",
-        clusters: {},
-        vcenter: { vms: { total: counts.total } },
-      }),
-    };
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
 describe("vmsEndpoints tag invalidation", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -70,7 +58,8 @@ describe("vmsEndpoints tag invalidation", () => {
 
   test("an exclusion mutation refetches both the VM list and the inventory", async () => {
     const counts = { total: 7 };
-    const fetchMock = stubInventoryFetch(counts);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
     const api = makeFakeApi(counts);
     const store = createStore(api);
 
@@ -86,8 +75,8 @@ describe("vmsEndpoints tag invalidation", () => {
 
     expect(vmsTotal()).toBe(7);
     expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(1);
-    // Probes `GET /assessments` (404 on agent) then loads `GET /inventory`.
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(api.getLatestInventory).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
 
     // Exclude two VMs from reports, then invalidate exactly what the mutation
     // invalidates (Vms:LIST + Inventory).
@@ -106,9 +95,44 @@ describe("vmsEndpoints tag invalidation", () => {
     // exclusion invalidation — they cannot diverge.
     await vi.waitFor(() => {
       expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(2);
-      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(api.getLatestInventory).toHaveBeenCalledTimes(2);
+      expect(fetchMock).not.toHaveBeenCalled();
       expect(vmsTotal()).toBe(5);
     });
+  });
+
+  test("getInventory uses the SDK endpoint for the selected vCenter", async () => {
+    const api = {
+      getLatestInventory: vi.fn(async () => ({
+        data: {
+          vcenter_id: "all",
+          clusters: {},
+          vcenter: { vms: { total: 12 } },
+        },
+        vcenters: [{ id: "vc1" }, { id: "vc2" }],
+      })),
+      getLatestVcenterInventory: vi.fn(async () => ({
+        inventory: {
+          vcenter_id: "vc2",
+          clusters: {},
+          vcenter: { vms: { total: 5 } },
+        },
+      })),
+    } as unknown as AgentApiClient;
+    const store = createStore(api);
+
+    const result = await store
+      .dispatch(
+        vmsEndpoints.endpoints.getInventory.initiate({
+          selectedVcenterId: "vc2",
+        }),
+      )
+      .unwrap();
+
+    expect(api.getLatestInventory).toHaveBeenCalledWith({});
+    expect(api.getLatestVcenterInventory).toHaveBeenCalledWith({ vid: "vc2" });
+    expect(result.inventory?.vcenter_id).toBe("vc2");
+    expect(result.inventory?.vcenter?.vms?.total).toBe(5);
   });
 
   test("getVMDetail merges the VM record with its utilization", async () => {
@@ -146,24 +170,8 @@ describe("vmsEndpoints tag invalidation", () => {
     expect(result).toMatchObject({ id: "vm1", utilization: undefined });
   });
 
-  test("getClusterUtilization returns null when no collection exists", async () => {
-    const api = {
-      listCollections: vi.fn(async () => ({ collections: [] })),
-      getClusterUtilization: vi.fn(),
-    } as unknown as AgentApiClient;
-    const store = createStore(api);
-
-    const result = await store
-      .dispatch(vmsEndpoints.endpoints.getClusterUtilization.initiate("c1"))
-      .unwrap();
-
-    expect(result).toBeNull();
-    expect(api.getClusterUtilization).not.toHaveBeenCalled();
-  });
-
   test("updateVMLabels invalidates VmLabels so getVMLabels refetches", async () => {
     const counts = { total: 3 };
-    stubInventoryFetch(counts);
     const api = makeFakeApi(counts);
     const store = createStore(api);
 

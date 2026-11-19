@@ -9,7 +9,7 @@ import {
 } from "@patternfly/react-core";
 import { ExclamationCircleIcon } from "@patternfly/react-icons";
 import type React from "react";
-import { useListCollectionsQuery } from "../store/api/comparisonEndpoints";
+import { useListCollectionsQuery } from "../store/api/collectionsEndpoints";
 
 /**
  * Startup gate: ensures we can reach the analyzer (`GET /collections`) before the

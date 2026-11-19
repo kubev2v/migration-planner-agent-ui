@@ -4,7 +4,7 @@ import type {
   GroupListResponse,
   GroupResponse,
   VirtualMachineListResponse,
-} from "@openshift-migration-advisor/agent-sdk";
+} from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { combineFilterExpressions } from "../../pages/Groups/utils/groupFilters";
 import { fetchAllGroupsPages } from "../../pages/Groups/utils/groupList";
 import {

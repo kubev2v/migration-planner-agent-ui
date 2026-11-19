@@ -1,229 +1,65 @@
 import type {
+  CollectedInventory,
   Infra,
+  InventoriesApiInterface,
   Inventory,
-  Inventory1,
   InventoryData,
   IssuesBreakdown,
   MigrationIssue,
+  SubResource,
   VirtualMachine,
   VMs,
-} from "@openshift-migration-advisor/agent-sdk";
+} from "@openshift-migration-advisor/offline-analyzer-sdk";
 import {
-  Inventory1FromJSON,
   InventoryFromJSON,
-  instanceOfInventory,
-  instanceOfUpdateInventory,
-  UpdateInventoryFromJSON,
-} from "@openshift-migration-advisor/agent-sdk";
+  ResponseError,
+} from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { getMigrationExcluded } from "./virtualMachineParsing";
 
-/** vCenter/cluster inventory payload (nested inside GET /inventory wrapper). */
-export type InventoryPayload = Inventory1;
-
-/** Sub-resource reference (`AssessmentV2.vcenters` in the Migration Advisor API). */
-export type AssessmentSubResource = { id: string };
-
 export type ReportInventoryResult = {
-  inventory: InventoryPayload | null;
-  /**
-   * Distinct vCenter ids for the dropdown: `GET /assessments` (`AssessmentV2.vcenters`),
-   * standalone analyzer `GET /inventory` (`InventoryResponse.vcenters`), or derived from
-   * legacy agent `GET /inventory` (`vcenter_id` and per-cluster `vcenter.id`).
-   */
-  vcenters: AssessmentSubResource[];
-  /** Present when the assessment API was used; omitted for legacy `GET /inventory` only. */
-  assessmentId: string | null;
+  inventory: Inventory | null;
+  /** vCenter ids returned by the Offline Analyzer inventory endpoint. */
+  vcenters: SubResource[];
 };
 
-function parseOptionalDate(value: unknown): Date | undefined {
-  if (typeof value !== "string" || !value.trim()) {
-    return undefined;
-  }
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? undefined : d;
-}
-
-/**
- * Maps `InventoryV2` (assessment API) into the dashboard's `Inventory1` shape.
- * @see openapi AssessmentV2 / AssessmentVCenterV2
- */
-export function inventoryPayloadFromInventoryV2(
-  raw: unknown,
-): InventoryPayload | null {
-  if (!raw || typeof raw !== "object") {
-    return null;
-  }
-  const record = raw as Record<string, unknown>;
-  const id = record.id;
-  const data = record.data;
-  if (typeof id !== "string" || !data || typeof data !== "object") {
-    return null;
-  }
-  const dataObj = data as InventoryData;
-  return {
-    vcenter_id: id,
-    clusters: {},
-    vcenter: dataObj,
-    vcenter_version:
-      typeof record.vcenter_version === "string"
-        ? record.vcenter_version
-        : undefined,
-    created_at: parseOptionalDate(record.created_at),
-  };
-}
-
-function parseVcentersList(raw: unknown): AssessmentSubResource[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  const out: AssessmentSubResource[] = [];
-  for (const item of raw) {
-    if (
-      item &&
-      typeof item === "object" &&
-      typeof (item as { id?: unknown }).id === "string"
-    ) {
-      out.push({ id: (item as { id: string }).id });
-    }
-  }
-  return out;
-}
-
-type AssessmentListEntry = { id: string; createdAt?: string };
-
-function pickNewestAssessment(
-  entries: AssessmentListEntry[],
-): string | undefined {
-  if (entries.length === 0) {
-    return undefined;
-  }
-  const sorted = [...entries].sort((a, b) => {
-    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return tb - ta || a.id.localeCompare(b.id);
-  });
-  return sorted[0]?.id;
-}
-
-async function fetchJsonAllow404(url: string): Promise<unknown | null> {
-  const httpResponse = await fetch(url, { cache: "no-store" });
-  if (httpResponse.status === 404) {
-    return null;
-  }
-  if (!httpResponse.ok) {
-    throw new Error(`HTTP ${httpResponse.status}: ${httpResponse.statusText}`);
-  }
-  return httpResponse.json() as Promise<unknown>;
-}
-
-async function tryFetchAssessmentInventory(
-  basePath: string,
-  selectedVcenterId: string | undefined,
-): Promise<ReportInventoryResult | null> {
-  const listJson = await fetchJsonAllow404(`${basePath}/assessments`);
-  if (listJson === null) {
-    return null;
-  }
-  if (!Array.isArray(listJson) || listJson.length === 0) {
-    return null;
-  }
-
-  const entries: AssessmentListEntry[] = listJson
-    .filter(
-      (e): e is Record<string, unknown> =>
-        Boolean(e) &&
-        typeof e === "object" &&
-        typeof (e as { id?: unknown }).id === "string",
-    )
-    .map((e) => ({
-      id: e.id as string,
-      createdAt:
-        typeof e.createdAt === "string"
-          ? e.createdAt
-          : typeof (e as { created_at?: unknown }).created_at === "string"
-            ? (e as { created_at: string }).created_at
-            : undefined,
-    }));
-
-  const assessmentId = pickNewestAssessment(entries);
-  if (!assessmentId) {
-    return null;
-  }
-
-  const summaryJson = await fetchJsonAllow404(
-    `${basePath}/assessments/${assessmentId}`,
-  );
-  if (summaryJson === null || typeof summaryJson !== "object") {
-    return null;
-  }
-  const summary = summaryJson as Record<string, unknown>;
-  const vcenters = parseVcentersList(summary.vcenters);
-
-  const wantAll = !selectedVcenterId || selectedVcenterId === "all";
-
-  if (wantAll) {
-    const inv = inventoryPayloadFromInventoryV2(summary.data);
-    return { inventory: inv, vcenters, assessmentId };
-  }
-
-  const vid = selectedVcenterId;
-  if (!vcenters.some((v) => v.id === vid)) {
-    const merged = inventoryPayloadFromInventoryV2(summary.data);
-    return { inventory: merged, vcenters, assessmentId };
-  }
-
-  const vcJson = await fetchJsonAllow404(
-    `${basePath}/assessments/${assessmentId}/vcenters/${vid}`,
-  );
-  if (vcJson === null || typeof vcJson !== "object") {
-    const merged = inventoryPayloadFromInventoryV2(summary.data);
-    return { inventory: merged, vcenters, assessmentId };
-  }
-  const vcRecord = vcJson as Record<string, unknown>;
-  const inv = inventoryPayloadFromInventoryV2(vcRecord.data);
-  return { inventory: inv, vcenters, assessmentId };
-}
-
-export function unwrapInventoryPayload(
-  inventory: Inventory | InventoryPayload | null | undefined,
-): InventoryPayload | null {
+export function unwrapInventoryPayload(inventory: unknown): Inventory | null {
   if (!inventory || typeof inventory !== "object") {
     return null;
   }
-  if ("vcenter_id" in inventory && "clusters" in inventory) {
-    return inventory as InventoryPayload;
+  const record = inventory as Record<string, unknown>;
+  if ("vcenter_id" in record && "clusters" in record) {
+    return record as unknown as Inventory;
   }
-  if (instanceOfInventory(inventory)) {
-    return inventory.inventory?.inventory ?? null;
-  }
-  if (
-    typeof inventory === "object" &&
-    "agentId" in inventory &&
-    "inventory" in inventory &&
-    instanceOfUpdateInventory(inventory as object)
-  ) {
-    return (inventory as { inventory?: InventoryPayload }).inventory ?? null;
+  if ("inventory" in record && record.inventory) {
+    const nested = record.inventory;
+    if (
+      typeof nested === "object" &&
+      "vcenter_id" in nested &&
+      "clusters" in nested
+    ) {
+      return nested as Inventory;
+    }
+    if (
+      typeof nested === "object" &&
+      "inventory" in nested &&
+      nested.inventory &&
+      typeof nested.inventory === "object"
+    ) {
+      return nested.inventory as Inventory;
+    }
   }
   return null;
 }
 
 /** Extract the group-scoped report inventory carried by GET /groups/{id}. */
 export function inventoryFromGroupResponse(response: {
-  inventory?: Inventory | InventoryPayload | null;
-}): InventoryPayload | null {
+  inventory?: CollectedInventory | Inventory | null;
+}): Inventory | null {
   return unwrapInventoryPayload(response.inventory);
 }
 
-export function wrapInventoryPayload(
-  payload: InventoryPayload,
-  agentId = "",
-): Inventory {
-  return {
-    inventory: {
-      agentId,
-      inventory: payload,
-    },
-  };
+export function wrapInventoryPayload(payload: Inventory): CollectedInventory {
+  return { inventory: payload };
 }
 
 export type MigrationExcludedInventoryChange = {
@@ -232,28 +68,8 @@ export type MigrationExcludedInventoryChange = {
   affectedVms: VirtualMachine[];
 };
 
-/**
- * vCenter ids from standalone RVTools analyzer `GET /inventory`
- * (`InventoryResponse.vcenters`), when present.
- */
-function parseInventoryVcentersFromJson(
-  jsonData: unknown,
-): AssessmentSubResource[] | null {
-  if (!jsonData || typeof jsonData !== "object") {
-    return null;
-  }
-  const record = jsonData as Record<string, unknown>;
-  if (!("data" in record) || !("vcenters" in record)) {
-    return null;
-  }
-  const parsed = parseVcentersList(record.vcenters);
-  return parsed.length > 0 ? parsed : null;
-}
-
-/** Parse inventory from GET /inventory JSON (wrapper or legacy payload). */
-export function parseInventoryResponse(
-  jsonData: unknown,
-): InventoryPayload | null {
+/** Parse inventory from a raw GET /inventory response or wrapped payload. */
+export function parseInventoryResponse(jsonData: unknown): Inventory | null {
   if (!jsonData || typeof jsonData !== "object") {
     return null;
   }
@@ -268,10 +84,10 @@ export function parseInventoryResponse(
     record.data &&
     typeof record.data === "object"
   ) {
-    return Inventory1FromJSON(record.data);
+    return InventoryFromJSON(record.data);
   }
   if ("vcenter_id" in record && "clusters" in record) {
-    return Inventory1FromJSON(jsonData);
+    return InventoryFromJSON(jsonData);
   }
   if ("inventory" in record) {
     const inner = record.inventory;
@@ -281,27 +97,31 @@ export function parseInventoryResponse(
       "vcenter_id" in inner &&
       "clusters" in inner
     ) {
-      return Inventory1FromJSON(inner);
+      return InventoryFromJSON(inner);
     }
-    const parsed = InventoryFromJSON(jsonData);
-    return unwrapInventoryPayload(parsed);
-  }
-  if ("agentId" in record && "inventory" in record) {
-    const updateInventory = UpdateInventoryFromJSON(jsonData);
-    return updateInventory.inventory ?? null;
+    if (
+      inner &&
+      typeof inner === "object" &&
+      "inventory" in inner &&
+      inner.inventory &&
+      typeof inner.inventory === "object"
+    ) {
+      return InventoryFromJSON(inner.inventory);
+    }
+    return null;
   }
   return null;
 }
 
 /** Extract inventory payload from GET /inventory SDK response. */
 export function inventoryFromGetInventoryResponse(
-  response: Inventory | null | undefined,
-): InventoryPayload | null {
+  response: CollectedInventory | Inventory | null | undefined,
+): Inventory | null {
   return unwrapInventoryPayload(response);
 }
 
 /** Parse inventory JSON from GET /inventory. */
-export function parseInventoryFromJson(json: unknown): InventoryPayload | null {
+export function parseInventoryFromJson(json: unknown): Inventory | null {
   return parseInventoryResponse(json);
 }
 
@@ -660,7 +480,7 @@ function mergeInfraParts(parts: Infra[]): Infra {
 
 /** Distinct vCenter ids from a parsed inventory payload (agent `GET /inventory`). */
 export function collectVcenterIdsFromInventoryPayload(
-  payload: InventoryPayload,
+  payload: Inventory,
 ): string[] {
   const ids = new Set<string>();
   if (payload.vcenter_id?.trim()) {
@@ -676,9 +496,9 @@ export function collectVcenterIdsFromInventoryPayload(
 }
 
 function filterInventoryPayloadByVcenterId(
-  payload: InventoryPayload,
+  payload: Inventory,
   vcenterId: string,
-): InventoryPayload {
+): Inventory {
   const clusters = payload.clusters ?? {};
   const matching: [string, InventoryData][] = [];
   for (const [name, data] of Object.entries(clusters)) {
@@ -729,9 +549,9 @@ function filterInventoryPayloadByVcenterId(
 }
 
 function inventoryWithVcenterScopeFromParsed(
-  parsed: InventoryPayload | null,
+  parsed: Inventory | null,
   selectedVcenterId: string | undefined,
-): { inventory: InventoryPayload | null; vcenters: AssessmentSubResource[] } {
+): { inventory: Inventory | null; vcenters: SubResource[] } {
   if (!parsed) {
     return { inventory: null, vcenters: [] };
   }
@@ -755,72 +575,57 @@ function inventoryWithVcenterScopeFromParsed(
 }
 
 /**
- * Latest report inventory: prefers `GET /assessments` when available (SaaS assessment API),
- * otherwise `GET /inventory` (agent appliance or standalone analyzer).
- *
- * Standalone analyzer (OpenAPI `getLatestInventory` / `getLatestVcenterInventory`): list comes
- * from `InventoryResponse.vcenters`; a specific vCenter uses `GET /inventory/vcenters/{vid}`.
+ * Load the latest inventory through the Offline Analyzer SDK. A selected vCenter is
+ * fetched directly when the SDK's inventory response lists it; otherwise the aggregate
+ * inventory is retained and scoped locally when possible.
  */
 export async function fetchReportInventoryFromApi(
-  basePath: string,
+  api: Pick<
+    InventoriesApiInterface,
+    "getLatestInventory" | "getLatestVcenterInventory"
+  >,
   selectedVcenterId?: string,
 ): Promise<ReportInventoryResult> {
-  const assessment = await tryFetchAssessmentInventory(
-    basePath,
-    selectedVcenterId,
-  );
-  if (assessment) {
-    return assessment;
-  }
-
-  const url = new URL(`${basePath}/inventory`);
-  const httpResponse = await fetch(url.toString(), { cache: "no-store" });
-  if (!httpResponse.ok) {
-    if (httpResponse.status === 404) {
-      return { inventory: null, vcenters: [], assessmentId: null };
+  let response: Awaited<ReturnType<typeof api.getLatestInventory>>;
+  try {
+    response = await api.getLatestInventory({});
+  } catch (error) {
+    if (error instanceof ResponseError && error.response.status === 404) {
+      return { inventory: null, vcenters: [] };
     }
-    throw new Error(`HTTP ${httpResponse.status}: ${httpResponse.statusText}`);
+    throw error;
   }
 
-  const jsonData = await httpResponse.json();
-  const parsed = parseInventoryResponse(jsonData);
-  const listVcenters = parseInventoryVcentersFromJson(jsonData);
-
+  const inventory = response.data ?? null;
+  const listVcenters = response.vcenters ?? [];
   const vid = selectedVcenterId;
   if (
-    listVcenters &&
     listVcenters.length > 1 &&
     vid &&
     vid !== "all" &&
     listVcenters.some((v) => v.id === vid)
   ) {
-    const vcUrl = `${basePath}/inventory/vcenters/${encodeURIComponent(vid)}`;
-    const vcResponse = await fetch(vcUrl, { cache: "no-store" });
-    if (vcResponse.ok) {
-      const vcJson = await vcResponse.json();
+    try {
+      const vcResponse = await api.getLatestVcenterInventory({ vid });
       return {
-        inventory: parseInventoryResponse(vcJson),
+        inventory: inventoryFromGetInventoryResponse(vcResponse),
         vcenters: listVcenters,
-        assessmentId: null,
       };
+    } catch (error) {
+      if (!(error instanceof ResponseError) || error.response.status !== 404) {
+        throw error;
+      }
     }
   }
 
-  const scoped = inventoryWithVcenterScopeFromParsed(parsed, selectedVcenterId);
+  const scoped = inventoryWithVcenterScopeFromParsed(
+    inventory,
+    selectedVcenterId,
+  );
   return {
     inventory: scoped.inventory,
-    vcenters:
-      listVcenters && listVcenters.length > 0 ? listVcenters : scoped.vcenters,
-    assessmentId: null,
+    vcenters: listVcenters.length > 0 ? listVcenters : scoped.vcenters,
   };
-}
-
-/** @deprecated Prefer `fetchReportInventoryFromApi` for full metadata. */
-export async function fetchInventoryFromApi(
-  basePath: string,
-): Promise<InventoryPayload | null> {
-  const { inventory } = await fetchReportInventoryFromApi(basePath);
-  return inventory;
 }
 
 function adjustVmsTotals(
@@ -835,16 +640,16 @@ function adjustVmsTotals(
   };
 }
 
-function cloneInventory(inventory: InventoryPayload): InventoryPayload {
+function cloneInventory(inventory: Inventory): Inventory {
   try {
     return structuredClone(inventory);
   } catch {
-    return JSON.parse(JSON.stringify(inventory)) as InventoryPayload;
+    return JSON.parse(JSON.stringify(inventory)) as Inventory;
   }
 }
 
 function findClusterKey(
-  clusters: InventoryPayload["clusters"] | undefined,
+  clusters: Inventory["clusters"] | undefined,
   clusterName: string,
 ): string | undefined {
   if (!clusters) {
@@ -858,10 +663,7 @@ function findClusterKey(
 }
 
 /** Write aggregate VM totals to the inventory location the dashboard reads. */
-function writeAggregateVms(
-  inventory: InventoryPayload,
-  vms: VMs,
-): InventoryPayload {
+function writeAggregateVms(inventory: Inventory, vms: VMs): Inventory {
   if (inventory.vcenter?.vms) {
     return {
       ...inventory,
@@ -897,11 +699,11 @@ function writeAggregateVms(
  * Keeps the assessment report in sync while the server recomputes inventory.
  */
 export function adjustInventoryForMigrationExcludedChange(
-  inventory: InventoryPayload,
+  inventory: Inventory,
   vmIds: string[],
   excluded: boolean,
   knownVms: VirtualMachine[],
-): InventoryPayload {
+): Inventory {
   const sign = excluded ? -1 : 1;
   let totalDelta = 0;
   let migratableDelta = 0;
@@ -979,7 +781,7 @@ export type InventoryAggregateView = {
 
 /** Aggregate infra/vms for the dashboard (vcenter scope, or cluster fallback). */
 export function getInventoryAggregateView(
-  inventory: InventoryPayload | Inventory | null,
+  inventory: Inventory | null,
 ): InventoryAggregateView {
   const payload = unwrapInventoryPayload(inventory);
   const clusters = payload?.clusters ?? {};

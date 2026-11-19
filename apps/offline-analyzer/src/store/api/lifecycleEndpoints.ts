@@ -1,4 +1,4 @@
-import type { CollectorStatus } from "@openshift-migration-advisor/agent-sdk";
+import type { CollectorStatus } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { agentApiSlice } from "./agentApiSlice";
 
 /**
@@ -9,7 +9,7 @@ import { agentApiSlice } from "./agentApiSlice";
  * entries, and the lifecycle mutations invalidate the shared tags so every
  * dependent query refetches together instead of being re-synced by callbacks.
  *
- * `listCollections` already lives in `comparisonEndpoints` (the `Collections`
+ * `listCollections` already lives in `collectionsEndpoints` (the `Collections`
  * tag), so it is not redefined here — a completed report invalidates that tag
  * via the collection-completion listener (see
  * `store/listeners/vmsInvalidationListeners.ts`) rather than owning a second copy.
@@ -23,11 +23,6 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
     }),
 
     // --- Mutations ---------------------------------------------------------
-    startCollector: build.mutation<CollectorStatus, void>({
-      query: () => (sdk) => sdk.startCollector(),
-      invalidatesTags: ["CollectorStatus"],
-    }),
-
     startRvtoolsCollector: build.mutation<CollectorStatus, { files: File[] }>({
       query:
         ({ files }) =>
@@ -56,7 +51,6 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
 
 export const {
   useGetCollectorStatusQuery,
-  useStartCollectorMutation,
   useStartRvtoolsCollectorMutation,
   useStopCollectorMutation,
   useDeleteCollectedDataMutation,

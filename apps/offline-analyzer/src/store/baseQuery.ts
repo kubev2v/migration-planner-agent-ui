@@ -1,13 +1,12 @@
-import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
+import { ResponseError } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import type { BaseQueryFn } from "@reduxjs/toolkit/query";
 import type { AgentApiClient } from "../api/agentApi";
 import { parseApiError } from "../common/parseApiError";
 
 /**
  * A baseQuery arg is a callback that performs the request using the composed
- * SDK client. This lets RTK Query reuse the existing SDK (auth, base path,
- * `cache: "no-store"`) and the raw-fetch inventory workaround, instead of
- * `fetchBaseQuery` over URLs.
+ * SDK client. This lets RTK Query reuse the existing SDK configuration
+ * (base path and `cache: "no-store"`) instead of `fetchBaseQuery` over URLs.
  */
 export type SdkQueryArg<T> = (sdk: AgentApiClient) => Promise<T>;
 

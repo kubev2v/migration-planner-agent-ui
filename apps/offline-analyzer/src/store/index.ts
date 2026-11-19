@@ -5,7 +5,7 @@ import { agentApiSlice } from "./api/agentApiSlice";
 import type { SdkExtra } from "./baseQuery";
 
 // Attach endpoint definitions to the api slice (side-effect imports).
-import "./api/comparisonEndpoints";
+import "./api/collectionsEndpoints";
 import "./api/groupsEndpoints";
 import "./api/lifecycleEndpoints";
 import "./api/vmsEndpoints";

@@ -1,4 +1,4 @@
-import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import type { ThProps } from "@patternfly/react-table";
 import {
   type Dispatch,

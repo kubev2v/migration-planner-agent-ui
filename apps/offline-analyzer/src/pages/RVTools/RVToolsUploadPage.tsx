@@ -1,5 +1,5 @@
 import { css } from "@emotion/css";
-import type { CollectorStatus } from "@openshift-migration-advisor/agent-sdk";
+import type { CollectorStatus } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import {
   Alert,
   Backdrop,

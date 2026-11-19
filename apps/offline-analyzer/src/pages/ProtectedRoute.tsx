@@ -1,7 +1,7 @@
 import { Bullseye, Spinner } from "@patternfly/react-core";
 import type React from "react";
 import { Navigate } from "react-router-dom";
-import { useListCollectionsQuery } from "../store/api/comparisonEndpoints";
+import { useListCollectionsQuery } from "../store/api/collectionsEndpoints";
 import { PageLayout } from "./PageLayout";
 
 /**
