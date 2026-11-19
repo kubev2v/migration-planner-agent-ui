@@ -45,12 +45,15 @@ const renderedDonut = (): MigrationDonutChartProps => {
   return props;
 };
 
+const NETWORK_CARD_SUBTITLE =
+  "Top 5 networks - a VM can be on multiple networks";
+
 describe("NetworkOverview", () => {
   it("shows the network empty state when no networks were collected", () => {
     render(<NetworkOverview />);
 
     expect(screen.getByText("Networks")).toBeInTheDocument();
-    expect(screen.getByText("Top 5 networks")).toBeInTheDocument();
+    expect(screen.getByText(NETWORK_CARD_SUBTITLE)).toBeInTheDocument();
     expect(screen.getByText("Network data not collected")).toBeInTheDocument();
     expect(screen.queryByTestId("network-donut")).not.toBeInTheDocument();
   });
@@ -74,13 +77,20 @@ describe("NetworkOverview", () => {
 
     const props = renderedDonut();
     expect(props.title).toBe("32");
-    expect(props.subTitle).toBe("VMs");
+    expect(props.subTitle).toBe("unique VMs");
     expect(props.data.map((slice) => [slice.name, slice.count])).toEqual([
       ["Network 1", 10],
       ["Network 2", 8],
       ["Network 3", 6],
       ["Network 4", 4],
       ["Rest of networks", 4],
+    ]);
+    expect(props.data.map((slice) => slice.countDisplay)).toEqual([
+      "10 VMs connected",
+      "8 VMs connected",
+      "6 VMs connected",
+      "4 VMs connected",
+      "4 VMs connected",
     ]);
     expect(props.legend).toEqual({
       "Network 1": chart_color_blue_300.value,
@@ -102,37 +112,63 @@ describe("NetworkOverview", () => {
         datum: {
           x: "Network 1",
           y: 10,
-          countDisplay: "10 VMs",
+          countDisplay: "10 VMs connected",
           legendCategory: "Network 1",
         },
         percent: 31.25,
         total: 32,
       }),
-    ).toBe("10 VMs\n31.3%\nVLAN: 100");
+    ).toBe("10 VMs connected\n31.3%\nVLAN: 100");
     expect(
       props.tooltipLabelFormatter?.({
         datum: {
           x: "Network 2",
           y: 8,
-          countDisplay: "8 VMs",
+          countDisplay: "8 VMs connected",
           legendCategory: "Network 2",
         },
         percent: 25,
         total: 32,
       }),
-    ).toBe("8 VMs\n25.0%\nVLAN: 200");
+    ).toBe("8 VMs connected\n25.0%\nVLAN: 200");
     expect(
       props.tooltipLabelFormatter?.({
         datum: {
           x: "Rest of networks",
           y: 4,
-          countDisplay: "4 VMs",
+          countDisplay: "4 VMs connected",
           legendCategory: "Rest of networks",
         },
         percent: 12.5,
         total: 32,
       }),
-    ).toBe("4 VMs\n12.5%\nVLAN: -");
+    ).toBe("4 VMs connected\n12.5%\nVLAN: -");
+  });
+
+  it("uses uniqueVmCount for the network donut center when provided", () => {
+    render(
+      <NetworkOverview
+        uniqueVmCount={25}
+        infra={{
+          networks: [
+            { vmsCount: 10, vlanId: "100" },
+            { vmsCount: 8, vlanId: 200 },
+            { vmsCount: 6 },
+            { vmsCount: 4 },
+            { vmsCount: 3 },
+            { vmsCount: 1 },
+          ],
+        }}
+      />,
+    );
+
+    const props = renderedDonut();
+    expect(props.title).toBe("25");
+    expect(props.subTitle).toBe("unique VMs");
+    expect(screen.getByText(NETWORK_CARD_SUBTITLE)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "VMs by network (may overlap)" }),
+    ).toBeInTheDocument();
   });
 
   it("switches to NIC count and falls back to the histogram", async () => {
@@ -148,13 +184,13 @@ describe("NetworkOverview", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "VM distribution by network" }),
+      screen.getByRole("button", { name: "VMs by network (may overlap)" }),
     );
     await user.click(
       screen.getByRole("menuitem", { name: "VM distribution by NIC count" }),
     );
 
-    expect(screen.queryByText("Top 5 networks")).not.toBeInTheDocument();
+    expect(screen.queryByText(NETWORK_CARD_SUBTITLE)).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "VM distribution by NIC count" }),
     ).toBeInTheDocument();
@@ -162,6 +198,7 @@ describe("NetworkOverview", () => {
     const props = renderedDonut();
     expect(props.legendVariant).toBe("chart");
     expect(props.title).toBe("9");
+    expect(props.subTitle).toBe("VMs");
     expect(props.data.map((slice) => [slice.name, slice.count])).toEqual([
       ["1 NIC", 4],
       ["3 NIC", 5],
@@ -193,7 +230,7 @@ describe("NetworkOverview", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "VM distribution by network" }),
+      screen.getByRole("button", { name: "VMs by network (may overlap)" }),
     );
     await user.click(
       screen.getByRole("menuitem", { name: "VM distribution by NIC count" }),
@@ -220,7 +257,7 @@ describe("NetworkOverview", () => {
     render(<NetworkOverview distributionByNicCount={{}} />);
 
     await user.click(
-      screen.getByRole("button", { name: "VM distribution by network" }),
+      screen.getByRole("button", { name: "VMs by network (may overlap)" }),
     );
     await user.click(
       screen.getByRole("menuitem", { name: "VM distribution by NIC count" }),
@@ -252,7 +289,7 @@ describe("NetworkOverview", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "VM distribution by network" }),
+      screen.getByRole("button", { name: "VMs by network (may overlap)" }),
     );
     await user.click(
       screen.getByRole("menuitem", { name: "VM distribution by NIC count" }),
