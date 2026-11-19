@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgentApiClient } from "../../api/agentApi";
+import { parseVirtualMachineListResponse } from "../../pages/VirtualMachinesOverview/virtualMachineParsing";
 import { createStore } from "../index";
 import { vmsEndpoints } from "./vmsEndpoints";
 
@@ -15,6 +16,29 @@ const VMS_ARG = {
   page: 1,
   pageSize: 20,
 };
+
+const LIST_VM_TEMPLATE = {
+  name: "vm",
+  vCenterID: "vc1",
+  vCenterState: "poweredOn",
+  cluster: "c1",
+  datacenter: "dc1",
+  diskSize: 1,
+  memory: 1,
+  issueCount: 0,
+};
+
+function listVmListJson(total: number) {
+  return {
+    virtualMachines: [
+      { ...LIST_VM_TEMPLATE, id: "vm1", name: "vm1" },
+      { ...LIST_VM_TEMPLATE, id: "vm2", name: "vm2" },
+    ],
+    total,
+    page: 1,
+    pageCount: 1,
+  };
+}
 
 function makeFakeApi(counts: { total: number }): AgentApiClient {
   return {
@@ -34,10 +58,43 @@ function makeFakeApi(counts: { total: number }): AgentApiClient {
         vcenter: { vms: { total: counts.total } },
       },
     })),
-    listLatestVirtualMachines: vi.fn(async () => ({
-      virtualMachines: [{ id: "vm1" }, { id: "vm2" }],
-      total: counts.total,
-      pageCount: 1,
+    listLatestVirtualMachinesRaw: vi.fn(async () => ({
+      raw: {
+        json: async () => listVmListJson(counts.total),
+      },
+    })),
+    listLatestVirtualMachines: vi.fn(async () =>
+      parseVirtualMachineListResponse(listVmListJson(counts.total)),
+    ),
+    getLatestVirtualMachineRaw: vi.fn(async ({ vmId }: { vmId: string }) => ({
+      raw: {
+        json: async () => ({
+          id: vmId,
+          name: vmId,
+          vCenterID: "vc1",
+          powerState: "poweredOn",
+          connectionState: "connected",
+          cpuCount: 1,
+          coresPerSocket: 1,
+          memoryMB: 1024,
+          disks: [],
+          nicCount: 0,
+          nics: [],
+        }),
+      },
+    })),
+    getLatestVirtualMachine: vi.fn(async ({ vmId }: { vmId: string }) => ({
+      id: vmId,
+      name: vmId,
+      vCenterID: "vc1",
+      powerState: "poweredOn",
+      connectionState: "connected",
+      cpuCount: 1,
+      coresPerSocket: 1,
+      memoryMB: 1024,
+      disks: [],
+      nicCount: 0,
+      nics: [],
     })),
     batchUpdateLatestVMExclusion: vi.fn(async () => undefined),
     updateLatestLabelVMs: vi.fn(async () => undefined),
@@ -74,7 +131,7 @@ describe("vmsEndpoints tag invalidation", () => {
         ?.total;
 
     expect(vmsTotal()).toBe(7);
-    expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(1);
+    expect(api.listLatestVirtualMachinesRaw).toHaveBeenCalledTimes(1);
     expect(api.getLatestInventory).toHaveBeenCalledTimes(1);
     expect(fetchMock).not.toHaveBeenCalled();
 
@@ -94,7 +151,7 @@ describe("vmsEndpoints tag invalidation", () => {
     // Both the table source and the inventory source refetch from the single
     // exclusion invalidation — they cannot diverge.
     await vi.waitFor(() => {
-      expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(2);
+      expect(api.listLatestVirtualMachinesRaw).toHaveBeenCalledTimes(2);
       expect(api.getLatestInventory).toHaveBeenCalledTimes(2);
       expect(fetchMock).not.toHaveBeenCalled();
       expect(vmsTotal()).toBe(5);
@@ -136,8 +193,25 @@ describe("vmsEndpoints tag invalidation", () => {
   });
 
   test("getVMDetail merges the VM record with its utilization", async () => {
+    const detailJson = {
+      id: "vm1",
+      name: "web",
+      vCenterID: "vc1",
+      powerState: "poweredOn",
+      connectionState: "connected",
+      cpuCount: 1,
+      coresPerSocket: 1,
+      memoryMB: 1024,
+      disks: [],
+      nicCount: 0,
+      nics: [],
+      metadata: { Forklift: ["migrated"] },
+      annotation: "VM",
+    };
     const api = {
-      getLatestVirtualMachine: vi.fn(async () => ({ id: "vm1", name: "web" })),
+      getLatestVirtualMachineRaw: vi.fn(async () => ({
+        raw: { json: async () => detailJson },
+      })),
       getLatestVMUtilization: vi.fn(async () => ({ cpu_avg: 42 })),
     } as unknown as AgentApiClient;
     const store = createStore(api);
@@ -149,14 +223,34 @@ describe("vmsEndpoints tag invalidation", () => {
     expect(result).toMatchObject({
       id: "vm1",
       name: "web",
+      metadata: { Forklift: ["migrated"] },
+      annotation: "VM",
       utilization: { cpu_avg: 42 },
     });
-    expect(api.getLatestVirtualMachine).toHaveBeenCalledWith({ vmId: "vm1" });
+    expect(api.getLatestVirtualMachineRaw).toHaveBeenCalledWith({
+      vmId: "vm1",
+    });
   });
 
   test("getVMDetail still resolves when utilization is unavailable", async () => {
     const api = {
-      getLatestVirtualMachine: vi.fn(async () => ({ id: "vm1", name: "web" })),
+      getLatestVirtualMachineRaw: vi.fn(async () => ({
+        raw: {
+          json: async () => ({
+            id: "vm1",
+            name: "web",
+            vCenterID: "vc1",
+            powerState: "poweredOn",
+            connectionState: "connected",
+            cpuCount: 1,
+            coresPerSocket: 1,
+            memoryMB: 1024,
+            disks: [],
+            nicCount: 0,
+            nics: [],
+          }),
+        },
+      })),
       getLatestVMUtilization: vi.fn(async () => {
         throw new Error("no metrics");
       }),

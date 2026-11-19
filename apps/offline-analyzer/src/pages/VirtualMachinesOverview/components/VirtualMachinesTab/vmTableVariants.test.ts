@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
-  type ALL_COLUMN_KEYS,
+  ALL_COLUMN_KEYS,
   COMPACT_VISIBLE_COLUMNS,
+  DEFAULT_VISIBLE_COLUMNS,
+  HIDDEN_BY_DEFAULT_COLUMNS,
   resolveVariantUI,
   resolveVisibleColumns,
   VM_TABLE_VARIANT_UI,
 } from "./vmTableShared";
 
 describe("vmTableVariants", () => {
+  it("shows vSphere tags by default and hides vSphere annotation until enabled", () => {
+    expect(DEFAULT_VISIBLE_COLUMNS).toContain("vsphereTags");
+    for (const key of HIDDEN_BY_DEFAULT_COLUMNS) {
+      expect(DEFAULT_VISIBLE_COLUMNS).not.toContain(key);
+      expect(ALL_COLUMN_KEYS).toContain(key);
+    }
+  });
+
   it("compact variant disables overview-only UI", () => {
     expect(VM_TABLE_VARIANT_UI.compact).toEqual({
       showManageColumns: false,

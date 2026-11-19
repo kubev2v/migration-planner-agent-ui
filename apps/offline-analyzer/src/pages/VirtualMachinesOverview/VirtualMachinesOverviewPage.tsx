@@ -86,6 +86,7 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
   concernLabels: [],
   concernCategories: [],
   vmLabels: [],
+  vsphereTags: [],
 };
 
 export const ReportContainer: React.FC = () => {

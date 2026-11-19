@@ -687,10 +687,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@openshift-migration-advisor/offline-analyzer-sdk@npm:0.32.0":
-  version: 0.32.0
-  resolution: "@openshift-migration-advisor/offline-analyzer-sdk@npm:0.32.0"
-  checksum: 10c0/d1f73c34a5b7638b00a2f6875d4efa25f0da3fa050edb7c24f5836ef9ab998c178c6ba129ac207902c7074ead9adffe7cb426b22cbafe2a72b24ef8fc31f53b3
+"@openshift-migration-advisor/offline-analyzer-sdk@npm:0.32.0-e9fd3752b1f5":
+  version: 0.32.0-e9fd3752b1f5
+  resolution: "@openshift-migration-advisor/offline-analyzer-sdk@npm:0.32.0-e9fd3752b1f5"
+  checksum: 10c0/858580af9530adc330ae234fa8c231f5faa016c73dc7177f0a52fdfb5c93a13b3b1af41823c4a30e21a2649168d55f57c4b499859713135dcf716a97ab528741
   languageName: node
   linkType: hard
 
@@ -700,7 +700,7 @@ __metadata:
   dependencies:
     "@emotion/css": "npm:^11.13.5"
     "@hookform/resolvers": "npm:^5.9.2"
-    "@openshift-migration-advisor/offline-analyzer-sdk": "npm:0.32.0"
+    "@openshift-migration-advisor/offline-analyzer-sdk": "npm:0.32.0-e9fd3752b1f5"
     "@openshift-migration-advisor/shared-components": "workspace:*"
     "@patternfly/react-core": "npm:^6.7.0"
     "@patternfly/react-icons": "npm:^6.7.0"

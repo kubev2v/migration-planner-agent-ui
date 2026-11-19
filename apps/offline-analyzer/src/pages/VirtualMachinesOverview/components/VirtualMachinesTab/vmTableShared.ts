@@ -1,10 +1,12 @@
 import { css } from "@emotion/css";
 import type { VirtualMachine } from "@openshift-migration-advisor/offline-analyzer-sdk";
-import { groupsSort, labelsSort } from "./vmSort";
+import { groupsSort, labelsSort, vsphereTagsSort } from "./vmSort";
 
 export type ColumnKey =
   | "name"
   | "labels"
+  | "vsphereTags"
+  | "vsphereAnnotation"
   | "groups"
   | "vCenterState"
   | "id"
@@ -31,7 +33,11 @@ export const BACKEND_SORTABLE_COLUMNS = [
   "issues",
 ] as const;
 
-export const FRONTEND_SORTABLE_COLUMNS = ["labels", "groups"] as const;
+export const FRONTEND_SORTABLE_COLUMNS = [
+  "labels",
+  "vsphereTags",
+  "groups",
+] as const;
 
 export type BackendSortableColumn = (typeof BACKEND_SORTABLE_COLUMNS)[number];
 export type FrontendSortableColumn = (typeof FRONTEND_SORTABLE_COLUMNS)[number];
@@ -40,6 +46,8 @@ export type SortableColumn = BackendSortableColumn | FrontendSortableColumn;
 export const Columns: Record<ColumnKey, string> = {
   name: "Name",
   labels: "Labels",
+  vsphereTags: "vSphere tags",
+  vsphereAnnotation: "vSphere annotation",
   groups: "Groups",
   vCenterState: "Status",
   migratable: "Migration Readiness",
@@ -55,8 +63,14 @@ export const Columns: Record<ColumnKey, string> = {
 };
 
 export const ALL_COLUMN_KEYS = Object.keys(Columns) as ColumnKey[];
+
+/** Optional table columns that stay off until the user enables them in Manage columns. */
+export const HIDDEN_BY_DEFAULT_COLUMNS: ColumnKey[] = ["vsphereAnnotation"];
+
 export const MANDATORY_COLUMNS: ColumnKey[] = ["name"];
-export const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [...ALL_COLUMN_KEYS];
+export const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = ALL_COLUMN_KEYS.filter(
+  (key) => !HIDDEN_BY_DEFAULT_COLUMNS.includes(key),
+);
 
 export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
   "name",
@@ -67,7 +81,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 9;
+export const VISIBLE_COLUMNS_VERSION = 10;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -102,7 +116,12 @@ export const getColumnModifier = (key: ColumnKey) => {
   ) {
     return "fitContent";
   }
-  if (key === "labels" || key === "groups") {
+  if (
+    key === "labels" ||
+    key === "vsphereTags" ||
+    key === "vsphereAnnotation" ||
+    key === "groups"
+  ) {
     return "wrap";
   }
   return "nowrap";
@@ -280,6 +299,7 @@ export const FRONTEND_SORT_METHODS: Record<
   FrontendSortFunction
 > = {
   labels: labelsSort,
+  vsphereTags: vsphereTagsSort,
   groups: groupsSort,
 };
 

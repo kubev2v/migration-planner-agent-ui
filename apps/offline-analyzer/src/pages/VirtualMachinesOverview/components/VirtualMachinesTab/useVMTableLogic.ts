@@ -94,6 +94,7 @@ export function useVMTableLogic({
     concernLabels: [],
     concernCategories: [],
     vmLabels: [],
+    vsphereTags: [],
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
@@ -143,6 +144,9 @@ export function useVMTableLogic({
 
   // Search state
   const [searchValue, setSearchValue] = useState(initialFilters?.search || "");
+  const [vsphereAnnotationSearch, setVsphereAnnotationSearch] = useState(
+    initialFilters?.vsphereAnnotation ?? "",
+  );
 
   // Bulk actions menu
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
@@ -198,6 +202,9 @@ export function useVMTableLogic({
   >(initialFilters?.reportInclusion ?? EMPTY_STRING_ARRAY);
   const [selectedVmLabels, setSelectedVmLabels] = useState<string[]>(
     initialFilters?.vmLabels ?? EMPTY_STRING_ARRAY,
+  );
+  const [selectedVsphereTags, setSelectedVsphereTags] = useState<string[]>(
+    initialFilters?.vsphereTags ?? EMPTY_STRING_ARRAY,
   );
   const [selectedConcernLabels, setSelectedConcernLabels] = useState<string[]>(
     initialFilters?.concernLabels ?? EMPTY_STRING_ARRAY,
@@ -259,6 +266,7 @@ export function useVMTableLogic({
       initialFilters?.reportInclusion,
     );
     syncStringArrayState(setSelectedVmLabels, initialFilters?.vmLabels);
+    syncStringArrayState(setSelectedVsphereTags, initialFilters?.vsphereTags);
     syncStringArrayState(
       setSelectedConcernLabels,
       initialFilters?.concernLabels,
@@ -277,6 +285,10 @@ export function useVMTableLogic({
     });
     setSearchValue((previous) => {
       const next = initialFilters?.search || "";
+      return previous === next ? previous : next;
+    });
+    setVsphereAnnotationSearch((previous) => {
+      const next = initialFilters?.vsphereAnnotation ?? "";
       return previous === next ? previous : next;
     });
 
@@ -327,6 +339,7 @@ export function useVMTableLogic({
   const availableConcernLabels = availableFilterOptions.concernLabels;
   const availableConcernCategories = availableFilterOptions.concernCategories;
   const availableVmLabels = availableFilterOptions.vmLabels;
+  const availableVsphereTags = availableFilterOptions.vsphereTags;
 
   const applyFilterChange = useCallback(
     (updater: () => void) => {
@@ -361,11 +374,13 @@ export function useVMTableLogic({
         selectedMigrationReadiness.length > 0 ||
         selectedReportInclusion.length > 0 ||
         selectedVmLabels.length > 0 ||
+        selectedVsphereTags.length > 0 ||
         selectedConcernLabels.length > 0 ||
         selectedConcernCategories.length > 0 ||
         hasIssuesFilter ||
         noIssuesFilter ||
         searchValue ||
+        vsphereAnnotationSearch ||
         diskRangeFilter ||
         memoryRangeFilter ||
         cpuUsageRangeFilter ||
@@ -385,6 +400,7 @@ export function useVMTableLogic({
       hasIssues: hasIssuesFilter || undefined,
       noIssues: noIssuesFilter || undefined,
       search: searchValue || undefined,
+      vsphereAnnotation: vsphereAnnotationSearch.trim() || undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
       cpuUsageRange: cpuUsageRangeFilter || undefined,
@@ -399,6 +415,8 @@ export function useVMTableLogic({
           ? selectedReportInclusion
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
+      vsphereTags:
+        selectedVsphereTags.length > 0 ? selectedVsphereTags : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -424,11 +442,13 @@ export function useVMTableLogic({
     selectedMigrationReadiness,
     selectedReportInclusion,
     selectedVmLabels,
+    selectedVsphereTags,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
     noIssuesFilter,
     searchValue,
+    vsphereAnnotationSearch,
     diskRangeFilter,
     memoryRangeFilter,
     cpuUsageRangeFilter,
@@ -448,6 +468,7 @@ export function useVMTableLogic({
       setSelectedMigrationReadiness(selection.selectedMigrationReadiness);
       setSelectedReportInclusion(selection.selectedReportInclusion);
       setSelectedVmLabels(selection.selectedVmLabels);
+      setSelectedVsphereTags(selection.selectedVsphereTags);
       setSelectedConcernLabels(selection.selectedConcernLabels);
       setSelectedConcernCategories(selection.selectedConcernCategories);
       setHasIssuesFilter(selection.hasIssuesFilter);
@@ -528,6 +549,14 @@ export function useVMTableLogic({
         onVmLabelsChange: (values) => {
           applyFilterChange(() => setSelectedVmLabels(values));
         },
+        selectedVsphereTags,
+        onVsphereTagsChange: (values) => {
+          applyFilterChange(() => setSelectedVsphereTags(values));
+        },
+        vsphereAnnotationSearch,
+        onVsphereAnnotationSearchChange: (value) => {
+          applyFilterChange(() => setVsphereAnnotationSearch(value));
+        },
         hasIssuesFilter,
         noIssuesFilter,
         onIssuesFilterChange: (hasIssues, noIssues) => {
@@ -545,6 +574,7 @@ export function useVMTableLogic({
         availableDatacenters,
         availableClusters,
         availableVmLabels,
+        availableVsphereTags,
       }),
     [
       applyFilterChange,
@@ -553,6 +583,7 @@ export function useVMTableLogic({
       availableConcernLabels,
       availableDatacenters,
       availableVmLabels,
+      availableVsphereTags,
       cpuUsageRangeFilter,
       diskRangeFilter,
       diskUsageRangeFilter,
@@ -561,6 +592,7 @@ export function useVMTableLogic({
       noIssuesFilter,
       ramUsageRangeFilter,
       searchValue,
+      vsphereAnnotationSearch,
       selectedClusters,
       selectedConcernCategories,
       selectedConcernLabels,
@@ -569,6 +601,7 @@ export function useVMTableLogic({
       selectedReportInclusion,
       selectedStatuses,
       selectedVmLabels,
+      selectedVsphereTags,
     ],
   );
 
@@ -620,6 +653,7 @@ export function useVMTableLogic({
       hasIssues: hasIssuesFilter || undefined,
       noIssues: noIssuesFilter || undefined,
       search: searchValue || undefined,
+      vsphereAnnotation: vsphereAnnotationSearch.trim() || undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
       cpuUsageRange: cpuUsageRangeFilter || undefined,
@@ -634,6 +668,8 @@ export function useVMTableLogic({
           ? selectedReportInclusion
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
+      vsphereTags:
+        selectedVsphereTags.length > 0 ? selectedVsphereTags : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -648,6 +684,7 @@ export function useVMTableLogic({
     hasIssuesFilter,
     noIssuesFilter,
     searchValue,
+    vsphereAnnotationSearch,
     diskRangeFilter,
     memoryRangeFilter,
     cpuUsageRangeFilter,
@@ -656,6 +693,7 @@ export function useVMTableLogic({
     selectedMigrationReadiness,
     selectedReportInclusion,
     selectedVmLabels,
+    selectedVsphereTags,
     selectedConcernLabels,
     selectedConcernCategories,
   ]);
@@ -713,6 +751,7 @@ export function useVMTableLogic({
     applyFilterChange(() => {
       applyFilterSelection(EMPTY_VM_TABLE_FILTER_SELECTION);
       setSearchValue("");
+      setVsphereAnnotationSearch("");
     });
   };
 

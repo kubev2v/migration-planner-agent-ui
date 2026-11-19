@@ -34,6 +34,10 @@ function createParams(
     onReportInclusionChange: vi.fn(),
     selectedVmLabels: [],
     onVmLabelsChange: vi.fn(),
+    selectedVsphereTags: [],
+    onVsphereTagsChange: vi.fn(),
+    vsphereAnnotationSearch: "",
+    onVsphereAnnotationSearchChange: vi.fn(),
     hasIssuesFilter: false,
     noIssuesFilter: false,
     onIssuesFilterChange: vi.fn(),
@@ -42,6 +46,7 @@ function createParams(
     availableDatacenters: ["dc-1"],
     availableClusters: ["cluster-a"],
     availableVmLabels: ["tier-1"],
+    availableVsphereTags: ["Environment:Production"],
     ...overrides,
   };
 }
@@ -55,6 +60,7 @@ describe("buildVmTableFilterAttributes", () => {
         availableDatacenters: [],
         availableClusters: [],
         availableVmLabels: [],
+        availableVsphereTags: [],
       }),
     );
 
@@ -69,6 +75,8 @@ describe("buildVmTableFilterAttributes", () => {
       "status",
       "migration-readiness",
       "report-inclusion",
+      "vsphere-tags",
+      "vsphere-annotation",
     ]);
   });
 

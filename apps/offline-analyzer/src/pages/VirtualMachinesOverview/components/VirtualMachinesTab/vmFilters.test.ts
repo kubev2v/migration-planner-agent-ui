@@ -8,6 +8,34 @@ import {
   withDefaultReportInclusion,
 } from "./vmFilters";
 
+describe("filtersToByExpression vsphereAnnotation", () => {
+  it("filters by annotation substring", () => {
+    expect(filtersToByExpression({ vsphereAnnotation: "sss" })).toBe(
+      "annotation like 'sss'",
+    );
+  });
+
+  it("escapes quotes in annotation search", () => {
+    expect(filtersToByExpression({ vsphereAnnotation: "it's" })).toBe(
+      "annotation like 'it\\'s'",
+    );
+  });
+
+  it("round-trips via URL params", () => {
+    const params = filtersToSearchParams({ vsphereAnnotation: "notes" });
+    expect(params.get("vsphereAnnotation")).toBe("notes");
+    expect(searchParamsToFilters(params).vsphereAnnotation).toBe("notes");
+  });
+});
+
+describe("filtersToByExpression vsphereTags", () => {
+  it("filters by metadata key/value pair", () => {
+    expect(filtersToByExpression({ vsphereTags: ["Environment:QA"] })).toBe(
+      "((metadata.key = 'Environment' and metadata.value = 'QA'))",
+    );
+  });
+});
+
 describe("filtersToByExpression vmLabels", () => {
   it("uses a single contains check for one label", () => {
     expect(filtersToByExpression({ vmLabels: ["prod"] })).toBe(
