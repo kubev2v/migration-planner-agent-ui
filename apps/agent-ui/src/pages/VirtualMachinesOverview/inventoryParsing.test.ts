@@ -1,5 +1,6 @@
 import type {
   Infra,
+  Inventory,
   VirtualMachine,
   VMs,
 } from "@openshift-migration-advisor/agent-sdk";
@@ -8,7 +9,6 @@ import {
   adjustInventoryForMigrationExcludedChange,
   fetchReportInventoryFromApi,
   getInventoryAggregateView,
-  type InventoryPayload,
   inventoryFromGroupResponse,
   parseInventoryResponse,
 } from "./inventoryParsing";
@@ -40,7 +40,7 @@ const testVms = (total: number, totalMigratable: number): VMs => ({
   migrationWarnings: [],
 });
 
-const baseInventory: InventoryPayload = {
+const baseInventory: Inventory = {
   vcenter_id: "vc-1",
   clusters: {
     "cluster-a": {
@@ -82,7 +82,7 @@ describe("adjustInventoryForMigrationExcludedChange", () => {
   });
 
   it("updates cluster aggregate totals when vcenter VMs are absent", () => {
-    const clusterOnlyInventory: InventoryPayload = {
+    const clusterOnlyInventory: Inventory = {
       vcenter_id: "vc-1",
       clusters: {
         prod: {
@@ -106,7 +106,7 @@ describe("adjustInventoryForMigrationExcludedChange", () => {
 
 describe("getInventoryAggregateView", () => {
   it("prefers vcenter VM totals even when vcenter infra is missing", () => {
-    const inventory: InventoryPayload = {
+    const inventory: Inventory = {
       vcenter_id: "vc-1",
       clusters: {
         prod: {
@@ -145,7 +145,7 @@ describe("sequential migration excluded changes", () => {
 
   it("applies bulk exclude then bulk include", () => {
     const vm2: VirtualMachine = { ...vm, id: "vm-2", name: "web-2" };
-    const inventoryWithTwo: InventoryPayload = {
+    const inventoryWithTwo: Inventory = {
       ...baseInventory,
       vcenter: {
         infra: testInfra(1),

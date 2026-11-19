@@ -19,14 +19,11 @@ import {
 import type { DefaultApiInterface } from "../../api/agentApi";
 import { getMigrationExcluded } from "./virtualMachineParsing";
 
-/** vCenter/cluster inventory payload from GET /inventory or assessments API. */
-export type InventoryPayload = Inventory;
-
 /** Sub-resource reference (`AssessmentV2.vcenters` in the Migration Advisor API). */
 export type AssessmentSubResource = { id: string };
 
 export type ReportInventoryResult = {
-  inventory: InventoryPayload | null;
+  inventory: Inventory | null;
   /**
    * Distinct vCenter ids for the dropdown: `GET /assessments` (`AssessmentV2.vcenters`),
    * standalone analyzer `GET /inventory` (`InventoryResponse.vcenters`), or derived from
@@ -74,7 +71,7 @@ function normalizeInventoryClustersInJson(json: unknown): unknown {
   return out;
 }
 
-function inventoryFromJsonSafe(json: unknown): InventoryPayload {
+function inventoryFromJsonSafe(json: unknown): Inventory {
   return InventoryFromJSON(normalizeInventoryClustersInJson(json));
 }
 
@@ -88,7 +85,7 @@ function updateInventoryFromJsonSafe(json: unknown): UpdateInventory {
  */
 export function inventoryPayloadFromInventoryV2(
   raw: unknown,
-): InventoryPayload | null {
+): Inventory | null {
   if (!raw || typeof raw !== "object") {
     return null;
   }
@@ -225,17 +222,17 @@ async function tryFetchAssessmentInventory(
 
 export function unwrapInventoryPayload(
   inventory:
-    | InventoryPayload
+    | Inventory
     | UpdateInventory
     | CollectedInventory
     | null
     | undefined,
-): InventoryPayload | null {
+): Inventory | null {
   if (!inventory || typeof inventory !== "object") {
     return null;
   }
   if ("vcenter_id" in inventory && "clusters" in inventory) {
-    return inventory as InventoryPayload;
+    return inventory as Inventory;
   }
   if (
     "agentId" in inventory &&
@@ -255,7 +252,7 @@ export function unwrapInventoryPayload(
 }
 
 export function wrapInventoryPayload(
-  payload: InventoryPayload,
+  payload: Inventory,
   agentId = "",
 ): UpdateInventory {
   return {
@@ -289,9 +286,7 @@ function parseInventoryVcentersFromJson(
 }
 
 /** Parse inventory from GET /inventory JSON (wrapper or legacy payload). */
-export function parseInventoryResponse(
-  jsonData: unknown,
-): InventoryPayload | null {
+export function parseInventoryResponse(jsonData: unknown): Inventory | null {
   if (!jsonData || typeof jsonData !== "object") {
     return null;
   }
@@ -343,25 +338,20 @@ export function parseInventoryResponse(
 
 /** Extract inventory payload from GET /inventory SDK response. */
 export function inventoryFromGetInventoryResponse(
-  response:
-    | CollectedInventory
-    | UpdateInventory
-    | InventoryPayload
-    | null
-    | undefined,
-): InventoryPayload | null {
+  response: CollectedInventory | UpdateInventory | Inventory | null | undefined,
+): Inventory | null {
   return unwrapInventoryPayload(response);
 }
 
 /** Parse inventory JSON from GET /groups/{id} or GET /inventory. */
-export function parseInventoryFromJson(json: unknown): InventoryPayload | null {
+export function parseInventoryFromJson(json: unknown): Inventory | null {
   return parseInventoryResponse(json);
 }
 
 /** Extract group-scoped assessment inventory from a GroupResponse. */
 export function inventoryFromGroupResponse(response: {
-  inventory?: InventoryPayload | null;
-}): InventoryPayload | null {
+  inventory?: Inventory | null;
+}): Inventory | null {
   return unwrapInventoryPayload(response.inventory);
 }
 
@@ -369,7 +359,7 @@ export function inventoryFromGroupResponse(response: {
 export async function fetchGroupAssessmentInventory(
   agentApi: DefaultApiInterface,
   groupId: string,
-): Promise<InventoryPayload | null> {
+): Promise<Inventory | null> {
   try {
     const response = await agentApi.getLatestGroup({
       groupId,
@@ -737,7 +727,7 @@ function mergeInfraParts(parts: Infra[]): Infra {
 
 /** Distinct vCenter ids from a parsed inventory payload (agent `GET /inventory`). */
 export function collectVcenterIdsFromInventoryPayload(
-  payload: InventoryPayload,
+  payload: Inventory,
 ): string[] {
   const ids = new Set<string>();
   if (payload.vcenter_id?.trim()) {
@@ -753,9 +743,9 @@ export function collectVcenterIdsFromInventoryPayload(
 }
 
 function filterInventoryPayloadByVcenterId(
-  payload: InventoryPayload,
+  payload: Inventory,
   vcenterId: string,
-): InventoryPayload {
+): Inventory {
   const clusters = payload.clusters ?? {};
   const matching: [string, InventoryData][] = [];
   for (const [name, data] of Object.entries(clusters)) {
@@ -806,9 +796,9 @@ function filterInventoryPayloadByVcenterId(
 }
 
 function inventoryWithVcenterScopeFromParsed(
-  parsed: InventoryPayload | null,
+  parsed: Inventory | null,
   selectedVcenterId: string | undefined,
-): { inventory: InventoryPayload | null; vcenters: AssessmentSubResource[] } {
+): { inventory: Inventory | null; vcenters: AssessmentSubResource[] } {
   if (!parsed) {
     return { inventory: null, vcenters: [] };
   }
@@ -895,7 +885,7 @@ export async function fetchReportInventoryFromApi(
 /** @deprecated Prefer `fetchReportInventoryFromApi` for full metadata. */
 export async function fetchInventoryFromApi(
   basePath: string,
-): Promise<InventoryPayload | null> {
+): Promise<Inventory | null> {
   const { inventory } = await fetchReportInventoryFromApi(basePath);
   return inventory;
 }
@@ -912,16 +902,16 @@ function adjustVmsTotals(
   };
 }
 
-function cloneInventory(inventory: InventoryPayload): InventoryPayload {
+function cloneInventory(inventory: Inventory): Inventory {
   try {
     return structuredClone(inventory);
   } catch {
-    return JSON.parse(JSON.stringify(inventory)) as InventoryPayload;
+    return JSON.parse(JSON.stringify(inventory)) as Inventory;
   }
 }
 
 function findClusterKey(
-  clusters: InventoryPayload["clusters"] | undefined,
+  clusters: Inventory["clusters"] | undefined,
   clusterName: string,
 ): string | undefined {
   if (!clusters) {
@@ -935,10 +925,7 @@ function findClusterKey(
 }
 
 /** Write aggregate VM totals to the inventory location the dashboard reads. */
-function writeAggregateVms(
-  inventory: InventoryPayload,
-  vms: VMs,
-): InventoryPayload {
+function writeAggregateVms(inventory: Inventory, vms: VMs): Inventory {
   if (inventory.vcenter?.vms) {
     return {
       ...inventory,
@@ -974,11 +961,11 @@ function writeAggregateVms(
  * Keeps the assessment report in sync while the server recomputes inventory.
  */
 export function adjustInventoryForMigrationExcludedChange(
-  inventory: InventoryPayload,
+  inventory: Inventory,
   vmIds: string[],
   excluded: boolean,
   knownVms: VirtualMachine[],
-): InventoryPayload {
+): Inventory {
   const sign = excluded ? -1 : 1;
   let totalDelta = 0;
   let migratableDelta = 0;
@@ -1056,7 +1043,7 @@ export type InventoryAggregateView = {
 
 /** Aggregate infra/vms for the dashboard (vcenter scope, or cluster fallback). */
 export function getInventoryAggregateView(
-  inventory: InventoryPayload | UpdateInventory | CollectedInventory | null,
+  inventory: Inventory | UpdateInventory | CollectedInventory | null,
 ): InventoryAggregateView {
   const payload = unwrapInventoryPayload(inventory);
   const clusters = payload?.clusters ?? {};
