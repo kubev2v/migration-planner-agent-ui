@@ -94,6 +94,7 @@ export function useVMTableLogic({
     concernLabels: [],
     concernCategories: [],
     vmLabels: [],
+    vsphereTags: [],
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
@@ -199,6 +200,9 @@ export function useVMTableLogic({
   const [selectedVmLabels, setSelectedVmLabels] = useState<string[]>(
     initialFilters?.vmLabels ?? EMPTY_STRING_ARRAY,
   );
+  const [selectedVsphereTags, setSelectedVsphereTags] = useState<string[]>(
+    initialFilters?.vsphereTags ?? EMPTY_STRING_ARRAY,
+  );
   const [selectedConcernLabels, setSelectedConcernLabels] = useState<string[]>(
     initialFilters?.concernLabels ?? EMPTY_STRING_ARRAY,
   );
@@ -259,6 +263,7 @@ export function useVMTableLogic({
       initialFilters?.reportInclusion,
     );
     syncStringArrayState(setSelectedVmLabels, initialFilters?.vmLabels);
+    syncStringArrayState(setSelectedVsphereTags, initialFilters?.vsphereTags);
     syncStringArrayState(
       setSelectedConcernLabels,
       initialFilters?.concernLabels,
@@ -327,6 +332,7 @@ export function useVMTableLogic({
   const availableConcernLabels = availableFilterOptions.concernLabels;
   const availableConcernCategories = availableFilterOptions.concernCategories;
   const availableVmLabels = availableFilterOptions.vmLabels;
+  const availableVsphereTags = availableFilterOptions.vsphereTags;
 
   const applyFilterChange = useCallback(
     (updater: () => void) => {
@@ -361,6 +367,7 @@ export function useVMTableLogic({
         selectedMigrationReadiness.length > 0 ||
         selectedReportInclusion.length > 0 ||
         selectedVmLabels.length > 0 ||
+        selectedVsphereTags.length > 0 ||
         selectedConcernLabels.length > 0 ||
         selectedConcernCategories.length > 0 ||
         hasIssuesFilter ||
@@ -399,6 +406,8 @@ export function useVMTableLogic({
           ? selectedReportInclusion
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
+      vsphereTags:
+        selectedVsphereTags.length > 0 ? selectedVsphereTags : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -424,6 +433,7 @@ export function useVMTableLogic({
     selectedMigrationReadiness,
     selectedReportInclusion,
     selectedVmLabels,
+    selectedVsphereTags,
     selectedConcernLabels,
     selectedConcernCategories,
     hasIssuesFilter,
@@ -448,6 +458,7 @@ export function useVMTableLogic({
       setSelectedMigrationReadiness(selection.selectedMigrationReadiness);
       setSelectedReportInclusion(selection.selectedReportInclusion);
       setSelectedVmLabels(selection.selectedVmLabels);
+      setSelectedVsphereTags(selection.selectedVsphereTags);
       setSelectedConcernLabels(selection.selectedConcernLabels);
       setSelectedConcernCategories(selection.selectedConcernCategories);
       setHasIssuesFilter(selection.hasIssuesFilter);
@@ -528,6 +539,10 @@ export function useVMTableLogic({
         onVmLabelsChange: (values) => {
           applyFilterChange(() => setSelectedVmLabels(values));
         },
+        selectedVsphereTags,
+        onVsphereTagsChange: (values) => {
+          applyFilterChange(() => setSelectedVsphereTags(values));
+        },
         hasIssuesFilter,
         noIssuesFilter,
         onIssuesFilterChange: (hasIssues, noIssues) => {
@@ -545,6 +560,7 @@ export function useVMTableLogic({
         availableDatacenters,
         availableClusters,
         availableVmLabels,
+        availableVsphereTags,
       }),
     [
       applyFilterChange,
@@ -553,6 +569,7 @@ export function useVMTableLogic({
       availableConcernLabels,
       availableDatacenters,
       availableVmLabels,
+      availableVsphereTags,
       cpuUsageRangeFilter,
       diskRangeFilter,
       diskUsageRangeFilter,
@@ -569,6 +586,7 @@ export function useVMTableLogic({
       selectedReportInclusion,
       selectedStatuses,
       selectedVmLabels,
+      selectedVsphereTags,
     ],
   );
 
@@ -634,6 +652,8 @@ export function useVMTableLogic({
           ? selectedReportInclusion
           : undefined,
       vmLabels: selectedVmLabels.length > 0 ? selectedVmLabels : undefined,
+      vsphereTags:
+        selectedVsphereTags.length > 0 ? selectedVsphereTags : undefined,
       concernLabels:
         selectedConcernLabels.length > 0 ? selectedConcernLabels : undefined,
       concernCategories:
@@ -656,6 +676,7 @@ export function useVMTableLogic({
     selectedMigrationReadiness,
     selectedReportInclusion,
     selectedVmLabels,
+    selectedVsphereTags,
     selectedConcernLabels,
     selectedConcernCategories,
   ]);

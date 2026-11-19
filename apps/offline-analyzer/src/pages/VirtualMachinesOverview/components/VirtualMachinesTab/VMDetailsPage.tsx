@@ -43,6 +43,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useGetVMDetailQuery } from "../../../../store/api/vmsEndpoints";
 import { getSdkErrorMessage } from "../../../../store/baseQuery";
 import { formatMetric } from "./VMUtilizationMetrics";
+import { VMVSphereMetadataSection } from "./VMVSphereMetadataSection";
 
 const MB_IN_GB = 1024;
 
@@ -340,6 +341,7 @@ export const VMDetailsPage: React.FC<VMDetailsPageProps> = ({
                     </DescriptionListDescription>
                   </DescriptionListGroup>
                 </DescriptionList>
+                <VMVSphereMetadataSection vm={vm} />
               </CardBody>
             </Card>
           </GridItem>

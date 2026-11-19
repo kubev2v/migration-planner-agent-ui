@@ -8,6 +8,14 @@ import {
   withDefaultReportInclusion,
 } from "./vmFilters";
 
+describe("filtersToByExpression vsphereTags", () => {
+  it("filters by metadata key/value pair", () => {
+    expect(
+      filtersToByExpression({ vsphereTags: ["Environment:QA"] }),
+    ).toBe("((metadata.key = 'Environment' and metadata.value = 'QA'))");
+  });
+});
+
 describe("filtersToByExpression vmLabels", () => {
   it("uses a single contains check for one label", () => {
     expect(filtersToByExpression({ vmLabels: ["prod"] })).toBe(

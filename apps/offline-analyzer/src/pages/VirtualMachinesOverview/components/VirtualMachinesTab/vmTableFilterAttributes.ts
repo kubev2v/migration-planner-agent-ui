@@ -83,6 +83,8 @@ export type BuildVmTableFilterAttributesParams = {
   onReportInclusionChange: (values: string[]) => void;
   selectedVmLabels: string[];
   onVmLabelsChange: (values: string[]) => void;
+  selectedVsphereTags: string[];
+  onVsphereTagsChange: (values: string[]) => void;
   hasIssuesFilter: boolean;
   noIssuesFilter: boolean;
   onIssuesFilterChange: (hasIssues: boolean, noIssues: boolean) => void;
@@ -91,6 +93,7 @@ export type BuildVmTableFilterAttributesParams = {
   availableDatacenters: string[];
   availableClusters: string[];
   availableVmLabels: string[];
+  availableVsphereTags: string[];
   onCheckboxValueOpen?: () => void;
 };
 
@@ -141,6 +144,8 @@ export function buildVmTableFilterAttributes({
   onReportInclusionChange,
   selectedVmLabels,
   onVmLabelsChange,
+  selectedVsphereTags,
+  onVsphereTagsChange,
   hasIssuesFilter,
   noIssuesFilter,
   onIssuesFilterChange,
@@ -149,6 +154,7 @@ export function buildVmTableFilterAttributes({
   availableDatacenters,
   availableClusters,
   availableVmLabels,
+  availableVsphereTags,
   onCheckboxValueOpen,
 }: BuildVmTableFilterAttributesParams): AttributeValueFilterAttribute[] {
   const issueSelections = [
@@ -323,6 +329,20 @@ export function buildVmTableFilterAttributes({
       })),
       selections: selectedVmLabels,
       onSelectionsChange: onVmLabelsChange,
+    });
+  }
+
+  if (availableVsphereTags.length > 0) {
+    attributes.push({
+      id: "vsphere-tags",
+      label: "vSphere tags",
+      type: "searchable-checkbox",
+      options: availableVsphereTags.map((tag) => ({
+        value: tag,
+        label: tag,
+      })),
+      selections: selectedVsphereTags,
+      onSelectionsChange: onVsphereTagsChange,
     });
   }
 

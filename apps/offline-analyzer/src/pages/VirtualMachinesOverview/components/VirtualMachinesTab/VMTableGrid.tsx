@@ -18,7 +18,11 @@ import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
-import { getMigrationExcluded, getVmTags } from "../../virtualMachineParsing";
+import {
+  getMigrationExcluded,
+  getVmTags,
+  getVmVSphereTags,
+} from "../../virtualMachineParsing";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { renderVmStatus } from "./vmTableCellRenderers";
 import {
@@ -182,6 +186,25 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                             {vmLabels.map((lbl: string) => (
                               <Label key={lbl} isCompact>
                                 {lbl}
+                              </Label>
+                            ))}
+                          </LabelGroup>
+                        );
+                      }
+                      return "–";
+                    })()}
+                  </Td>
+                )}
+                {isColumnVisible("vsphereTags") && (
+                  <Td dataLabel="vSphere tags">
+                    {(() => {
+                      const vsphereTags = getVmVSphereTags(vm);
+                      if (vsphereTags.length > 0) {
+                        return (
+                          <LabelGroup numLabels={5}>
+                            {vsphereTags.map((tag) => (
+                              <Label key={tag} isCompact>
+                                {tag}
                               </Label>
                             ))}
                           </LabelGroup>

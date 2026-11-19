@@ -48,6 +48,7 @@ interface VirtualMachinesViewProps {
     concernLabels: string[];
     concernCategories: string[];
     vmLabels: string[];
+    vsphereTags: string[];
   };
   agentApi?: DefaultApiInterface;
   /** When set, table actions are scoped to this group's report. */
