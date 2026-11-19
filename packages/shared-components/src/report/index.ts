@@ -26,7 +26,6 @@ export {
   CpuAndMemoryOverview,
   type CpuAndMemoryOverviewProps,
 } from "./CpuAndMemoryOverview.js";
-export { captureChartElement } from "./captureChartElement.js";
 export {
   CHART_EXPORT_CAPTURING_ATTR,
   CHART_EXPORT_HIDE_ATTR,

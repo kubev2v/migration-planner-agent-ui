@@ -13,7 +13,6 @@ import {
 
 /** Default scale for bulk exports; single-chart PNG uses a higher scale. */
 const CHART_CAPTURE_SCALE_DEFAULT = 1;
-export const CHART_CAPTURE_SCALE_SINGLE = 2;
 const EXPORT_FONT_FAMILY = "RedHatText, Overpass, Helvetica, Arial, sans-serif";
 
 export type CaptureChartElementOptions = {

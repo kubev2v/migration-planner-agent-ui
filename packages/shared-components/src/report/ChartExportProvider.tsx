@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { CHART_CAPTURE_SCALE_SINGLE } from "./captureChartElement.js";
 import {
   type ChartCaptureSource,
   type ChartExportFile,
@@ -229,8 +228,9 @@ export const ChartExportProvider: FC<ChartExportProviderProps> = ({
             throw new Error("The chart is not ready to export yet.");
           }
           const captureFn = await resolveCapture(capture);
+          const doubled_scale = 2;
           const canvas = await captureFn(chart.element, {
-            scale: CHART_CAPTURE_SCALE_SINGLE,
+            scale: doubled_scale,
           });
           try {
             downloadFile(await encodePng(canvas), chart.filename);
