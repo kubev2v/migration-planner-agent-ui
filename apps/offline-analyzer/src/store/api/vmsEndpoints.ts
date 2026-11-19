@@ -1,16 +1,13 @@
 import type {
   BatchUpdateExclusionRequest,
   DeleteLabelGloballyResponse,
-  RightsizingClusterUtilization,
   UpdateLabelVMsRequest,
   VirtualMachineDetail,
   VirtualMachineListResponse,
   VirtualMachineUpdateRequest,
   VMLabelsResponse,
   VmUtilizationDetails,
-} from "@openshift-migration-advisor/agent-sdk";
-import { getAgentApiBasePath } from "../../api/agentApiConfig";
-import { getLatestCollectionId } from "../../api/collectionApi";
+} from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { fetchVmTableFilterOptions } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmFilterOptions";
 import type { VMTableFilterOptions } from "../../pages/VirtualMachinesOverview/components/VirtualMachinesTab/vmTableTypes";
 import {
@@ -29,9 +26,9 @@ interface GetVMsArg {
   pageSize: number;
 }
 
-/** vCenter scope for assessment inventory (`GET /assessments/.../vcenters/{vid}`). */
+/** vCenter scope for the latest Offline Analyzer inventory. */
 export interface GetInventoryArg {
-  /** `"all"` = merged inventory from `GET /assessments/{id}`; otherwise a vCenter UUID. */
+  /** `"all"` = merged inventory; otherwise a vCenter UUID. */
   selectedVcenterId: string;
 }
 
@@ -66,7 +63,7 @@ interface DeleteLabelGloballyArg {
 }
 
 /**
- * VM overview endpoints. The VM table (`getVMs`), the assessment inventory
+ * VM overview endpoints. The VM table (`getVMs`), the report inventory
  * (`getInventory`), the filter dropdowns (`getVMFilterOptions`), the label set
  * (`getVMLabels`) are separate
  * cache entries invalidated by the same tags, so an exclusion or label change
@@ -94,14 +91,14 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       ],
     }),
 
-    // Header/dashboard source: assessment API when present (`/assessments`, multi-vCenter),
-    // else `GET /inventory` (agent). Keyed by vCenter selection.
+    // Header/dashboard source: latest inventory from the Offline Analyzer SDK.
+    // Keyed by vCenter selection.
     getInventory: build.query<ReportInventoryResult, GetInventoryArg>({
       query:
         ({ selectedVcenterId }) =>
         (sdk) =>
           fetchReportInventoryFromApi(
-            getAgentApiBasePath(sdk),
+            sdk,
             selectedVcenterId === "all" ? undefined : selectedVcenterId,
           ),
       providesTags: ["Inventory"],
@@ -139,26 +136,6 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
         return { ...vmData, utilization };
       },
       providesTags: (_result, _error, vmId) => [{ type: "Vms", id: vmId }],
-    }),
-
-    // Per-cluster usage statistics for the latest collection. Keyed by
-    // clusterId; consumers skip the query when no specific cluster is selected.
-    getClusterUtilization: build.query<
-      RightsizingClusterUtilization | null,
-      string
-    >({
-      query: (clusterId) => async (sdk) => {
-        const collectionId = await getLatestCollectionId(sdk);
-        if (!collectionId) {
-          return null;
-        }
-        const response = await sdk.getClusterUtilization({
-          id: collectionId,
-          clusterId,
-        });
-        return response.cluster;
-      },
-      providesTags: ["Inventory"],
     }),
 
     // Bulk exclude/include from reports. Invalidates the VM list and inventory
@@ -275,7 +252,6 @@ export const {
   useGetVMFilterOptionsQuery,
   useGetVMLabelsQuery,
   useGetVMDetailQuery,
-  useGetClusterUtilizationQuery,
   useSetVMExclusionMutation,
   useUpdateVirtualMachineMutation,
   useUpdateVMLabelsMutation,

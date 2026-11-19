@@ -1,4 +1,4 @@
-import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
+import { ResponseError } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { describe, expect, it, vi } from "vitest";
 import {
   detectExportFormatFromContentType,

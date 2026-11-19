@@ -1,4 +1,4 @@
-import type { CollectorStatusStatusEnum } from "@openshift-migration-advisor/agent-sdk";
+import type { CollectorStatusStatusEnum } from "@openshift-migration-advisor/offline-analyzer-sdk";
 
 const COLLECTOR_IN_PROGRESS_STATUSES = new Set<string>([
   "connecting",

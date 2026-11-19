@@ -2,16 +2,12 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgentApiClient } from "../../api/agentApi";
 import { createStore } from "../index";
 import { agentApiSlice } from "./agentApiSlice";
-import { comparisonEndpoints } from "./comparisonEndpoints";
+import { collectionsEndpoints } from "./collectionsEndpoints";
 
 /**
- * The collection list and the summary comparison are independent cache entries
- * that both provide the `Collections` tag. A completed report invalidates that
- * one tag and every dependent entry refetches together — the report-comparison
- * analogue of the WP-3 exclusion regression lock.
+ * A completed report invalidates the `Collections` tag and refreshes the
+ * collection list used by the analyzer views.
  */
-
-const COMPARE_ARG = { aId: "c1", bId: "c2" };
 
 function makeFakeApi(): AgentApiClient {
   return {
@@ -21,38 +17,29 @@ function makeFakeApi(): AgentApiClient {
         { id: "c1", createdAt: new Date("2026-01-01T00:00:00Z") },
       ],
     })),
-    compareCollections: vi.fn(async () => ({
-      collections: [],
-      diff: {},
-    })),
   } as unknown as AgentApiClient;
 }
 
-describe("comparisonEndpoints tag invalidation", () => {
+describe("collectionsEndpoints tag invalidation", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  test("invalidating Collections refetches the list and the comparison", async () => {
+  test("invalidating Collections refetches the list", async () => {
     const api = makeFakeApi();
     const store = createStore(api);
 
     await store.dispatch(
-      comparisonEndpoints.endpoints.listCollections.initiate(),
-    );
-    await store.dispatch(
-      comparisonEndpoints.endpoints.compareCollections.initiate(COMPARE_ARG),
+      collectionsEndpoints.endpoints.listCollections.initiate(),
     );
 
     expect(api.listCollections).toHaveBeenCalledTimes(1);
-    expect(api.compareCollections).toHaveBeenCalledTimes(1);
 
     // A completed report invalidates the shared tag.
     store.dispatch(agentApiSlice.util.invalidateTags(["Collections"]));
 
     await vi.waitFor(() => {
       expect(api.listCollections).toHaveBeenCalledTimes(2);
-      expect(api.compareCollections).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -61,10 +48,10 @@ describe("comparisonEndpoints tag invalidation", () => {
     const store = createStore(api);
 
     await store.dispatch(
-      comparisonEndpoints.endpoints.listCollections.initiate(),
+      collectionsEndpoints.endpoints.listCollections.initiate(),
     );
 
-    const collections = comparisonEndpoints.endpoints.listCollections.select()(
+    const collections = collectionsEndpoints.endpoints.listCollections.select()(
       store.getState(),
     ).data;
 

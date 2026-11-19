@@ -1,4 +1,4 @@
-import type { Group } from "@openshift-migration-advisor/agent-sdk";
+import type { Group } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import {
   Button,
   Content,

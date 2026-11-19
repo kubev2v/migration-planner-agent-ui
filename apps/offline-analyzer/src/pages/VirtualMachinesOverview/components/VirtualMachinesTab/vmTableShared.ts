@@ -1,5 +1,5 @@
 import { css } from "@emotion/css";
-import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { groupsSort, labelsSort } from "./vmSort";
 
 export type ColumnKey =

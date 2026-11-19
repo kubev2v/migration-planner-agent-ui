@@ -25,9 +25,8 @@ export type ReportTabIndex = (typeof REPORT_TAB)[keyof typeof REPORT_TAB];
 export const CLUSTER_PARAM = "cluster";
 
 /**
- * Selected vCenter for multi-vCenter report inventory: SaaS `GET .../assessments/.../vcenters/{id}`,
- * or standalone analyzer `GET .../inventory/vcenters/{vid}`. Omitted or `all` means aggregated
- * inventory across vCenters.
+ * Selected vCenter for multi-vCenter report inventory. Omitted or `all` means
+ * aggregated inventory across vCenters.
  */
 export const VCENTER_PARAM = "vcenter";
 

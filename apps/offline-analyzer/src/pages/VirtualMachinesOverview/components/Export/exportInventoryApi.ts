@@ -1,4 +1,4 @@
-import { ResponseError } from "@openshift-migration-advisor/agent-sdk";
+import { ResponseError } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { getLatestCollectionId } from "../../../../api/collectionApi";
 import {

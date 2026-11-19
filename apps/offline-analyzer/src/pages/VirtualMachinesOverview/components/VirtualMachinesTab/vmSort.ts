@@ -1,4 +1,4 @@
-import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { getVmTags } from "../../virtualMachineParsing";
 
 export function getVmGroupCount(vm: VirtualMachine): number {

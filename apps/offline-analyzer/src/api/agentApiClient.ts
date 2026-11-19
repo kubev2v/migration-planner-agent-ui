@@ -1,4 +1,4 @@
-import { Configuration } from "@openshift-migration-advisor/agent-sdk";
+import { Configuration } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { type AgentApiClient, createAgentApi } from "./agentApi";
 
 /**

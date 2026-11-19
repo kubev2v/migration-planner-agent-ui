@@ -1,4 +1,4 @@
-import type { Group } from "@openshift-migration-advisor/agent-sdk";
+import type { Group } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { PageSection } from "@patternfly/react-core";
 import type React from "react";
 import { useEffect, useState } from "react";

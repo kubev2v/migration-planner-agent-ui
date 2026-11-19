@@ -1,4 +1,4 @@
-import type { VirtualMachine } from "@openshift-migration-advisor/agent-sdk";
+import type { VirtualMachine } from "@openshift-migration-advisor/offline-analyzer-sdk";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 
 const VM_FETCH_PAGE_SIZE = 100;

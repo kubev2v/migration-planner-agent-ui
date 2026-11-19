@@ -1,4 +1,7 @@
-import type { Infra, VMs } from "@openshift-migration-advisor/agent-sdk";
+import type {
+  Infra,
+  VMs,
+} from "@openshift-migration-advisor/offline-analyzer-sdk";
 import { describe, expect, it } from "vitest";
 import { buildClusterViewModel, getFleetHeaderCounts } from "./clusterView";
 
