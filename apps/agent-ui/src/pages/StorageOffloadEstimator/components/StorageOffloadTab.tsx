@@ -139,6 +139,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
         if (pairNames.length === 0) {
           if (shouldApplyResults()) {
             setPageView("results");
+            setHasAutoLoadedResults(true);
           }
           return;
         }
@@ -168,6 +169,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
           setResultsLoading(false);
           if (shouldApplyResults()) {
             setPageView("results");
+            setHasAutoLoadedResults(true);
           }
         }
       };
@@ -183,7 +185,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     async (pairNames: string[]) => {
       const task = (async () => {
         setBenchmarkDone(true);
-        setHasAutoLoadedResults(true);
         await loadResults(pairNames);
       })();
 
@@ -210,10 +211,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     onBenchmarkComplete,
   });
 
-  const hadSavedSession = useRef(!!saved.pageView);
   useEffect(() => {
-    if (hadSavedSession.current) return;
-
     let cancelled = false;
     const probe = async () => {
       try {
@@ -294,7 +292,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     ) {
       return;
     }
-    setHasAutoLoadedResults(true);
     void loadResults(completePairs.map((p) => p.name));
   }, [
     startOverLoading,
@@ -310,11 +307,6 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   useEffect(() => {
     saveCanceledPairKeys(canceledPairNames);
   }, [canceledPairNames]);
-
-  useEffect(() => {
-    if (startOverLoading || pageView !== "results") return;
-    void resumePollingIfNeeded(completePairs.map((p) => p.name));
-  }, [startOverLoading, pageView, completePairs, resumePollingIfNeeded]);
 
   const clearLocalState = useCallback(() => {
     stopPolling();
