@@ -190,7 +190,7 @@ export const RVToolsUploadPage: React.FC = () => {
                   size="2xl"
                   id="rvtools-upload-modal-title"
                 >
-                  Migration Advisor Agent
+                  Migration advisor discovery appliance
                 </Title>
               </FlexItem>
 
