@@ -5,7 +5,7 @@ import {
   Popover,
   type PopoverProps,
 } from "@patternfly/react-core";
-import { QuestionCircleIcon } from "@patternfly/react-icons";
+import { OutlinedQuestionCircleIcon } from "@patternfly/react-icons";
 import type { CSSProperties, FC } from "react";
 
 type PopoverIconProps = PopoverProps & {
@@ -25,9 +25,10 @@ const PopoverIcon: FC<PopoverIconProps> = ({
 }) => (
   <Popover {...props}>
     <Button
+      size="sm"
       icon={
         <Icon isInline={noVerticalAlign}>
-          <QuestionCircleIcon />
+          <OutlinedQuestionCircleIcon />
         </Icon>
       }
       variant={variant}

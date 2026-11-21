@@ -1,5 +1,4 @@
 import {
-  Content,
   Flex,
   FlexItem,
   Icon,
@@ -14,8 +13,6 @@ import {
 } from "@patternfly/react-icons";
 import type React from "react";
 import { useState } from "react";
-import { formatReportRunDate } from "../pages/ReportComparison/comparisonFormatting";
-import { useListCollectionsQuery } from "../store/api/comparisonEndpoints";
 import { DataSharingAlert } from "./components/DataSharingAlert";
 import { DataSharingModal } from "./components/DataSharingModal";
 import {
@@ -27,9 +24,6 @@ import useLocalStorage from "./hooks/useLocalStorage";
 import { useAgentStatus } from "./useAgentStatus";
 
 export const DiscoveryStatus: React.FC = () => {
-  const { data: collections } = useListCollectionsQuery();
-  const latestReportRun = collections?.[0]?.createdAt;
-
   const {
     discoverySharingStatus,
     discoverySharingError,
@@ -136,13 +130,6 @@ export const DiscoveryStatus: React.FC = () => {
             <FlexItem>{statusContent}</FlexItem>
           </Flex>
         </StackItem>
-        {latestReportRun ? (
-          <StackItem>
-            <Content component="p">
-              Latest run: {formatReportRunDate(latestReportRun)}
-            </Content>
-          </StackItem>
-        ) : null}
         {showSharingAlert ? (
           <StackItem>
             <DataSharingAlert
