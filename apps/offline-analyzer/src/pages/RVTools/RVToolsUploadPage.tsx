@@ -25,6 +25,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCollectionProgressInfo } from "../../common/collectionProgress";
 import { CollectionProgress, RedHatLogo } from "../../common/components/index";
+import {
+  MAX_RVTOOLS_FILES,
+  mergeRvtoolsFilesByName,
+} from "../../common/rvtools/rvtoolsFileUpload";
 import { agentApiSlice } from "../../store/api/agentApiSlice";
 import {
   useGetCollectorStatusQuery,
@@ -69,6 +73,7 @@ export const RVToolsUploadPage: React.FC = () => {
   const [startedStatus, setStartedStatus] =
     useState<CollectorStatusValue | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fileLimitError, setFileLimitError] = useState<string | null>(null);
 
   const [startRvtoolsCollector, { isLoading: isStarting }] =
     useStartRvtoolsCollectorMutation();
@@ -125,15 +130,19 @@ export const RVToolsUploadPage: React.FC = () => {
   const handleFileDrop = useCallback(
     (_event: DropEvent, droppedFiles: File[]): void => {
       setError(null);
+      setFileLimitError(null);
       const accepted = droppedFiles.filter((file) =>
         file.name.toLowerCase().endsWith(ACCEPTED_EXTENSION),
       );
       setFiles((current) => {
-        const byName = new Map(current.map((file) => [file.name, file]));
-        for (const file of accepted) {
-          byName.set(file.name, file);
+        const { files: merged, overLimit } = mergeRvtoolsFilesByName(
+          current,
+          accepted,
+        );
+        if (overLimit) {
+          setFileLimitError(`You can upload up to ${MAX_RVTOOLS_FILES} files.`);
         }
-        return Array.from(byName.values());
+        return merged;
       });
     },
     [],
@@ -141,6 +150,7 @@ export const RVToolsUploadPage: React.FC = () => {
 
   const handleRemoveFile = useCallback((name: string): void => {
     setFiles((current) => current.filter((file) => file.name !== name));
+    setFileLimitError(null);
   }, []);
 
   const handleSubmit = async (): Promise<void> => {
@@ -213,6 +223,14 @@ export const RVToolsUploadPage: React.FC = () => {
                 </Title>
               </FlexItem>
 
+              {fileLimitError && (
+                <FlexItem>
+                  <Alert variant="warning" isInline title="File limit">
+                    {fileLimitError}
+                  </Alert>
+                </FlexItem>
+              )}
+
               {error && (
                 <FlexItem>
                   <Alert
@@ -238,7 +256,7 @@ export const RVToolsUploadPage: React.FC = () => {
                     titleIcon={<UploadIcon />}
                     titleText="Drag and drop files here"
                     titleTextSeparator="or"
-                    infoText="Accepted file type: .xlsx"
+                    infoText={`Accepted file type: .xlsx (up to ${MAX_RVTOOLS_FILES} files)`}
                     browseButtonText="Upload"
                   />
                   {files.length > 0 && (
