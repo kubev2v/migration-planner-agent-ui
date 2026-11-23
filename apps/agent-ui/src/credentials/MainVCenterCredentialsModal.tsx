@@ -84,7 +84,7 @@ export const MainVCenterCredentialsModal: React.FC<
                 size="2xl"
                 id="vcenter-credentials-modal-title"
               >
-                Migration Advisor Agent
+                Migration advisor discovery appliance
               </Title>
             </FlexItem>
             {version && (
