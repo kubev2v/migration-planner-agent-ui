@@ -14,6 +14,7 @@ import {
   InputGroupItem,
 } from "@patternfly/react-core";
 import type React from "react";
+import { AddRvtoolsFilesAction } from "../../common/report/AddRvtoolsFilesAction";
 import { DeleteCollectedDataButton } from "../../common/report/DeleteCollectedDataButton";
 import { ExportButton } from "../../common/report/ExportButton";
 import { buildOverviewExportOptions } from "./reportExportOptions";
@@ -24,6 +25,7 @@ interface ReportPageHeaderProps {
   exportOptions?: ReportExportOption[];
   isExporting?: boolean;
   exportLoadingLabel?: string | null;
+  additionalActions?: React.ReactNode;
 }
 
 export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
@@ -32,6 +34,7 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
   exportOptions,
   isExporting = false,
   exportLoadingLabel = null,
+  additionalActions,
 }) => {
   const hasExportMenu = Boolean(showExport && exportOptions?.length);
   const canExport = hasExportMenu || (showExport && Boolean(onExportClick));
@@ -46,6 +49,9 @@ export const ReportPageHeader: React.FC<ReportPageHeaderProps> = ({
       <Flex alignItems={{ default: "alignItemsCenter" }}>
         <FlexItem>
           <InputGroup>
+            {additionalActions ? (
+              <InputGroupItem>{additionalActions}</InputGroupItem>
+            ) : null}
             {canExport && (
               <InputGroupItem>
                 {hasExportMenu && exportOptions ? (
@@ -76,6 +82,7 @@ interface OverviewReportHeaderProps {
   onExportInventory?: () => void;
   documentTitle: string;
   enableHtml?: boolean;
+  onRvtoolsUploadSuccess?: () => void;
 }
 
 export const OverviewReportHeader: React.FC<OverviewReportHeaderProps> = ({
@@ -83,6 +90,7 @@ export const OverviewReportHeader: React.FC<OverviewReportHeaderProps> = ({
   onExportInventory,
   documentTitle,
   enableHtml = true,
+  onRvtoolsUploadSuccess,
 }) => {
   const charts = useChartExport();
   const exportOptions = buildOverviewExportOptions({
@@ -112,6 +120,9 @@ export const OverviewReportHeader: React.FC<OverviewReportHeaderProps> = ({
         exportOptions={exportOptions}
         isExporting={Boolean(charts?.isBusy)}
         exportLoadingLabel={charts?.exportLoadingLabel}
+        additionalActions={
+          <AddRvtoolsFilesAction onUploadSuccess={onRvtoolsUploadSuccess} />
+        }
       />
       {charts?.exportError ? (
         <Alert

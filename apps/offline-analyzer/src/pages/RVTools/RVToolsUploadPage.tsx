@@ -1,5 +1,6 @@
 import { css } from "@emotion/css";
 import type { CollectorStatus } from "@openshift-migration-advisor/offline-analyzer-sdk";
+import { MAX_RVTOOLS_FILES } from "@openshift-migration-advisor/shared-components";
 import {
   Alert,
   Backdrop,
@@ -25,10 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCollectionProgressInfo } from "../../common/collectionProgress";
 import { CollectionProgress, RedHatLogo } from "../../common/components/index";
-import {
-  MAX_RVTOOLS_FILES,
-  mergeRvtoolsFilesByName,
-} from "../../common/rvtools/rvtoolsFileUpload";
+import { mergeRvtoolsFilesByName } from "../../common/rvtools/rvtoolsFileUpload";
 import { agentApiSlice } from "../../store/api/agentApiSlice";
 import {
   useGetCollectorStatusQuery,

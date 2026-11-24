@@ -31,6 +31,14 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
       invalidatesTags: ["CollectorStatus"],
     }),
 
+    updateRvtoolsCollector: build.mutation<CollectorStatus, { files: File[] }>({
+      query:
+        ({ files }) =>
+        (sdk) =>
+          sdk.updateRvtoolsCollector({ files }),
+      invalidatesTags: ["CollectorStatus"],
+    }),
+
     stopCollector: build.mutation<void, void>({
       query: () => (sdk) => sdk.stopCollector(),
       invalidatesTags: ["CollectorStatus"],
@@ -52,6 +60,7 @@ export const lifecycleEndpoints = agentApiSlice.injectEndpoints({
 export const {
   useGetCollectorStatusQuery,
   useStartRvtoolsCollectorMutation,
+  useUpdateRvtoolsCollectorMutation,
   useStopCollectorMutation,
   useDeleteCollectedDataMutation,
 } = lifecycleEndpoints;
