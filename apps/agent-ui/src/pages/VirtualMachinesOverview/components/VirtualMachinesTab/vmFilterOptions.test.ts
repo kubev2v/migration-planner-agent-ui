@@ -1,5 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { mergeGroupNamesIntoFilterOptions } from "./vmFilterOptions";
+import {
+  mergeGroupNamesIntoFilterOptions,
+  parseVmTableFilterOptionsFromJson,
+} from "./vmFilterOptions";
+
+describe("parseVmTableFilterOptionsFromJson", () => {
+  it("maps metadata into vSphere tag filter options", () => {
+    const options = parseVmTableFilterOptionsFromJson(
+      {
+        metadata: {
+          Forklift: ["migrated"],
+          ami: ["ttt"],
+        },
+        clusters: ["c1"],
+        datacenters: ["dc1"],
+        concernLabels: [],
+        concernCategories: [],
+        applications: ["SAP ERP"],
+      },
+      ["prod"],
+      ["group-a"],
+    );
+
+    expect(options.vsphereTags).toEqual(["ami:ttt", "Forklift:migrated"]);
+    expect(options.applications).toEqual(["SAP ERP"]);
+    expect(options.groups).toEqual(["group-a"]);
+  });
+});
 
 describe("mergeGroupNamesIntoFilterOptions", () => {
   it("adds membership group names to empty filter options", () => {
@@ -11,6 +38,7 @@ describe("mergeGroupNamesIntoFilterOptions", () => {
       concernLabels: [],
       concernCategories: [],
       vmLabels: [],
+      vsphereTags: [],
       groups: ["group1", "group2"],
       applications: [],
     });
@@ -25,6 +53,7 @@ describe("mergeGroupNamesIntoFilterOptions", () => {
           concernLabels: [],
           concernCategories: [],
           vmLabels: [],
+          vsphereTags: [],
           groups: ["group1"],
           applications: [],
         },

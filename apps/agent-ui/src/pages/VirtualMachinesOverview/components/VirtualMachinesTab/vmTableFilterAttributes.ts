@@ -83,6 +83,10 @@ export type BuildVmTableFilterAttributesParams = {
   onReportInclusionChange: (values: string[]) => void;
   selectedVmLabels: string[];
   onVmLabelsChange: (values: string[]) => void;
+  selectedVsphereTags: string[];
+  onVsphereTagsChange: (values: string[]) => void;
+  vsphereAnnotationSearch: string;
+  onVsphereAnnotationSearchChange: (value: string) => void;
   selectedGroups: string[];
   onGroupsChange: (values: string[]) => void;
   selectedApplications: string[];
@@ -95,6 +99,7 @@ export type BuildVmTableFilterAttributesParams = {
   availableDatacenters: string[];
   availableClusters: string[];
   availableVmLabels: string[];
+  availableVsphereTags: string[];
   availableGroups: string[];
   availableApplications: string[];
   showGroupsFilter: boolean;
@@ -148,6 +153,10 @@ export function buildVmTableFilterAttributes({
   onReportInclusionChange,
   selectedVmLabels,
   onVmLabelsChange,
+  selectedVsphereTags,
+  onVsphereTagsChange,
+  vsphereAnnotationSearch,
+  onVsphereAnnotationSearchChange,
   selectedGroups,
   onGroupsChange,
   selectedApplications,
@@ -160,6 +169,7 @@ export function buildVmTableFilterAttributes({
   availableDatacenters,
   availableClusters,
   availableVmLabels,
+  availableVsphereTags,
   availableGroups,
   availableApplications,
   showGroupsFilter,
@@ -339,6 +349,32 @@ export function buildVmTableFilterAttributes({
       onSelectionsChange: onVmLabelsChange,
     });
   }
+
+  attributes.push({
+    id: "vsphere-tags",
+    label: "vSphere tags",
+    type: "searchable-checkbox",
+    options: availableVsphereTags.map((tag) => ({
+      value: tag,
+      label: tag,
+    })),
+    selections: selectedVsphereTags,
+    onSelectionsChange: onVsphereTagsChange,
+    emptyMessage:
+      availableVsphereTags.length === 0
+        ? "No vSphere tags in inventory"
+        : undefined,
+  });
+
+  attributes.push({
+    id: "vsphere-annotation",
+    label: "vSphere annotation",
+    type: "text",
+    value: vsphereAnnotationSearch,
+    onChange: onVsphereAnnotationSearchChange,
+    placeholder: "Find by annotation",
+    ariaLabel: "Find by vSphere annotation",
+  });
 
   if (showGroupsFilter && availableGroups.length > 0) {
     attributes.push({

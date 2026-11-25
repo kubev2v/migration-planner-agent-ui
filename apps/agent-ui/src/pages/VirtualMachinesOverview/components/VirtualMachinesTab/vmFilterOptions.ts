@@ -1,6 +1,13 @@
-import type { Group } from "@openshift-migration-advisor/agent-sdk";
+import {
+  type Group,
+  VMFilterOptionsResponseFromJSON,
+} from "@openshift-migration-advisor/agent-sdk";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { fetchAllGroupsPages } from "../../../Groups/utils/groupList";
+import {
+  listVmMetadataFilterOptions,
+  normalizeVmMetadata,
+} from "../../virtualMachineParsing";
 import type { VMTableFilterOptions } from "./vmTableTypes";
 
 const EMPTY_VM_TABLE_FILTER_OPTIONS: VMTableFilterOptions = {
@@ -9,6 +16,7 @@ const EMPTY_VM_TABLE_FILTER_OPTIONS: VMTableFilterOptions = {
   concernLabels: [],
   concernCategories: [],
   vmLabels: [],
+  vsphereTags: [],
   groups: [],
   applications: [],
 };
@@ -30,12 +38,37 @@ export function mergeGroupNamesIntoFilterOptions(
   };
 }
 
+/** Map filter-options JSON into table filter dropdown values (keeps vSphere metadata). */
+export function parseVmTableFilterOptionsFromJson(
+  json: unknown,
+  vmLabels: string[],
+  groups: string[],
+): VMTableFilterOptions {
+  const response = VMFilterOptionsResponseFromJSON(json);
+  const record =
+    json && typeof json === "object" ? (json as Record<string, unknown>) : {};
+  const metadata =
+    normalizeVmMetadata(record.metadata) ??
+    normalizeVmMetadata(response.metadata);
+
+  return {
+    clusters: response.clusters || [],
+    datacenters: response.datacenters || [],
+    concernLabels: response.concernLabels || [],
+    concernCategories: response.concernCategories || [],
+    vmLabels,
+    vsphereTags: listVmMetadataFilterOptions(metadata),
+    groups,
+    applications: response.applications || [],
+  };
+}
+
 /** Loads distinct VM filter option values for the VMs table filter UI. */
 export async function fetchVmTableFilterOptions(
   agentApi: DefaultApiInterface,
 ): Promise<VMTableFilterOptions> {
-  const [response, labelsResponse, groups] = await Promise.all([
-    agentApi.getLatestVMFilterOptions(),
+  const [filterOptionsResponse, labelsResponse, groups] = await Promise.all([
+    agentApi.getLatestVMFilterOptionsRaw(),
     agentApi.getLatestVMLabels().catch(() => ({ labels: [] as string[] })),
     fetchAllGroupsPages(agentApi).catch((err) => {
       console.error("Error fetching groups for filter options:", err);
@@ -48,13 +81,10 @@ export async function fetchVmTableFilterOptions(
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
 
-  return {
-    clusters: response.clusters || [],
-    datacenters: response.datacenters || [],
-    concernLabels: response.concernLabels || [],
-    concernCategories: response.concernCategories || [],
-    vmLabels: labelsResponse.labels || [],
-    groups: groupNames,
-    applications: response.applications || [],
-  };
+  const json = await filterOptionsResponse.raw.json();
+  return parseVmTableFilterOptionsFromJson(
+    json,
+    labelsResponse.labels || [],
+    groupNames,
+  );
 }

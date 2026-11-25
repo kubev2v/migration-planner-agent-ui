@@ -9,6 +9,7 @@ export function applianceToDrawerApplication(
     name: appliance.name,
     description: appliance.version,
     vendor: appliance.vendor,
+    category: "",
     confidence: appliance.confidence,
     vmCount: appliance.vmCount,
     vms: appliance.vms,

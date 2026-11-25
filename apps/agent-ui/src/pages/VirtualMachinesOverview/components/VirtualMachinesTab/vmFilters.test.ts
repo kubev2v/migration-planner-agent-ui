@@ -8,6 +8,52 @@ import {
   withDefaultReportInclusion,
 } from "./vmFilters";
 
+describe("filtersToByExpression vsphereAnnotation", () => {
+  it("filters by annotation substring", () => {
+    expect(filtersToByExpression({ vsphereAnnotation: "sss" })).toBe(
+      "annotation like 'sss'",
+    );
+  });
+
+  it("escapes quotes in annotation search", () => {
+    expect(filtersToByExpression({ vsphereAnnotation: "it's" })).toBe(
+      "annotation like 'it\\'s'",
+    );
+  });
+
+  it("round-trips via URL params", () => {
+    const params = filtersToSearchParams({ vsphereAnnotation: "notes" });
+    expect(params.get("vsphereAnnotation")).toBe("notes");
+    expect(searchParamsToFilters(params).vsphereAnnotation).toBe("notes");
+  });
+});
+
+describe("filtersToByExpression vsphereTags", () => {
+  it("filters by a single metadata key/value pair", () => {
+    expect(
+      filtersToByExpression({ vsphereTags: ["Environment:Production"] }),
+    ).toBe(
+      "((metadata.key = 'Environment' and metadata.value = 'Production'))",
+    );
+  });
+
+  it("ORs multiple metadata pairs", () => {
+    expect(
+      filtersToByExpression({
+        vsphereTags: ["Environment:Production", "Owner:Finance"],
+      }),
+    ).toBe(
+      "((metadata.key = 'Environment' and metadata.value = 'Production') or (metadata.key = 'Owner' and metadata.value = 'Finance'))",
+    );
+  });
+
+  it("escapes quotes in metadata key and value", () => {
+    expect(filtersToByExpression({ vsphereTags: ["It's:ok"] })).toBe(
+      "((metadata.key = 'It\\'s' and metadata.value = 'ok'))",
+    );
+  });
+});
+
 describe("filtersToByExpression vmLabels", () => {
   it("uses a single contains check for one label", () => {
     expect(filtersToByExpression({ vmLabels: ["prod"] })).toBe(

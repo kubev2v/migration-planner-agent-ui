@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AgentApiClient } from "../../api/agentApi";
+import { parseVirtualMachineListResponse } from "../../pages/VirtualMachinesOverview/virtualMachineParsing";
 import { createStore } from "../index";
 import { vmsEndpoints } from "./vmsEndpoints";
 
@@ -17,13 +18,52 @@ const VMS_ARG = {
   pageSize: 20,
 };
 
+const LIST_VM_TEMPLATE = {
+  name: "vm",
+  vCenterID: "vc1",
+  vCenterState: "poweredOn",
+  cluster: "c1",
+  datacenter: "dc1",
+  diskSize: 1,
+  memory: 1,
+  issueCount: 0,
+};
+
+function listVmListJson(total: number) {
+  return {
+    virtualMachines: [
+      { ...LIST_VM_TEMPLATE, id: "vm1", name: "vm1" },
+      { ...LIST_VM_TEMPLATE, id: "vm2", name: "vm2" },
+    ],
+    total,
+    page: 1,
+    pageCount: 1,
+  };
+}
+
 function makeFakeApi(counts: { total: number }): AgentApiClient {
   return {
     configuration: { basePath: "http://localhost/agent/api/v2" },
-    listLatestVirtualMachines: vi.fn(async () => ({
-      virtualMachines: [{ id: "vm1" }, { id: "vm2" }],
-      total: counts.total,
-      pageCount: 1,
+    listLatestVirtualMachinesRaw: vi.fn(async () => ({
+      raw: {
+        json: async () => listVmListJson(counts.total),
+      },
+    })),
+    listLatestVirtualMachines: vi.fn(async () =>
+      parseVirtualMachineListResponse(listVmListJson(counts.total)),
+    ),
+    getLatestVirtualMachine: vi.fn(async ({ vmId }: { vmId: string }) => ({
+      id: vmId,
+      name: vmId,
+      vCenterID: "vc1",
+      powerState: "poweredOn",
+      connectionState: "connected",
+      cpuCount: 1,
+      coresPerSocket: 1,
+      memoryMB: 1024,
+      disks: [],
+      nicCount: 0,
+      nics: [],
     })),
     batchUpdateLatestVMExclusion: vi.fn(async () => undefined),
     updateLatestLabelVMs: vi.fn(async () => undefined),
@@ -87,7 +127,7 @@ describe("vmsEndpoints tag invalidation", () => {
         ?.total;
 
     expect(vmsTotal()).toBe(7);
-    expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(1);
+    expect(api.listLatestVirtualMachinesRaw).toHaveBeenCalledTimes(1);
     // Probes `GET /assessments` (404 on agent) then loads `GET /inventory`.
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
@@ -107,7 +147,7 @@ describe("vmsEndpoints tag invalidation", () => {
     // Both the table source and the inventory source refetch from the single
     // exclusion invalidation — they cannot diverge.
     await vi.waitFor(() => {
-      expect(api.listLatestVirtualMachines).toHaveBeenCalledTimes(2);
+      expect(api.listLatestVirtualMachinesRaw).toHaveBeenCalledTimes(2);
       expect(fetchMock).toHaveBeenCalledTimes(4);
       expect(vmsTotal()).toBe(5);
     });

@@ -27,6 +27,7 @@ import {
   type MigrationExcludedInventoryChange,
   type ReportInventoryResult,
 } from "../../pages/VirtualMachinesOverview/inventoryParsing";
+import { listLatestVirtualMachinesWithMetadata } from "../../pages/VirtualMachinesOverview/virtualMachineParsing";
 import { agentApiSlice } from "./agentApiSlice";
 import { groupChangeTags } from "./groupTags";
 
@@ -98,7 +99,7 @@ export const vmsEndpoints = agentApiSlice.injectEndpoints({
       query:
         ({ byExpression, sort, page, pageSize }) =>
         (sdk) =>
-          sdk.listLatestVirtualMachines({
+          listLatestVirtualMachinesWithMetadata(sdk, {
             byExpression,
             sort: sort && sort.length > 0 ? sort : undefined,
             page,

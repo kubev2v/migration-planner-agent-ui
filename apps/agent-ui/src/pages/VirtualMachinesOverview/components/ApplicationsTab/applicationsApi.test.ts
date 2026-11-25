@@ -9,6 +9,8 @@ const sampleApplications: ApplicationOverview[] = [
   {
     name: "Apache HTTP Server",
     description: "Web server",
+    vendor: "Apache Software Foundation",
+    category: "Web server",
     vmCount: 2,
     vms: [
       { id: "vm-1", name: "web-01" },
@@ -18,6 +20,8 @@ const sampleApplications: ApplicationOverview[] = [
   {
     name: "PostgreSQL",
     description: "Database",
+    vendor: "PostgreSQL Global Development Group",
+    category: "Database",
     vmCount: 2,
     vms: [
       { id: "vm-2", name: "web-02" },
@@ -27,6 +31,8 @@ const sampleApplications: ApplicationOverview[] = [
   {
     name: "Nginx",
     description: "Web server",
+    vendor: "F5, Inc.",
+    category: "Web server",
     vmCount: 1,
     vms: [{ id: "vm-4", name: "edge-01" }],
   },
