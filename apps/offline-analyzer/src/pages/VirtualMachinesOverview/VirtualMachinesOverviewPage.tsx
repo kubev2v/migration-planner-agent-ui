@@ -4,6 +4,7 @@ import {
 } from "@openshift-migration-advisor/shared-components";
 import {
   Alert,
+  AlertActionCloseButton,
   Content,
   Flex,
   FlexItem,
@@ -98,6 +99,7 @@ export const ReportContainer: React.FC = () => {
   const selectedVcenterId = getVcenterParam(searchParams);
   const [isClusterSelectOpen, setIsClusterSelectOpen] = useState(false);
   const [isVcenterSelectOpen, setIsVcenterSelectOpen] = useState(false);
+  const [rvtoolsAppendSuccess, setRvtoolsAppendSuccess] = useState(false);
 
   // VM pagination state (client-only; the query keys on these values)
   const [vmsPage, setVmsPage] = useState(1);
@@ -414,8 +416,26 @@ export const ReportContainer: React.FC = () => {
               onExportInventory={openExportModal}
               documentTitle={`Virtual machines overview - ${clusterView.selectionLabel}`}
               enableHtml={clusterView.isAggregateView}
+              onRvtoolsUploadSuccess={() => setRvtoolsAppendSuccess(true)}
             />
           </StackItem>
+
+          {rvtoolsAppendSuccess ? (
+            <StackItem>
+              <Alert
+                variant="success"
+                title="RVTools files added"
+                isInline
+                actionClose={
+                  <AlertActionCloseButton
+                    onClose={() => setRvtoolsAppendSuccess(false)}
+                  />
+                }
+              >
+                RVTools files were added. Report metrics have been updated.
+              </Alert>
+            </StackItem>
+          ) : null}
 
           <StackItem>
             <Header totalVMs={totalVMs} totalClusters={totalClusters} />

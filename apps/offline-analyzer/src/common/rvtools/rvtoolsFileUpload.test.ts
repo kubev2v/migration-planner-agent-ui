@@ -1,8 +1,6 @@
+import { MAX_RVTOOLS_FILES } from "@openshift-migration-advisor/shared-components";
 import { describe, expect, it } from "vitest";
-import {
-  MAX_RVTOOLS_FILES,
-  mergeRvtoolsFilesByName,
-} from "./rvtoolsFileUpload";
+import { mergeRvtoolsFilesByName } from "./rvtoolsFileUpload";
 
 function fileNamed(name: string): File {
   return new File(["content"], name, {

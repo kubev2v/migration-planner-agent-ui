@@ -1,4 +1,4 @@
-export const MAX_RVTOOLS_FILES = 50;
+import { MAX_RVTOOLS_FILES } from "@openshift-migration-advisor/shared-components";
 
 export function mergeRvtoolsFilesByName(
   current: File[],

@@ -17,7 +17,7 @@
   "dependencies": {
     "@emotion/css": "^11.13.5",
     "@hookform/resolvers": "^5.9.2",
-    "@openshift-migration-advisor/offline-analyzer-sdk": "0.32.0",
+    "@openshift-migration-advisor/offline-analyzer-sdk": "0.32.0-1e681f2e74af",
     "@openshift-migration-advisor/shared-components": "workspace:*",
     "@patternfly/react-core": "^6.7.0",
     "@patternfly/react-icons": "^6.7.0",

@@ -4,6 +4,7 @@ Shared React UI components for Migration Advisor applications (agent UI and clou
 
 Includes:
 
+- Controlled RVTools file-add button and modal (`AddRvtoolsFilesButton`)
 - Migration recommendations landing, tool chrome, and architecture sizing form/result UI ([design doc](../../docs/migration-recommendations-tools.md))
 - PatternFly form field wrappers (`react-hook-form`)
 - Guest OS support-tier helpers and badges
@@ -27,6 +28,7 @@ npm install @openshift-migration-advisor/shared-components
 ```tsx
 import {
   buildInfrastructureSummary,
+  AddRvtoolsFilesButton,
   ChartExportProvider,
   HostPowerStates,
   InfrastructureSummary,
@@ -63,6 +65,24 @@ import { ChartExportSurface } from "@openshift-migration-advisor/shared-componen
 `ReportExportMenu` accepts a fully custom `options` list. `standardReportExportOptions()` builds the PDF / HTML / PNG entries; omit a handler to hide that format.
 
 Components are SDK-agnostic: pass already-shaped props (for example `OSDistributionEntry` maps). Map `agent-sdk` / `planner-sdk` models at the app boundary.
+
+`AddRvtoolsFilesButton` is controlled by its caller. The app owns the upload API,
+job lifecycle, error, and progress state; the component handles file selection,
+validation, and the modal UI:
+
+```tsx
+<AddRvtoolsFilesButton
+  isOpen={isAppendModalOpen}
+  onOpen={openAppendModal}
+  onClose={closeAppendModal}
+  onSubmit={(files) => void appendRvtoolsFiles(files)}
+  maxFiles={remainingFileSlots}
+  isLoading={isUploading}
+  isProcessing={isJobProcessing}
+  error={uploadError}
+  progress={uploadProgress}
+/>;
+```
 
 ## Development
 

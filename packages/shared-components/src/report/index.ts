@@ -1,4 +1,9 @@
 export {
+  AddRvtoolsFilesButton,
+  type AddRvtoolsFilesButtonProps,
+  MAX_RVTOOLS_FILES,
+} from "./AddRvtoolsFilesButton.js";
+export {
   CARD_EMPTY_STATE_DESCRIPTION,
   CardEmptyState,
   type CardEmptyStateProps,
