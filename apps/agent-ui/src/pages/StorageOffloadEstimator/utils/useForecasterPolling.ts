@@ -128,7 +128,9 @@ export function useForecasterPolling({
   }, []);
 
   const finishBenchmarkStart = useCallback(() => {
-    wasRunningRef.current = true;
+    // Do not arm wasRunning here — the previous run may still be "ready" in the
+    // cache until the server transitions. Wait for an observed "running" status
+    // in processStatus (same pattern as VM inspection polling).
     lastProcessedTsRef.current = fulfilledTsRef.current;
     setIsStarting(false);
     setPollingEnabled(true);

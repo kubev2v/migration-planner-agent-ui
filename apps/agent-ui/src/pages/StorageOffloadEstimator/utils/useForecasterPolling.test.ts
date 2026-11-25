@@ -83,6 +83,32 @@ describe("useForecasterPolling", () => {
     expect(result.current.isPollingActive).toBe(false);
   });
 
+  it("does not call onBenchmarkComplete on a stale ready status before running is observed", async () => {
+    vi.mocked(getForecasterStatus).mockResolvedValue({
+      state: "ready",
+      pairs: [],
+    });
+
+    const onBenchmarkComplete = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderPollingHook({
+      onStatusUpdate: vi.fn(),
+      onBenchmarkComplete,
+    });
+
+    act(() => {
+      result.current.markBenchmarkStarting(["pair-a"]);
+    });
+    act(() => {
+      result.current.finishBenchmarkStart();
+    });
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 250));
+    });
+
+    expect(onBenchmarkComplete).not.toHaveBeenCalled();
+  });
+
   it("calls onBenchmarkComplete when polling observes a ready state", async () => {
     vi.mocked(getForecasterStatus)
       .mockResolvedValueOnce({
