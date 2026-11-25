@@ -1,3 +1,5 @@
+import { parseVSphereTagFilterToken } from "../../virtualMachineParsing";
+
 /** Combines two filter expressions with AND. */
 export function combineFilterExpressions(
   base: string | undefined,
@@ -30,6 +32,13 @@ export interface VMFilters {
   diskUsageRange?: { min: number; max?: number };
   migrationReadiness?: string[];
   vmLabels?: string[];
+  /** Selected vSphere tags as `Category:Value` tokens. */
+  vsphereTags?: string[];
+  /**
+   * Substring match on vSphere annotation (`annotation like '…'`).
+   * Requires agent https://github.com/kubev2v/assisted-migration-agent/pull/728
+   */
+  vsphereAnnotation?: string;
   concernLabels?: string[];
   concernCategories?: string[];
   reportInclusion?: string[];
@@ -217,6 +226,28 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
     }
   }
 
+  if (filters.vsphereTags && filters.vsphereTags.length > 0) {
+    const tagConditions = filters.vsphereTags
+      .map((token) => {
+        const parsed = parseVSphereTagFilterToken(token);
+        if (!parsed) {
+          return undefined;
+        }
+        return `(metadata.key = '${escapeFilterValue(parsed.key)}' and metadata.value = '${escapeFilterValue(parsed.value)}')`;
+      })
+      .filter((condition): condition is string => Boolean(condition));
+
+    if (tagConditions.length > 0) {
+      conditions.push(`(${tagConditions.join(" or ")})`);
+    }
+  }
+
+  if (filters.vsphereAnnotation?.trim()) {
+    conditions.push(
+      `annotation like '${escapeFilterValue(filters.vsphereAnnotation.trim())}'`,
+    );
+  }
+
   // Migration readiness filter
   if (filters.migrationReadiness && filters.migrationReadiness.length > 0) {
     const hasReady = filters.migrationReadiness.includes("ready");
@@ -392,6 +423,16 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
     params.set("vmLabels", filters.vmLabels.join(","));
   }
 
+  if (filters.vsphereTags && filters.vsphereTags.length > 0) {
+    for (const tag of filters.vsphereTags) {
+      params.append("vsphereTags", tag);
+    }
+  }
+
+  if (filters.vsphereAnnotation?.trim()) {
+    params.set("vsphereAnnotation", filters.vsphereAnnotation.trim());
+  }
+
   if (filters.concernLabels && filters.concernLabels.length > 0) {
     filters.concernLabels.forEach((label) => {
       params.append("concernLabels", label);
@@ -539,6 +580,16 @@ export function searchParamsToFilters(
     filters.vmLabels = vmLabels.split(",").filter(Boolean);
   }
 
+  const vsphereTags = searchParams.getAll("vsphereTags");
+  if (vsphereTags.length > 0) {
+    filters.vsphereTags = vsphereTags.filter(Boolean);
+  }
+
+  const vsphereAnnotation = searchParams.get("vsphereAnnotation");
+  if (vsphereAnnotation) {
+    filters.vsphereAnnotation = vsphereAnnotation;
+  }
+
   const concernLabels = searchParams.getAll("concernLabels");
   if (concernLabels.length > 0) {
     filters.concernLabels = concernLabels.filter(Boolean);
@@ -575,6 +626,8 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.networks && filters.networks.length > 0) ||
     (filters.migrationReadiness && filters.migrationReadiness.length > 0) ||
     (filters.vmLabels && filters.vmLabels.length > 0) ||
+    (filters.vsphereTags && filters.vsphereTags.length > 0) ||
+    (filters.vsphereAnnotation && filters.vsphereAnnotation.length > 0) ||
     (filters.concernLabels && filters.concernLabels.length > 0) ||
     (filters.concernCategories && filters.concernCategories.length > 0) ||
     (filters.reportInclusion && filters.reportInclusion.length > 0) ||

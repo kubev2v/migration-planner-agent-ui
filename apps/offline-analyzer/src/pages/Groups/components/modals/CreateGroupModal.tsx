@@ -65,6 +65,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       concernLabels: [],
       concernCategories: [],
       vmLabels: [],
+      vsphereTags: [],
     });
   const requestIdRef = useRef(0);
 
