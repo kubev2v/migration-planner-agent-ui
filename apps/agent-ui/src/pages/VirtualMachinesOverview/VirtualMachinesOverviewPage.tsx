@@ -1,4 +1,8 @@
-import { ChartExportProvider } from "@openshift-migration-advisor/shared-components";
+import {
+  ChartExportProvider,
+  InventoryDetailsView,
+  NetworkingInventoryDetails,
+} from "@openshift-migration-advisor/shared-components";
 import {
   Alert,
   Content,
@@ -67,6 +71,7 @@ import { OverviewReportHeader, ReportPageHeader } from "./ReportPageHeader";
 import {
   buildAppliancesTabUrl,
   buildApplicationsTabUrl,
+  buildInventoryDetailsTabUrl,
   buildOverviewTabUrl,
   buildVmDetailUrl,
   buildVmsTabUrl,
@@ -108,6 +113,7 @@ export const ReportContainer: React.FC = () => {
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
 
   const overviewTabRef = useRef<HTMLElement>(null);
+  const inventoryDetailsTabRef = useRef<HTMLElement>(null);
   const vmsTabRef = useRef<HTMLElement>(null);
   const applicationsTabRef = useRef<HTMLElement>(null);
   const appliancesTabRef = useRef<HTMLElement>(null);
@@ -389,6 +395,10 @@ export const ReportContainer: React.FC = () => {
     clusters: aggregateView.clusters,
     selectedClusterId,
   });
+  const inventoryScopeLabel =
+    clusterView.selectionId === "all"
+      ? "Entire environment"
+      : clusterView.selectionLabel;
   const { totalVMs, totalClusters } = getFleetHeaderCounts(aggregateView);
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
@@ -414,7 +424,9 @@ export const ReportContainer: React.FC = () => {
     tabIndex: string | number,
   ) => {
     let newParams: URLSearchParams;
-    if (tabIndex === REPORT_TAB.vms) {
+    if (tabIndex === REPORT_TAB.inventoryDetails) {
+      newParams = buildInventoryDetailsTabUrl(searchParams);
+    } else if (tabIndex === REPORT_TAB.vms) {
       newParams = buildVmsTabUrl(searchParams);
       setVmsPage(1);
     } else if (tabIndex === REPORT_TAB.applications) {
@@ -598,6 +610,12 @@ export const ReportContainer: React.FC = () => {
                 tabContentRef={overviewTabRef}
               />
               <Tab
+                eventKey={REPORT_TAB.inventoryDetails}
+                title={<TabTitleText>Inventory details</TabTitleText>}
+                tabContentId="report-tab-inventory-details"
+                tabContentRef={inventoryDetailsTabRef}
+              />
+              <Tab
                 eventKey={REPORT_TAB.vms}
                 title={<TabTitleText>Virtual Machines</TabTitleText>}
                 tabContentId="report-tab-vms"
@@ -656,6 +674,40 @@ export const ReportContainer: React.FC = () => {
                     bullseyeStyle={{ minHeight: "240px" }}
                   />
                 )}
+              </TabContentBody>
+            </TabContent>
+
+            <TabContent
+              eventKey={REPORT_TAB.inventoryDetails}
+              id="report-tab-inventory-details"
+              ref={inventoryDetailsTabRef}
+              hidden={activeTab !== REPORT_TAB.inventoryDetails}
+            >
+              <TabContentBody hasPadding>
+                <InventoryDetailsView>
+                  {clusterView.viewInfra ? (
+                    <NetworkingInventoryDetails
+                      key={`inventory-networking-${clusterView.selectionId}`}
+                      networks={clusterView.viewInfra.networks}
+                      scopeLabel={inventoryScopeLabel}
+                    />
+                  ) : (
+                    <AppEmptyState
+                      titleText={
+                        clusterView.isAggregateView
+                          ? "Network inventory is not available yet"
+                          : "No network data for the selected cluster"
+                      }
+                      body={
+                        clusterView.isAggregateView
+                          ? "Network inventory will appear here once collection completes."
+                          : "Select a different cluster or verify that network data was collected."
+                      }
+                      icon={InboxIcon}
+                      bullseyeStyle={{ minHeight: "240px" }}
+                    />
+                  )}
+                </InventoryDetailsView>
               </TabContentBody>
             </TabContent>
 

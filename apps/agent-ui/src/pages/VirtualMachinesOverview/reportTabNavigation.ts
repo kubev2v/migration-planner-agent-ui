@@ -1,9 +1,10 @@
-/** Tab indices for report overview pages (Assessment / VMs / Applications / Appliances). */
+/** Tab indices for report overview pages (Assessment / Inventory / VMs / Applications / Appliances). */
 export const REPORT_TAB = {
   overview: 0,
-  vms: 1,
-  applications: 2,
-  appliances: 3,
+  inventoryDetails: 1,
+  vms: 2,
+  applications: 3,
+  appliances: 4,
 } as const;
 
 export type ReportTabIndex = (typeof REPORT_TAB)[keyof typeof REPORT_TAB];
@@ -62,6 +63,9 @@ export function setTabParam(
 }
 
 export function reportTabFromParam(tabParam: string | null): ReportTabIndex {
+  if (tabParam === "inventory-details") {
+    return REPORT_TAB.inventoryDetails;
+  }
   if (tabParam === "vms") {
     return REPORT_TAB.vms;
   }
@@ -83,6 +87,9 @@ export function resolveReportTab(
   hasActiveVmFilters: boolean,
 ): ReportTabIndex {
   const tabParam = searchParams.get("tab");
+  if (tabParam === "inventory-details") {
+    return REPORT_TAB.inventoryDetails;
+  }
   if (tabParam === "vms") {
     return REPORT_TAB.vms;
   }
@@ -102,6 +109,9 @@ export function resolveReportTab(
 }
 
 function reportTabToParam(tabIndex: string | number): string {
+  if (tabIndex === REPORT_TAB.inventoryDetails) {
+    return "inventory-details";
+  }
   if (tabIndex === REPORT_TAB.vms) {
     return "vms";
   }
@@ -213,5 +223,16 @@ export function buildOverviewTabUrl(
   const params = new URLSearchParams(searchParams);
   params.delete("vmId");
   setTabParam(params, REPORT_TAB.overview);
+  return params;
+}
+
+export function buildInventoryDetailsTabUrl(
+  searchParams: URLSearchParams,
+): URLSearchParams {
+  const params = new URLSearchParams(searchParams);
+  params.delete("vmId");
+  params.delete("application");
+  params.delete("appliance");
+  setTabParam(params, REPORT_TAB.inventoryDetails);
   return params;
 }
