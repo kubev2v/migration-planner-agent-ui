@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isStorageOffloadResultsGenerationCurrent,
   shouldApplyStorageOffloadResults,
   waitForPendingResultsWork,
 } from "./storageOffloadResultsFlow";
@@ -15,6 +16,16 @@ describe("shouldApplyStorageOffloadResults", () => {
 
   it("blocks applying results once the page has been reset to empty", () => {
     expect(shouldApplyStorageOffloadResults("empty", false)).toBe(false);
+  });
+});
+
+describe("isStorageOffloadResultsGenerationCurrent", () => {
+  it("allows apply when generation was not bumped", () => {
+    expect(isStorageOffloadResultsGenerationCurrent(2, 2)).toBe(true);
+  });
+
+  it("blocks apply after a newer benchmark or start-over invalidates in-flight loads", () => {
+    expect(isStorageOffloadResultsGenerationCurrent(2, 3)).toBe(false);
   });
 });
 

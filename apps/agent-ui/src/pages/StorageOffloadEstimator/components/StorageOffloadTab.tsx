@@ -33,6 +33,7 @@ import type {
   SelectedPair,
 } from "../utils/forecasterTypes";
 import {
+  isStorageOffloadResultsGenerationCurrent,
   shouldApplyStorageOffloadResults,
   waitForPendingResultsWork,
 } from "../utils/storageOffloadResultsFlow";
@@ -87,6 +88,8 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
   const [hasAutoLoadedResults, setHasAutoLoadedResults] = useState(false);
   const loadResultsInFlightRef = useRef<Promise<void>>(Promise.resolve());
   const benchmarkCompleteInFlightRef = useRef<Promise<void>>(Promise.resolve());
+  const resultsApplyGenerationRef = useRef(0);
+  const resultsLoadingGenerationRef = useRef<number | null>(null);
   const pageViewRef = useRef(pageView);
   pageViewRef.current = pageView;
 
@@ -133,24 +136,37 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     );
   }, []);
 
+  const invalidateInFlightResultsApply = useCallback(() => {
+    resultsApplyGenerationRef.current += 1;
+  }, []);
+
   const loadResults = useCallback(
     async (pairNames: string[]) => {
       const run = async () => {
+        const capturedGeneration = resultsApplyGenerationRef.current;
+        const mayApply = () =>
+          shouldApplyResults() &&
+          isStorageOffloadResultsGenerationCurrent(
+            capturedGeneration,
+            resultsApplyGenerationRef.current,
+          );
+
         if (pairNames.length === 0) {
-          if (shouldApplyResults()) {
+          if (mayApply()) {
             setPageView("results");
             setHasAutoLoadedResults(true);
           }
           return;
         }
         setResultsLoading(true);
+        resultsLoadingGenerationRef.current = capturedGeneration;
         try {
           const [runsResult, ...statsResults] = await Promise.allSettled([
             getRuns(basePath),
             ...pairNames.map((n) => getStats(basePath, n)),
           ]);
 
-          if (!shouldApplyResults()) {
+          if (!mayApply()) {
             return;
           }
 
@@ -166,8 +182,11 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
           });
           setStatsMap(map);
         } finally {
-          setResultsLoading(false);
-          if (shouldApplyResults()) {
+          if (resultsLoadingGenerationRef.current === capturedGeneration) {
+            setResultsLoading(false);
+            resultsLoadingGenerationRef.current = null;
+          }
+          if (mayApply()) {
             setPageView("results");
             setHasAutoLoadedResults(true);
           }
@@ -310,6 +329,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
   const clearLocalState = useCallback(() => {
     stopPolling();
+    invalidateInFlightResultsApply();
     setHasAutoLoadedResults(false);
     setIsPollingCheckPending(false);
     clearWizardState();
@@ -323,10 +343,11 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
     setForecastStatus(null);
     setBenchmarkDone(false);
     setResultsLoading(false);
+    resultsLoadingGenerationRef.current = null;
     setStatsMap({});
     setAllRuns([]);
     setCanceledPairNames(new Set());
-  }, [stopPolling]);
+  }, [invalidateInFlightResultsApply, stopPolling]);
 
   const isBenchmarkRunning = forecastStatus?.state === "running";
   const isCancelInFlight = cancelingPairNames.size > 0;
@@ -518,6 +539,8 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
 
       setForecastStatus(null);
       setBenchmarkDone(false);
+      setHasAutoLoadedResults(false);
+      invalidateInFlightResultsApply();
       markBenchmarkStarting(allPairNames);
       setPageView("results");
       closeSetupModal();
@@ -601,6 +624,7 @@ export const StorageOffloadTab: React.FC<StorageOffloadTabProps> = ({
       closeSetupModal,
       completePairs,
       finishBenchmarkStart,
+      invalidateInFlightResultsApply,
       markBenchmarkStarting,
       redirectToRunningBenchmark,
       stopPolling,
