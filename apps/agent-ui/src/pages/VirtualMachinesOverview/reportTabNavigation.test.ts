@@ -4,6 +4,7 @@ import {
   buildAppliancesTabUrl,
   buildApplicationDetailUrl,
   buildApplicationsTabUrl,
+  buildInventoryDetailsTabUrl,
   buildOverviewTabUrl,
   buildVmDetailUrl,
   buildVmsTabUrl,
@@ -16,6 +17,12 @@ import {
 } from "./reportTabNavigation";
 
 describe("resolveReportTab", () => {
+  it("returns the inventory details tab from the URL", () => {
+    expect(
+      resolveReportTab(new URLSearchParams("tab=inventory-details"), false),
+    ).toBe(REPORT_TAB.inventoryDetails);
+  });
+
   it("returns the applications tab from the URL", () => {
     expect(
       resolveReportTab(new URLSearchParams("tab=applications"), false),
@@ -38,6 +45,17 @@ describe("resolveReportTab", () => {
     expect(resolveReportTab(new URLSearchParams(), false)).toBe(
       REPORT_TAB.overview,
     );
+  });
+});
+
+describe("buildInventoryDetailsTabUrl", () => {
+  it("sets the inventory-details tab and clears drawer params", () => {
+    const params = buildInventoryDetailsTabUrl(
+      new URLSearchParams("tab=vms&vmId=vm-1&application=Nginx"),
+    );
+    expect(params.get("tab")).toBe("inventory-details");
+    expect(params.get("vmId")).toBeNull();
+    expect(params.get("application")).toBeNull();
   });
 });
 

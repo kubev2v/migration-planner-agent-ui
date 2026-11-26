@@ -109,6 +109,10 @@ export {
   InfrastructureSummary,
   type InfrastructureSummaryProps,
 } from "./InfrastructureSummary.js";
+export {
+  InventoryDetailsView,
+  type InventoryDetailsViewProps,
+} from "./InventoryDetailsView.js";
 export type {
   ClusterDetailRow,
   ClusterDetailsModel,
@@ -276,6 +280,10 @@ export type {
   RecommendationToolId,
 } from "./migration-recommendations/types.js";
 export {
+  NetworkingInventoryDetails,
+  type NetworkingInventoryDetailsProps,
+} from "./NetworkingInventoryDetails.js";
+export {
   type NetworkInfraLike,
   type NetworkLike,
   NetworkOverview,
@@ -283,6 +291,13 @@ export {
   type NicCountHistogram,
   type NicCountSummary,
 } from "./NetworkOverview.js";
+export {
+  buildNetworkingInventorySummary,
+  buildNetworkingInventoryTableRows,
+  type InventoryNetworkRowLike,
+  type NetworkingInventorySummary,
+  type NetworkingInventoryTableRow,
+} from "./networkingInventoryModel.js";
 export { OSBarChart, OSDistribution } from "./OSDistribution.js";
 export { OsSupportTiersHelpPopover } from "./OsSupportTiersHelpPopover.js";
 export { OsUpgradeNotice } from "./OsUpgradeNotice.js";

@@ -1,4 +1,8 @@
 import {
+  InventoryDetailsView,
+  NetworkingInventoryDetails,
+} from "@openshift-migration-advisor/shared-components";
+import {
   Alert,
   Breadcrumb,
   BreadcrumbItem,
@@ -77,6 +81,7 @@ import {
 import {
   buildAppliancesTabUrl,
   buildApplicationsTabUrl,
+  buildInventoryDetailsTabUrl,
   buildOverviewTabUrl,
   buildVmDetailUrl,
   buildVmsTabUrl,
@@ -133,6 +138,7 @@ export const GroupDetailPage: React.FC = () => {
   const [vmsSortFields, setVmsSortFields] = useState<string[]>([]);
 
   const overviewTabRef = useRef<HTMLElement>(null);
+  const inventoryDetailsTabRef = useRef<HTMLElement>(null);
   const vmsTabRef = useRef<HTMLElement>(null);
   const applicationsTabRef = useRef<HTMLElement>(null);
   const appliancesTabRef = useRef<HTMLElement>(null);
@@ -257,7 +263,9 @@ export const GroupDetailPage: React.FC = () => {
     tabIndex: string | number,
   ) => {
     let newParams: URLSearchParams;
-    if (tabIndex === REPORT_TAB.vms) {
+    if (tabIndex === REPORT_TAB.inventoryDetails) {
+      newParams = buildInventoryDetailsTabUrl(searchParams);
+    } else if (tabIndex === REPORT_TAB.vms) {
       newParams = buildVmsTabUrl(searchParams);
       setVmsPage(1);
     } else if (tabIndex === REPORT_TAB.applications) {
@@ -371,6 +379,10 @@ export const GroupDetailPage: React.FC = () => {
     clusters: aggregateView.clusters,
     selectedClusterId,
   });
+  const inventoryScopeLabel =
+    clusterView.selectionId === "all"
+      ? "Entire environment"
+      : clusterView.selectionLabel;
   const { totalVMs, totalClusters } = getFleetHeaderCounts(aggregateView);
 
   const clusterSelectDisabled = clusterView.clusterOptions.length <= 1;
@@ -484,6 +496,12 @@ export const GroupDetailPage: React.FC = () => {
               tabContentRef={overviewTabRef}
             />
             <Tab
+              eventKey={REPORT_TAB.inventoryDetails}
+              title={<TabTitleText>Inventory details</TabTitleText>}
+              tabContentId="group-tab-inventory-details"
+              tabContentRef={inventoryDetailsTabRef}
+            />
+            <Tab
               eventKey={REPORT_TAB.vms}
               title={<TabTitleText>Virtual machines</TabTitleText>}
               tabContentId="group-tab-vms"
@@ -541,6 +559,32 @@ export const GroupDetailPage: React.FC = () => {
                   bullseyeStyle={{ minHeight: "240px", marginTop: "16px" }}
                 />
               )}
+            </TabContentBody>
+          </TabContent>
+
+          <TabContent
+            eventKey={REPORT_TAB.inventoryDetails}
+            id="group-tab-inventory-details"
+            ref={inventoryDetailsTabRef}
+            hidden={activeTab !== REPORT_TAB.inventoryDetails}
+          >
+            <TabContentBody hasPadding>
+              <InventoryDetailsView>
+                {clusterView.viewInfra ? (
+                  <NetworkingInventoryDetails
+                    key={`group-inventory-networking-${clusterView.selectionId}`}
+                    networks={clusterView.viewInfra.networks}
+                    scopeLabel={inventoryScopeLabel}
+                  />
+                ) : (
+                  <AppEmptyState
+                    titleText="Network inventory is not available for this group yet"
+                    body="Network inventory will appear here once group assessment data includes infrastructure networks."
+                    icon={InboxIcon}
+                    bullseyeStyle={{ minHeight: "240px", marginTop: "16px" }}
+                  />
+                )}
+              </InventoryDetailsView>
             </TabContentBody>
           </TabContent>
 
