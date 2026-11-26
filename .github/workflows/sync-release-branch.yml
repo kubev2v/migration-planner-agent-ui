@@ -12,5 +12,5 @@ permissions:
 jobs:
   sync:
     name: Sync Release Branch
-    uses: kubev2v/migration-planner-workflows/.github/workflows/sync-release-branch.yml@b5de744cc45e4daaf9e28dcd6b179ab4a8ad7c7c # main
+    uses: kubev2v/migration-planner-workflows/.github/workflows/sync-release-branch.yml@8faa41115a8ee0144097ab6015f7277675faf1a4 # main
     secrets: inherit
