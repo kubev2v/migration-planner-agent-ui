@@ -665,16 +665,16 @@ __metadata:
     "@patternfly/react-icons": "npm:^6.7.0"
     "@patternfly/react-table": "npm:^6.7.0"
     "@patternfly/react-tokens": "npm:^6.7.0"
-    "@reduxjs/toolkit": "npm:^2.14.0"
+    "@reduxjs/toolkit": "npm:^2.15.0"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
-    "@testing-library/user-event": "npm:^14.6.12"
+    "@testing-library/user-event": "npm:^14.6.13"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
     react-hook-form: "npm:^7.92.0"
     react-redux: "npm:^9.3.1"
-    react-router-dom: "npm:^7.18.5"
+    react-router-dom: "npm:^7.18.6"
     victory: "npm:^37.4.1"
     victory-core: "npm:^37.4.1"
     yup: "npm:^1.7.1"
@@ -705,16 +705,16 @@ __metadata:
     "@patternfly/react-core": "npm:^6.7.0"
     "@patternfly/react-icons": "npm:^6.7.0"
     "@patternfly/react-table": "npm:^6.7.0"
-    "@reduxjs/toolkit": "npm:^2.14.0"
+    "@reduxjs/toolkit": "npm:^2.15.0"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
-    "@testing-library/user-event": "npm:^14.6.12"
+    "@testing-library/user-event": "npm:^14.6.13"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
     react-hook-form: "npm:^7.92.0"
     react-redux: "npm:^9.3.1"
-    react-router-dom: "npm:^7.18.5"
+    react-router-dom: "npm:^7.18.6"
     yup: "npm:^1.7.1"
   languageName: unknown
   linkType: soft
@@ -1137,9 +1137,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@reduxjs/toolkit@npm:^2.14.0":
-  version: 2.14.0
-  resolution: "@reduxjs/toolkit@npm:2.14.0"
+"@reduxjs/toolkit@npm:^2.15.0":
+  version: 2.15.0
+  resolution: "@reduxjs/toolkit@npm:2.15.0"
   dependencies:
     "@standard-schema/spec": "npm:^1.0.0"
     "@standard-schema/utils": "npm:^0.3.0"
@@ -1158,7 +1158,7 @@ __metadata:
       optional: true
     react-redux:
       optional: true
-  checksum: 10c0/7316d62f9773a2e5d44fdfbf29d54d9b3d133633cdd0d27d43bff1e0b02cde8f600200b6bed7610d3a676f5f68475c05e6960492f1e203873f493f00f6604b9c
+  checksum: 10c0/1a0cdcb2c72b70c7fe750a73798a2537969261144c734431a0e56d63b398109411817ac5cd73a5fe3357cc8dc50cdd203f43293e342ae2a9bc0dfd6a2648fca3
   languageName: node
   linkType: hard
 
@@ -1355,12 +1355,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/user-event@npm:^14.6.12":
-  version: 14.6.12
-  resolution: "@testing-library/user-event@npm:14.6.12"
+"@testing-library/user-event@npm:^14.6.13":
+  version: 14.6.13
+  resolution: "@testing-library/user-event@npm:14.6.13"
   peerDependencies:
     "@testing-library/dom": ">=7.21.4"
-  checksum: 10c0/6b5b1c8219a17b00d6fcc968f9d257a62d3be3a5fa05b9373d26a965e272613f8a58c3d716b8ba226741fd1c77ecced6db23118020813ed2731e73ab944edbe3
+  checksum: 10c0/29cb1c17275ac8b0be3800fbcbcfd3b87c2fc7134aa91df4dc404e3962c4204e720c2286d654d15669eb9e0ee9428a9e246e162149ef9704ea6082b5e303ba85
   languageName: node
   linkType: hard
 
@@ -2453,9 +2453,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.45.1":
-  version: 6.45.1
-  resolution: "knip@npm:6.45.1"
+"knip@npm:^6.46.1":
+  version: 6.46.1
+  resolution: "knip@npm:6.46.1"
   dependencies:
     formatly: "npm:^0.11.4"
     get-tsconfig: "npm:4.14.3"
@@ -2471,7 +2471,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/22ead3ad1f50f35b83e67e26f9e4624fe849e840146c03954dec6a062fcda520e2311daec6f7326f46a55f3e6cb06f1243e6a2f3fb0fadd14dbc04b94a268320
+  checksum: 10c0/a3ec310f5d3a3c912a4e06549cdb2b201d73041c6b2d8673ec45f6e9b23003629fd0fe29e8b30000597fa054a1937a0d8a991f150a9080d210283a042a4f05d8
   languageName: node
   linkType: hard
 
@@ -2671,7 +2671,7 @@ __metadata:
     "@types/react-dom": "npm:^18.3.7"
     "@vitejs/plugin-react": "npm:^6.3.0"
     jsdom: "npm:^30.1.3"
-    knip: "npm:^6.45.1"
+    knip: "npm:^6.46.1"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.3.8"
     vitest: "npm:^4.1.12"
@@ -3136,21 +3136,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router-dom@npm:^7.18.5":
-  version: 7.18.5
-  resolution: "react-router-dom@npm:7.18.5"
+"react-router-dom@npm:^7.18.6":
+  version: 7.18.6
+  resolution: "react-router-dom@npm:7.18.6"
   dependencies:
-    react-router: "npm:7.18.5"
+    react-router: "npm:7.18.6"
   peerDependencies:
     react: ">=18"
     react-dom: ">=18"
-  checksum: 10c0/9e19ccb3fa061d86ad90eb906657cab6b2e4313b4eb02882f7515493c3d61c978a383ee0954854f2a9238ac013bdd03c526a5de14819c8ecaae62b5280774030
+  checksum: 10c0/6a564a97e4bbd5278673c7fa4fd8c66722abecc783bd57fd41a3bde7585b3312ead7cb31ba5cf8fc6e0e5989791e3c01ab40f7d92c96706db48559983871a202
   languageName: node
   linkType: hard
 
-"react-router@npm:7.18.5":
-  version: 7.18.5
-  resolution: "react-router@npm:7.18.5"
+"react-router@npm:7.18.6":
+  version: 7.18.6
+  resolution: "react-router@npm:7.18.6"
   dependencies:
     cookie: "npm:^1.0.1"
     set-cookie-parser: "npm:^2.6.0"
@@ -3160,7 +3160,7 @@ __metadata:
   peerDependenciesMeta:
     react-dom:
       optional: true
-  checksum: 10c0/dbed9b4d0019873615028e2fe7bf7782ab4f41d9f287595b9a82f4a6d619dc5d3b88449fb3e717282f9f558312f29f88325372a7bb67355472703291607f9280
+  checksum: 10c0/1227a7fc566f47799a2f157213e07dcafff584b08454ec46c74ff05babe3c2adf10c25701ce546141be1b328675b658312af3ae6dcca5c551ee9a5c88732067c
   languageName: node
   linkType: hard
 
