@@ -645,10 +645,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openshift-migration-advisor/agent-sdk@npm:0.32.0":
-  version: 0.32.0
-  resolution: "@openshift-migration-advisor/agent-sdk@npm:0.32.0"
-  checksum: 10c0/7241c3016eb9598f77b4f9edb1134dc7e7634c2619fc96b8e1720dc122f1ccaef072cab5f83b741644e73b4a003d1d1876ffcfad6299508ec43914c255420c04
+"@openshift-migration-advisor/agent-sdk@npm:0.33.1-84c734aba511":
+  version: 0.33.1-84c734aba511
+  resolution: "@openshift-migration-advisor/agent-sdk@npm:0.33.1-84c734aba511"
+  checksum: 10c0/c5654854f991ba18accbd24296776091f631d6e4b37b4961c1a38e4a90bd88aba65cc737cdabfa1353f59b3286ec92fbb6995784e6324d4abfefe7decc6d60d6
   languageName: node
   linkType: hard
 
@@ -658,7 +658,7 @@ __metadata:
   dependencies:
     "@emotion/css": "npm:^11.13.5"
     "@hookform/resolvers": "npm:^5.9.2"
-    "@openshift-migration-advisor/agent-sdk": "npm:0.32.0"
+    "@openshift-migration-advisor/agent-sdk": "npm:0.33.1-84c734aba511"
     "@openshift-migration-advisor/shared-components": "workspace:*"
     "@patternfly/react-charts": "npm:^8.7.0"
     "@patternfly/react-core": "npm:^6.7.0"

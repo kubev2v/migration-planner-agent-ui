@@ -11,6 +11,8 @@ const EMPTY_VM_TABLE_FILTER_OPTIONS: VMTableFilterOptions = {
   vmLabels: [],
   groups: [],
   applications: [],
+  osConfigs: [],
+  osTools: [],
 };
 
 /**
@@ -56,5 +58,7 @@ export async function fetchVmTableFilterOptions(
     vmLabels: labelsResponse.labels || [],
     groups: groupNames,
     applications: response.applications || [],
+    osConfigs: response.osConfigs?.filter(Boolean) ?? [],
+    osTools: response.osTools?.filter(Boolean) ?? [],
   };
 }

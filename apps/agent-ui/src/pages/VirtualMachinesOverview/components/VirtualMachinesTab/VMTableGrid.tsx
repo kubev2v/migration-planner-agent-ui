@@ -18,7 +18,12 @@ import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
-import { getMigrationExcluded, getVmTags } from "../../virtualMachineParsing";
+import {
+  getMigrationExcluded,
+  getVmOsConfig,
+  getVmOsTools,
+  getVmTags,
+} from "../../virtualMachineParsing";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { getDeepInspectionEnablementForVmAction } from "./vmInspectionUtils";
 import {
@@ -322,6 +327,16 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                       onVMClick,
                       cancelingInspectionVmIds,
                     )}
+                  </Td>
+                )}
+                {isColumnVisible("osConfig") && (
+                  <Td dataLabel="OS (config)" modifier="truncate">
+                    {getVmOsConfig(vm) || "—"}
+                  </Td>
+                )}
+                {isColumnVisible("osTools") && (
+                  <Td dataLabel="OS (tools)" modifier="truncate">
+                    {getVmOsTools(vm) || "—"}
                   </Td>
                 )}
                 {!hideToolbarActions && (

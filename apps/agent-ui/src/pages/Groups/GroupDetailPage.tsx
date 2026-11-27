@@ -100,6 +100,8 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
   vmLabels: [],
   groups: [],
   applications: [],
+  osConfigs: [],
+  osTools: [],
 };
 
 /** Extract a human-readable message from an RTK Query / SDK error. */

@@ -28,6 +28,45 @@ describe("filtersToByExpression vmLabels", () => {
   });
 });
 
+describe("filtersToByExpression operating system", () => {
+  it("filters a single os_config value", () => {
+    expect(filtersToByExpression({ osConfigs: ["Ubuntu Linux (64-bit)"] })).toBe(
+      "os_config = 'Ubuntu Linux (64-bit)'",
+    );
+  });
+
+  it("filters multiple os_config values with in", () => {
+    expect(
+      filtersToByExpression({
+        osConfigs: ["Ubuntu Linux (64-bit)", "Red Hat Enterprise Linux 8 (64-bit)"],
+      }),
+    ).toBe(
+      "os_config in ['Ubuntu Linux (64-bit)','Red Hat Enterprise Linux 8 (64-bit)']",
+    );
+  });
+
+  it("filters os_tools only", () => {
+    expect(filtersToByExpression({ osTools: ["Microsoft Windows 10 (64-bit)"] })).toBe(
+      "os_tools = 'Microsoft Windows 10 (64-bit)'",
+    );
+  });
+
+  it("escapes single quotes in OS filter values", () => {
+    expect(filtersToByExpression({ osConfigs: ["it's"] })).toBe(
+      "os_config = 'it\\'s'",
+    );
+  });
+
+  it("round-trips OS filters through URL params", () => {
+    const filters = {
+      osConfigs: ["Ubuntu Linux (64-bit)"],
+      osTools: ["Microsoft Windows 10 (64-bit)"],
+    };
+    const roundTripped = searchParamsToFilters(filtersToSearchParams(filters));
+    expect(roundTripped).toEqual(filters);
+  });
+});
+
 describe("filtersToByExpression utilization ranges", () => {
   it("filters by CPU usage range", () => {
     expect(

@@ -98,6 +98,8 @@ export function useVMTableLogic({
     vmLabels: [],
     groups: [],
     applications: [],
+    osConfigs: [],
+    osTools: [],
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
@@ -148,6 +150,12 @@ export function useVMTableLogic({
 
   // Search state
   const [searchValue, setSearchValue] = useState(initialFilters?.search || "");
+  const [selectedOsConfigs, setSelectedOsConfigs] = useState<string[]>(
+    initialFilters?.osConfigs ?? EMPTY_STRING_ARRAY,
+  );
+  const [selectedOsTools, setSelectedOsTools] = useState<string[]>(
+    initialFilters?.osTools ?? EMPTY_STRING_ARRAY,
+  );
 
   // Cancel deep inspection confirmation (vm id when open, null when closed)
   const [cancelInspectionVmId, setCancelInspectionVmId] = useState<
@@ -316,6 +324,8 @@ export function useVMTableLogic({
       const next = initialFilters?.search || "";
       return previous === next ? previous : next;
     });
+    syncStringArrayState(setSelectedOsConfigs, initialFilters?.osConfigs);
+    syncStringArrayState(setSelectedOsTools, initialFilters?.osTools);
 
     if (selectedVMs.size > 0) {
       onSelectionChange?.(new Set());
@@ -366,6 +376,8 @@ export function useVMTableLogic({
   const availableVmLabels = availableFilterOptions.vmLabels;
   const availableGroups = availableFilterOptions.groups;
   const availableApplications = availableFilterOptions.applications;
+  const availableOsConfigs = availableFilterOptions.osConfigs;
+  const availableOsTools = availableFilterOptions.osTools;
 
   const applyFilterChange = useCallback(
     (updater: () => void) => {
@@ -407,6 +419,8 @@ export function useVMTableLogic({
         hasIssuesFilter ||
         noIssuesFilter ||
         searchValue ||
+        selectedOsConfigs.length > 0 ||
+        selectedOsTools.length > 0 ||
         diskRangeFilter ||
         memoryRangeFilter ||
         cpuUsageRangeFilter ||
@@ -426,6 +440,8 @@ export function useVMTableLogic({
       hasIssues: hasIssuesFilter || undefined,
       noIssues: noIssuesFilter || undefined,
       search: searchValue || undefined,
+      osConfigs: selectedOsConfigs.length > 0 ? selectedOsConfigs : undefined,
+      osTools: selectedOsTools.length > 0 ? selectedOsTools : undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
       cpuUsageRange: cpuUsageRangeFilter || undefined,
@@ -475,6 +491,8 @@ export function useVMTableLogic({
     hasIssuesFilter,
     noIssuesFilter,
     searchValue,
+    selectedOsConfigs,
+    selectedOsTools,
     diskRangeFilter,
     memoryRangeFilter,
     cpuUsageRangeFilter,
@@ -518,6 +536,18 @@ export function useVMTableLogic({
         onSearchChange: (value) => {
           applyFilterChange(() => setSearchValue(value));
         },
+        selectedOsConfigs,
+        onOsConfigsChange: (values) => {
+          applyFilterChange(() => setSelectedOsConfigs(values));
+        },
+        selectedOsTools,
+        onOsToolsChange: (values) => {
+          applyFilterChange(() => setSelectedOsTools(values));
+        },
+        showOsConfigFilter:
+          isColumnVisible("osConfig") || selectedOsConfigs.length > 0,
+        showOsToolsFilter:
+          isColumnVisible("osTools") || selectedOsTools.length > 0,
         selectedConcernCategories,
         onConcernCategoriesChange: (values) => {
           applyFilterChange(() => {
@@ -605,6 +635,8 @@ export function useVMTableLogic({
         availableVmLabels,
         availableGroups,
         availableApplications,
+        availableOsConfigs,
+        availableOsTools,
         showGroupsFilter,
       }),
     [
@@ -615,13 +647,18 @@ export function useVMTableLogic({
       availableDatacenters,
       availableGroups,
       availableApplications,
+      availableOsConfigs,
+      availableOsTools,
       availableVmLabels,
       cpuUsageRangeFilter,
       diskRangeFilter,
       diskUsageRangeFilter,
       hasIssuesFilter,
+      isColumnVisible,
       memoryRangeFilter,
       noIssuesFilter,
+      selectedOsConfigs,
+      selectedOsTools,
       ramUsageRangeFilter,
       searchValue,
       selectedClusters,
@@ -686,6 +723,8 @@ export function useVMTableLogic({
       hasIssues: hasIssuesFilter || undefined,
       noIssues: noIssuesFilter || undefined,
       search: searchValue || undefined,
+      osConfigs: selectedOsConfigs.length > 0 ? selectedOsConfigs : undefined,
+      osTools: selectedOsTools.length > 0 ? selectedOsTools : undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
       cpuUsageRange: cpuUsageRangeFilter || undefined,
@@ -717,6 +756,8 @@ export function useVMTableLogic({
     hasIssuesFilter,
     noIssuesFilter,
     searchValue,
+    selectedOsConfigs,
+    selectedOsTools,
     diskRangeFilter,
     memoryRangeFilter,
     cpuUsageRangeFilter,
@@ -784,6 +825,8 @@ export function useVMTableLogic({
     applyFilterChange(() => {
       applyFilterSelection(EMPTY_VM_TABLE_FILTER_SELECTION);
       setSearchValue("");
+      setSelectedOsConfigs([]);
+      setSelectedOsTools([]);
     });
   };
 

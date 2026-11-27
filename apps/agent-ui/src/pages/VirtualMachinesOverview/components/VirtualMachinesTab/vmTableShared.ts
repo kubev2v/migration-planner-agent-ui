@@ -23,7 +23,9 @@ export type ColumnKey =
   | "memory"
   | "issues"
   | "migratable"
-  | "deepInspection";
+  | "deepInspection"
+  | "osConfig"
+  | "osTools";
 
 export const BACKEND_SORTABLE_COLUMNS = [
   "name",
@@ -66,6 +68,8 @@ export const Columns: Record<ColumnKey, string> = {
   memory: "Memory size",
   issues: "Issues",
   deepInspection: "Deep inspection",
+  osConfig: "OS (config)",
+  osTools: "OS (tools)",
 };
 
 export const ALL_COLUMN_KEYS = Object.keys(Columns) as ColumnKey[];
@@ -81,7 +85,7 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 8;
+export const VISIBLE_COLUMNS_VERSION = 10;
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||

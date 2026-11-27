@@ -89,6 +89,8 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
   vmLabels: [],
   groups: [],
   applications: [],
+  osConfigs: [],
+  osTools: [],
 };
 
 export const ReportContainer: React.FC = () => {

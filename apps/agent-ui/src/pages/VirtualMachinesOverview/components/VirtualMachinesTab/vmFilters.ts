@@ -8,6 +8,10 @@ export interface VMFilters {
   datacenters?: string[];
   networks?: string[];
   search?: string;
+  /** Selected guest OS values from VM configuration (filter os_config). */
+  osConfigs?: string[];
+  /** Selected guest OS values from VMware Tools (filter os_tools). */
+  osTools?: string[];
   diskRange?: { min: number; max?: number };
   memoryRange?: { min: number; max?: number };
   cpuUsageRange?: { min: number; max?: number };
@@ -33,6 +37,20 @@ function escapeFilterValue(value: string): string {
   return value.replace(/'/g, "\\'");
 }
 
+function stringFieldInExpression(
+  field: string,
+  values: string[],
+): string | undefined {
+  if (values.length === 0) {
+    return undefined;
+  }
+  if (values.length === 1) {
+    return `${field} = '${escapeFilterValue(values[0])}'`;
+  }
+  const list = values.map((value) => `'${escapeFilterValue(value)}'`).join(",");
+  return `${field} in [${list}]`;
+}
+
 /**
  * Converts VM filters to backend byExpression format
  * The backend expects an expression language documented in:
@@ -44,6 +62,23 @@ export function filtersToByExpression(filters: VMFilters): string | undefined {
   // Search filter - searches in VM name only
   if (filters.search) {
     conditions.push(`name like '${escapeFilterValue(filters.search)}'`);
+  }
+
+  if (filters.osConfigs && filters.osConfigs.length > 0) {
+    const osConfigCondition = stringFieldInExpression(
+      "os_config",
+      filters.osConfigs,
+    );
+    if (osConfigCondition) {
+      conditions.push(osConfigCondition);
+    }
+  }
+
+  if (filters.osTools && filters.osTools.length > 0) {
+    const osToolsCondition = stringFieldInExpression("os_tools", filters.osTools);
+    if (osToolsCondition) {
+      conditions.push(osToolsCondition);
+    }
   }
 
   // Status filter (powerstate field in backend)
@@ -366,6 +401,18 @@ export function filtersToSearchParams(filters: VMFilters): URLSearchParams {
     params.set("search", filters.search);
   }
 
+  if (filters.osConfigs && filters.osConfigs.length > 0) {
+    for (const os of filters.osConfigs) {
+      params.append("osConfigs", os);
+    }
+  }
+
+  if (filters.osTools && filters.osTools.length > 0) {
+    for (const os of filters.osTools) {
+      params.append("osTools", os);
+    }
+  }
+
   if (filters.diskRange) {
     params.set("diskRangeMin", filters.diskRange.min.toString());
     if (filters.diskRange.max !== undefined) {
@@ -487,6 +534,16 @@ export function searchParamsToFilters(
   const search = searchParams.get("search");
   if (search) {
     filters.search = search;
+  }
+
+  const osConfigs = searchParams.getAll("osConfigs");
+  if (osConfigs.length > 0) {
+    filters.osConfigs = osConfigs.filter(Boolean);
+  }
+
+  const osTools = searchParams.getAll("osTools");
+  if (osTools.length > 0) {
+    filters.osTools = osTools.filter(Boolean);
   }
 
   const diskRangeMin = searchParams.get("diskRangeMin");
@@ -636,6 +693,8 @@ export function hasActiveFilters(filters: VMFilters): boolean {
     (filters.applications && filters.applications.length > 0) ||
     (filters.products && filters.products.length > 0) ||
     (filters.reportInclusion && filters.reportInclusion.length > 0) ||
-    filters.search
+    filters.search ||
+    (filters.osConfigs && filters.osConfigs.length > 0) ||
+    (filters.osTools && filters.osTools.length > 0)
   );
 }

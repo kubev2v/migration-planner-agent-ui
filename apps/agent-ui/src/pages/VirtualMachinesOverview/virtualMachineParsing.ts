@@ -7,12 +7,35 @@ export type VirtualMachineWithExclusion = VirtualMachine & {
 type VirtualMachineJson = VirtualMachineWithExclusion & {
   migration_excluded?: boolean;
   tags?: string[];
+  guestName?: string;
+  guestNameFromVmwareTools?: string;
+  os_config?: string;
+  os_tools?: string;
+  osConfig?: string;
+  osTools?: string;
 };
 
 export function getMigrationExcluded(
   vm: VirtualMachine | undefined,
 ): boolean | undefined {
   return (vm as VirtualMachineWithExclusion | undefined)?.migrationExcluded;
+}
+
+/** Guest OS from VM configuration (API guestName / filter os_config). */
+export function getVmOsConfig(vm: VirtualMachine): string | undefined {
+  const raw = vm as VirtualMachineJson;
+  const value = raw.guestName ?? raw.osConfig ?? raw.os_config;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/** Guest OS reported by VMware Tools (API guestNameFromVmwareTools / filter os_tools). */
+export function getVmOsTools(vm: VirtualMachine): string | undefined {
+  const raw = vm as VirtualMachineJson;
+  const value =
+    raw.guestNameFromVmwareTools ?? raw.osTools ?? raw.os_tools;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 /** VM labels for display/filtering (`labels` on v2 list model). */

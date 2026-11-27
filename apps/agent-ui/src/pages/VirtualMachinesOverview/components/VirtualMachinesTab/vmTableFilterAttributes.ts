@@ -57,6 +57,12 @@ function createSingleRangeAttribute(
 export type BuildVmTableFilterAttributesParams = {
   searchValue: string;
   onSearchChange: (value: string) => void;
+  selectedOsConfigs: string[];
+  onOsConfigsChange: (values: string[]) => void;
+  selectedOsTools: string[];
+  onOsToolsChange: (values: string[]) => void;
+  showOsConfigFilter: boolean;
+  showOsToolsFilter: boolean;
   selectedConcernCategories: string[];
   onConcernCategoriesChange: (values: string[]) => void;
   selectedConcernLabels: string[];
@@ -97,6 +103,8 @@ export type BuildVmTableFilterAttributesParams = {
   availableVmLabels: string[];
   availableGroups: string[];
   availableApplications: string[];
+  availableOsConfigs: string[];
+  availableOsTools: string[];
   showGroupsFilter: boolean;
   onCheckboxValueOpen?: () => void;
 };
@@ -122,6 +130,12 @@ function applyCheckboxOpenHandlers(
 export function buildVmTableFilterAttributes({
   searchValue,
   onSearchChange,
+  selectedOsConfigs,
+  onOsConfigsChange,
+  selectedOsTools,
+  onOsToolsChange,
+  showOsConfigFilter,
+  showOsToolsFilter,
   selectedConcernCategories,
   onConcernCategoriesChange,
   selectedConcernLabels,
@@ -162,6 +176,8 @@ export function buildVmTableFilterAttributes({
   availableVmLabels,
   availableGroups,
   availableApplications,
+  availableOsConfigs,
+  availableOsTools,
   showGroupsFilter,
   onCheckboxValueOpen,
 }: BuildVmTableFilterAttributesParams): AttributeValueFilterAttribute[] {
@@ -181,6 +197,30 @@ export function buildVmTableFilterAttributes({
       ariaLabel: "Find by VM name",
     },
   ];
+
+  if (showOsConfigFilter && availableOsConfigs.length > 0) {
+    attributes.push({
+      id: "os-config",
+      label: "OS (config)",
+      type: "searchable-checkbox",
+      options: availableOsConfigs.map((os) => ({ value: os, label: os })),
+      selections: selectedOsConfigs,
+      onSelectionsChange: onOsConfigsChange,
+      searchPlaceholder: "Filter OS (config) options",
+    });
+  }
+
+  if (showOsToolsFilter && availableOsTools.length > 0) {
+    attributes.push({
+      id: "os-tools",
+      label: "OS (tools)",
+      type: "searchable-checkbox",
+      options: availableOsTools.map((os) => ({ value: os, label: os })),
+      selections: selectedOsTools,
+      onSelectionsChange: onOsToolsChange,
+      searchPlaceholder: "Filter OS (tools) options",
+    });
+  }
 
   if (availableConcernCategories.length > 0) {
     attributes.push({
