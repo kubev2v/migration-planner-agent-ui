@@ -8,6 +8,9 @@ function createParams(
   return {
     searchValue: "",
     onSearchChange: vi.fn(),
+    selectedGuestOs: [],
+    onGuestOsChange: vi.fn(),
+    showGuestOsFilter: false,
     selectedConcernCategories: [],
     onConcernCategoriesChange: vi.fn(),
     selectedConcernLabels: [],
@@ -42,6 +45,7 @@ function createParams(
     availableDatacenters: ["dc-1"],
     availableClusters: ["cluster-a"],
     availableVmLabels: ["tier-1"],
+    availableGuestOs: [],
     ...overrides,
   };
 }

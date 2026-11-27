@@ -57,6 +57,9 @@ function createSingleRangeAttribute(
 export type BuildVmTableFilterAttributesParams = {
   searchValue: string;
   onSearchChange: (value: string) => void;
+  selectedGuestOs: string[];
+  onGuestOsChange: (values: string[]) => void;
+  showGuestOsFilter: boolean;
   selectedConcernCategories: string[];
   onConcernCategoriesChange: (values: string[]) => void;
   selectedConcernLabels: string[];
@@ -91,6 +94,7 @@ export type BuildVmTableFilterAttributesParams = {
   availableDatacenters: string[];
   availableClusters: string[];
   availableVmLabels: string[];
+  availableGuestOs: string[];
   onCheckboxValueOpen?: () => void;
 };
 
@@ -115,6 +119,9 @@ function applyCheckboxOpenHandlers(
 export function buildVmTableFilterAttributes({
   searchValue,
   onSearchChange,
+  selectedGuestOs,
+  onGuestOsChange,
+  showGuestOsFilter,
   selectedConcernCategories,
   onConcernCategoriesChange,
   selectedConcernLabels,
@@ -149,6 +156,7 @@ export function buildVmTableFilterAttributes({
   availableDatacenters,
   availableClusters,
   availableVmLabels,
+  availableGuestOs,
   onCheckboxValueOpen,
 }: BuildVmTableFilterAttributesParams): AttributeValueFilterAttribute[] {
   const issueSelections = [
@@ -167,6 +175,18 @@ export function buildVmTableFilterAttributes({
       ariaLabel: "Find by VM name",
     },
   ];
+
+  if (showGuestOsFilter && availableGuestOs.length > 0) {
+    attributes.push({
+      id: "guest-os",
+      label: "Guest OS",
+      type: "searchable-checkbox",
+      options: availableGuestOs.map((os) => ({ value: os, label: os })),
+      selections: selectedGuestOs,
+      onSelectionsChange: onGuestOsChange,
+      searchPlaceholder: "Filter guest OS options",
+    });
+  }
 
   if (availableConcernCategories.length > 0) {
     attributes.push({
