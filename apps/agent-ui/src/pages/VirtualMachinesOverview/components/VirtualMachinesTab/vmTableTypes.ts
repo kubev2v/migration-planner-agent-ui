@@ -11,6 +11,7 @@ export interface VMTableFilterOptions {
   vmLabels: string[];
   groups: string[];
   applications: string[];
+  guestOs: string[];
 }
 
 export interface VMTableProps {

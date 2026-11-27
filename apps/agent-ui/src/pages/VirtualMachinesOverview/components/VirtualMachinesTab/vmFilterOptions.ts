@@ -1,6 +1,7 @@
 import type { Group } from "@openshift-migration-advisor/agent-sdk";
 import type { DefaultApiInterface } from "../../../../api/agentApi";
 import { fetchAllGroupsPages } from "../../../Groups/utils/groupList";
+import { mergeGuestOsFilterOptions } from "./guestOsFilterOptions";
 import type { VMTableFilterOptions } from "./vmTableTypes";
 
 const EMPTY_VM_TABLE_FILTER_OPTIONS: VMTableFilterOptions = {
@@ -11,6 +12,7 @@ const EMPTY_VM_TABLE_FILTER_OPTIONS: VMTableFilterOptions = {
   vmLabels: [],
   groups: [],
   applications: [],
+  guestOs: [],
 };
 
 /**
@@ -56,5 +58,9 @@ export async function fetchVmTableFilterOptions(
     vmLabels: labelsResponse.labels || [],
     groups: groupNames,
     applications: response.applications || [],
+    guestOs: mergeGuestOsFilterOptions(
+      response.osConfigs ?? [],
+      response.osTools ?? [],
+    ),
   };
 }

@@ -22,6 +22,7 @@ const EMPTY_FILTER_OPTIONS: NonNullable<
   vmLabels: [],
   groups: [],
   applications: [],
+  guestOs: [],
 };
 const PERFORMANCE_CATEGORY = ["Performance"];
 const HIGH_CPU_LABEL = ["High CPU"];

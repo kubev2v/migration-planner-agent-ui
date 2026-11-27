@@ -8,6 +8,9 @@ function createParams(
   return {
     searchValue: "",
     onSearchChange: vi.fn(),
+    selectedGuestOs: [],
+    onGuestOsChange: vi.fn(),
+    showGuestOsFilter: false,
     selectedConcernCategories: [],
     onConcernCategoriesChange: vi.fn(),
     selectedConcernLabels: [],
@@ -48,6 +51,7 @@ function createParams(
     availableVmLabels: ["tier-1"],
     availableGroups: ["production"],
     availableApplications: ["SAP ERP"],
+    availableGuestOs: [],
     showGroupsFilter: true,
     ...overrides,
   };

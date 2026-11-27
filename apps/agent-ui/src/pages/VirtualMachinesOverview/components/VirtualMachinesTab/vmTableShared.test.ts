@@ -11,6 +11,11 @@ describe("sortable columns", () => {
     expect(isBackendSortableColumn("datacenter")).toBe(true);
     expect(isSortableColumn("datacenter")).toBe(true);
   });
+
+  it("treats guest OS as a backend-sortable column", () => {
+    expect(isBackendSortableColumn("guestOs")).toBe(true);
+    expect(isSortableColumn("guestOs")).toBe(true);
+  });
 });
 
 describe("diskSizeRanges", () => {
