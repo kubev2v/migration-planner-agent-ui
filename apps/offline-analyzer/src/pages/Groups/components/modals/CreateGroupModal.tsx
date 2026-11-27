@@ -65,6 +65,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       concernLabels: [],
       concernCategories: [],
       vmLabels: [],
+      guestOs: [],
     });
   const requestIdRef = useRef(0);
 

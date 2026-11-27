@@ -18,7 +18,11 @@ import type React from "react";
 import { AppEmptyState } from "../../../../common/components";
 import { GroupsList } from "../../../Groups/components/GroupsList";
 import type { GroupListItem } from "../../../Groups/utils/vmGroupMembership";
-import { getMigrationExcluded, getVmTags } from "../../virtualMachineParsing";
+import {
+  getMigrationExcluded,
+  getVmGuestOs,
+  getVmTags,
+} from "../../virtualMachineParsing";
 import { formatMetric } from "./VMUtilizationMetrics";
 import { renderVmStatus } from "./vmTableCellRenderers";
 import {
@@ -264,6 +268,14 @@ export const VMTableGrid: React.FC<VMTableGridProps> = ({
                     ) : (
                       vm.issueCount || 0
                     )}
+                  </Td>
+                )}
+                {isColumnVisible("guestOs") && (
+                  <Td
+                    dataLabel="Guest OS"
+                    modifier={getColumnModifier("guestOs")}
+                  >
+                    {getVmGuestOs(vm) || "—"}
                   </Td>
                 )}
                 {!hideToolbarActions && (

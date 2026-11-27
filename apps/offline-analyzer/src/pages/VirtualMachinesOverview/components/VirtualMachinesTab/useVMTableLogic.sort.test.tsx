@@ -59,4 +59,36 @@ describe("useVMTableLogic sort", () => {
 
     expect(onSortChange).toHaveBeenCalledWith(["datacenter:asc"]);
   });
+
+  it("sends guest OS sort to the backend", () => {
+    const onSortChange = vi.fn();
+
+    const { result } = renderHook(() =>
+      useVMTableLogic({
+        vms: EMPTY_VMS,
+        onSortChange,
+      }),
+    );
+
+    const guestOsColumn = result.current.columns.find(
+      (column) => column.key === "guestOs",
+    );
+    expect(guestOsColumn?.sortable).toBe(true);
+
+    const guestOsIndex = result.current.columns.findIndex(
+      (column) => column.key === "guestOs",
+    );
+    const sortParams = result.current.getSortParams("guestOs", guestOsIndex);
+
+    act(() => {
+      sortParams?.onSort?.(
+        {} as MouseEvent,
+        guestOsIndex,
+        SortByDirection.desc,
+        {} as never,
+      );
+    });
+
+    expect(onSortChange).toHaveBeenCalledWith(["guestOs:desc"]);
+  });
 });
