@@ -98,6 +98,7 @@ export function useVMTableLogic({
     vmLabels: [],
     groups: [],
     applications: [],
+    guestOs: [],
   },
   selectedVMs = new Set<string>(),
   onSelectionChange,
@@ -148,6 +149,9 @@ export function useVMTableLogic({
 
   // Search state
   const [searchValue, setSearchValue] = useState(initialFilters?.search || "");
+  const [selectedGuestOs, setSelectedGuestOs] = useState<string[]>(
+    initialFilters?.guestOs ?? EMPTY_STRING_ARRAY,
+  );
 
   // Cancel deep inspection confirmation (vm id when open, null when closed)
   const [cancelInspectionVmId, setCancelInspectionVmId] = useState<
@@ -316,6 +320,7 @@ export function useVMTableLogic({
       const next = initialFilters?.search || "";
       return previous === next ? previous : next;
     });
+    syncStringArrayState(setSelectedGuestOs, initialFilters?.guestOs);
 
     if (selectedVMs.size > 0) {
       onSelectionChange?.(new Set());
@@ -366,6 +371,7 @@ export function useVMTableLogic({
   const availableVmLabels = availableFilterOptions.vmLabels;
   const availableGroups = availableFilterOptions.groups;
   const availableApplications = availableFilterOptions.applications;
+  const availableGuestOs = availableFilterOptions.guestOs;
 
   const applyFilterChange = useCallback(
     (updater: () => void) => {
@@ -407,6 +413,7 @@ export function useVMTableLogic({
         hasIssuesFilter ||
         noIssuesFilter ||
         searchValue ||
+        selectedGuestOs.length > 0 ||
         diskRangeFilter ||
         memoryRangeFilter ||
         cpuUsageRangeFilter ||
@@ -426,6 +433,7 @@ export function useVMTableLogic({
       hasIssues: hasIssuesFilter || undefined,
       noIssues: noIssuesFilter || undefined,
       search: searchValue || undefined,
+      guestOs: selectedGuestOs.length > 0 ? selectedGuestOs : undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
       cpuUsageRange: cpuUsageRangeFilter || undefined,
@@ -475,6 +483,7 @@ export function useVMTableLogic({
     hasIssuesFilter,
     noIssuesFilter,
     searchValue,
+    selectedGuestOs,
     diskRangeFilter,
     memoryRangeFilter,
     cpuUsageRangeFilter,
@@ -518,6 +527,12 @@ export function useVMTableLogic({
         onSearchChange: (value) => {
           applyFilterChange(() => setSearchValue(value));
         },
+        selectedGuestOs,
+        onGuestOsChange: (values) => {
+          applyFilterChange(() => setSelectedGuestOs(values));
+        },
+        showGuestOsFilter:
+          isColumnVisible("guestOs") || selectedGuestOs.length > 0,
         selectedConcernCategories,
         onConcernCategoriesChange: (values) => {
           applyFilterChange(() => {
@@ -605,6 +620,7 @@ export function useVMTableLogic({
         availableVmLabels,
         availableGroups,
         availableApplications,
+        availableGuestOs,
         showGroupsFilter,
       }),
     [
@@ -615,13 +631,16 @@ export function useVMTableLogic({
       availableDatacenters,
       availableGroups,
       availableApplications,
+      availableGuestOs,
       availableVmLabels,
       cpuUsageRangeFilter,
       diskRangeFilter,
       diskUsageRangeFilter,
       hasIssuesFilter,
+      isColumnVisible,
       memoryRangeFilter,
       noIssuesFilter,
+      selectedGuestOs,
       ramUsageRangeFilter,
       searchValue,
       selectedClusters,
@@ -653,6 +672,7 @@ export function useVMTableLogic({
     diskSize: "diskSize",
     memory: "memory",
     issues: "issues",
+    guestOs: "guestOs",
   };
 
   // Apply client-side sort for frontend-sortable columns; all other columns use backend sort.
@@ -686,6 +706,7 @@ export function useVMTableLogic({
       hasIssues: hasIssuesFilter || undefined,
       noIssues: noIssuesFilter || undefined,
       search: searchValue || undefined,
+      guestOs: selectedGuestOs.length > 0 ? selectedGuestOs : undefined,
       diskRange: diskRangeFilter || undefined,
       memoryRange: memoryRangeFilter || undefined,
       cpuUsageRange: cpuUsageRangeFilter || undefined,
@@ -717,6 +738,7 @@ export function useVMTableLogic({
     hasIssuesFilter,
     noIssuesFilter,
     searchValue,
+    selectedGuestOs,
     diskRangeFilter,
     memoryRangeFilter,
     cpuUsageRangeFilter,
@@ -784,6 +806,7 @@ export function useVMTableLogic({
     applyFilterChange(() => {
       applyFilterSelection(EMPTY_VM_TABLE_FILTER_SELECTION);
       setSearchValue("");
+      setSelectedGuestOs([]);
     });
   };
 

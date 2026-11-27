@@ -13,6 +13,7 @@ describe("mergeGroupNamesIntoFilterOptions", () => {
       vmLabels: [],
       groups: ["group1", "group2"],
       applications: [],
+      guestOs: [],
     });
   });
 
@@ -27,6 +28,7 @@ describe("mergeGroupNamesIntoFilterOptions", () => {
           vmLabels: [],
           groups: ["group1"],
           applications: [],
+          guestOs: [],
         },
         ["group2", "group1"],
       ).groups,
