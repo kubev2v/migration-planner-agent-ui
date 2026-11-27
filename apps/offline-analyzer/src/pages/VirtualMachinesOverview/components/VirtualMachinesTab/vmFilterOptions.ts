@@ -1,4 +1,5 @@
 import type { DefaultApiInterface } from "../../../../api/agentApi";
+import { mergeGuestOsFilterOptions } from "./guestOsFilterOptions";
 import type { VMTableFilterOptions } from "./vmTableTypes";
 
 /** Loads distinct VM filter option values for the VMs table filter UI. */
@@ -16,5 +17,9 @@ export async function fetchVmTableFilterOptions(
     concernLabels: response.concernLabels || [],
     concernCategories: response.concernCategories || [],
     vmLabels: labelsResponse.labels || [],
+    guestOs: mergeGuestOsFilterOptions(
+      response.osConfigs ?? [],
+      response.osTools ?? [],
+    ),
   };
 }

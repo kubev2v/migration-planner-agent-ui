@@ -16,7 +16,8 @@ export type ColumnKey =
   | "diskSize"
   | "memory"
   | "issues"
-  | "migratable";
+  | "migratable"
+  | "guestOs";
 
 export const BACKEND_SORTABLE_COLUMNS = [
   "name",
@@ -29,6 +30,7 @@ export const BACKEND_SORTABLE_COLUMNS = [
   "diskSize",
   "memory",
   "issues",
+  "guestOs",
 ] as const;
 
 export const FRONTEND_SORTABLE_COLUMNS = ["labels", "groups"] as const;
@@ -52,6 +54,7 @@ export const Columns: Record<ColumnKey, string> = {
   diskSize: "Disk size",
   memory: "Memory size",
   issues: "Issues",
+  guestOs: "Guest OS",
 };
 
 export const ALL_COLUMN_KEYS = Object.keys(Columns) as ColumnKey[];
@@ -67,7 +70,23 @@ export const COMPACT_VISIBLE_COLUMNS: ColumnKey[] = [
 ];
 
 export const VISIBLE_COLUMNS_KEY = "vmTable.visibleColumns";
-export const VISIBLE_COLUMNS_VERSION = 9;
+export const VISIBLE_COLUMNS_VERSION = 10;
+
+const LEGACY_OS_COLUMN_KEYS = ["osConfig", "osTools"] as const;
+
+/** Maps stored column prefs from the two-OS-column era to `guestOs`. */
+export function coalesceStoredColumnKeys(columns: ColumnKey[]): ColumnKey[] {
+  const hasLegacy = columns.some((key) =>
+    (LEGACY_OS_COLUMN_KEYS as readonly string[]).includes(key),
+  );
+  const withoutLegacy = columns.filter(
+    (key) => !(LEGACY_OS_COLUMN_KEYS as readonly string[]).includes(key),
+  );
+  if (hasLegacy && !withoutLegacy.includes("guestOs")) {
+    return [...withoutLegacy, "guestOs"];
+  }
+  return columns;
+}
 
 export const isSortableColumn = (key: ColumnKey): key is SortableColumn =>
   (BACKEND_SORTABLE_COLUMNS as readonly ColumnKey[]).includes(key) ||
@@ -104,6 +123,9 @@ export const getColumnModifier = (key: ColumnKey) => {
   }
   if (key === "labels" || key === "groups") {
     return "wrap";
+  }
+  if (key === "guestOs") {
+    return "truncate";
   }
   return "nowrap";
 };
@@ -408,7 +430,9 @@ export function resolveVisibleColumns({
   if (variant === "compact") return [...COMPACT_VISIBLE_COLUMNS];
 
   const selectedSet = new Set([
-    ...userSelectedColumns.filter((key) => ALL_COLUMN_KEYS.includes(key)),
+    ...coalesceStoredColumnKeys(userSelectedColumns).filter((key) =>
+      ALL_COLUMN_KEYS.includes(key),
+    ),
     ...MANDATORY_COLUMNS,
   ]);
 

@@ -76,6 +76,7 @@ const EMPTY_FILTER_OPTIONS: VMTableFilterOptions = {
   concernLabels: [],
   concernCategories: [],
   vmLabels: [],
+  guestOs: [],
 };
 
 const groupVmTableContainerStyle = css`

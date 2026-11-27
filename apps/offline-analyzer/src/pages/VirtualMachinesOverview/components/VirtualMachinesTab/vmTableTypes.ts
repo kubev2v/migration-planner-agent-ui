@@ -9,6 +9,7 @@ export interface VMTableFilterOptions {
   concernLabels: string[];
   concernCategories: string[];
   vmLabels: string[];
+  guestOs: string[];
 }
 
 export interface VMTableProps {
